@@ -2704,8 +2704,14 @@ export const liveFeedServices: LiveFeedService[] = [
   }
 ];
 
-// Added helper functions to fix missing exports build error
-export function fetchLiveCategories(): string[] {
+// Ensure your type alias matches what components import, or alias it:
+export type LiveChannel = LiveFeedService & {
+  streamUrl: string;
+  title: string;
+};
+
+// Make these async or return Promises so .then() works seamlessly:
+export async function fetchLiveCategories(): Promise<string[]> {
   const categories = new Set<string>();
   liveFeedServices.forEach((service) => {
     if (service.groupTitle) {
@@ -2715,6 +2721,13 @@ export function fetchLiveCategories(): string[] {
   return Array.from(categories);
 }
 
-export function fetchChannelsByCategory(category: string): LiveFeedService[] {
-  return liveFeedServices.filter((service) => service.groupTitle.toLowerCase() === category.toLowerCase());
+export async function fetchChannelsByCategory(category: string): Promise<LiveChannel[]> {
+  const filtered = liveFeedServices.filter(
+    (service) => service.groupTitle.toLowerCase() === category.toLowerCase()
+  );
+  return filtered.map((s) => ({
+    ...s,
+    streamUrl: s.url,
+    title: s.name,
+  }));
 }
