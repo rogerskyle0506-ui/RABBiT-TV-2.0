@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchLiveCategories, fetchChannelsByCategory, LiveChannel } from '../lib/live-feed-service';
 import { AppTheme, getSavedTheme } from '@/lib/settings';
@@ -116,9 +116,9 @@ function LiveTvComponent() {
             <h1 className="text-2xl sm:text-3xl font-black text-white">Live TV & Sports</h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Stream live broadcast feeds, sports channels, and events.</p>
           </div>
-          <a href="/" className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold hover:bg-white/10 transition">
+          <Link to="/" className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold hover:bg-white/10 transition">
             ← Back to Home
-          </a>
+          </Link>
         </div>
 
         <div className="w-full">
@@ -145,9 +145,10 @@ function LiveTvComponent() {
         ) : channels.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {channels.map((channel) => (
-              <a
+              <Link
                 key={channel.id}
-                href={`/live-player?url=${encodeURIComponent(channel.streamUrl)}&title=${encodeURIComponent(channel.title)}`}
+                to="/live-player"
+                search={{ url: channel.streamUrl, title: channel.title }}
                 className={`group flex flex-col items-center p-4 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden`}
               >
                 {channel.logo ? (
@@ -168,7 +169,7 @@ function LiveTvComponent() {
                 <span className="mt-2 w-full py-1 text-[10px] font-bold rounded-full bg-black/60 border border-white/10 text-slate-300">
                   WATCH →
                 </span>
-              </a>
+              </Link>
             ))}
           </div>
         ) : (
