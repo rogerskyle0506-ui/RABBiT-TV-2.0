@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import React, { useState, useEffect } from "react";
 import { AppTheme, CardSize, HistoryScale, getSavedTheme, getSavedCardSize, getHistoryOverscale, getLargeButtons } from "@/lib/settings";
 import {
@@ -28,6 +28,7 @@ function WatchHistoryComponent() {
   const [historyOverscale, setHistoryOverscale] = useState<HistoryScale>("off");
   const [largeButtons, setLargeButtons] = useState<boolean>(true);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const [showScrollReminder, setShowScrollReminder] = useState(false);
 
   useEffect(() => {
     const checkVerticalScroll = () => {
@@ -46,6 +47,37 @@ function WatchHistoryComponent() {
       window.removeEventListener("resize", checkVerticalScroll);
     };
   }, [historyMap, dislikedTitles]);
+
+  // Handle 30s user inactivity & reset on user interaction
+  useEffect(() => {
+    let inactivityTimer: NodeJS.Timeout;
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      setShowScrollReminder(false);
+
+      if (canScrollDown) {
+        inactivityTimer = setTimeout(() => {
+          setShowScrollReminder(true);
+        }, 30000); // 30 seconds wait time
+      }
+    };
+
+    resetInactivityTimer();
+
+    window.addEventListener("scroll", resetInactivityTimer, { passive: true });
+    window.addEventListener("click", resetInactivityTimer);
+    window.addEventListener("keydown", resetInactivityTimer);
+    window.addEventListener("touchstart", resetInactivityTimer, { passive: true });
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      window.removeEventListener("scroll", resetInactivityTimer);
+      window.removeEventListener("click", resetInactivityTimer);
+      window.removeEventListener("keydown", resetInactivityTimer);
+      window.removeEventListener("touchstart", resetInactivityTimer);
+    };
+  }, [canScrollDown]);
 
   const refreshData = () => {
     setHistoryMap(getWatchHistory());
@@ -200,7 +232,7 @@ function WatchHistoryComponent() {
           <span><strong className="text-white">✕</strong> = Reset to Un-tracked</span>
         </div>
         <div className="text-violet-400 font-medium">
-          ✨ More saved items are also on your <strong className="text-white">My List</strong> tab!
+          ✨ More saved items are also on your <Link to="/" className="text-white underline hover:text-violet-300 transition font-bold">My List</Link> tab!
         </div>
       </div>
 
@@ -336,8 +368,23 @@ function WatchHistoryComponent() {
         </div>
       )}
 
-      {canScrollDown && (
-        <div className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none">
+      {canScrollDown && showScrollReminder && (
+        <div 
+          className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
+          onAnimationEnd={() => setShowScrollReminder(false)}
+        >
+          <style>{`
+            @keyframes flashTwice {
+              0% { opacity: 0; }
+              25% { opacity: 1; }
+              50% { opacity: 0; }
+              75% { opacity: 1; }
+              100% { opacity: 0; }
+            }
+            .animate-flash-twice {
+              animation: flashTwice 8s ease-in-out forwards;
+            }
+          `}</style>
           <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
               More History Below
