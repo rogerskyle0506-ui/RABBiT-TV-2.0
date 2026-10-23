@@ -8,7 +8,6 @@ export interface LiveChannel {
   provider?: string;
 }
 
-// Guaranteed fallback channels so the UI instantly populates even if offline or blocked
 const FALLBACK_CHANNELS: LiveChannel[] = [
   {
     id: 'sample-1',
@@ -34,31 +33,17 @@ const FALLBACK_CHANNELS: LiveChannel[] = [
 ];
 
 const PROVIDER_URLS = [
-  // Master Raw M3U Playlists
   'https://i.mjh.nz/all/raw-tv.m3u8',
-  'https://i.mjh.nz/all/kodi-tv.m3u8',
-  
-  // Sports & Premium Providers
-  'https://i.mjh.nz/Kayo/app.json',
-  'https://i.mjh.nz/SkySportNow/app.json',
-  'https://i.mjh.nz/Foxtel/app.json',
-  'https://i.mjh.nz/Binge/app.json',
-  
-  // Standard TV & Streaming Manifests
   'https://i.mjh.nz/PlutoTV/app.json',
   'https://i.mjh.nz/SamsungTVPlus/app.json',
-  'https://i.mjh.nz/Plex/app.json',
-  'https://i.mjh.nz/MeTV/app.json',
   'https://i.mjh.nz/Roku/app.json',
-  'https://i.mjh.nz/HGTV/app.json',
-  'https://i.mjh.nz/PBS/app.json',
-  'https://i.mjh.nz/DStv/app.json',
-  'https://i.mjh.nz/Singtel/app.json',
-  'https://i.mjh.nz/SkyGo/app.json',
-  'https://i.mjh.nz/frndly_tv/app.json',
+  'https://i.mjh.nz/Kayo/app.json',
+  'https://i.mjh.nz/SkySportNow/app.json',
 ];
 
-// Parser for M3U / M3U8 text playlists
+// Helper to wrap URLs with a CORS proxy to bypass browser restrictions
+const proxyUrl = (target: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+
 function parseM3U(text: string): any[] {
   const lines = text.split('\n');
   const channels: any[] = [];
@@ -99,16 +84,14 @@ async function fetchAllRawChannels(): Promise<any[]> {
   try {
     const promises = PROVIDER_URLS.map(async (url) => {
       try {
-        const res = await fetch(url);
+        const res = await fetch(proxyUrl(url));
         if (!res.ok) return [];
         const text = await res.text();
 
-        // Handle M3U/M3U8 playlists
         if (url.includes('.m3u') || text.startsWith('#EXTM3U') || text.includes('#EXTINF:')) {
           return parseM3U(text);
         }
 
-        // Handle JSON manifests
         const data = JSON.parse(text);
         let rawList: any[] = [];
 
@@ -128,6 +111,7 @@ async function fetchAllRawChannels(): Promise<any[]> {
 
         return rawList;
       } catch (e) {
+        console.warn(`Failed fetching ${url}:`, e);
         return [];
       }
     });
@@ -157,7 +141,7 @@ async function fetchAllRawChannels(): Promise<any[]> {
 
     return [...mappedFetched, ...FALLBACK_CHANNELS];
   } catch (error) {
-    console.error('Failed to aggregate feeds, falling back to defaults:', error);
+    console.error('Failed to aggregate feeds:', error);
     return FALLBACK_CHANNELS;
   }
 }
