@@ -2,7 +2,6 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { fetchLiveCategories, fetchChannelsByCategory, LiveChannel } from '@/lib/live-feed-service';
-import Hls from 'hls.js';
 
 export const Route = createFileRoute('/live-player')({
   component: LivePlayerComponent,
@@ -56,26 +55,43 @@ function LivePlayerComponent() {
     };
   }, [streamUrl]);
 
-  // HLS stream playback handler
+  // HLS stream playback handler via Dynamic CDN Loading
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !streamUrl) return;
 
-    let hls: Hls | null = null;
+    let hlsInstance: any = null;
 
     if (streamUrl.includes('.m3u8')) {
-      if (Hls.isSupported()) {
-        hls = new Hls();
-        hls.loadSource(streamUrl);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch((err) => console.log('Autoplay deferred:', err));
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (Safari / standard browser engines)
         video.src = streamUrl;
         video.addEventListener('loadedmetadata', () => {
           video.play().catch((err) => console.log('Autoplay deferred:', err));
         });
+      } else {
+        // Dynamic loader for HLS.js
+        const initHls = () => {
+          const HlsClass = (window as any).Hls;
+          if (HlsClass && HlsClass.isSupported()) {
+            hlsInstance = new HlsClass();
+            hlsInstance.loadSource(streamUrl);
+            hlsInstance.attachMedia(video);
+            hlsInstance.on(HlsClass.Events.MANIFEST_PARSED, () => {
+              video.play().catch((err) => console.log('Autoplay deferred:', err));
+            });
+          }
+        };
+
+        if ((window as any).Hls) {
+          initHls();
+        } else {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
+          script.async = true;
+          script.onload = () => initHls();
+          document.head.appendChild(script);
+        }
       }
     } else {
       video.src = streamUrl;
@@ -83,8 +99,8 @@ function LivePlayerComponent() {
     }
 
     return () => {
-      if (hls) {
-        hls.destroy();
+      if (hlsInstance) {
+        hlsInstance.destroy();
       }
     };
   }, [streamUrl]);
@@ -201,7 +217,7 @@ function LivePlayerComponent() {
           </Link>
         </div>
 
-        {/* Suggested Channels Grid (Vidsrc Style) */}
+        {/* Suggested Channels Grid */}
         <section className="pt-2">
           <div className="mb-3 flex items-center justify-between px-1">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
