@@ -9,62 +9,93 @@ export interface LiveChannel {
 
 const LIVE_FEED_URL = 'https://i.mjh.nz/Stirr/app.json';
 
-export async function fetchLiveCategories(): Promise<string[]> {
+// Helper to safely parse and normalize channels from mjh.nz / Stirr formats
+async function fetchRawChannels(): Promise<any[]> {
   try {
     const response = await fetch(LIVE_FEED_URL);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    
     const data = await response.json();
-    const rawChannels = data.channels || data || {};
+
+    // mjh.nz endpoints can return an array or an object map under .channels or root
+    const raw = data.channels || data.items || data;
+    
+    if (Array.isArray(raw)) {
+      return raw;
+    }
+    if (raw && typeof raw === 'object') {
+      return Object.entries(raw).map(([key, val]: [string, any]) => ({
+        id: val.id || key,
+        ...val,
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error('Failed to fetch raw live channels feed:', error);
+    return [];
+  }
+}
+
+export async function fetchLiveCategories(): Promise<string[]> {
+  try {
+    const channels = await fetchRawChannels();
     const groups = new Set<string>();
 
-    const channelList = Array.isArray(rawChannels) 
-      ? rawChannels 
-      : Object.values(rawChannels);
+    channels.forEach((channel: any) => {
+      // Check various group/category property names used across mjh.nz schemas
+      const channelGroups = 
+        channel.groups || 
+        channel.category ? [channel.category] : 
+        channel.genre ? [channel.genre] : 
+        ['General'];
 
-    channelList.forEach((channel: any) => {
-      const channelGroups = channel.groups || (channel.category ? [channel.category] : []);
-      if (channelGroups && channelGroups.length > 0) {
-        channelGroups.forEach((g: string) => groups.add(g));
+      if (Array.isArray(channelGroups)) {
+        channelGroups.forEach((g) => {
+          if (g) groups.add(String(g));
+        });
       }
     });
 
     const categoryArray = Array.from(groups).sort();
-    return categoryArray.length > 0 ? categoryArray : ['Sports', 'News', 'Entertainment', 'Local'];
+    return categoryArray.length > 0 ? categoryArray : ['All', 'Sports', 'News', 'Entertainment', 'General'];
   } catch (error) {
-    console.error('Failed to fetch live categories:', error);
-    return ['Sports', 'News', 'Entertainment', 'Local'];
+    console.error('Failed to parse live categories:', error);
+    return ['All', 'Sports', 'News', 'Entertainment', 'General'];
   }
 }
 
 export async function fetchChannelsByCategory(categoryName: string): Promise<LiveChannel[]> {
   try {
-    const response = await fetch(LIVE_FEED_URL);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-    const data = await response.json();
-    const rawChannels = data.channels || data || {};
+    const channels = await fetchRawChannels();
     const results: LiveChannel[] = [];
 
-    const entries = Array.isArray(rawChannels)
-      ? rawChannels.map((c, idx) => [String(c.id || idx), c] as [string, any])
-      : Object.entries(rawChannels);
+    channels.forEach((channel: any, index: number) => {
+      const channelGroups = 
+        channel.groups || 
+        (channel.category ? [channel.category] : []) || 
+        (channel.genre ? [channel.genre] : []) || 
+        ['General'];
 
-    entries.forEach(([id, channel]: [string, any]) => {
-      const channelGroups = channel.groups || (channel.category ? [channel.category] : []);
-      
-      if (
-        categoryName === 'All' || 
+      const matchesCategory =
+        categoryName === 'All' ||
         categoryName === 'All (Default)' ||
-        (channelGroups && channelGroups.includes(categoryName))
-      ) {
-        results.push({
-          id,
-          title: channel.name || channel.title || 'Unknown Channel',
-          logo: channel.logo || channel.tvg_logo || '',
-          streamUrl: channel.url || (channel.playlist && channel.playlist[0]) || '',
-          category: channelGroups[0] || categoryName,
-        });
+        (Array.isArray(channelGroups) && channelGroups.some((g) => String(g).toLowerCase() === categoryName.toLowerCase()));
+
+      if (matchesCategory) {
+        const streamUrl = 
+          channel.url || 
+          (Array.isArray(channel.playlist) && channel.playlist[0]) || 
+          channel.streamUrl || 
+          '';
+
+        if (streamUrl) {
+          results.push({
+            id: String(channel.id || channel.tvg_id || index),
+            title: channel.name || channel.title || channel.tvg_name || `Channel ${index + 1}`,
+            logo: channel.logo || channel.tvg_logo || '',
+            streamUrl,
+            category: Array.isArray(channelGroups) ? channelGroups[0] : categoryName,
+          });
+        }
       }
     });
 
