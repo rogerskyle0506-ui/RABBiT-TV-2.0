@@ -1,6 +1,4 @@
 // src/lib/live-feed-service.ts
-import axios from 'axios';
-
 export interface LiveChannel {
   id: string;
   title: string;
@@ -13,9 +11,11 @@ const LIVE_FEED_URL = 'https://i.mjh.nz/Stirr/app.json';
 
 export async function fetchLiveCategories(): Promise<string[]> {
   try {
-    const response = await axios.get(LIVE_FEED_URL);
-    // mjh.nz feeds usually have a root 'channels' object or array
-    const rawChannels = response.data.channels || response.data || {};
+    const response = await fetch(LIVE_FEED_URL);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+    const data = await response.json();
+    const rawChannels = data.channels || data || {};
     const groups = new Set<string>();
 
     const channelList = Array.isArray(rawChannels) 
@@ -23,8 +23,7 @@ export async function fetchLiveCategories(): Promise<string[]> {
       : Object.values(rawChannels);
 
     channelList.forEach((channel: any) => {
-      // Check groups, category, or fallback
-      const channelGroups = channel.groups || channel.category ? [channel.category] : [];
+      const channelGroups = channel.groups || (channel.category ? [channel.category] : []);
       if (channelGroups && channelGroups.length > 0) {
         channelGroups.forEach((g: string) => groups.add(g));
       }
@@ -40,8 +39,11 @@ export async function fetchLiveCategories(): Promise<string[]> {
 
 export async function fetchChannelsByCategory(categoryName: string): Promise<LiveChannel[]> {
   try {
-    const response = await axios.get(LIVE_FEED_URL);
-    const rawChannels = response.data.channels || response.data || {};
+    const response = await fetch(LIVE_FEED_URL);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    const data = await response.json();
+    const rawChannels = data.channels || data || {};
     const results: LiveChannel[] = [];
 
     const entries = Array.isArray(rawChannels)
@@ -53,6 +55,7 @@ export async function fetchChannelsByCategory(categoryName: string): Promise<Liv
       
       if (
         categoryName === 'All' || 
+        categoryName === 'All (Default)' ||
         (channelGroups && channelGroups.includes(categoryName))
       ) {
         results.push({
