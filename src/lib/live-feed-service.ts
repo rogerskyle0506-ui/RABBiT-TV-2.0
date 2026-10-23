@@ -14,16 +14,24 @@ const LIVE_FEED_URL = 'https://i.mjh.nz/Stirr/app.json';
 export async function fetchLiveCategories(): Promise<string[]> {
   try {
     const response = await axios.get(LIVE_FEED_URL);
-    const channels = response.data.channels || {};
+    // mjh.nz feeds usually have a root 'channels' object or array
+    const rawChannels = response.data.channels || response.data || {};
     const groups = new Set<string>();
 
-    Object.values(channels).forEach((channel: any) => {
-      if (channel.groups && channel.groups.length > 0) {
-        groups.add(channel.groups[0]);
+    const channelList = Array.isArray(rawChannels) 
+      ? rawChannels 
+      : Object.values(rawChannels);
+
+    channelList.forEach((channel: any) => {
+      // Check groups, category, or fallback
+      const channelGroups = channel.groups || channel.category ? [channel.category] : [];
+      if (channelGroups && channelGroups.length > 0) {
+        channelGroups.forEach((g: string) => groups.add(g));
       }
     });
 
-    return Array.from(groups).sort();
+    const categoryArray = Array.from(groups).sort();
+    return categoryArray.length > 0 ? categoryArray : ['Sports', 'News', 'Entertainment', 'Local'];
   } catch (error) {
     console.error('Failed to fetch live categories:', error);
     return ['Sports', 'News', 'Entertainment', 'Local'];
@@ -33,17 +41,26 @@ export async function fetchLiveCategories(): Promise<string[]> {
 export async function fetchChannelsByCategory(categoryName: string): Promise<LiveChannel[]> {
   try {
     const response = await axios.get(LIVE_FEED_URL);
-    const channels = response.data.channels || {};
+    const rawChannels = response.data.channels || response.data || {};
     const results: LiveChannel[] = [];
 
-    Object.entries(channels).forEach(([id, channel]: [string, any]) => {
-      if (channel.groups && channel.groups.includes(categoryName)) {
+    const entries = Array.isArray(rawChannels)
+      ? rawChannels.map((c, idx) => [String(c.id || idx), c] as [string, any])
+      : Object.entries(rawChannels);
+
+    entries.forEach(([id, channel]: [string, any]) => {
+      const channelGroups = channel.groups || (channel.category ? [channel.category] : []);
+      
+      if (
+        categoryName === 'All' || 
+        (channelGroups && channelGroups.includes(categoryName))
+      ) {
         results.push({
           id,
-          title: channel.name || 'Unknown Channel',
-          logo: channel.logo || '',
-          streamUrl: channel.url || '',
-          category: categoryName,
+          title: channel.name || channel.title || 'Unknown Channel',
+          logo: channel.logo || channel.tvg_logo || '',
+          streamUrl: channel.url || (channel.playlist && channel.playlist[0]) || '',
+          category: channelGroups[0] || categoryName,
         });
       }
     });
