@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { AppTheme, getSavedTheme } from "@/lib/settings";
 import { isTitleDisliked } from "@/lib/watch-history";
+import { isTitleBroken, reportBrokenLink } from "@/lib/broken-links";
 import type { MediaItem } from "@/lib/tmdb-scraper";
 
 const WATCH_HISTORY_STORAGE_KEY = "rabtv_watch_history";
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/details")({
 });
 
 export function DetailsPage() {
+  const navigate = useNavigate();
   const search = Route.useSearch() as { id?: string; type?: string };
   const mediaId = search?.id;
   
@@ -42,8 +44,14 @@ export function DetailsPage() {
   const seasonRef = useRef<HTMLDivElement>(null);
   const episodeRef = useRef<HTMLDivElement>(null);
 
+  const handleBackHome = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.dispatchEvent(new Event("rabtv_restore_home_state"));
+    navigate({ to: "/" });
+  };
+
   useEffect(() => {
-    if (isPlaying) return; // Pause scroll check during playback for performance
+    if (isPlaying) return;
 
     const checkVerticalScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -115,7 +123,7 @@ export function DetailsPage() {
 
   useEffect(() => {
     async function fetchSimilarContent() {
-      if (!mediaId || isPlaying) return; // Skip fetching recommendations while playing video
+      if (!mediaId || isPlaying) return;
       try {
         const apiKey =
           (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
@@ -127,7 +135,7 @@ export function DetailsPage() {
 
         if (data?.results) {
           const mapped: MediaItem[] = data.results
-            .filter((item: any) => !isTitleDisliked(item.id))
+            .filter((item: any) => !isTitleDisliked(item.id) && !isTitleBroken(item.id))
             .slice(0, 6)
             .map((item: any) => ({
               id: String(item.id),
@@ -456,6 +464,18 @@ export function DetailsPage() {
     }
   };
 
+  const handleReportBroken = () => {
+    if (!mediaId) return;
+    const { message } = reportBrokenLink(`${inferredMediaType}-${mediaId}`);
+    triggerFeedback(message);
+
+    // Redirect to home page after short delay so user sees feedback
+    setTimeout(() => {
+      window.dispatchEvent(new Event("rabtv_catalog_updated"));
+      navigate({ to: "/" });
+    }, 1200);
+  };
+
   const triggerFeedback = (msg: string) => {
     setActionFeedback(msg);
     setTimeout(() => setActionFeedback(null), 2500);
@@ -492,12 +512,13 @@ export function DetailsPage() {
 
   return (
     <div className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20`}>
-      <Link
-        className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
-        to="/"
+      <a
+        href="/"
+        onClick={handleBackHome}
+        className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1 cursor-pointer`}
       >
         ← Back to Home
-      </Link>
+      </a>
 
       {isPlaying ? (
         <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -807,6 +828,15 @@ export function DetailsPage() {
                   }`}
                 >
                   {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleReportBroken}
+                  className="flex items-center gap-2 rounded-full border border-red-500/40 bg-red-950/80 px-6 py-4 text-sm font-bold text-red-300 hover:bg-red-800/80 transition focus:outline-none focus:ring-4 focus:ring-red-400 shadow-lg shadow-red-950/40"
+                  title="Hide title from all catalogs (14 days, 30 days, or permanent)"
+                >
+                  🚨 Broken Link
                 </button>
               </div>
 
