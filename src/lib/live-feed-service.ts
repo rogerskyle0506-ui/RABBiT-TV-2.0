@@ -1,4 +1,4 @@
-// Updated live-feedservices.ts
+// Updated live-feed-service.ts
 export interface LiveFeedService {
   channelId: string;
   name: string;
@@ -2703,3 +2703,18 @@ export const liveFeedServices: LiveFeedService[] = [
     referrer: ""
   }
 ];
+
+// Added helper functions to fix missing exports build error
+export function fetchLiveCategories(): string[] {
+  const categories = new Set<string>();
+  liveFeedServices.forEach((service) => {
+    if (service.groupTitle) {
+      categories.add(service.groupTitle);
+    }
+  });
+  return Array.from(categories);
+}
+
+export function fetchChannelsByCategory(category: string): LiveFeedService[] {
+  return liveFeedServices.filter((service) => service.groupTitle.toLowerCase() === category.toLowerCase());
+}
