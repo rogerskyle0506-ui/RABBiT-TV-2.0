@@ -213,6 +213,7 @@ function Home() {
   const [totalPages, setTotalPages] = useState(1);
   const [cardSize, setCardSize] = useState<CardSize>("large");
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const [showScrollReminder, setShowScrollReminder] = useState(false);
 
   useEffect(() => {
     const checkVerticalScroll = () => {
@@ -232,6 +233,37 @@ function Home() {
       window.removeEventListener("resize", checkVerticalScroll);
     };
   }, [items, loading]);
+
+  // Handle 30s user inactivity & reset on user interaction
+  useEffect(() => {
+    let inactivityTimer: NodeJS.Timeout;
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      setShowScrollReminder(false);
+
+      if (canScrollDown) {
+        inactivityTimer = setTimeout(() => {
+          setShowScrollReminder(true);
+        }, 30000); // 30 seconds wait time
+      }
+    };
+
+    resetInactivityTimer();
+
+    window.addEventListener("scroll", resetInactivityTimer, { passive: true });
+    window.addEventListener("click", resetInactivityTimer);
+    window.addEventListener("keydown", resetInactivityTimer);
+    window.addEventListener("touchstart", resetInactivityTimer, { passive: true });
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      window.removeEventListener("scroll", resetInactivityTimer);
+      window.removeEventListener("click", resetInactivityTimer);
+      window.removeEventListener("keydown", resetInactivityTimer);
+      window.removeEventListener("touchstart", resetInactivityTimer);
+    };
+  }, [canScrollDown]);
 
   const loadSavedListsAndTheme = () => {
     try {
@@ -964,8 +996,24 @@ function Home() {
           )}
         </section>
 
-        {canScrollDown && (
-          <div className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none">
+        {/* Scroll Reminder with 30s Inactivity & 8s Flash Twice Animation */}
+        {canScrollDown && showScrollReminder && (
+          <div 
+            className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
+            onAnimationEnd={() => setShowScrollReminder(false)}
+          >
+            <style>{`
+              @keyframes flashTwice {
+                0% { opacity: 0; }
+                25% { opacity: 1; }
+                50% { opacity: 0; }
+                75% { opacity: 1; }
+                100% { opacity: 0; }
+              }
+              .animate-flash-twice {
+                animation: flashTwice 8s ease-in-out forwards;
+              }
+            `}</style>
             <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
                 More Content Below
