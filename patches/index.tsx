@@ -15,7 +15,7 @@ import { getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
 import { ScrollPillBar } from "@/components/scroll-pill-bar";
 import React from "react";
 
-const navTabs = ["Home", "TV Shows", "Movies", "Netflix", "Prime", "Disney+", "In Theaters", "My List"] as const;
+const navTabs = ["Home", "TV Shows", "Movies", "In Theaters", "My List"] as const;
 type NavTab = (typeof navTabs)[number];
 
 const genreCategories = [
@@ -25,6 +25,13 @@ const genreCategories = [
   "Comedy",
   "Sci-Fi",
   "Horror",
+];
+
+const providerCategories = [
+  "All (Default)",
+  "Netflix",
+  "Prime",
+  "Disney+",
 ];
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
@@ -178,6 +185,14 @@ function Home() {
     }
     return "All (Default)";
   });
+
+  const handleProviderSelect = (provider: string) => {
+    setGlobalFeedOverride(provider);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rabtv_global_feed", provider);
+      window.dispatchEvent(new CustomEvent("rabtv_global_feed_updated", { detail: provider }));
+    }
+  };
 
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -738,7 +753,8 @@ function Home() {
 
   return (
     <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20`}>
-      <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5">
+      {/* 1. SEPARATE STICKY TOP WRAPPER FOR MAIN NAVIGATION BAR */}
+      <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 bg-black/70 backdrop-blur-xl border-b border-white/10 shadow-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-center">
           <div className="w-full">
             <ScrollPillBar
@@ -836,16 +852,33 @@ function Home() {
           )}
         </section>
 
+        {/* 2. SEPARATE WRAPPER FOR GENRES & PROVIDER SLIDERS */}
         {activeTab !== "My List" && (
-          <section className="mb-4 flex justify-center">
-            <div className="w-full max-w-3xl">
-              <ScrollPillBar
-                options={genreCategories.map((genre) => ({ id: genre, label: genre }))}
-                activeId={selectedGenre}
-                onSelect={(id) => setSelectedGenre(id)}
-                appTheme={appTheme}
-                getPrimaryBgColor={getPrimaryBgColor}
-              />
+          <section className="mb-4 space-y-2.5">
+            {/* Genre Filter Pill Bar */}
+            <div className="flex justify-center">
+              <div className="w-full max-w-3xl">
+                <ScrollPillBar
+                  options={genreCategories.map((genre) => ({ id: genre, label: genre }))}
+                  activeId={selectedGenre}
+                  onSelect={(id) => setSelectedGenre(id)}
+                  appTheme={appTheme}
+                  getPrimaryBgColor={getPrimaryBgColor}
+                />
+              </div>
+            </div>
+
+            {/* Provider Filter Pill Bar */}
+            <div className="flex justify-center">
+              <div className="w-full max-w-3xl">
+                <ScrollPillBar
+                  options={providerCategories.map((prov) => ({ id: prov, label: prov }))}
+                  activeId={globalFeedOverride}
+                  onSelect={(id) => handleProviderSelect(id)}
+                  appTheme={appTheme}
+                  getPrimaryBgColor={getPrimaryBgColor}
+                />
+              </div>
             </div>
           </section>
         )}
