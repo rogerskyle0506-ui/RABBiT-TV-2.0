@@ -16,7 +16,7 @@ import { isTitleBroken } from "@/lib/broken-links";
 import { ScrollPillBar } from "@/components/scroll-pill-bar";
 import React from "react";
 
-const navTabs = ["Home", "TV Shows", "Movies", "In Theaters", "My List"] as const;
+const navTabs = ["Home", "TV Shows", "Movies", "In Theaters", "Live TV & Sports", "My List"] as const;
 type NavTab = (typeof navTabs)[number];
 
 const genreCategories = [
@@ -186,6 +186,14 @@ function Home() {
     }
     return "All (Default)";
   });
+
+  const handleTabSelect = (tab: NavTab) => {
+    if (tab === "Live TV & Sports") {
+      window.location.href = "/live-tv";
+      return;
+    }
+    setActiveTab(tab);
+  };
 
   const handleProviderSelect = (provider: string) => {
     setGlobalFeedOverride(provider);
@@ -795,7 +803,7 @@ function Home() {
             <ScrollPillBar
               options={navTabs.map((tab) => ({ id: tab, label: tab }))}
               activeId={activeTab}
-              onSelect={(id) => setActiveTab(id as NavTab)}
+              onSelect={(id) => handleTabSelect(id as NavTab)}
               appTheme={appTheme}
               getPrimaryBgColor={getPrimaryBgColor}
             />
