@@ -9,10 +9,13 @@ export interface LiveChannel {
 }
 
 const PROVIDER_URLS = [
-  // Master Raw M3U Playlist from /all/ directory
+  // Master Raw M3U Playlist & Sports Providers
   'https://i.mjh.nz/all/raw-tv.m3u8',
+  'https://i.mjh.nz/Kayo/app.json',
+  'https://i.mjh.nz/SkySportNow/app.json',
+  'https://i.mjh.nz/Foxtel/app.json',
   
-  // JSON App Manifests
+  // General Entertainment & Streaming Manifests
   'https://i.mjh.nz/PlutoTV/app.json',
   'https://i.mjh.nz/SamsungTVPlus/app.json',
   'https://i.mjh.nz/Plex/app.json',
@@ -20,17 +23,13 @@ const PROVIDER_URLS = [
   'https://i.mjh.nz/Roku/app.json',
   'https://i.mjh.nz/HGTV/app.json',
   'https://i.mjh.nz/Binge/app.json',
-  'https://i.mjh.nz/Kayo/app.json',
   'https://i.mjh.nz/PBS/app.json',
   'https://i.mjh.nz/DStv/app.json',
-  'https://i.mjh.nz/Foxtel/app.json',
   'https://i.mjh.nz/Singtel/app.json',
   'https://i.mjh.nz/SkyGo/app.json',
-  'https://i.mjh.nz/SkySportNow/app.json',
   'https://i.mjh.nz/frndly_tv/app.json',
 ];
 
-// Parser for M3U / M3U8 text playlists
 function parseM3U(text: string): any[] {
   const lines = text.split('\n');
   const channels: any[] = [];
@@ -75,7 +74,6 @@ async function fetchAllRawChannels(): Promise<any[]> {
         if (!res.ok) return [];
         const text = await res.text();
 
-        // Automatic format detection for M3U/M3U8 vs JSON
         if (url.includes('.m3u') || text.startsWith('#EXTM3U') || text.includes('#EXTINF:')) {
           return parseM3U(text);
         }
@@ -134,7 +132,7 @@ export async function fetchLiveCategories(): Promise<string[]> {
     });
 
     const categoryArray = Array.from(groups).sort();
-    return categoryArray.length > 0 ? categoryArray : ['All', 'Sports', 'News', 'Entertainment', 'General'];
+    return ['All', ...categoryArray.filter(c => c !== 'All')];
   } catch (error) {
     console.error('Failed to parse aggregated live categories:', error);
     return ['All', 'Sports', 'News', 'Entertainment', 'General'];
