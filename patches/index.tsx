@@ -12,6 +12,7 @@ import {
   getPosterDimensions,
 } from "@/lib/settings";
 import { getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
+import { isTitleBroken } from "@/lib/broken-links";
 import { ScrollPillBar } from "@/components/scroll-pill-bar";
 import React from "react";
 
@@ -321,12 +322,14 @@ function Home() {
     window.addEventListener("rabtv_watch_history_updated", loadSavedListsAndTheme);
     window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);
     window.addEventListener("rabtv_global_feed_updated", handleGlobalFeedUpdate as EventListener);
+    window.addEventListener("rabtv_broken_links_updated", loadSavedListsAndTheme);
 
     return () => {
       window.removeEventListener("rabtv_catalog_updated", loadSavedListsAndTheme);
       window.removeEventListener("rabtv_watch_history_updated", loadSavedListsAndTheme);
       window.removeEventListener("rabtv_settings_updated", handleSettingsUpdate);
       window.removeEventListener("rabtv_global_feed_updated", handleGlobalFeedUpdate as EventListener);
+      window.removeEventListener("rabtv_broken_links_updated", loadSavedListsAndTheme);
     };
   }, []);
 
@@ -367,7 +370,7 @@ function Home() {
             if (voteAvg < 7.0) continue;
 
             const tmdbId = String(item.id);
-            if (isTitleDisliked(tmdbId) || isTitleDisliked(`movie-${tmdbId}`)) continue;
+            if (isTitleDisliked(tmdbId) || isTitleDisliked(`movie-${tmdbId}`) || isTitleBroken(tmdbId) || isTitleBroken(`movie-${tmdbId}`)) continue;
 
             const historyEntry = watchHistoryMap[tmdbId];
             const isCompleted = historyEntry && (
@@ -417,7 +420,7 @@ function Home() {
             const voteAvg = item.vote_average || 0;
             if (!title || !item.backdrop_path || voteAvg < 7.0) continue;
 
-            if (isTitleDisliked(tmdbId) || isTitleDisliked(`${isTv ? "tv" : "movie"}-${tmdbId}`)) continue;
+            if (isTitleDisliked(tmdbId) || isTitleDisliked(`${isTv ? "tv" : "movie"}-${tmdbId}`) || isTitleBroken(tmdbId) || isTitleBroken(`${isTv ? "tv" : "movie"}-${tmdbId}`)) continue;
 
             const historyEntry = watchHistoryMap[tmdbId];
             const isCompleted = historyEntry && (
@@ -460,7 +463,7 @@ function Home() {
             const voteAvg = item.vote_average || 0;
             if (!item.name || !item.backdrop_path || voteAvg < 7.0) continue;
 
-            if (isTitleDisliked(tmdbId) || isTitleDisliked(`tv-${tmdbId}`)) continue;
+            if (isTitleDisliked(tmdbId) || isTitleDisliked(`tv-${tmdbId}`) || isTitleBroken(tmdbId) || isTitleBroken(`tv-${tmdbId}`)) continue;
 
             const historyEntry = watchHistoryMap[tmdbId];
             const isCompleted = historyEntry && (
@@ -496,7 +499,7 @@ function Home() {
               const voteAvg = Number(item.rating ?? 7.0);
               if (voteAvg < 7.0) continue;
 
-              if (isTitleDisliked(item.id) || isTitleDisliked(tmdbId)) continue;
+              if (isTitleDisliked(item.id) || isTitleDisliked(tmdbId) || isTitleBroken(item.id) || isTitleBroken(tmdbId)) continue;
 
               const historyEntry = watchHistoryMap[tmdbId];
               const isCompleted = historyEntry && (
@@ -623,7 +626,7 @@ function Home() {
         const uniqueSuggestions = new Map<string, MediaItem>();
         for (const candidate of fetchedPool) {
           const cleanId = String(candidate.id).replace(/^(movie|tv)-/, "");
-          if (watchedIds.has(cleanId) || isTitleDisliked(candidate.id)) continue;
+          if (watchedIds.has(cleanId) || isTitleDisliked(candidate.id) || isTitleBroken(candidate.id)) continue;
           
           if (!isAllowedForAge((candidate as any).certification, candidate.genre, userAge)) continue;
 
@@ -668,7 +671,7 @@ function Home() {
 
     const map = new Map<string, MediaItem>();
     for (const item of rawList) {
-      if (isTitleDisliked(item.id)) continue;
+      if (isTitleDisliked(item.id) || isTitleBroken(item.id)) continue;
       if (!isAllowedForAge((item as any).certification, item.genre, userAge)) continue;
 
       const normalizedTitle = (item.title ?? "").trim().toLowerCase();
@@ -685,7 +688,7 @@ function Home() {
     const baseList = activeTab === "My List" ? savedCatalogItems : items;
     
     return baseList.filter((item) => {
-      if (isTitleDisliked(item.id)) return false;
+      if (isTitleDisliked(item.id) || isTitleBroken(item.id)) return false;
       return isAllowedForAge((item as any).certification, item.genre, userAge);
     });
   }, [items, activeTab, savedCatalogItems, userAge]);
