@@ -8,21 +8,49 @@ export interface LiveChannel {
   provider?: string;
 }
 
+// Guaranteed fallback channels so the UI instantly populates even if offline or blocked
+const FALLBACK_CHANNELS: LiveChannel[] = [
+  {
+    id: 'sample-1',
+    title: 'NASA TV Live',
+    logo: 'https://www.nasa.gov/wp-content/themes/nasa/assets/images/nasa-logo.svg',
+    streamUrl: 'https://ntv1.nasa.gov/hls/live/511628/NASA-NTV1-HLS/master.m3u8',
+    category: 'News',
+  },
+  {
+    id: 'sample-2',
+    title: 'Red Bull TV',
+    logo: 'https://image.redbull.com/rbcom/0105/0/000/1/545/657/1200/logo/red-bull-tv-logo.png',
+    streamUrl: 'https://rbmn-live.akamaized.net/hls/live/590964/redbull-app-de/index.m3u8',
+    category: 'Sports',
+  },
+  {
+    id: 'sample-3',
+    title: 'Big Buck Bunny (Test Stream)',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg',
+    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    category: 'Entertainment',
+  }
+];
+
 const PROVIDER_URLS = [
-  // Master Raw M3U Playlist & Sports Providers
+  // Master Raw M3U Playlists
   'https://i.mjh.nz/all/raw-tv.m3u8',
+  'https://i.mjh.nz/all/kodi-tv.m3u8',
+  
+  // Sports & Premium Providers
   'https://i.mjh.nz/Kayo/app.json',
   'https://i.mjh.nz/SkySportNow/app.json',
   'https://i.mjh.nz/Foxtel/app.json',
+  'https://i.mjh.nz/Binge/app.json',
   
-  // General Entertainment & Streaming Manifests
+  // Standard TV & Streaming Manifests
   'https://i.mjh.nz/PlutoTV/app.json',
   'https://i.mjh.nz/SamsungTVPlus/app.json',
   'https://i.mjh.nz/Plex/app.json',
   'https://i.mjh.nz/MeTV/app.json',
   'https://i.mjh.nz/Roku/app.json',
   'https://i.mjh.nz/HGTV/app.json',
-  'https://i.mjh.nz/Binge/app.json',
   'https://i.mjh.nz/PBS/app.json',
   'https://i.mjh.nz/DStv/app.json',
   'https://i.mjh.nz/Singtel/app.json',
@@ -30,6 +58,7 @@ const PROVIDER_URLS = [
   'https://i.mjh.nz/frndly_tv/app.json',
 ];
 
+// Parser for M3U / M3U8 text playlists
 function parseM3U(text: string): any[] {
   const lines = text.split('\n');
   const channels: any[] = [];
@@ -45,9 +74,9 @@ function parseM3U(text: string): any[] {
 
       const groupMatch = line.match(/group-title="([^"]+)"/);
       if (groupMatch) {
-        currentChannel.groups = [groupMatch[1]];
+        currentChannel.category = groupMatch[1];
       } else {
-        currentChannel.groups = ['General'];
+        currentChannel.category = 'General';
       }
 
       const commaIndex = line.lastIndexOf(',');
@@ -74,10 +103,12 @@ async function fetchAllRawChannels(): Promise<any[]> {
         if (!res.ok) return [];
         const text = await res.text();
 
+        // Handle M3U/M3U8 playlists
         if (url.includes('.m3u') || text.startsWith('#EXTM3U') || text.includes('#EXTINF:')) {
           return parseM3U(text);
         }
 
+        // Handle JSON manifests
         const data = JSON.parse(text);
         let rawList: any[] = [];
 
@@ -102,10 +133,32 @@ async function fetchAllRawChannels(): Promise<any[]> {
     });
 
     const results = await Promise.all(promises);
-    return results.flat().filter(Boolean);
+    const fetched = results.flat().filter(Boolean);
+
+    const mappedFetched: LiveChannel[] = fetched.map((channel: any, index: number) => {
+      const streamUrl = 
+        channel.url || 
+        channel.streamUrl || 
+        channel.stream || 
+        (Array.isArray(channel.playlist) && channel.playlist[0]) || 
+        (typeof channel.playlist === 'string' ? channel.playlist : '') || 
+        '';
+      
+      const rawCategory = channel.category || channel.group || (Array.isArray(channel.groups) ? channel.groups[0] : 'General');
+
+      return {
+        id: String(channel.id || channel.tvg_id || `fetched-${index}`),
+        title: channel.name || channel.title || channel.tvg_name || channel.displayName || `Channel ${index + 1}`,
+        logo: channel.logo || channel.tvg_logo || channel.icon || '',
+        streamUrl,
+        category: typeof rawCategory === 'string' ? rawCategory : 'General',
+      };
+    }).filter(c => c.streamUrl);
+
+    return [...mappedFetched, ...FALLBACK_CHANNELS];
   } catch (error) {
-    console.error('Failed to aggregate raw live channels feeds:', error);
-    return [];
+    console.error('Failed to aggregate feeds, falling back to defaults:', error);
+    return FALLBACK_CHANNELS;
   }
 }
 
@@ -114,27 +167,13 @@ export async function fetchLiveCategories(): Promise<string[]> {
     const channels = await fetchAllRawChannels();
     const groups = new Set<string>();
 
-    channels.forEach((channel: any) => {
-      const channelGroups = 
-        channel.groups || 
-        channel.group || 
-        (channel.category ? [channel.category] : null) || 
-        (channel.genre ? [channel.genre] : null) || 
-        ['General'];
-
-      if (Array.isArray(channelGroups)) {
-        channelGroups.forEach((g) => {
-          if (g) groups.add(String(g).trim());
-        });
-      } else if (typeof channelGroups === 'string') {
-        groups.add(channelGroups.trim());
-      }
+    channels.forEach((c) => {
+      if (c.category) groups.add(c.category.trim());
     });
 
     const categoryArray = Array.from(groups).sort();
-    return ['All', ...categoryArray.filter(c => c !== 'All')];
-  } catch (error) {
-    console.error('Failed to parse aggregated live categories:', error);
+    return ['All', 'Sports', ...categoryArray.filter(c => c !== 'All' && c !== 'Sports')];
+  } catch (e) {
     return ['All', 'Sports', 'News', 'Entertainment', 'General'];
   }
 }
@@ -142,51 +181,25 @@ export async function fetchLiveCategories(): Promise<string[]> {
 export async function fetchChannelsByCategory(categoryName: string): Promise<LiveChannel[]> {
   try {
     const channels = await fetchAllRawChannels();
-    const results: LiveChannel[] = [];
     const seenUrls = new Set<string>();
-
-    channels.forEach((channel: any, index: number) => {
-      const channelGroups = 
-        channel.groups || 
-        channel.group || 
-        (channel.category ? [channel.category] : []) || 
-        (channel.genre ? [channel.genre] : []) || 
-        ['General'];
-
-      const groupList = Array.isArray(channelGroups) 
-        ? channelGroups.map((g) => String(g).trim().toLowerCase()) 
-        : [String(channelGroups).trim().toLowerCase()];
-
-      const matchesCategory =
-        categoryName === 'All' ||
-        categoryName === 'All (Default)' ||
-        groupList.includes(categoryName.toLowerCase());
-
-      if (matchesCategory) {
-        const streamUrl = 
-          channel.url || 
-          channel.streamUrl || 
-          channel.stream || 
-          (Array.isArray(channel.playlist) && channel.playlist[0]) || 
-          (typeof channel.playlist === 'string' ? channel.playlist : '') || 
-          '';
-
-        if (streamUrl && !seenUrls.has(streamUrl)) {
-          seenUrls.add(streamUrl);
-          results.push({
-            id: String(channel.id || channel.tvg_id || `${index}-${Math.random()}`),
-            title: channel.name || channel.title || channel.tvg_name || channel.displayName || `Channel ${index + 1}`,
-            logo: channel.logo || channel.tvg_logo || channel.icon || '',
-            streamUrl,
-            category: Array.isArray(channelGroups) ? channelGroups[0] : categoryName,
-          });
-        }
-      }
+    const uniqueChannels = channels.filter(c => {
+      if (!c.streamUrl || seenUrls.has(c.streamUrl)) return false;
+      seenUrls.add(c.streamUrl);
+      return true;
     });
 
-    return results.sort((a, b) => a.title.localeCompare(b.title));
+    if (categoryName === 'All' || categoryName === 'All (Default)') {
+      return uniqueChannels.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    const filtered = uniqueChannels.filter((c) => 
+      c.category.toLowerCase().includes(categoryName.toLowerCase()) ||
+      c.title.toLowerCase().includes(categoryName.toLowerCase())
+    );
+
+    return filtered.length > 0 ? filtered.sort((a, b) => a.title.localeCompare(b.title)) : uniqueChannels;
   } catch (error) {
     console.error(`Failed to fetch channels for category ${categoryName}:`, error);
-    return [];
+    return FALLBACK_CHANNELS;
   }
 }
