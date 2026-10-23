@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, memo } from "react";
 import type { MediaItem } from "@/lib/tmdb-scraper";
 import { scrapeCategoryContent } from "@/lib/tmdb-scraper";
@@ -178,6 +178,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<NavTab>("Home");
   const [selectedGenre, setSelectedGenre] = useState<string>("Trending");
   const [globalFeedOverride, setGlobalFeedOverride] = useState<string>(() => {
@@ -189,7 +190,7 @@ function Home() {
 
   const handleTabSelect = (tab: NavTab) => {
     if (tab === "Live TV & Sports") {
-      window.location.href = "/live-tv";
+      navigate({ to: "/live-tv" });
       return;
     }
     setActiveTab(tab);
