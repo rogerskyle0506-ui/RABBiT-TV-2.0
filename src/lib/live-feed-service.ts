@@ -8,8 +8,11 @@ export interface LiveChannel {
   provider?: string;
 }
 
-// Comprehensive list pointing to every provider endpoint available in the repository index
 const PROVIDER_URLS = [
+  // Master Raw M3U Playlist from /all/ directory
+  'https://i.mjh.nz/all/raw-tv.m3u8',
+  
+  // JSON App Manifests
   'https://i.mjh.nz/PlutoTV/app.json',
   'https://i.mjh.nz/SamsungTVPlus/app.json',
   'https://i.mjh.nz/Plex/app.json',
@@ -27,28 +30,76 @@ const PROVIDER_URLS = [
   'https://i.mjh.nz/frndly_tv/app.json',
 ];
 
+// Parser for M3U / M3U8 text playlists
+function parseM3U(text: string): any[] {
+  const lines = text.split('\n');
+  const channels: any[] = [];
+  let currentChannel: any = {};
+
+  for (let line of lines) {
+    line = line.trim();
+    if (line.startsWith('#EXTINF:')) {
+      currentChannel = {};
+      
+      const logoMatch = line.match(/tvg-logo="([^"]+)"/);
+      if (logoMatch) currentChannel.logo = logoMatch[1];
+
+      const groupMatch = line.match(/group-title="([^"]+)"/);
+      if (groupMatch) {
+        currentChannel.groups = [groupMatch[1]];
+      } else {
+        currentChannel.groups = ['General'];
+      }
+
+      const commaIndex = line.lastIndexOf(',');
+      if (commaIndex !== -1) {
+        currentChannel.title = line.substring(commaIndex + 1).trim();
+      }
+    } else if (line && !line.startsWith('#')) {
+      if (currentChannel.title) {
+        currentChannel.url = line;
+        currentChannel.id = `${channels.length}-${currentChannel.title}`;
+        channels.push(currentChannel);
+        currentChannel = {};
+      }
+    }
+  }
+  return channels;
+}
+
 async function fetchAllRawChannels(): Promise<any[]> {
   try {
     const promises = PROVIDER_URLS.map(async (url) => {
       try {
         const res = await fetch(url);
-        if (!res.ok) return null;
-        const data = await res.json();
-        const raw = data.channels || data.items || data;
-        
-        if (Array.isArray(raw)) {
-          return raw;
+        if (!res.ok) return [];
+        const text = await res.text();
+
+        // Automatic format detection for M3U/M3U8 vs JSON
+        if (url.includes('.m3u') || text.startsWith('#EXTM3U') || text.includes('#EXTINF:')) {
+          return parseM3U(text);
         }
-        if (raw && typeof raw === 'object') {
-          return Object.entries(raw).map(([key, val]: [string, any]) => ({
-            id: val.id || key,
-            ...val,
-          }));
+
+        const data = JSON.parse(text);
+        let rawList: any[] = [];
+
+        if (Array.isArray(data)) {
+          rawList = data;
+        } else if (data && typeof data === 'object') {
+          const candidate = data.channels || data.items || data.data || data;
+          if (Array.isArray(candidate)) {
+            rawList = candidate;
+          } else if (typeof candidate === 'object') {
+            rawList = Object.entries(candidate).map(([key, val]: [string, any]) => ({
+              id: val?.id || key,
+              ...(typeof val === 'object' && val !== null ? val : { title: String(val) }),
+            }));
+          }
         }
-        return [];
+
+        return rawList;
       } catch (e) {
-        // Skip any providers that fail or use a different file structure silently
-        return null;
+        return [];
       }
     });
 
@@ -68,14 +119,17 @@ export async function fetchLiveCategories(): Promise<string[]> {
     channels.forEach((channel: any) => {
       const channelGroups = 
         channel.groups || 
+        channel.group || 
         (channel.category ? [channel.category] : null) || 
         (channel.genre ? [channel.genre] : null) || 
         ['General'];
 
       if (Array.isArray(channelGroups)) {
         channelGroups.forEach((g) => {
-          if (g) groups.add(String(g));
+          if (g) groups.add(String(g).trim());
         });
+      } else if (typeof channelGroups === 'string') {
+        groups.add(channelGroups.trim());
       }
     });
 
@@ -91,33 +145,40 @@ export async function fetchChannelsByCategory(categoryName: string): Promise<Liv
   try {
     const channels = await fetchAllRawChannels();
     const results: LiveChannel[] = [];
-    const seenUrls = new Set<string>(); // Prevent duplicate streams
+    const seenUrls = new Set<string>();
 
     channels.forEach((channel: any, index: number) => {
       const channelGroups = 
         channel.groups || 
+        channel.group || 
         (channel.category ? [channel.category] : []) || 
         (channel.genre ? [channel.genre] : []) || 
         ['General'];
 
+      const groupList = Array.isArray(channelGroups) 
+        ? channelGroups.map((g) => String(g).trim().toLowerCase()) 
+        : [String(channelGroups).trim().toLowerCase()];
+
       const matchesCategory =
         categoryName === 'All' ||
         categoryName === 'All (Default)' ||
-        (Array.isArray(channelGroups) && channelGroups.some((g) => String(g).toLowerCase() === categoryName.toLowerCase()));
+        groupList.includes(categoryName.toLowerCase());
 
       if (matchesCategory) {
         const streamUrl = 
           channel.url || 
-          (Array.isArray(channel.playlist) && channel.playlist[0]) || 
           channel.streamUrl || 
+          channel.stream || 
+          (Array.isArray(channel.playlist) && channel.playlist[0]) || 
+          (typeof channel.playlist === 'string' ? channel.playlist : '') || 
           '';
 
         if (streamUrl && !seenUrls.has(streamUrl)) {
           seenUrls.add(streamUrl);
           results.push({
             id: String(channel.id || channel.tvg_id || `${index}-${Math.random()}`),
-            title: channel.name || channel.title || channel.tvg_name || `Channel ${index + 1}`,
-            logo: channel.logo || channel.tvg_logo || '',
+            title: channel.name || channel.title || channel.tvg_name || channel.displayName || `Channel ${index + 1}`,
+            logo: channel.logo || channel.tvg_logo || channel.icon || '',
             streamUrl,
             category: Array.isArray(channelGroups) ? channelGroups[0] : categoryName,
           });
