@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { AppTheme, getSavedTheme } from "@/lib/settings";
 import { isTitleDisliked } from "@/lib/watch-history";
@@ -13,7 +13,6 @@ export const Route = createFileRoute("/details")({
 });
 
 export function DetailsPage() {
-  const navigate = useNavigate();
   const search = Route.useSearch() as { id?: string; type?: string };
   const mediaId = search?.id;
   
@@ -43,14 +42,8 @@ export function DetailsPage() {
   const seasonRef = useRef<HTMLDivElement>(null);
   const episodeRef = useRef<HTMLDivElement>(null);
 
-  const handleBackHome = (e: React.MouseEvent) => {
-    e.preventDefault();
-    window.dispatchEvent(new Event("rabtv_restore_home_state"));
-    navigate({ to: "/" });
-  };
-
   useEffect(() => {
-    if (isPlaying) return;
+    if (isPlaying) return; // Pause scroll check during playback for performance
 
     const checkVerticalScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -122,7 +115,7 @@ export function DetailsPage() {
 
   useEffect(() => {
     async function fetchSimilarContent() {
-      if (!mediaId || isPlaying) return;
+      if (!mediaId || isPlaying) return; // Skip fetching recommendations while playing video
       try {
         const apiKey =
           (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
@@ -499,13 +492,12 @@ export function DetailsPage() {
 
   return (
     <div className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20`}>
-      <a
-        href="/"
-        onClick={handleBackHome}
-        className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1 cursor-pointer`}
+      <Link
+        className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
+        to="/"
       >
         ← Back to Home
-      </a>
+      </Link>
 
       {isPlaying ? (
         <div className="mx-auto flex max-w-5xl flex-col gap-6">
