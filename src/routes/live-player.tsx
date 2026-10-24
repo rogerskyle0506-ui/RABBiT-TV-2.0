@@ -299,17 +299,17 @@ function LivePlayerComponent() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {suggestedChannels.map((channel) => (
                 <Link
-                  key={channel.id}
+                  key={channel.channelId || channel.url}
                   to="/live-player"
                   search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || '' }}
                   className={`group flex flex-col items-center p-3.5 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden`}
                 >
-                  <div className="w-full h-24 bg-black/50 rounded-xl mb-2.5 overflow-hidden flex items-center justify-center border border-white/10 relative">
+                  <div className="w-full h-24 bg-black/50 rounded-xl mb-2.5 overflow-hidden flex items-center justify-center border border-white/10 relative p-2">
                     {channel.logo ? (
                       <img
                         src={channel.logo}
                         alt={channel.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform"
                         loading="lazy"
                       />
                     ) : (
