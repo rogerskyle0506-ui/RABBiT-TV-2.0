@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { fetchLiveCategories, fetchChannelsByCategory, LiveChannel } from '../lib/live-feed-service';
+import { fetchLiveCategories, fetchChannelsByCategory, liveFeedServices, LiveChannel } from '../lib/live-feed-service';
 import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { ScrollPillBar } from '@/components/scroll-pill-bar';
 
@@ -24,17 +24,25 @@ function LiveTvComponent() {
 
   useEffect(() => {
     fetchLiveCategories().then((cats) => {
-      setCategories(cats);
-      if (cats.length > 0) {
-        setSelectedCategory('All');
-      }
+      // Always prepend 'All' so it appears as the first category tab
+      setCategories(['All', ...cats]);
+      setSelectedCategory('All');
       setLoading(false);
     });
   }, []);
 
   useEffect(() => {
-    if (selectedCategory) {
-      setLoading(true);
+    setLoading(true);
+    if (selectedCategory === 'All') {
+      // Map all channels directly from liveFeedServices when 'All' is selected
+      const allChannels: LiveChannel[] = liveFeedServices.map((s) => ({
+        ...s,
+        streamUrl: s.url,
+        title: s.name,
+      }));
+      setChannels(allChannels);
+      setLoading(false);
+    } else if (selectedCategory) {
       fetchChannelsByCategory(selectedCategory).then((chans) => {
         setChannels(chans);
         setLoading(false);
@@ -105,7 +113,7 @@ function LiveTvComponent() {
   return (
     <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-4 sm:px-6`}>
       <header className="py-6 max-w-7xl mx-auto space-y-3">
-        {/* Clean single-line Back to Home button above title */}
+        {/* Single-line Back to Home button above title */}
         <div>
           <Link
             to="/"
@@ -120,7 +128,7 @@ function LiveTvComponent() {
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Stream live broadcast feeds, sports channels, and events.</p>
         </div>
 
-        {/* Scrollable Category Navigation Tabs (World, Nz, Brisbane, Sydney, Melbourne, All) */}
+        {/* Category Navigation Bar */}
         <div className="w-full pt-2">
           <ScrollPillBar
             options={categories.map((cat) => ({ id: cat, label: cat }))}
@@ -146,17 +154,18 @@ function LiveTvComponent() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {channels.map((channel) => (
               <Link
-                key={channel.id}
+                key={channel.channelId || channel.url}
                 to="/live-player"
                 search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || '' }}
                 className={`group flex flex-col items-center p-3.5 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden`}
               >
-                <div className="w-full h-28 bg-black/50 rounded-xl mb-3 overflow-hidden flex items-center justify-center border border-white/10 relative">
+                {/* Changed object-cover to object-contain with padding to keep logos fully visible */}
+                <div className="w-full h-28 bg-black/50 rounded-xl mb-3 overflow-hidden flex items-center justify-center border border-white/10 relative p-2">
                   {channel.logo ? (
                     <img
                       src={channel.logo}
                       alt={channel.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform"
                       loading="lazy"
                     />
                   ) : (
