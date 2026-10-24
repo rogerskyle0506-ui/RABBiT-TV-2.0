@@ -8,6 +8,25 @@ export const Route = createFileRoute('/live-tv')({
   component: LiveTvComponent,
 });
 
+// Canadian display mapping for Australian / NZ regional feeds (display-only overlay)
+const categoryMapping: Record<string, string> = {
+  'Nz': 'Atlantic Canada',
+  'Sydney': 'Toronto',
+  'Melbourne': 'Vancouver',
+  'Brisbane': 'Montreal',
+  'Perth': 'Calgary',
+  'Adelaide': 'Ottawa',
+  'Canberra': 'National',
+  'Darwin': 'Northern',
+  'Hobart': 'Pacific',
+  'Au': 'Canada Feeds',
+  'World': 'International',
+};
+
+const reverseCategoryMapping: Record<string, string> = Object.fromEntries(
+  Object.entries(categoryMapping).map(([orig, disp]) => [disp, orig])
+);
+
 function LiveTvComponent() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -24,8 +43,9 @@ function LiveTvComponent() {
 
   useEffect(() => {
     fetchLiveCategories().then((cats) => {
-      // Always prepend 'All' so it appears as the first category tab
-      setCategories(['All', ...cats]);
+      // Map categories to Canadian display names while preserving original backend references
+      const displayCats = cats.map((cat) => categoryMapping[cat] || cat);
+      setCategories(['All', ...displayCats]);
       setSelectedCategory('All');
       setLoading(false);
     });
@@ -34,7 +54,6 @@ function LiveTvComponent() {
   useEffect(() => {
     setLoading(true);
     if (selectedCategory === 'All') {
-      // Map all channels directly from liveFeedServices when 'All' is selected
       const allChannels: LiveChannel[] = liveFeedServices.map((s) => ({
         ...s,
         streamUrl: s.url,
@@ -43,7 +62,9 @@ function LiveTvComponent() {
       setChannels(allChannels);
       setLoading(false);
     } else if (selectedCategory) {
-      fetchChannelsByCategory(selectedCategory).then((chans) => {
+      // Resolve Canadian display tab back to original underlying category key
+      const originalCategory = reverseCategoryMapping[selectedCategory] || selectedCategory;
+      fetchChannelsByCategory(originalCategory).then((chans) => {
         setChannels(chans);
         setLoading(false);
       });
@@ -111,9 +132,8 @@ function LiveTvComponent() {
   };
 
   return (
-    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-4 sm:px-6`}>
-      <header className="py-6 max-w-7xl mx-auto space-y-3">
-        {/* Single-line Back to Home button above title */}
+    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-4 sm:px-6 w-full max-w-full overflow-x-hidden box-border`}>
+      <header className="py-6 max-w-7xl mx-auto space-y-3 box-border">
         <div>
           <Link
             to="/"
@@ -128,7 +148,7 @@ function LiveTvComponent() {
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Stream live broadcast feeds, sports channels, and events.</p>
         </div>
 
-        {/* Category Navigation Bar */}
+        {/* Category Navigation Bar with Canadian Display Names */}
         <div className="w-full pt-2">
           <ScrollPillBar
             options={categories.map((cat) => ({ id: cat, label: cat }))}
@@ -140,7 +160,7 @@ function LiveTvComponent() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto box-border">
         <div className="mb-3 flex items-center justify-between px-1">
           <h3 className="text-lg font-bold text-white">{selectedCategory} Feeds</h3>
           <span className={`text-xs font-medium ${themeStyles.accentText}`}>{channels.length} channels available</span>
@@ -157,10 +177,9 @@ function LiveTvComponent() {
                 key={channel.channelId || channel.url}
                 to="/live-player"
                 search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || '' }}
-                className={`group flex flex-col items-center p-3.5 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden`}
+                className={`group flex flex-col items-center p-3.5 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden box-border`}
               >
-                {/* Changed object-cover to object-contain with padding to keep logos fully visible */}
-                <div className="w-full h-28 bg-black/50 rounded-xl mb-3 overflow-hidden flex items-center justify-center border border-white/10 relative p-2">
+                <div className="w-full h-28 bg-black/50 rounded-xl mb-3 overflow-hidden flex items-center justify-center border border-white/10 relative p-2 box-border">
                   {channel.logo ? (
                     <img
                       src={channel.logo}
