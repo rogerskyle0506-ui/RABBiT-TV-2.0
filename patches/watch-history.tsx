@@ -232,7 +232,15 @@ function WatchHistoryComponent() {
           <span><strong className="text-white">✕</strong> = Reset to Un-tracked</span>
         </div>
         <div className="text-violet-400 font-medium">
-          ✨ More saved items are also on your <Link to="/" className="text-white underline hover:text-violet-300 transition font-bold">My List</Link> tab!
+          ✨ More saved items are also on your{" "}
+          <Link
+            to="/"
+            search={{ tab: "My List" }}
+            className="text-white underline hover:text-violet-300 transition font-bold"
+          >
+            My List
+          </Link>{" "}
+          tab!
         </div>
       </div>
 
