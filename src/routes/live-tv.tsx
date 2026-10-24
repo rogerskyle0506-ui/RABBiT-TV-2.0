@@ -10,7 +10,7 @@ export const Route = createFileRoute('/live-tv')({
 
 function LiveTvComponent() {
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [channels, setChannels] = useState<LiveChannel[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [appTheme, setAppTheme] = useState<AppTheme>('violet');
@@ -26,7 +26,7 @@ function LiveTvComponent() {
     fetchLiveCategories().then((cats) => {
       setCategories(cats);
       if (cats.length > 0) {
-        setSelectedCategory(cats[0]);
+        setSelectedCategory('All');
       }
       setLoading(false);
     });
@@ -48,7 +48,6 @@ function LiveTvComponent() {
         return {
           bg: 'bg-gradient-to-br from-zinc-950 via-red-950/40 to-black',
           cardGradient: 'from-red-950/80 via-zinc-900 to-neutral-950',
-          btnActive: 'bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30',
           accentText: 'text-red-400',
           borderGlow: 'border-red-500/30',
         };
@@ -56,7 +55,6 @@ function LiveTvComponent() {
         return {
           bg: 'bg-gradient-to-br from-slate-950 via-blue-950/40 to-slate-950',
           cardGradient: 'from-blue-950/80 via-slate-900 to-sky-950/80',
-          btnActive: 'bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30',
           accentText: 'text-sky-300',
           borderGlow: 'border-sky-500/30',
         };
@@ -64,7 +62,6 @@ function LiveTvComponent() {
         return {
           bg: 'bg-gradient-to-br from-slate-950 via-emerald-950/40 to-slate-950',
           cardGradient: 'from-emerald-950/80 via-slate-900 to-teal-950/80',
-          btnActive: 'bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30',
           accentText: 'text-emerald-300',
           borderGlow: 'border-emerald-500/30',
         };
@@ -72,7 +69,6 @@ function LiveTvComponent() {
         return {
           bg: 'bg-gradient-to-br from-stone-950 via-yellow-950/40 to-neutral-950',
           cardGradient: 'from-yellow-950/80 via-stone-900 to-amber-950/80',
-          btnActive: 'bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30',
           accentText: 'text-amber-300',
           borderGlow: 'border-amber-500/30',
         };
@@ -80,7 +76,6 @@ function LiveTvComponent() {
         return {
           bg: 'bg-gradient-to-br from-slate-950 via-cyan-950/40 to-slate-950',
           cardGradient: 'from-cyan-950/80 via-slate-900 to-blue-950/80',
-          btnActive: 'bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30',
           accentText: 'text-cyan-300',
           borderGlow: 'border-cyan-500/30',
         };
@@ -89,7 +84,6 @@ function LiveTvComponent() {
         return {
           bg: 'bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-950',
           cardGradient: 'from-purple-950/80 via-slate-900 to-indigo-950/80',
-          btnActive: 'bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30',
           accentText: 'text-violet-300',
           borderGlow: 'border-violet-500/30',
         };
@@ -110,18 +104,24 @@ function LiveTvComponent() {
 
   return (
     <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-4 sm:px-6`}>
-      <header className="py-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white">Live TV & Sports</h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Stream live broadcast feeds, sports channels, and events.</p>
-          </div>
-          <Link to="/" className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold hover:bg-white/10 transition">
-            ← Back to Home
+      <header className="py-6 max-w-7xl mx-auto space-y-3">
+        {/* Clean single-line Back to Home button above title */}
+        <div>
+          <Link
+            to="/"
+            className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition"
+          >
+            <span>← Back to Home</span>
           </Link>
         </div>
 
-        <div className="w-full">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">Live TV & Sports</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Stream live broadcast feeds, sports channels, and events.</p>
+        </div>
+
+        {/* Scrollable Category Navigation Tabs (World, Nz, Brisbane, Sydney, Melbourne, All) */}
+        <div className="w-full pt-2">
           <ScrollPillBar
             options={categories.map((cat) => ({ id: cat, label: cat }))}
             activeId={selectedCategory}
@@ -148,21 +148,21 @@ function LiveTvComponent() {
               <Link
                 key={channel.id}
                 to="/live-player"
-                search={{ url: channel.streamUrl, title: channel.title }}
-                className={`group flex flex-col items-center p-4 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden`}
+                search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || '' }}
+                className={`group flex flex-col items-center p-3.5 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden`}
               >
-                {channel.logo ? (
-                  <img
-                    src={channel.logo}
-                    alt={channel.title}
-                    className="w-16 h-16 object-contain mb-3 rounded-xl bg-black/40 p-2 border border-white/10 group-hover:scale-105 transition-transform"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-white/5 rounded-xl mb-3 flex items-center justify-center text-slate-400 font-bold border border-white/10">
-                    LIVE
-                  </div>
-                )}
+                <div className="w-full h-28 bg-black/50 rounded-xl mb-3 overflow-hidden flex items-center justify-center border border-white/10 relative">
+                  {channel.logo ? (
+                    <img
+                      src={channel.logo}
+                      alt={channel.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-slate-400">LIVE</span>
+                  )}
+                </div>
                 <span className="text-xs font-bold line-clamp-2 text-white group-hover:text-slate-200">
                   {channel.title}
                 </span>
