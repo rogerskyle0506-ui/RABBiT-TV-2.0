@@ -9,8 +9,11 @@ import {
   getDislikedTitles,
   removeDislikedTitle,
   dislikeTitle,
+  getRecentLiveChannels,
+  removeRecentLiveChannel,
   ShowWatchHistory,
   DislikedTitle,
+  RecentLiveChannel,
 } from "@/lib/watch-history";
 
 export const Route = createFileRoute("/watch-history")({
@@ -21,6 +24,7 @@ const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
 function WatchHistoryComponent() {
   const [historyMap, setHistoryMap] = useState<Record<string, ShowWatchHistory>>({});
+  const [recentLiveChannels, setRecentLiveChannels] = useState<RecentLiveChannel[]>([]);
   const [dislikedTitles, setDislikedTitles] = useState<DislikedTitle[]>([]);
   const [verifyingTarget, setVerifyingTarget] = useState<{ showId: string; episodeId: string; title: string } | null>(null);
   const [appTheme, setAppTheme] = useState<AppTheme>("violet");
@@ -46,9 +50,8 @@ function WatchHistoryComponent() {
       window.removeEventListener("scroll", checkVerticalScroll);
       window.removeEventListener("resize", checkVerticalScroll);
     };
-  }, [historyMap, dislikedTitles]);
+  }, [historyMap, recentLiveChannels, dislikedTitles]);
 
-  // Handle 30s user inactivity & reset on user interaction
   useEffect(() => {
     let inactivityTimer: NodeJS.Timeout;
 
@@ -59,7 +62,7 @@ function WatchHistoryComponent() {
       if (canScrollDown) {
         inactivityTimer = setTimeout(() => {
           setShowScrollReminder(true);
-        }, 30000); // 30 seconds wait time
+        }, 30000);
       }
     };
 
@@ -81,6 +84,7 @@ function WatchHistoryComponent() {
 
   const refreshData = () => {
     setHistoryMap(getWatchHistory());
+    setRecentLiveChannels(getRecentLiveChannels());
     setDislikedTitles(getDislikedTitles());
     setAppTheme(getSavedTheme());
     setCardSize(getSavedCardSize());
@@ -208,6 +212,8 @@ function WatchHistoryComponent() {
   const inProgressShows = tvShows.filter((s) => calculateSeriesProgress(s) < 100);
   const completedShows = tvShows.filter((s) => calculateSeriesProgress(s) === 100);
 
+  const iconBtnClass = largeButtons ? "h-7 w-7 text-sm" : "h-6 w-6 text-xs";
+
   return (
     <div className={`min-h-screen w-full ${getPageBackground(appTheme)} p-4 md:p-12 text-white space-y-6 transition-colors duration-300 pb-20 overflow-x-hidden`}>
       <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -218,7 +224,7 @@ function WatchHistoryComponent() {
           <span>Watch History & Activity</span>
         </h1>
         <span className="text-xs text-slate-400 font-semibold">
-          {allEntries.length} Tracked Titles
+          {allEntries.length + recentLiveChannels.length} Tracked Items
         </span>
       </div>
 
@@ -244,13 +250,70 @@ function WatchHistoryComponent() {
         </div>
       </div>
 
-      {allEntries.length === 0 && dislikedTitles.length === 0 ? (
+      {allEntries.length === 0 && recentLiveChannels.length === 0 && dislikedTitles.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-black/40 p-8 text-center text-slate-400 backdrop-blur-md">
           <p className="text-sm font-bold">No watch history recorded yet.</p>
-          <p className="text-xs mt-1">Start watching movies or shows to automatically populate your history.</p>
+          <p className="text-xs mt-1">Start watching movies, shows, or live streams to automatically populate your history.</p>
         </div>
       ) : (
         <div className="space-y-12">
+          {recentLiveChannels.length > 0 && (
+            <section className="space-y-4">
+              <h2 className="text-sm font-bold text-slate-200 border-l-4 border-red-500 pl-3 uppercase tracking-wider flex items-center gap-2">
+                <span>🔴 Recently Watched Live TV</span>
+                <span className="text-[10px] text-red-400 font-bold lowercase">(Last {recentLiveChannels.length})</span>
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-2 items-start">
+                {recentLiveChannels.map((channel) => (
+                  <div
+                    key={channel.channelId}
+                    className="group relative rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/90 to-black p-3 shadow-xl hover:-translate-y-1 transition text-center flex flex-col items-center justify-between overflow-hidden"
+                  >
+                    <div className="absolute top-1.5 right-1.5 z-10">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeRecentLiveChannel(channel.channelId);
+                          refreshData();
+                        }}
+                        className={`flex items-center justify-center rounded-lg bg-red-950/90 text-red-300 backdrop-blur-md border border-red-500/30 transition hover:bg-red-600 hover:text-white focus:outline-none font-bold ${iconBtnClass}`}
+                        title="Remove from history"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <Link
+                      to="/live-player"
+                      search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || "" }}
+                      className="w-full flex flex-col items-center"
+                    >
+                      <div className="w-full h-20 bg-black/50 rounded-xl mb-2 overflow-hidden flex items-center justify-center border border-white/10 p-2">
+                        {channel.logo ? (
+                          <img
+                            src={channel.logo}
+                            alt={channel.title}
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className="text-xs font-bold text-slate-400">LIVE</span>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold line-clamp-1 text-white group-hover:text-slate-200">
+                        {channel.title}
+                      </span>
+                      <span className="mt-2 w-full py-1 text-[10px] font-bold rounded-full bg-red-600/80 border border-red-400/30 text-white shadow">
+                        RESUME STREAM →
+                      </span>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {inProgressMovies.length > 0 && (
             <section className="space-y-4">
               <h2 className={`text-sm font-bold text-slate-200 border-l-4 pl-3 uppercase tracking-wider ${getPrimaryAccentColor(appTheme)}`}>
