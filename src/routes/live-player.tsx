@@ -37,7 +37,6 @@ function LivePlayerComponent() {
     return () => window.removeEventListener('rabtv_settings_updated', handleSettingsUpdate);
   }, []);
 
-  // Automatically log live stream to Recently Watched Live TV history
   useEffect(() => {
     if (streamUrl && title) {
       logLiveChannelWatch({
