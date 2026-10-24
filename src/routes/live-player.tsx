@@ -38,7 +38,6 @@ function LivePlayerComponent() {
         const primaryCategory = categories[0] || 'All';
         const channels = await fetchChannelsByCategory(primaryCategory);
         if (isMounted) {
-          // Filter out the currently playing channel
           const filtered = channels.filter((c) => c.streamUrl !== streamUrl);
           setSuggestedChannels(filtered.slice(0, 12));
           setLoadingSuggestions(false);
@@ -55,7 +54,7 @@ function LivePlayerComponent() {
     };
   }, [streamUrl]);
 
-  // HLS stream playback handler via Dynamic CDN Loading
+  // HLS stream playback handler with optimized live configuration for streaming sticks
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !streamUrl) return;
@@ -70,15 +69,44 @@ function LivePlayerComponent() {
           video.play().catch((err) => console.log('Autoplay deferred:', err));
         });
       } else {
-        // Dynamic loader for HLS.js
+        // Dynamic loader for HLS.js with strict memory and live-edge configs
         const initHls = () => {
           const HlsClass = (window as any).Hls;
           if (HlsClass && HlsClass.isSupported()) {
-            hlsInstance = new HlsClass();
+            hlsInstance = new HlsClass({
+              liveSyncDurationCount: 3,         // Keep close to live edge
+              liveMaxLatencyDurationCount: 10,  // Max allowed drift before jumping to live edge
+              maxBufferLength: 30,              // Limit buffer to 30 seconds to prevent RAM crashes on sticks
+              maxMaxBufferLength: 60,
+              enableWorker: true,
+              lowLatencyMode: true,
+            });
+
             hlsInstance.loadSource(streamUrl);
             hlsInstance.attachMedia(video);
+
             hlsInstance.on(HlsClass.Events.MANIFEST_PARSED, () => {
               video.play().catch((err) => console.log('Autoplay deferred:', err));
+            });
+
+            // Error recovery to prevent freezing and app crashes on low-spec hardware
+            hlsInstance.on(HlsClass.Events.ERROR, (_event: any, data: any) => {
+              if (data.fatal) {
+                switch (data.type) {
+                  case HlsClass.ErrorTypes.NETWORK_ERROR:
+                    console.warn('Network error encountered, attempting to recover...');
+                    hlsInstance.startLoad();
+                    break;
+                  case HlsClass.ErrorTypes.MEDIA_ERROR:
+                    console.warn('Media error encountered, attempting to recover...');
+                    hlsInstance.recoverMediaError();
+                    break;
+                  default:
+                    console.error('Fatal HLS error, destroying instance');
+                    hlsInstance.destroy();
+                    break;
+                }
+              }
             });
           }
         };
@@ -177,7 +205,7 @@ function LivePlayerComponent() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 space-y-6">
-        {/* Main Video Player Container */}
+        {/* Main Video Player Container with custom CSS to hide timeline scrubbing for live feeds */}
         <div className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl min-h-[300px] sm:min-h-[480px]">
           {streamUrl ? (
             <video
@@ -185,7 +213,7 @@ function LivePlayerComponent() {
               controls
               autoPlay
               playsInline
-              className="w-full max-h-[75vh] object-contain rounded-2xl bg-black"
+              className="w-full max-h-[75vh] object-contain rounded-2xl bg-black [&::-webkit-media-controls-timeline]:hidden [&::-webkit-media-controls-seek-back-button]:hidden [&::-webkit-media-controls-seek-forward-button]:hidden"
               onError={(e) => console.error('Video stream error:', e)}
             >
               Your browser does not support live video playback.
