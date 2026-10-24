@@ -49,8 +49,17 @@ export interface DislikedTitle {
   posterPath?: string | null;
 }
 
+export interface RecentLiveChannel {
+  channelId: string;
+  title: string;
+  logo: string;
+  streamUrl: string;
+  watchedAt: number;
+}
+
 const WATCH_HISTORY_KEY = "rabtv_watch_history";
 const DISLIKED_TITLES_KEY = "rabbit_tv_disliked_titles";
+const RECENT_LIVE_CHANNELS_KEY = "rabtv_recent_live_channels";
 const MAX_HISTORY_ITEMS = 50; // Hard cap for 2GB device memory optimization
 
 export function getRawWatchHistory(): WatchHistoryItem[] {
@@ -164,7 +173,6 @@ export function saveWatchProgress(item: Omit<WatchHistoryItem, "lastWatchedAt">)
     history.unshift(updatedItem);
   }
 
-  // Enforce strict 50-item cap to prevent JSON parse freezes
   const cappedHistory = history.slice(0, MAX_HISTORY_ITEMS);
 
   localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(cappedHistory));
@@ -298,5 +306,58 @@ export function removeDislikedTitle(id: number | string): void {
     window.dispatchEvent(new Event("rabtv_disliked_updated"));
   } catch (e) {
     console.error('Failed to remove disliked title:', e);
+  }
+}
+
+// ==========================================
+// LIVE CHANNELS WATCH HISTORY HELPERS
+// ==========================================
+
+export function getRecentLiveChannels(): RecentLiveChannel[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(RECENT_LIVE_CHANNELS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    console.error('Error reading recent live channels:', err);
+    return [];
+  }
+}
+
+export function logLiveChannelWatch(channel: { title: string; logo: string; streamUrl: string; channelId?: string }) {
+  if (typeof window === "undefined") return;
+  try {
+    const currentList = getRecentLiveChannels();
+    const cleanId = channel.channelId || channel.streamUrl;
+
+    const filtered = currentList.filter((c) => c.channelId !== cleanId);
+
+    const updated = [
+      {
+        channelId: cleanId,
+        title: channel.title,
+        logo: channel.logo,
+        streamUrl: channel.streamUrl,
+        watchedAt: Date.now(),
+      },
+      ...filtered,
+    ].slice(0, 5); // Strictly keep the last 5 watched live streams
+
+    localStorage.setItem(RECENT_LIVE_CHANNELS_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new Event('rabtv_watch_history_updated'));
+  } catch (err) {
+    console.error('Error logging live channel watch:', err);
+  }
+}
+
+export function removeRecentLiveChannel(channelId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const currentList = getRecentLiveChannels();
+    const updated = currentList.filter((c) => c.channelId !== channelId);
+    localStorage.setItem(RECENT_LIVE_CHANNELS_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new Event('rabtv_watch_history_updated'));
+  } catch (err) {
+    console.error('Error removing recent live channel:', err);
   }
 }
