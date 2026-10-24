@@ -87,6 +87,13 @@ function RootComponent() {
   const [settingsAgeCodeInput, setSettingsAgeCodeInput] = useState<string>("");
   const [settingsAgeError, setSettingsAgeError] = useState<boolean>(false);
   const [settingsAgeSuccess, setSettingsAgeSuccess] = useState<boolean>(false);
+
+  // Custom Passcode Change States inside Profile Menu
+  const [currentPasscodeInput, setCurrentPasscodeInput] = useState<string>("");
+  const [newPasscode, setNewPasscode] = useState<string>("");
+  const [confirmNewPasscode, setConfirmNewPasscode] = useState<string>("");
+  const [passcodeStatusMsg, setPasscodeStatusMsg] = useState<{ text: string; isError: boolean } | null>(null);
+
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
   const [canModalScrollDown, setCanModalScrollDown] = useState<boolean>(false);
 
@@ -276,7 +283,8 @@ function RootComponent() {
 
   const handleUpdateAgeInSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    if (settingsAgeCodeInput.trim() === AUTHORIZATION_CODE) {
+    const activeAgePasscode = localStorage.getItem("rabtv_age_passcode") || AUTHORIZATION_CODE;
+    if (settingsAgeCodeInput.trim() === activeAgePasscode) {
       const parsedAge = parseInt(userAgeInput, 10);
       if (isNaN(parsedAge)) {
         setSettingsAgeError(true);
@@ -292,6 +300,34 @@ function RootComponent() {
       setSettingsAgeError(true);
       setSettingsAgeCodeInput("");
     }
+  };
+
+  const handleChangePasscodeInSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    const activeAgePasscode = localStorage.getItem("rabtv_age_passcode") || AUTHORIZATION_CODE;
+
+    if (currentPasscodeInput.trim() !== activeAgePasscode) {
+      setPasscodeStatusMsg({ text: "Current passcode is incorrect.", isError: true });
+      return;
+    }
+
+    if (!newPasscode || newPasscode.trim() === "") {
+      setPasscodeStatusMsg({ text: "New passcode cannot be empty.", isError: true });
+      return;
+    }
+
+    if (newPasscode !== confirmNewPasscode) {
+      setPasscodeStatusMsg({ text: "New passcodes do not match.", isError: true });
+      return;
+    }
+
+    // Update ONLY the age verification passcode key in LocalStorage
+    localStorage.setItem("rabtv_age_passcode", newPasscode);
+    setPasscodeStatusMsg({ text: "Age passcode updated successfully!", isError: false });
+    setCurrentPasscodeInput("");
+    setNewPasscode("");
+    setConfirmNewPasscode("");
+    setTimeout(() => setPasscodeStatusMsg(null), 3000);
   };
 
   const handleSaveBackup = () => {
@@ -603,8 +639,10 @@ function RootComponent() {
 
           {/* FIXED VIEWPORT PROFILE DROPDOWN MENU */}
           {showProfileMenu && !showFirstStartModal && (
-            <div className={`fixed top-16 right-3 sm:right-6 z-50 w-80 max-w-[92vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-xl shadow-2xl max-h-[80vh] overflow-y-auto`}>
-              <div className="mx-auto flex flex-col gap-4">
+            <div className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-xl shadow-2xl max-h-[85vh] overflow-y-auto box-border`}>
+              <div className="mx-auto flex flex-col gap-4 box-border">
+                
+                {/* Header */}
                 <div className="flex items-center justify-between border-b border-white/10 pb-2">
                   <h3 className={`text-sm font-black uppercase tracking-wider ${getPrimaryAccentColor(appTheme)}`}>
                     👤 Personal Profile & Accessibility
@@ -618,63 +656,124 @@ function RootComponent() {
                   </button>
                 </div>
 
-                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-300 w-16 shrink-0">Name:</span>
-                    <input
-                      type="text"
-                      maxLength={20}
-                      value={profileNameInput}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setProfileNameInput(val);
-                        localStorage.setItem("rabtv_profile_name", val.trim());
-                        setSavedProfileName(val.trim());
-                      }}
-                      placeholder="Your Name"
-                      className="flex-1 rounded-lg border border-white/10 bg-slate-800 px-3 py-1.5 text-xs font-bold text-white focus:outline-none"
-                    />
-                  </div>
+                {/* Profile & Age Verification Section */}
+                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Age Verification</h4>
 
-                  <form onSubmit={handleUpdateAgeInSettings} className="flex flex-col gap-2 pt-2 border-t border-white/10">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-slate-300 w-16 shrink-0">Age:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <span className="block text-[11px] text-slate-400 mb-1">Name:</span>
+                      <input
+                        type="text"
+                        maxLength={20}
+                        value={profileNameInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProfileNameInput(val);
+                          localStorage.setItem("rabtv_profile_name", val.trim());
+                          setSavedProfileName(val.trim());
+                        }}
+                        placeholder="Your Name"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-slate-400 mb-1">Age:</span>
                       <input
                         type="number"
                         min={1}
                         max={120}
                         value={userAgeInput}
                         onChange={(e) => setUserAgeInput(e.target.value)}
-                        className="w-20 rounded-lg border border-white/10 bg-slate-800 px-2 py-1.5 text-center text-xs font-bold text-white focus:outline-none"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
                       />
                     </div>
-                    <div className="flex items-center gap-2">
+                  </div>
+
+                  <form onSubmit={handleUpdateAgeInSettings} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 pt-1 w-full box-border">
+                    <div className="flex-1">
+                      <span className="block text-[11px] text-slate-400 mb-1">Passcode:</span>
                       <input
                         type="password"
                         maxLength={10}
-                        placeholder="Passcode"
+                        placeholder="Enter passcode"
                         value={settingsAgeCodeInput}
                         onChange={(e) => setSettingsAgeCodeInput(e.target.value)}
-                        className="flex-1 rounded-lg border border-white/10 bg-slate-800 px-3 py-1.5 text-center text-xs font-bold text-white focus:outline-none"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
                       />
-                      <button
-                        type="submit"
-                        className={`rounded-lg ${getPrimaryBgColor(appTheme)} px-4 py-1.5 text-xs font-bold whitespace-nowrap shadow`}
-                      >
-                        Update Age
-                      </button>
                     </div>
+                    <button
+                      type="submit"
+                      className={`w-full sm:w-auto px-4 py-2 rounded-xl ${getPrimaryBgColor(appTheme)} text-xs font-bold whitespace-nowrap shadow transition shrink-0 box-border`}
+                    >
+                      Update Age
+                    </button>
                   </form>
 
                   {settingsAgeError && (
-                    <span className="text-xs font-semibold text-red-400 text-center block">⚠️ Invalid Code or Age</span>
+                    <span className="text-[11px] font-semibold text-red-400 text-center block">⚠️ Invalid Code or Age</span>
                   )}
                   {settingsAgeSuccess && (
-                    <span className="text-xs font-semibold text-emerald-400 text-center block">✓ Profile Updated!</span>
+                    <span className="text-[11px] font-semibold text-emerald-400 text-center block">✓ Profile Updated!</span>
                   )}
                 </div>
 
-                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10">
+                {/* Custom Passcode Change Section */}
+                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Change Age Passcode</h4>
+
+                  <form onSubmit={handleChangePasscodeInSettings} className="space-y-2.5 box-border">
+                    <div>
+                      <span className="block text-[11px] text-slate-400 mb-1">Old Passcode:</span>
+                      <input
+                        type="password"
+                        placeholder="Enter current passcode"
+                        value={currentPasscodeInput}
+                        onChange={(e) => setCurrentPasscodeInput(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <span className="block text-[11px] text-slate-400 mb-1">New Passcode:</span>
+                        <input
+                          type="password"
+                          placeholder="New passcode"
+                          value={newPasscode}
+                          onChange={(e) => setNewPasscode(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-[11px] text-slate-400 mb-1">Confirm New:</span>
+                        <input
+                          type="password"
+                          placeholder="Re-enter new"
+                          value={confirmNewPasscode}
+                          onChange={(e) => setConfirmNewPasscode(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full mt-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition box-border"
+                    >
+                      Update Passcode
+                    </button>
+
+                    {passcodeStatusMsg && (
+                      <p className={`text-[11px] font-bold mt-1 text-center ${passcodeStatusMsg.isError ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {passcodeStatusMsg.text}
+                      </p>
+                    )}
+                  </form>
+                </div>
+
+                {/* Accessibility Section */}
+                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
                   <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Accessibility</span>
 
                   <div className="flex items-center justify-between gap-3">
@@ -737,6 +836,7 @@ function RootComponent() {
                     </button>
                   </div>
                 </div>
+
               </div>
             </div>
           )}
