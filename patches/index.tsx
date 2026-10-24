@@ -175,11 +175,29 @@ MemoizedMediaCard.displayName = "MemoizedMediaCard";
 
 export const Route = createFileRoute("/")({
   component: Home,
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => {
+    return {
+      tab: (search.tab as string) || undefined,
+    };
+  },
 });
 
 function Home() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<NavTab>("Home");
+  const search = Route.useSearch();
+  const [activeTab, setActiveTab] = useState<NavTab>(() => {
+    if (search.tab && navTabs.includes(search.tab as NavTab)) {
+      return search.tab as NavTab;
+    }
+    return "Home";
+  });
+
+  useEffect(() => {
+    if (search.tab && navTabs.includes(search.tab as NavTab)) {
+      setActiveTab(search.tab as NavTab);
+    }
+  }, [search.tab]);
+
   const [selectedGenre, setSelectedGenre] = useState<string>("Trending");
   const [globalFeedOverride, setGlobalFeedOverride] = useState<string>(() => {
     if (typeof window !== "undefined") {
