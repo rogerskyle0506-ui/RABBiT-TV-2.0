@@ -196,21 +196,29 @@ function LivePlayerComponent() {
   return (
     <div className={`min-h-screen ${themeStyles.bg} text-white transition-colors duration-300 pb-20`}>
       {/* Header Container */}
-      <div className="flex flex-col items-center justify-center px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10 z-20 sticky top-0 shadow-lg text-center gap-1.5 relative">
-        <Link
-          to="/live-tv"
-          className="absolute left-4 text-xs font-bold text-slate-300 hover:text-white flex items-center space-x-1 transition px-3 py-1.5 rounded-xl bg-white/5 border border-white/10"
-        >
-          <span>&lt; TV Menu</span>
-        </Link>
+      <div className="flex flex-col items-center justify-center px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10 z-20 sticky top-0 shadow-lg text-center gap-2">
+        {/* Row 1: TV Menu Pill Button */}
+        <div className="w-full flex justify-start max-w-7xl">
+          <Link
+            to="/live-tv"
+            className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition"
+          >
+            <span>← TV Menu</span>
+          </Link>
+        </div>
 
+        {/* Row 2: Larger Centered Logo */}
         {logo && (
-          <img src={logo} alt={title} className="w-8 h-8 object-contain rounded-lg bg-black/50 p-1 border border-white/10" />
+          <img
+            src={logo}
+            alt={title}
+            className="w-12 h-12 object-contain rounded-xl bg-black/60 p-1.5 border border-white/15 shadow-md"
+          />
         )}
 
+        {/* Row 3: Centered Title + LIVE Badge */}
         <div className="flex items-center justify-center space-x-2">
-          {/* Increased font size 2pt (text-base sm:text-lg) */}
-          <h1 className="text-base sm:text-lg font-black truncate max-w-xs sm:max-w-md">{title}</h1>
+          <h1 className="text-base sm:text-lg font-black truncate max-w-xs sm:max-w-md text-white">{title}</h1>
           <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] shrink-0"></span>
           <span className="text-xs font-bold text-red-400 tracking-wider shrink-0">LIVE</span>
         </div>
@@ -253,20 +261,18 @@ function LivePlayerComponent() {
           )}
         </div>
 
-        {/* Channel Details Header */}
-        <div className={`p-4 sm:p-5 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex items-center justify-between`}>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="rounded-full bg-red-500/20 border border-red-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300">
-                Live Broadcast
-              </span>
-              <span className={`text-xs font-medium ${themeStyles.accentText}`}>Streaming Now</span>
-            </div>
-            <h2 className="text-lg sm:text-xl font-black text-white">{title}</h2>
+        {/* Channel Details Header (Centered) */}
+        <div className={`p-4 sm:p-5 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex flex-col items-center justify-center text-center space-y-2`}>
+          <div className="flex items-center justify-center gap-2">
+            <span className="rounded-full bg-red-500/20 border border-red-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300">
+              Live Broadcast
+            </span>
+            <span className={`text-xs font-medium ${themeStyles.accentText}`}>Streaming Now</span>
           </div>
+          <h2 className="text-lg sm:text-2xl font-black text-white">{title}</h2>
         </div>
 
-        {/* Separated Explore Movies & Shows (40% Opacity Background) */}
+        {/* Separated Explore Movies & Shows */}
         <div className="w-full p-4 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex items-center justify-between">
           <div>
             <h4 className="text-sm font-bold text-white">Looking for something else?</h4>
