@@ -194,102 +194,106 @@ function LivePlayerComponent() {
   }, [appTheme]);
 
   return (
-    <div className={`min-h-screen ${themeStyles.bg} text-white transition-colors duration-300 pb-20`}>
-      {/* Header Container */}
-      <div className="flex flex-col items-center justify-center px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10 z-20 sticky top-0 shadow-lg text-center gap-2">
-        {/* Row 1: TV Menu Pill Button */}
-        <div className="w-full flex justify-start max-w-7xl">
-          <Link
-            to="/live-tv"
-            className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition"
-          >
-            <span>← TV Menu</span>
-          </Link>
-        </div>
+    <div className={`min-h-screen ${themeStyles.bg} text-white transition-colors duration-300 pb-16 w-full max-w-full overflow-x-hidden box-border`}>
+      {/* Dynamic Device Container */}
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 pt-3 space-y-4 box-border">
+        
+        {/* Top Header Row (Back Button + Logo + Title) */}
+        <div className="w-full flex flex-col items-center justify-center p-3 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 shadow-lg text-center gap-2 box-border">
+          <div className="w-full flex items-center justify-between">
+            <Link
+              to="/live-tv"
+              className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition"
+            >
+              <span>← TV Menu</span>
+            </Link>
 
-        {/* Row 2: Larger Centered Logo */}
-        {logo && (
-          <img
-            src={logo}
-            alt={title}
-            className="w-12 h-12 object-contain rounded-xl bg-black/60 p-1.5 border border-white/15 shadow-md"
-          />
-        )}
+            {/* Quality Picker Control inside Header on Smaller Screens */}
+            {qualityLevels.length > 0 && (
+              <div className="bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
+                <select
+                  value={selectedQuality}
+                  onChange={handleQualityChange}
+                  className="bg-transparent text-[11px] sm:text-xs font-bold text-white focus:outline-none cursor-pointer"
+                >
+                  <option value={-1} className="bg-zinc-900 text-white">Auto Quality</option>
+                  {qualityLevels.map((lvl) => (
+                    <option key={lvl.index} value={lvl.index} className="bg-zinc-900 text-white">
+                      {lvl.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
 
-        {/* Row 3: Centered Title + LIVE Badge */}
-        <div className="flex items-center justify-center space-x-2">
-          <h1 className="text-base sm:text-lg font-black truncate max-w-xs sm:max-w-md text-white">{title}</h1>
-          <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] shrink-0"></span>
-          <span className="text-xs font-bold text-red-400 tracking-wider shrink-0">LIVE</span>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 space-y-6">
-        {/* Main Video Player Container */}
-        <div className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl min-h-[300px] sm:min-h-[480px]">
-          {qualityLevels.length > 0 && (
-            <div className="absolute top-3 right-3 z-10 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
-              <select
-                value={selectedQuality}
-                onChange={handleQualityChange}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"
-              >
-                <option value={-1} className="bg-zinc-900 text-white">Auto Quality</option>
-                {qualityLevels.map((lvl) => (
-                  <option key={lvl.index} value={lvl.index} className="bg-zinc-900 text-white">
-                    {lvl.label}
-                  </option>
-                ))}
-              </select>
+          {/* Borderless Floating Logo (Centered & Scaled to Bounds) */}
+          {logo && (
+            <div className="w-full max-w-[180px] h-10 flex items-center justify-center my-0.5">
+              <img
+                src={logo}
+                alt={title}
+                className="max-w-full max-h-full object-contain bg-transparent"
+              />
             </div>
           )}
 
+          {/* Title and Live Indicator */}
+          <div className="flex items-center justify-center space-x-2 max-w-full px-2">
+            <h1 className="text-sm sm:text-base md:text-lg font-black truncate max-w-[250px] sm:max-w-md text-white">{title}</h1>
+            <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] shrink-0"></span>
+            <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider shrink-0">LIVE</span>
+          </div>
+        </div>
+
+        {/* Video Wrapper Constrained to Portrait / Landscape Viewports */}
+        <div className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] aspect-video box-border">
           {streamUrl ? (
             <video
               ref={videoRef}
               controls
               autoPlay
               playsInline
-              className="w-full h-full object-cover rounded-2xl bg-black [&::-webkit-media-controls-timeline]:hidden"
+              className="w-full h-full max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] object-contain rounded-2xl bg-black [&::-webkit-media-controls-timeline]:hidden"
             >
               Your browser does not support live video playback.
             </video>
           ) : (
-            <div className="text-center text-slate-400 p-8 rounded-2xl bg-black/40 border border-white/10">
-              <p className="text-sm font-medium">Invalid or missing stream URL.</p>
+            <div className="text-center text-slate-400 p-6 rounded-2xl bg-black/40 border border-white/10">
+              <p className="text-xs sm:text-sm font-medium">Invalid or missing stream URL.</p>
             </div>
           )}
         </div>
 
-        {/* Channel Details Header (Centered) */}
-        <div className={`p-4 sm:p-5 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex flex-col items-center justify-center text-center space-y-2`}>
+        {/* Stream Banner */}
+        <div className={`p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex flex-col items-center justify-center text-center space-y-1.5 box-border`}>
           <div className="flex items-center justify-center gap-2">
-            <span className="rounded-full bg-red-500/20 border border-red-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300">
+            <span className="rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-red-300">
               Live Broadcast
             </span>
-            <span className={`text-xs font-medium ${themeStyles.accentText}`}>Streaming Now</span>
+            <span className={`text-[11px] sm:text-xs font-medium ${themeStyles.accentText}`}>Streaming Now</span>
           </div>
-          <h2 className="text-lg sm:text-2xl font-black text-white">{title}</h2>
+          <h2 className="text-base sm:text-xl font-black text-white truncate max-w-full px-2">{title}</h2>
         </div>
 
-        {/* Separated Explore Movies & Shows */}
-        <div className="w-full p-4 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex items-center justify-between">
+        {/* Explore Card */}
+        <div className="w-full p-3.5 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 box-border text-center sm:text-left">
           <div>
-            <h4 className="text-sm font-bold text-white">Looking for something else?</h4>
-            <p className="text-xs text-slate-400">Discover full movies, TV series, and more.</p>
+            <h4 className="text-xs sm:text-sm font-bold text-white">Looking for something else?</h4>
+            <p className="text-[11px] sm:text-xs text-slate-400">Discover full movies, TV series, and more.</p>
           </div>
           <Link
             to="/"
-            className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-xs font-bold hover:bg-white/20 transition text-white"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-xs font-bold hover:bg-white/20 transition text-white text-center shrink-0"
           >
             Explore Movies & Shows →
           </Link>
         </div>
 
-        {/* Suggested Channels Grid */}
+        {/* Recommended Grid */}
         <section className="pt-2">
           <div className="mb-3 flex items-center justify-between px-1">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <span>✨ Recommended Live Feeds</span>
             </h3>
             <span className={`text-xs font-medium ${themeStyles.accentText}`}>
@@ -298,19 +302,19 @@ function LivePlayerComponent() {
           </div>
 
           {loadingSuggestions ? (
-            <div className="flex justify-center items-center h-32">
+            <div className="flex justify-center items-center h-28">
               <div className={`animate-spin rounded-full h-8 w-8 border-t-2 ${themeStyles.accentText}`}></div>
             </div>
           ) : suggestedChannels.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3">
               {suggestedChannels.map((channel) => (
                 <Link
                   key={channel.channelId || channel.url}
                   to="/live-player"
                   search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || '' }}
-                  className={`group flex flex-col items-center p-3.5 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden`}
+                  className={`group flex flex-col items-center p-3 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden box-border`}
                 >
-                  <div className="w-full h-24 bg-black/50 rounded-xl mb-2.5 overflow-hidden flex items-center justify-center border border-white/10 relative p-2">
+                  <div className="w-full h-20 sm:h-24 bg-black/50 rounded-xl mb-2 overflow-hidden flex items-center justify-center border border-white/10 relative p-2 box-border">
                     {channel.logo ? (
                       <img
                         src={channel.logo}
