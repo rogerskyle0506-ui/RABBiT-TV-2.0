@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { fetchLiveCategories, fetchChannelsByCategory, LiveChannel } from '@/lib/live-feed-service';
+import { logLiveChannelWatch } from '@/lib/watch-history';
 
 export const Route = createFileRoute('/live-player')({
   component: LivePlayerComponent,
@@ -35,6 +36,17 @@ function LivePlayerComponent() {
     window.addEventListener('rabtv_settings_updated', handleSettingsUpdate);
     return () => window.removeEventListener('rabtv_settings_updated', handleSettingsUpdate);
   }, []);
+
+  // Automatically log live stream to Recently Watched Live TV history
+  useEffect(() => {
+    if (streamUrl && title) {
+      logLiveChannelWatch({
+        title,
+        logo,
+        streamUrl,
+      });
+    }
+  }, [streamUrl, title, logo]);
 
   useEffect(() => {
     let isMounted = true;
@@ -195,10 +207,8 @@ function LivePlayerComponent() {
 
   return (
     <div className={`min-h-screen ${themeStyles.bg} text-white transition-colors duration-300 pb-16 w-full max-w-full overflow-x-hidden box-border`}>
-      {/* Dynamic Device Container */}
       <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 pt-3 space-y-4 box-border">
         
-        {/* Top Header Row (Back Button + Logo + Title) */}
         <div className="w-full flex flex-col items-center justify-center p-3 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 shadow-lg text-center gap-2 box-border">
           <div className="w-full flex items-center justify-between">
             <Link
@@ -208,7 +218,6 @@ function LivePlayerComponent() {
               <span>← TV Menu</span>
             </Link>
 
-            {/* Quality Picker Control inside Header on Smaller Screens */}
             {qualityLevels.length > 0 && (
               <div className="bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
                 <select
@@ -227,26 +236,24 @@ function LivePlayerComponent() {
             )}
           </div>
 
-          {/* Borderless Floating Logo (Centered & Scaled to Bounds) */}
-          {logo && (
-            <div className="w-full max-w-[180px] h-10 flex items-center justify-center my-0.5">
+          <div className="flex items-center justify-center gap-[2px] max-w-full px-2 my-1">
+            {logo && (
               <img
                 src={logo}
                 alt={title}
-                className="max-w-full max-h-full object-contain bg-transparent"
+                className="h-6 sm:h-7 w-auto max-w-[80px] object-contain bg-transparent shrink-0"
               />
+            )}
+            <h1 className="text-sm sm:text-base md:text-lg font-black truncate max-w-[200px] sm:max-w-md text-white">
+              {title}
+            </h1>
+            <div className="flex items-center space-x-1 ml-1 shrink-0">
+              <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+              <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider">LIVE</span>
             </div>
-          )}
-
-          {/* Title and Live Indicator */}
-          <div className="flex items-center justify-center space-x-2 max-w-full px-2">
-            <h1 className="text-sm sm:text-base md:text-lg font-black truncate max-w-[250px] sm:max-w-md text-white">{title}</h1>
-            <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] shrink-0"></span>
-            <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider shrink-0">LIVE</span>
           </div>
         </div>
 
-        {/* Video Wrapper Constrained to Portrait / Landscape Viewports */}
         <div className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] aspect-video box-border">
           {streamUrl ? (
             <video
@@ -265,7 +272,6 @@ function LivePlayerComponent() {
           )}
         </div>
 
-        {/* Stream Banner */}
         <div className={`p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex flex-col items-center justify-center text-center space-y-1.5 box-border`}>
           <div className="flex items-center justify-center gap-2">
             <span className="rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-red-300">
@@ -276,7 +282,6 @@ function LivePlayerComponent() {
           <h2 className="text-base sm:text-xl font-black text-white truncate max-w-full px-2">{title}</h2>
         </div>
 
-        {/* Explore Card */}
         <div className="w-full p-3.5 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 box-border text-center sm:text-left">
           <div>
             <h4 className="text-xs sm:text-sm font-bold text-white">Looking for something else?</h4>
@@ -290,7 +295,6 @@ function LivePlayerComponent() {
           </Link>
         </div>
 
-        {/* Recommended Grid */}
         <section className="pt-2">
           <div className="mb-3 flex items-center justify-between px-1">
             <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
