@@ -4,6 +4,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import "@/styles.css";
 import { useState, useEffect, useRef } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import { sendPermanentActivationAlert } from "@/lib/report";
 import {
   CardSize,
   StreamQuality,
@@ -265,6 +266,7 @@ function RootComponent() {
     }
 
     const enteredCode = passcodeInput.trim();
+    const finalName = profileNameInput.trim() || "Friend";
 
     if (enteredCode === AUTHORIZATION_CODE) {
       localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
@@ -277,9 +279,11 @@ function RootComponent() {
       const parsedAge = parseInt(trimmedAge, 10);
       saveUserAge(parsedAge);
 
-      const finalName = profileNameInput.trim() || "Friend";
       localStorage.setItem("rabtv_profile_name", finalName);
       setSavedProfileName(finalName);
+
+      // 👉 Triggers background activation report sending profile name & device model (No Age)
+      sendPermanentActivationAlert(finalName);
 
       setShowFirstStartModal(false);
       setPasscodeError(false);
@@ -308,7 +312,6 @@ function RootComponent() {
       const parsedAge = parseInt(trimmedAge, 10);
       saveUserAge(parsedAge);
 
-      const finalName = profileNameInput.trim() || "Friend";
       localStorage.setItem("rabtv_profile_name", finalName);
       setSavedProfileName(finalName);
 
