@@ -815,10 +815,10 @@ function Home() {
 
   return (
     <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20`}>
-      {/* 1. SEPARATE STICKY TOP WRAPPER FOR MAIN NAVIGATION BAR */}
+      {/* 1. SEPARATE STICKY TOP WRAPPER FOR MAIN NAVIGATION BAR - PERFECTLY CENTERED */}
       <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 bg-black/70 backdrop-blur-xl border-b border-white/10 shadow-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-center">
-          <div className="w-full">
+        <div className="mx-auto flex max-w-7xl items-center justify-center text-center">
+          <div className="w-full flex justify-center">
             <ScrollPillBar
               options={navTabs.map((tab) => ({ id: tab, label: tab }))}
               activeId={activeTab}
@@ -914,12 +914,12 @@ function Home() {
           )}
         </section>
 
-        {/* 2. SEPARATE WRAPPER FOR GENRES & PROVIDER SLIDERS */}
+        {/* 2. SEPARATE WRAPPER FOR GENRES & PROVIDER SLIDERS - CENTERED */}
         {activeTab !== "My List" && (
-          <section className="mb-4 space-y-2.5">
+          <section className="mb-4 space-y-2.5 flex flex-col items-center justify-center text-center">
             {/* Genre Filter Pill Bar */}
-            <div className="flex justify-center">
-              <div className="w-full max-w-3xl">
+            <div className="flex justify-center w-full">
+              <div className="w-full max-w-3xl flex justify-center">
                 <ScrollPillBar
                   options={genreCategories.map((genre) => ({ id: genre, label: genre }))}
                   activeId={selectedGenre}
@@ -930,9 +930,9 @@ function Home() {
               </div>
             </div>
 
-            {/* Provider Filter Pill Bar */}
-            <div className="flex justify-center">
-              <div className="w-full max-w-3xl">
+            {/* Provider Filter Pill Bar (Netflix, Prime, Disney+) */}
+            <div className="flex justify-center w-full">
+              <div className="w-full max-w-3xl flex justify-center">
                 <ScrollPillBar
                   options={providerCategories.map((prov) => ({ id: prov, label: prov }))}
                   activeId={globalFeedOverride}
@@ -946,7 +946,7 @@ function Home() {
         )}
 
         {activeTab === "My List" && (
-          <section className="mb-4 flex flex-wrap items-center gap-2 border-b border-white/10 pb-3 px-2">
+          <section className="mb-4 flex flex-wrap items-center justify-center gap-2 border-b border-white/10 pb-3 px-2 text-center">
             <button
               type="button"
               onClick={() => setMyListSubTab("all")}
