@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { AppTheme, getSavedTheme } from "@/lib/settings";
+import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
 
 const WATCH_HISTORY_STORAGE_KEY = "rabtv_watch_history";
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
@@ -18,6 +19,7 @@ export function DetailsPage() {
   const [mediaType, setMediaType] = useState<string>(search?.type || "movie");
 
   const [mediaDetails, setMediaDetails] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -39,8 +41,63 @@ export function DetailsPage() {
   const [isSeasonOpen, setIsSeasonOpen] = useState(false);
   const [isEpisodeOpen, setIsEpisodeOpen] = useState(false);
 
+  // Scroll reminder states
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const [showScrollReminder, setShowScrollReminder] = useState(false);
+
   const seasonRef = useRef<HTMLDivElement>(null);
   const episodeRef = useRef<HTMLDivElement>(null);
+
+  // Check vertical scroll for reminder banner
+  useEffect(() => {
+    const checkVerticalScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+
+      setCanScrollDown(scrollTop + clientHeight < scrollHeight - 100);
+    };
+
+    checkVerticalScroll();
+    window.addEventListener("scroll", checkVerticalScroll, { passive: true });
+    window.addEventListener("resize", checkVerticalScroll);
+
+    return () => {
+      window.removeEventListener("scroll", checkVerticalScroll);
+      window.removeEventListener("resize", checkVerticalScroll);
+    };
+  }, [recommendations, loading, isPlaying]);
+
+  // Handle 30s user inactivity & reset on user interaction
+  useEffect(() => {
+    let inactivityTimer: NodeJS.Timeout;
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      setShowScrollReminder(false);
+
+      if (canScrollDown) {
+        inactivityTimer = setTimeout(() => {
+          setShowScrollReminder(true);
+        }, 30000); // 30 seconds wait time
+      }
+    };
+
+    resetInactivityTimer();
+
+    window.addEventListener("scroll", resetInactivityTimer, { passive: true });
+    window.addEventListener("click", resetInactivityTimer);
+    window.addEventListener("keydown", resetInactivityTimer);
+    window.addEventListener("touchstart", resetInactivityTimer, { passive: true });
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      window.removeEventListener("scroll", resetInactivityTimer);
+      window.removeEventListener("click", resetInactivityTimer);
+      window.removeEventListener("keydown", resetInactivityTimer);
+      window.removeEventListener("touchstart", resetInactivityTimer);
+    };
+  }, [canScrollDown]);
 
   // Close custom dropdowns on outside click
   useEffect(() => {
@@ -154,6 +211,18 @@ export function DetailsPage() {
     }
   };
 
+  const getThemeArrowColor = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
+      case "midnight":
+        return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
+      case "violet":
+      default:
+        return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
+    }
+  };
+
   const activeTheme = getThemeClasses(appTheme);
 
   // Check saved state for My List & Favorites
@@ -172,7 +241,7 @@ export function DetailsPage() {
     }
   }, [mediaId, mediaType]);
 
-  // Fetch item details + cast with LocalStorage Caching (6-hour expiry) & Type Auto-Correction
+  // Fetch item details + recommendations with LocalStorage Caching (6-hour expiry) & Type Auto-Correction
   useEffect(() => {
     async function fetchDetailsWithCache() {
       if (!mediaId) return;
@@ -190,7 +259,6 @@ export function DetailsPage() {
             }
             setMediaDetails(data);
             setLoading(false);
-            return;
           }
         }
 
@@ -221,14 +289,26 @@ export function DetailsPage() {
         );
 
         setMediaDetails(data);
+
+        // Fetch recommended/similar titles from TMDB API[span_2](start_span)[span_2](end_span)
+        const recRes = await fetch(
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
+        );
+        const recData = await recRes.json();
+        if (recData?.results) {
+          const filteredRecs = recData.results.filter(
+            (item: any) => !isTitleBroken(String(item.id)) && !isTitleBroken(`${activeFetchType}-${item.id}`)
+          );
+          setRecommendations(filteredRecs);
+        }
       } catch (err) {
-        console.error("Failed to load details", err);
+        console.error("Failed to load details and recommendations", err);
       } finally {
         setLoading(false);
       }
     }
     fetchDetailsWithCache();
-  }, [mediaId]); // <-- STABILIZED: Removed mediaType to prevent post-mount state re-trigger loops[span_1](start_span)[span_1](end_span)
+  }, [mediaId]); // <-- STABILIZED: Removed mediaType to prevent post-mount state re-trigger loops[span_3](start_span)[span_3](end_span)
 
   // Robust inferred type check
   const inferredMediaType = mediaDetails?.seasons || mediaType === "tv" ? "tv" : "movie";
@@ -322,6 +402,15 @@ export function DetailsPage() {
     }
   };
 
+  const handleReportBroken = () => {
+    if (!mediaId) return;
+    const result = reportBrokenLink(String(mediaId));
+    triggerFeedback(result.message);
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 1500);
+  };
+
   const triggerFeedback = (msg: string) => {
     setActionFeedback(msg);
     setTimeout(() => setActionFeedback(null), 2500);
@@ -355,7 +444,7 @@ export function DetailsPage() {
   const currentEpisodeObj = seasonEpisodes?.find((e: any) => e.episode_number === episode);
 
   return (
-    <div className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300`}>
+    <div className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20`}>
       <Link
         className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
         to="/"
@@ -514,158 +603,245 @@ export function DetailsPage() {
         </div>
       ) : (
         /* Overview Card with Custom Theme-Aware Dropdown Pickers */
-        <div className="mx-auto flex max-w-5xl flex-col gap-8 md:flex-row md:items-start">
-          <img
-            src={poster}
-            alt={title}
-            className="h-[450px] w-[300px] rounded-2xl object-cover shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start"
-          />
+        <div className="mx-auto flex max-w-5xl flex-col gap-8">
+          <div className="flex flex-col gap-8 md:flex-row md:items-start">
+            <img
+              src={poster}
+              alt={title}
+              className="h-[450px] w-[300px] rounded-2xl object-cover shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start"
+            />
 
-          <div className="flex flex-col justify-center gap-4">
-            <span className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}>
-              {genres}
-            </span>
-
-            <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
-              {title}
-            </h1>
-
-            <div className="flex items-center gap-4 text-sm text-slate-300">
-              {rating !== "N/A" && (
-                <span className="flex items-center gap-1 font-bold text-yellow-300">
-                  ⭐ {rating}
-                </span>
-              )}
-              {releaseYear && <span>{releaseYear}</span>}
-              <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
-                {inferredMediaType}
+            <div className="flex flex-col justify-center gap-4 flex-1">
+              <span className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}>
+                {genres}
               </span>
-            </div>
 
-            <p className="max-w-2xl text-base leading-relaxed text-slate-300">
-              {overview}
-            </p>
+              <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+                {title}
+              </h1>
 
-            {/* Custom Theme-Aware Season & Episode Dropdown Pickers for TV Series */}
-            {inferredMediaType === "tv" && mediaDetails?.seasons && (
-              <div className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}>
-                
-                {/* Custom Season Dropdown */}
-                <div className="relative" ref={seasonRef}>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Season</label>
-                  <button
-                    type="button"
-                    onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                    className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                  >
-                    <span>{currentSeasonObj ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)` : `Season ${season}`}</span>
-                    <span>▾</span>
-                  </button>
-
-                  {isSeasonOpen && (
-                    <div className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}>
-                      {mediaDetails.seasons
-                        .filter((s: any) => s.season_number > 0)
-                        .map((s: any) => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => {
-                              setSeason(s.season_number);
-                              setEpisode(1);
-                              setIsSeasonOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                              season === s.season_number ? `${activeTheme.bg} text-white font-bold` : "text-slate-200 hover:bg-white/10"
-                            }`}
-                          >
-                            {s.name} ({s.episode_count} Episodes)
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Custom Episode Dropdown */}
-                <div className="relative" ref={episodeRef}>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Episode</label>
-                  <button
-                    type="button"
-                    onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                    className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                  >
-                    <span>{currentEpisodeObj ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}` : `Episode ${episode}`}</span>
-                    <span>▾</span>
-                  </button>
-
-                  {isEpisodeOpen && (
-                    <div className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}>
-                      {seasonEpisodes.length > 0 ? (
-                        seasonEpisodes.map((ep: any) => (
-                          <button
-                            key={ep.id}
-                            type="button"
-                            onClick={() => {
-                              setEpisode(ep.episode_number);
-                              setIsEpisodeOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                              episode === ep.episode_number ? `${activeTheme.bg} text-white font-bold` : "text-slate-200 hover:bg-white/10"
-                            }`}
-                          >
-                            Ep {ep.episode_number}: {ep.name}
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-3 py-2 text-sm text-slate-400">Loading episodes...</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
+              <div className="flex items-center gap-4 text-sm text-slate-300">
+                {rating !== "N/A" && (
+                  <span className="flex items-center gap-1 font-bold text-yellow-300">
+                    ⭐ {rating}
+                  </span>
+                )}
+                {releaseYear && <span>{releaseYear}</span>}
+                <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
+                  {inferredMediaType}
+                </span>
               </div>
-            )}
 
-            {/* Action Bar */}
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={handlePlay}
-                className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
-              >
-                ▶ Play {inferredMediaType === "tv" ? `S${season}:E${episode}` : "Movie"}
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleMyList}
-                className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} ${
-                  inMyList
-                    ? `${activeTheme.border} bg-white/10${activeTheme.text}`
-                    : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
-                }`}
-              >
-                {inMyList ? "✓ In My List" : "🔖 + Save to My List"}
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleFavorites}
-                className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 ${
-                  inFavorites
-                    ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
-                    : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
-                }`}
-              >
-                {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
-              </button>
-            </div>
-
-            {actionFeedback && (
-              <p className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}>
-                {actionFeedback}
+              <p className="max-w-2xl text-base leading-relaxed text-slate-300">
+                {overview}
               </p>
-            )}
+
+              {/* Custom Theme-Aware Season & Episode Dropdown Pickers for TV Series */}
+              {inferredMediaType === "tv" && mediaDetails?.seasons && (
+                <div className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}>
+                  
+                  {/* Custom Season Dropdown */}
+                  <div className="relative" ref={seasonRef}>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Season</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsSeasonOpen(!isSeasonOpen)}
+                      className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                    >
+                      <span>{currentSeasonObj ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)` : `Season ${season}`}</span>
+                      <span>▾</span>
+                    </button>
+
+                    {isSeasonOpen && (
+                      <div className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}>
+                        {mediaDetails.seasons
+                          .filter((s: any) => s.season_number > 0)
+                          .map((s: any) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                setSeason(s.season_number);
+                                setEpisode(1);
+                                setIsSeasonOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                season === s.season_number ? `${activeTheme.bg} text-white font-bold` : "text-slate-200 hover:bg-white/10"
+                              }`}
+                            >
+                              {s.name} ({s.episode_count} Episodes)
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Custom Episode Dropdown */}
+                  <div className="relative" ref={episodeRef}>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Episode</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
+                      className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                    >
+                      <span>{currentEpisodeObj ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}` : `Episode ${episode}`}</span>
+                      <span>▾</span>
+                    </button>
+
+                    {isEpisodeOpen && (
+                      <div className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}>
+                        {seasonEpisodes.length > 0 ? (
+                          seasonEpisodes.map((ep: any) => (
+                            <button
+                              key={ep.id}
+                              type="button"
+                              onClick={() => {
+                                setEpisode(ep.episode_number);
+                                setIsEpisodeOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                episode === ep.episode_number ? `${activeTheme.bg} text-white font-bold` : "text-slate-200 hover:bg-white/10"
+                              }`}
+                            >
+                              Ep {ep.episode_number}: {ep.name}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-slate-400">Loading episodes...</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              )}
+
+              {/* Action Bar */}
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handlePlay}
+                  className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
+                >
+                  ▶ Play {inferredMediaType === "tv" ? `S${season}:E${episode}` : "Movie"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleMyList}
+                  className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} ${
+                    inMyList
+                      ? `${activeTheme.border} bg-white/10 ${activeTheme.text}`
+                      : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                  }`}
+                >
+                  {inMyList ? "✓ In My List" : "🔖 + Save to My List"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleFavorites}
+                  className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 ${
+                    inFavorites
+                      ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
+                      : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                  }`}
+                >
+                  {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleReportBroken}
+                  className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500"
+                  title="Report link as broken and hide globally"
+                >
+                  ⚠️ Report Broken
+                </button>
+              </div>
+
+              {actionFeedback && (
+                <p className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}>
+                  {actionFeedback}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Suggested Videos / Recommendations Section (TMDB API) */}
+          {recommendations.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <span>✨ Similar Recommendations</span>
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+                {recommendations.slice(0, 12).map((rec: any) => {
+                  const recId = rec.id;
+                  const recTitle = rec.title || rec.name || "Untitled";
+                  const recPoster = rec.poster_path
+                    ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
+                    : "";
+                  const recType = inferredMediaType;
+
+                  return (
+                    <Link
+                      key={recId}
+                      to="/details"
+                      search={{ id: String(recId), type: recType }}
+                      className={`group flex flex-col items-center p-3 rounded-2xl bg-gradient-to-b ${getCardBackground(appTheme)} border border-white/10 shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden`}
+                    >
+                      <div className="w-full aspect-[2/3] bg-black/50 rounded-xl mb-2 overflow-hidden flex items-center justify-center border border-white/10 relative">
+                        {recPoster ? (
+                          <img
+                            src={recPoster}
+                            alt={recTitle}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className="text-xs font-bold text-slate-400">NO IMAGE</span>
+                        )}
+                      </div>
+                      <h3 className="text-xs font-bold line-clamp-1 text-white group-hover:text-slate-200 w-full">
+                        {recTitle}
+                      </h3>
+                      <span className="mt-2 w-full py-1 text-[10px] font-bold rounded-full bg-white/10 border border-white/10 text-slate-300">
+                        VIEW →
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Scroll Reminder with 30s Inactivity & 8s Flash Twice Animation */}
+      {canScrollDown && showScrollReminder && (
+        <div 
+          className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
+          onAnimationEnd={() => setShowScrollReminder(false)}
+        >
+          <style>{`
+            @keyframes flashTwice {
+              0% { opacity: 0; }
+              25% { opacity: 1; }
+              50% { opacity: 0; }
+              75% { opacity: 1; }
+              100% { opacity: 0; }
+            }
+            .animate-flash-twice {
+              animation: flashTwice 8s ease-in-out forwards;
+            }
+          `}</style>
+          <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
+              More Content Below
+            </span>
+            <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
+              ⌄
+            </span>
           </div>
         </div>
       )}
