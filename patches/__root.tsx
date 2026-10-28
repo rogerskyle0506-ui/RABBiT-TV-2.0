@@ -27,6 +27,9 @@ import {
 } from "@/lib/settings";
 
 const AUTHORIZATION_CODE = "34688643";
+const TRIAL_CODE = "9654";
+const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // Exactly 7 days in milliseconds
+
 const globalFeedOptions = ["All (Default)", "Russian", "British", "Hungarian", "German"] as const;
 export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 const HOSTED_ICON_URL = "https://github.com/rogerskyle0506-ui/RABBIT-TV/blob/main/assets/icon.png?raw=true";
@@ -51,6 +54,38 @@ async function updateNativeStatusBar(theme: AppTheme) {
   }
 }
 
+function verifyCurrentAccess(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const status = localStorage.getItem("rabtv_access_status");
+
+  if (status === "permanent") {
+    return true;
+  }
+
+  if (status === "trial") {
+    const startTime = Number(localStorage.getItem("rabtv_trial_start_timestamp") || 0);
+    const now = Date.now();
+
+    if (now - startTime < TRIAL_DURATION_MS) {
+      return true; // Still within the 7-day trial window
+    } else {
+      // Trial has expired! Block access
+      localStorage.setItem("rabtv_access_status", "expired");
+      return false;
+    }
+  }
+
+  // Fallback check for legacy permanent disclaimer acceptance
+  const legacyAuthorized = localStorage.getItem(DISCLAIMER_ACCEPTED_KEY);
+  if (legacyAuthorized === "true") {
+    localStorage.setItem("rabtv_access_status", "permanent");
+    return true;
+  }
+
+  return false;
+}
+
 export const Route = createRootRoute({
   component: RootComponent,
   head: () => ({
@@ -67,6 +102,7 @@ function RootComponent() {
   const [showFirstStartModal, setShowFirstStartModal] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState("");
   const [passcodeError, setPasscodeError] = useState(false);
+  const [passcodeErrorMsg, setPasscodeErrorMsg] = useState("⚠️ Invalid Passcode. Please try again.");
   const [ageErrorNotice, setAgeErrorNotice] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -172,8 +208,8 @@ function RootComponent() {
       }
     }
 
-    const authorized = localStorage.getItem(DISCLAIMER_ACCEPTED_KEY);
-    if (!authorized) {
+    const hasAccess = verifyCurrentAccess();
+    if (!hasAccess) {
       setShowFirstStartModal(true);
     }
 
@@ -228,8 +264,42 @@ function RootComponent() {
       return;
     }
 
-    if (passcodeInput.trim() === AUTHORIZATION_CODE) {
+    const enteredCode = passcodeInput.trim();
+
+    if (enteredCode === AUTHORIZATION_CODE) {
       localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
+      localStorage.setItem("rabtv_access_status", "permanent");
+      saveCardSize(cardSize);
+      saveStreamQuality(streamQuality);
+      saveTheme(appTheme);
+      setHelpfulMouse(helpfulMouse);
+
+      const parsedAge = parseInt(trimmedAge, 10);
+      saveUserAge(parsedAge);
+
+      const finalName = profileNameInput.trim() || "Friend";
+      localStorage.setItem("rabtv_profile_name", finalName);
+      setSavedProfileName(finalName);
+
+      setShowFirstStartModal(false);
+      setPasscodeError(false);
+      setAgeErrorNotice(false);
+      window.dispatchEvent(new Event("rabtv_settings_updated"));
+    } else if (enteredCode === TRIAL_CODE) {
+      const trialAlreadyUsed = localStorage.getItem("rabtv_trial_used_flag") === "true";
+      if (trialAlreadyUsed) {
+        setPasscodeError(true);
+        setPasscodeErrorMsg("⚠️ Trial code has already been used and cannot be redeemed again.");
+        setAgeErrorNotice(false);
+        setPasscodeInput("");
+        return;
+      }
+
+      localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
+      localStorage.setItem("rabtv_access_status", "trial");
+      localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));
+      localStorage.setItem("rabtv_trial_used_flag", "true");
+
       saveCardSize(cardSize);
       saveStreamQuality(streamQuality);
       saveTheme(appTheme);
@@ -248,6 +318,7 @@ function RootComponent() {
       window.dispatchEvent(new Event("rabtv_settings_updated"));
     } else {
       setPasscodeError(true);
+      setPasscodeErrorMsg("⚠️ Invalid Passcode. Please try again.");
       setAgeErrorNotice(false);
       setPasscodeInput("");
     }
@@ -384,6 +455,7 @@ function RootComponent() {
         if (data.favorites) localStorage.setItem("rabtv_favorites", data.favorites);
 
         localStorage.removeItem(DISCLAIMER_ACCEPTED_KEY);
+        localStorage.removeItem("rabtv_access_status");
         setShowFirstStartModal(true);
         handleCloseAll();
         setBackupStatus("Settings restored. Please reinstate your passcode agreement.");
@@ -1126,7 +1198,7 @@ function RootComponent() {
 
                   {passcodeError && (
                     <p className="text-xs font-semibold text-red-400 text-center">
-                      ⚠️ Invalid Passcode. Please try again.
+                      {passcodeErrorMsg}
                     </p>
                   )}
                 </div>
