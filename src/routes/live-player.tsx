@@ -20,6 +20,8 @@ interface QualityLevel {
   label: string;
 }
 
+type StreamStatus = 'checking' | 'live' | 'offline';
+
 function LivePlayerComponent() {
   const { url: streamUrl, title, logo } = Route.useSearch();
   const [appTheme, setAppTheme] = useState<AppTheme>('violet');
@@ -27,6 +29,8 @@ function LivePlayerComponent() {
   const [loadingSuggestions, setLoadingSuggestions] = useState<boolean>(true);
   const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([]);
   const [selectedQuality, setSelectedQuality] = useState<number>(-1);
+  const [streamStatus, setStreamStatus] = useState<StreamStatus>('checking');
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
 
@@ -75,14 +79,39 @@ function LivePlayerComponent() {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !streamUrl) return;
+    if (!video || !streamUrl) {
+      setStreamStatus('offline');
+      return;
+    }
+
+    setStreamStatus('checking');
+
+    const handlePlaying = () => setStreamStatus('live');
+    const handleError = () => setStreamStatus('offline');
+    const handleStalled = () => {
+      // If stalled for too long without data, mark offline
+      if (video.networkState === HTMLVideoElement.NETWORK_NO_SOURCE) {
+        setStreamStatus('offline');
+      }
+    };
+
+    video.addEventListener('playing', handlePlaying);
+    video.addEventListener('error', handleError);
+    video.addEventListener('stalled', handleStalled);
+
+    // Safety timeout: if it doesn't load within 8 seconds, flag as offline
+    const timeoutId = setTimeout(() => {
+      if (video.paused && video.readyState < 2) {
+        setStreamStatus('offline');
+      }
+    }, 8000);
 
     if (streamUrl.includes('.m3u8')) {
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = streamUrl;
-        video.addEventListener('loadedmetadata', () => {
-          video.play().catch((err) => console.log('Autoplay deferred:', err));
-        });
+        video.play()
+          .then(() => setStreamStatus('live'))
+          .catch(() => setStreamStatus('offline'));
       } else {
         const initHls = () => {
           const HlsClass = (window as any).Hls;
@@ -101,7 +130,9 @@ function LivePlayerComponent() {
             hlsInstance.attachMedia(video);
 
             hlsInstance.on(HlsClass.Events.MANIFEST_PARSED, () => {
-              video.play().catch((err) => console.log('Autoplay deferred:', err));
+              video.play()
+                .then(() => setStreamStatus('live'))
+                .catch(() => setStreamStatus('offline'));
 
               if (hlsInstance.levels && hlsInstance.levels.length > 0) {
                 const levels: QualityLevel[] = hlsInstance.levels.map((lvl: any, idx: number) => ({
@@ -114,6 +145,7 @@ function LivePlayerComponent() {
 
             hlsInstance.on(HlsClass.Events.ERROR, (_event: any, data: any) => {
               if (data.fatal) {
+                setStreamStatus('offline');
                 if (data.type === HlsClass.ErrorTypes.NETWORK_ERROR) {
                   hlsInstance.startLoad();
                 } else if (data.type === HlsClass.ErrorTypes.MEDIA_ERROR) {
@@ -123,6 +155,8 @@ function LivePlayerComponent() {
                 }
               }
             });
+          } else {
+            setStreamStatus('offline');
           }
         };
 
@@ -133,15 +167,22 @@ function LivePlayerComponent() {
           script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
           script.async = true;
           script.onload = () => initHls();
+          script.onerror = () => setStreamStatus('offline');
           document.head.appendChild(script);
         }
       }
     } else {
       video.src = streamUrl;
-      video.play().catch((err) => console.log('Autoplay deferred:', err));
+      video.play()
+        .then(() => setStreamStatus('live'))
+        .catch(() => setStreamStatus('offline'));
     }
 
     return () => {
+      clearTimeout(timeoutId);
+      video.removeEventListener('playing', handlePlaying);
+      video.removeEventListener('error', handleError);
+      video.removeEventListener('stalled', handleStalled);
       if (hlsRef.current) {
         hlsRef.current.destroy();
       }
@@ -170,7 +211,7 @@ function LivePlayerComponent() {
           bg: 'bg-gradient-to-br from-slate-950 via-blue-950/40 to-slate-950',
           cardGradient: 'from-blue-950/80 via-slate-900 to-sky-950/80',
           accentText: 'text-sky-300',
-          borderGlow: 'border-sky-500/30',
+          borderGlow: 'border-blue-500/30',
         };
       case 'emerald':
         return {
@@ -208,6 +249,7 @@ function LivePlayerComponent() {
     <div className={`min-h-screen ${themeStyles.bg} text-white transition-colors duration-300 pb-16 w-full max-w-full overflow-x-hidden box-border`}>
       <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 pt-3 space-y-4 box-border">
         
+        {/* TOP CONTROL & LOGO HEADER */}
         <div className="w-full flex flex-col items-center justify-center p-3 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 shadow-lg text-center gap-2 box-border">
           <div className="w-full flex items-center justify-between">
             <Link
@@ -235,24 +277,43 @@ function LivePlayerComponent() {
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-[2px] max-w-full px-2 my-1">
-            {logo && (
+          {/* CENTERED LOGO WRAPPER & DYNAMIC LIVE / OFFLINE STATUS BADGE */}
+          <div className="w-full flex items-center justify-center gap-3 max-w-full px-2 my-1">
+            {logo ? (
               <img
                 src={logo}
                 alt={title}
-                className="h-6 sm:h-7 w-auto max-w-[80px] object-contain bg-transparent shrink-0"
+                className="h-9 sm:h-11 w-auto max-w-[180px] sm:max-w-[240px] object-contain bg-transparent shrink-0"
               />
+            ) : (
+              <span className="text-sm sm:text-base font-black text-white tracking-wider uppercase">
+                LIVE STREAM
+              </span>
             )}
-            <h1 className="text-sm sm:text-base md:text-lg font-black truncate max-w-[200px] sm:max-w-md text-white">
-              {title}
-            </h1>
+
+            {/* DYNAMIC HEALTH BADGE */}
             <div className="flex items-center space-x-1 ml-1 shrink-0">
-              <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
-              <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider">LIVE</span>
+              {streamStatus === 'live' ? (
+                <>
+                  <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+                  <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider">LIVE</span>
+                </>
+              ) : streamStatus === 'offline' ? (
+                <>
+                  <span className="inline-flex items-center justify-center w-4 h-4 bg-red-600/90 text-white rounded-full text-[10px] font-black shadow-[0_0_8px_rgba(239,68,68,0.8)]">✕</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider uppercase">STREAM UNAVAILABLE</span>
+                </>
+              ) : (
+                <>
+                  <span className="inline-block w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping"></span>
+                  <span className="text-[10px] sm:text-xs font-bold text-yellow-400 tracking-wider">CHECKING...</span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
+        {/* PLAYER WRAPPER */}
         <div className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] aspect-video box-border">
           {streamUrl ? (
             <video
@@ -271,16 +332,24 @@ function LivePlayerComponent() {
           )}
         </div>
 
+        {/* WRITTEN DESCRIPTION / CHANNEL NAME BELOW VIDEO */}
         <div className={`p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex flex-col items-center justify-center text-center space-y-1.5 box-border`}>
           <div className="flex items-center justify-center gap-2">
-            <span className="rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-red-300">
-              Live Broadcast
+            <span className={`rounded-full px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border ${
+              streamStatus === 'offline' 
+                ? 'bg-red-500/20 border-red-500/40 text-red-300' 
+                : 'bg-red-500/20 border-red-500/40 text-red-300'
+            }`}>
+              {streamStatus === 'offline' ? 'Broken Link' : 'Live Broadcast'}
             </span>
-            <span className={`text-[11px] sm:text-xs font-medium ${themeStyles.accentText}`}>Streaming Now</span>
+            <span className={`text-[11px] sm:text-xs font-medium ${themeStyles.accentText}`}>
+              {streamStatus === 'offline' ? 'Connection Failed' : 'Streaming Now'}
+            </span>
           </div>
           <h2 className="text-base sm:text-xl font-black text-white truncate max-w-full px-2">{title}</h2>
         </div>
 
+        {/* NAVIGATION EXPLORER */}
         <div className="w-full p-3.5 rounded-2xl bg-black/40 border border-white/10 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 box-border text-center sm:text-left">
           <div>
             <h4 className="text-xs sm:text-sm font-bold text-white">Looking for something else?</h4>
@@ -294,6 +363,7 @@ function LivePlayerComponent() {
           </Link>
         </div>
 
+        {/* RECOMMENDED FEEDS */}
         <section className="pt-2">
           <div className="mb-3 flex items-center justify-between px-1">
             <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
