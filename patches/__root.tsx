@@ -137,7 +137,7 @@ function RootComponent() {
   const [passcodeStatusMsg, setPasscodeStatusMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
-  const [canModalScrollDown, setCanModalScrollDown] = useState<boolean>(false);
+  const [canModalScrollDown, setCanModalScrollDown] = useState<boolean>(true);
 
   const [headerSearchInput, setHeaderSearchInput] = useState("");
 
@@ -1141,152 +1141,167 @@ function RootComponent() {
           </main>
 
           {showFirstStartModal && (
-            <div
-              ref={(node) => handleModalScrollCheck(node)}
-              onScroll={(e) => handleModalScrollCheck(e.currentTarget)}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-md overflow-y-auto"
-            >
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-md overflow-hidden">
               <form
                 onSubmit={handleFirstTimeAuthorize}
-                className={`my-auto w-full max-w-xl space-y-5 rounded-2xl border p-6 text-white shadow-2xl md:p-8 ${getCardBackground(appTheme)}`}
+                className={`relative w-full max-w-xl rounded-2xl border text-white shadow-2xl flex flex-col h-[85vh] max-h-[85vh] ${getCardBackground(appTheme)}`}
               >
-                <div className="text-center space-y-2">
-                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl overflow-hidden border border-red-500/30 shadow-lg bg-black">
-                    <img
-                      src={HOSTED_ICON_URL}
-                      alt="RABBiT TV Logo"
-                      className="h-full w-full object-cover"
-                    />
+                {/* Scrollable Content Container */}
+                <div
+                  ref={(node) => handleModalScrollCheck(node)}
+                  onScroll={(e) => handleModalScrollCheck(e.currentTarget)}
+                  className="p-6 md:p-8 space-y-5 overflow-y-auto flex-1 pb-24"
+                >
+                  <div className="text-center space-y-2">
+                    <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl overflow-hidden border border-red-500/30 shadow-lg bg-black">
+                      <img
+                        src={HOSTED_ICON_URL}
+                        alt="RABBiT TV Logo"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <h2 className={`text-2xl font-bold ${getPrimaryAccentColor(appTheme)}`}>
+                      Welcome to RABBiT TV
+                    </h2>
                   </div>
-                  <h2 className={`text-2xl font-bold ${getPrimaryAccentColor(appTheme)}`}>
-                    Welcome to RABBiT TV
-                  </h2>
-                </div>
 
-                <div className="space-y-3 text-sm leading-relaxed text-slate-300 text-center">
-                  <p>
-                    Get all your favorite movies and TV shows right here, streaming smoothly in one place!
-                  </p>
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
-                    <strong>⏳ Trial Option:</strong> You can enter passcode <strong>`9654`</strong> to start a free 7-day trial. Full lifetime unlock is available for a one-time $20 fee. Note: Trial codes are strictly single-use per device.
-                  </div>
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300">
-                    <strong>🔒 Friendly Request:</strong> Please try not to share this app around too widely for now, so we can keep server payloads manageable and ensure smooth streaming for everyone.
-                  </div>
-                </div>
-
-                <div className="space-y-2 border-t border-white/10 pt-4">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                    What's your name? <span className="text-slate-400 font-normal lowercase">(For your welcome greeting!)</span>
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={25}
-                    value={profileNameInput}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setProfileNameInput(val);
-                      localStorage.setItem("rabtv_profile_name", val.trim());
-                      setSavedProfileName(val.trim());
-                    }}
-                    placeholder="Enter Name"
-                    className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-center text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
-                  />
-                </div>
-
-                <div className="space-y-2 border-t border-white/10 pt-3">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                    How old are you? <span className="text-slate-400 font-normal lowercase">(So we can streamline your experience!)</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={120}
-                    value={userAgeInput}
-                    onChange={(e) => setUserAgeInput(e.target.value)}
-                    placeholder="Enter Age"
-                    className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-center text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
-                  />
-                  {ageErrorNotice && (
-                    <p className="text-xs font-semibold text-red-400 text-center">
-                      ⚠️ Age was not entered! Please enter your age and passcode to proceed.
+                  <div className="space-y-3 text-sm leading-relaxed text-slate-300 text-center">
+                    <p>
+                      Get all your favorite movies and TV shows right here, streaming smoothly in one place!
                     </p>
-                  )}
-                </div>
-
-                <div className="space-y-2 border-t border-white/10 pt-3">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Select Startup Theme:
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    {allThemesList.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => handleThemeChange(t.id)}
-                        className={`rounded-xl border py-2.5 text-xs font-bold transition focus:outline-none focus:ring-4 ${
-                          appTheme === t.id
-                            ? `border-white/30 ${getPrimaryBgColor(t.id)} text-white shadow-lg`
-                            : "border-white/10 bg-slate-800 text-slate-300 hover:bg-slate-700"
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                      <strong>⏳ Trial Option:</strong> You can enter passcode <strong>`9654`</strong> to start a free 7-day trial. Full lifetime unlock is available for a one-time $20 fee. Note: Trial codes are strictly single-use per device.
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2 border-t border-white/10 pt-3">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Select Display Size (Adjustable anytime in settings):
-                  </label>
-
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    {(["small", "medium", "large"] as CardSize[]).map((size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => handleSizeChange(size)}
-                        className={`rounded-xl border py-2.5 text-xs font-bold transition focus:outline-none focus:ring-4 ${
-                          cardSize === size
-                            ? `border-white/30 ${getPrimaryBgColor(appTheme)} text-white shadow-lg`
-                            : "border-white/10 bg-slate-800 text-slate-300 hover:bg-slate-700"
-                        }`}
-                      >
-                        {size === "small" ? "Small (25%)" : size === "medium" ? "Medium (60%)" : "Large (100%)"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-white/10 pt-3">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      XL Mouse Pointer
+                  <div className="space-y-2 border-t border-white/10 pt-4">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                      What's your name? <span className="text-slate-400 font-normal lowercase">(For your welcome greeting!)</span>
                     </label>
-                    <p className="text-[11px] text-slate-400">Enlarges cursor 3x for easy projector/TV navigation.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleMouseToggle(!helpfulMouse)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      helpfulMouse ? "bg-violet-600" : "bg-slate-700"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        helpfulMouse ? "translate-x-6" : "translate-x-1"
-                      }`}
+                    <input
+                      type="text"
+                      maxLength={25}
+                      value={profileNameInput}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setProfileNameInput(val);
+                        localStorage.setItem("rabtv_profile_name", val.trim());
+                        setSavedProfileName(val.trim());
+                      }}
+                      placeholder="Enter Name"
+                      className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-center text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
                     />
-                  </button>
+                  </div>
+
+                  <div className="space-y-2 border-t border-white/10 pt-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                      How old are you? <span className="text-slate-400 font-normal lowercase">(So we can streamline your experience!)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={120}
+                      value={userAgeInput}
+                      onChange={(e) => setUserAgeInput(e.target.value)}
+                      placeholder="Enter Age"
+                      className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-center text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
+                    />
+                    {ageErrorNotice && (
+                      <p className="text-xs font-semibold text-red-400 text-center">
+                        ⚠️ Age was not entered! Please enter your age and passcode to proceed.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 border-t border-white/10 pt-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Select Startup Theme:
+                    </label>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                      {allThemesList.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => handleThemeChange(t.id)}
+                          className={`rounded-xl border py-2.5 text-xs font-bold transition focus:outline-none focus:ring-4 ${
+                            appTheme === t.id
+                              ? `border-white/30 ${getPrimaryBgColor(t.id)} text-white shadow-lg`
+                              : "border-white/10 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 border-t border-white/10 pt-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Select Display Size (Adjustable anytime in settings):
+                    </label>
+
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                      {(["small", "medium", "large"] as CardSize[]).map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => handleSizeChange(size)}
+                          className={`rounded-xl border py-2.5 text-xs font-bold transition focus:outline-none focus:ring-4 ${
+                            cardSize === size
+                              ? `border-white/30 ${getPrimaryBgColor(appTheme)} text-white shadow-lg`
+                              : "border-white/10 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                          }`}
+                        >
+                          {size === "small" ? "Small (25%)" : size === "medium" ? "Medium (60%)" : "Large (100%)"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-white/10 pt-3">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        XL Mouse Pointer
+                      </label>
+                      <p className="text-[11px] text-slate-400">Enlarges cursor 3x for easy projector/TV navigation.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleMouseToggle(!helpfulMouse)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        helpfulMouse ? "bg-violet-600" : "bg-slate-700"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          helpfulMouse ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-2 border-t border-white/10 pt-3">
+                {/* Floating "Scroll Down For Passcode" Indicator pinned at the bottom of the device screen */}
+                {canModalScrollDown && (
+                  <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-bounce">
+                    <div className="flex flex-col items-center gap-0.5 bg-black/90 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-2xl">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white">
+                        Scroll Down For Passcode
+                      </span>
+                      <span className={`text-lg font-black ${getThemeArrowColor(appTheme)}`}>
+                        ⌄
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sticky Bottom Footer for Passcode Input & Submit Button */}
+                <div className="p-6 md:p-8 pt-4 border-t border-white/10 bg-slate-950/95 rounded-b-2xl space-y-3 shrink-0 z-20">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Enter Personal Passcode or Trial (`9654`):
                   </label>
                   <input
-                    type="password"
+                    type="text"
                     maxLength={10}
                     value={passcodeInput}
                     onChange={(e) => setPasscodeInput(e.target.value)}
@@ -1299,27 +1314,14 @@ function RootComponent() {
                       {passcodeErrorMsg}
                     </p>
                   )}
+
+                  <button
+                    type="submit"
+                    className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none focus:ring-4`}
+                  >
+                    Enter RABBiT TV
+                  </button>
                 </div>
-
-                <button
-                  type="submit"
-                  className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none focus:ring-4`}
-                >
-                  Enter RABBiT TV
-                </button>
-
-                {canModalScrollDown && (
-                  <div className="pointer-events-none fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
-                        Scroll Down For Passcode
-                      </span>
-                      <span className={`text-lg font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
-                        ⌄
-                      </span>
-                    </div>
-                  </div>
-                )}
               </form>
             </div>
           )}
