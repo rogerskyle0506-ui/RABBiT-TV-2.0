@@ -75,7 +75,7 @@ export function ScrollPillBar({
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md p-1.5">
+    <div className="relative w-full max-w-fit mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md p-1.5 flex justify-center">
       {/* Left Side Edge Fade + Theme-Matched Slow Glowing Left Arrow */}
       <div
         className={`pointer-events-none absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-black/90 via-black/40 to-transparent z-10 flex items-center justify-start pl-2.5 transition-opacity duration-300 ${
@@ -87,10 +87,10 @@ export function ScrollPillBar({
         </span>
       </div>
 
-      {/* Scrollable Track */}
+      {/* Centered Scrollable Track */}
       <div
         ref={scrollContainerRef}
-        className="flex items-center gap-2 overflow-x-auto scrollbar-none px-2 py-1"
+        className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto scrollbar-none px-2 py-1 min-w-full sm:min-w-0"
       >
         {options.map((item) => (
           <button
