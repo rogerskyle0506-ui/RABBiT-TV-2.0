@@ -77,6 +77,7 @@ function SearchPage() {
   const [cardSize, setCardSize] = useState<CardSize>("large");
   const [userAge, setUserAge] = useState<number>(18);
   const [canScrollDown, setCanScrollDown] = useState<boolean>(false);
+  const [showScrollReminder, setShowScrollReminder] = useState<boolean>(false);
 
   useEffect(() => {
     setAppTheme(getSavedTheme());
@@ -86,8 +87,11 @@ function SearchPage() {
 
   useEffect(() => {
     const handleScrollCheck = () => {
-      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-      setCanScrollDown(scrollTop + clientHeight < scrollHeight - 40);
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+
+      setCanScrollDown(scrollTop + clientHeight < scrollHeight - 100);
     };
 
     handleScrollCheck();
@@ -98,6 +102,37 @@ function SearchPage() {
       window.removeEventListener("resize", handleScrollCheck);
     };
   }, [results, loading]);
+
+  // Handle 30s user inactivity & reset on user interaction
+  useEffect(() => {
+    let inactivityTimer: NodeJS.Timeout;
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      setShowScrollReminder(false);
+
+      if (canScrollDown) {
+        inactivityTimer = setTimeout(() => {
+          setShowScrollReminder(true);
+        }, 30000); // 30 seconds wait time
+      }
+    };
+
+    resetInactivityTimer();
+
+    window.addEventListener("scroll", resetInactivityTimer, { passive: true });
+    window.addEventListener("click", resetInactivityTimer);
+    window.addEventListener("keydown", resetInactivityTimer);
+    window.addEventListener("touchstart", resetInactivityTimer, { passive: true });
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      window.removeEventListener("scroll", resetInactivityTimer);
+      window.removeEventListener("click", resetInactivityTimer);
+      window.removeEventListener("keydown", resetInactivityTimer);
+      window.removeEventListener("touchstart", resetInactivityTimer);
+    };
+  }, [canScrollDown]);
 
   useEffect(() => {
     let active = true;
@@ -208,12 +243,12 @@ function SearchPage() {
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
-      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3";
+      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 justify-items-center";
     }
     if (cardSize === "medium") {
-      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4";
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center";
     }
-    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4";
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
   }, [cardSize]);
 
   const themeStyles = {
@@ -254,8 +289,8 @@ function SearchPage() {
   }, []);
 
   return (
-    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 px-4 py-6 pb-12`}>
-      <div className="mx-auto max-w-7xl space-y-6">
+    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 px-4 py-6 pb-12 flex flex-col items-center`}>
+      <div className="mx-auto max-w-7xl w-full space-y-6">
         
         <div className={`rounded-2xl border ${themeStyles.border} bg-black/40 backdrop-blur-md p-4 sm:p-6 shadow-xl`}>
           <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3 items-center">
@@ -339,17 +374,21 @@ function SearchPage() {
 
           <div className="mt-4 space-y-1">
             <span className="text-xs text-slate-400 font-semibold block px-1">Genre:</span>
-            <ScrollPillBar
-              options={allGenreOptions}
-              activeId={selectedGenre}
-              onSelect={(id) => setSelectedGenre(id)}
-              appTheme={appTheme}
-              getPrimaryBgColor={getPrimaryBgColor}
-            />
+            <div className="flex justify-center w-full">
+              <div className="w-full max-w-4xl flex justify-center">
+                <ScrollPillBar
+                  options={allGenreOptions}
+                  activeId={selectedGenre}
+                  onSelect={(id) => setSelectedGenre(id)}
+                  appTheme={appTheme}
+                  getPrimaryBgColor={getPrimaryBgColor}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-1">
+        <div className="flex items-center justify-between px-1 w-full">
           <h2 className="text-lg font-bold text-white">
             {searchParams.q ? `Search Results for "${searchParams.q}"` : "Filtered Catalog Results"}
           </h2>
@@ -363,7 +402,7 @@ function SearchPage() {
         ) : error ? (
           <div className="py-20 text-center text-red-400">Error: {error}</div>
         ) : filteredResults.length > 0 ? (
-          <div className={gridColsClass}>
+          <div className={`${gridColsClass} w-full`}>
             {filteredResults.map((item) => (
               <MediaCard item={item} key={item.id} />
             ))}
@@ -374,8 +413,24 @@ function SearchPage() {
           </div>
         )}
 
-        {canScrollDown && (
-          <div className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none">
+        {/* Scroll Reminder with 30s Inactivity & 8s Flash Twice Animation */}
+        {canScrollDown && showScrollReminder && (
+          <div 
+            className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
+            onAnimationEnd={() => setShowScrollReminder(false)}
+          >
+            <style>{`
+              @keyframes flashTwice {
+                0% { opacity: 0; }
+                25% { opacity: 1; }
+                50% { opacity: 0; }
+                75% { opacity: 1; }
+                100% { opacity: 0; }
+              }
+              .animate-flash-twice {
+                animation: flashTwice 8s ease-in-out forwards;
+              }
+            `}</style>
             <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
                 More Content Below
