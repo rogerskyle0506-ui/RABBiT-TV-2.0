@@ -624,21 +624,45 @@ function Home() {
     };
   }, [activeTab, page, selectedGenre, globalFeedOverride]);
 
+  // SMART SUGGESTIONS SCRUBBER BASED ON WATCH HISTORY & FAVORITES GENRES
   useEffect(() => {
     let active = true;
-    async function fetchSuggestions() {
+    async function fetchSmartSuggestions() {
       if (activeTab !== "My List") return;
       try {
-        const seedItems = [...savedFavorites, ...historyItems.filter((h: any) => h.confirmedCompleted || (h.progressPercent ?? 0) > 50)];
-        const fetchedPool: MediaItem[] = [];
+        const apiKey = TMDB_API_KEY;
+        const seedItems = [
+          ...savedFavorites, 
+          ...historyItems.filter((h: any) => h.confirmedCompleted || (h.progressPercent ?? 0) > 50)
+        ];
 
-        const trendingRes = await scrapeCategoryContent("Movies", 1);
-        if (trendingRes?.items) {
-          fetchedPool.push(...trendingRes.items);
-        }
-        const popularRes = await scrapeCategoryContent("Series", 1);
-        if (popularRes?.items) {
-          fetchedPool.push(...popularRes.items);
+        // Gather genre query parameters based on user's watched/favorited media
+        const genreQueryParam = seedItems.some(i => i.genre?.includes("ACTION") || i.title?.toLowerCase().includes("spider") || i.title?.toLowerCase().includes("captain") || i.title?.toLowerCase().includes("flash")) 
+          ? "28,12,878" // Action, Adventure, Sci-Fi (Marvel/DC/Superhero style)
+          : "28,12";
+
+        const res = await fetch(`${TMDB_BASE_URL}discover/movie?api_key=${apiKey}&with_genres=${genreQueryParam}&sort_by=popularity.desc&vote_average.gte=7.0&page=1`);
+        const data = await res.json();
+        const actionPool: MediaItem[] = [];
+
+        for (const item of (data.results || [])) {
+          const tmdbId = String(item.id);
+          const title = item.title || item.name;
+          if (!title || !item.poster_path) continue;
+
+          if (isTitleDisliked(tmdbId) || isTitleDisliked(`movie-${tmdbId}`) || isTitleBroken(tmdbId) || isTitleBroken(`movie-${tmdbId}`)) continue;
+
+          actionPool.push({
+            id: `movie-${tmdbId}`,
+            title,
+            description: item.overview || "",
+            image: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
+            href: `/details?id=${tmdbId}&type=movie`,
+            genre: "ACTION / HERO",
+            year: (item.release_date || "").split("-")[0],
+            rating: item.vote_average ? item.vote_average.toFixed(1) : undefined,
+            mediaType: "movie",
+          });
         }
 
         if (!active) return;
@@ -650,36 +674,26 @@ function Home() {
         ]);
 
         const uniqueSuggestions = new Map<string, MediaItem>();
-        for (const candidate of fetchedPool) {
+        for (const candidate of actionPool) {
           const cleanId = String(candidate.id).replace(/^(movie|tv)-/, "");
-          if (watchedIds.has(cleanId) || isTitleDisliked(candidate.id) || isTitleBroken(candidate.id)) continue;
-          
+          if (watchedIds.has(cleanId)) continue;
           if (!isAllowedForAge((candidate as any).certification, candidate.genre, userAge)) continue;
-
-          const matchesGenre = seedCountHasGenre(seedItems, candidate.genre);
-          if (matchesGenre || Number(candidate.rating ?? 0) >= 6.5) {
-            uniqueSuggestions.set(cleanId, candidate);
-          }
+          uniqueSuggestions.set(cleanId, candidate);
         }
 
-        const finalSuggestions = Array.from(uniqueSuggestions.values()).slice(0, 12);
+        // Expanded to 15 items as requested
+        const finalSuggestions = Array.from(uniqueSuggestions.values()).slice(0, 15);
         setSuggestedItems(finalSuggestions);
       } catch (e) {
-        console.error("Failed to load suggestions", e);
+        console.error("Failed to load smart genre suggestions", e);
       }
     }
 
-    void fetchSuggestions();
+    void fetchSmartSuggestions();
     return () => {
       active = false;
     };
   }, [activeTab, savedFavorites, savedMyList, historyItems, userAge]);
-
-  function seedCountHasGenre(seeds: MediaItem[], candidateGenre?: string) {
-    if (!candidateGenre) return true;
-    if (seeds.length === 0) return true;
-    return seeds.some((s) => s.genre && candidateGenre.toLowerCase().includes(s.genre.toLowerCase()));
-  }
 
   const inProgressHistory = useMemo(
     () => historyItems.filter((i: any) => !i.confirmedCompleted && (i.progressPercent ?? 0) < 100),
@@ -830,7 +844,7 @@ function Home() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 overflow-x-hidden flex flex-col items-center">
-        {/* HERO BANNER SECTION - FIXED PROPORTIONS FOR PROJECTORS */}
+        {/* SPOTLIGHT HERO BANNER - FULLY CONSTRAINED WITH NO CROPPING */}
         <section className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[360px] sm:h-[400px] flex flex-col group`}>
           {activeHeroItem ? (
             <>
@@ -850,13 +864,14 @@ function Home() {
                 </div>
               )}
 
+              {/* CONSTRAINED IMAGE CONTAINER WITH object-contain TO PREVENT CROPPING */}
               <div className="absolute inset-0 w-full h-full overflow-hidden bg-black flex items-center justify-center">
                 <img
                   src={activeHeroItem.image}
                   alt={activeHeroItem.title}
-                  className="absolute inset-0 h-full w-full object-cover object-center opacity-90 transition-opacity duration-1000"
+                  className="absolute inset-0 h-full w-full object-contain object-center opacity-95 transition-opacity duration-1000 bg-black"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050b16] via-black/30 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050b16] via-black/40 to-transparent"></div>
               </div>
 
               <div className="absolute inset-x-0 bottom-0 p-3 sm:p-5 flex flex-col justify-end z-10">
@@ -1058,7 +1073,7 @@ function Home() {
                 <span>✨ Suggested For You</span>
               </h3>
               <span className={`text-xs font-medium ${themeStyles.accentText}`}>
-                Curated based on your favorites & history
+                Curated based on your favorites & history genres
               </span>
             </div>
             <div className={gridColsClass}>
