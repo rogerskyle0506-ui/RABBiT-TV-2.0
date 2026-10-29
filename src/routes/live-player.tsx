@@ -299,36 +299,38 @@ function LivePlayerComponent() {
             )}
           </div>
 
-          {/* CENTERED LOGO WRAPPER & DYNAMIC LIVE / OFFLINE STATUS BADGE */}
-          <div className="w-full flex items-center justify-center gap-3 max-w-full px-2 my-1">
-            {logo ? (
-              <img
-                src={logo}
-                alt={title}
-                className="w-[160px] sm:w-[200px] h-[40px] sm:h-[50px] object-contain bg-transparent shrink-0"
-              />
-            ) : (
-              <span className="text-sm sm:text-base font-black text-white tracking-wider uppercase">
-                LIVE STREAM
-              </span>
-            )}
+          {/* SCALED LOGO & STATUS BADGE HEADER */}
+          <div className="w-full flex items-center justify-between px-2 my-1">
+            <div className="flex items-center justify-start w-[210px] sm:w-[260px] h-[55px] sm:h-[65px] shrink-0 bg-transparent">
+              {logo ? (
+                <img
+                  src={logo}
+                  alt={title}
+                  className="w-full h-full object-contain bg-transparent"
+                />
+              ) : (
+                <span className="text-sm sm:text-base font-black text-white tracking-wider uppercase">
+                  LIVE STREAM
+                </span>
+              )}
+            </div>
 
             {/* DYNAMIC HEALTH BADGE */}
-            <div className="flex items-center space-x-1 ml-1 shrink-0">
+            <div className="flex items-center space-x-1.5 shrink-0 ml-4">
               {streamStatus === 'live' ? (
                 <>
                   <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
-                  <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider">LIVE</span>
+                  <span className="text-xs sm:text-sm font-bold text-red-400 tracking-wider">LIVE</span>
                 </>
               ) : streamStatus === 'offline' ? (
                 <>
-                  <span className="inline-flex items-center justify-center w-4 h-4 bg-red-600/90 text-white rounded-full text-[10px] font-black shadow-[0_0_8px_rgba(239,68,68,0.8)]">✕</span>
-                  <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider uppercase">OFF-AIR</span>
+                  <span className="inline-flex items-center justify-center w-4 h-4 bg-red-600/90 text-white rounded-full text-xs font-black shadow-[0_0_8px_rgba(239,68,68,0.8)]">✕</span>
+                  <span className="text-xs sm:text-sm font-bold text-red-400 tracking-wider uppercase">OFF-AIR</span>
                 </>
               ) : (
                 <>
                   <span className="inline-block w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping"></span>
-                  <span className="text-[10px] sm:text-xs font-bold text-yellow-400 tracking-wider">CHECKING...</span>
+                  <span className="text-xs sm:text-sm font-bold text-yellow-400 tracking-wider">CHECKING...</span>
                 </>
               )}
             </div>
