@@ -1,14 +1,18 @@
 // src/lib/report.ts
 
-// Base64 encoded: "rogerskyle0506@gmail.com"
-const ENCODED_ALERT_EMAIL = "cm9nZXJza3lsZTA1MDZAZ21haWwuY29t";
+// Full email base64 encoded: "rogerskyle0506@gmail.com"
+const ENCODED_ALERT_DESTINATION = "cm9nZXJza3lsZTA1MDZAZ21haWwuY29t";
 
 /**
  * Decodes the base64-protected destination email at runtime
  */
 function getAlertEmailAddress(): string {
   if (typeof window !== "undefined" && typeof window.atob === "function") {
-    return window.atob(ENCODED_ALERT_EMAIL);
+    try {
+      return window.atob(ENCODED_ALERT_DESTINATION);
+    } catch {
+      return "";
+    }
   }
   return "";
 }
@@ -46,11 +50,14 @@ export function getDeviceDetails() {
 /**
  * Dispatches activation alert containing user input and captured device details
  */
-export async function sendPermanentActivationAlert(profileName: string, userAge: string) {
+export async function sendPermanentActivationAlert(profileName: string, userAge?: string | number) {
   try {
     const destinationEmail = getAlertEmailAddress();
     const device = getDeviceDetails();
     const timestamp = new Date().toLocaleString();
+
+    // Safely resolve age from parameter or localStorage fallback
+    const resolvedAge = userAge || (typeof window !== "undefined" ? localStorage.getItem("rabtv_user_age") || "Not Provided" : "Not Provided");
 
     console.log(`[RABBIT TV SECURITY] Permanent activation alert triggered for: ${profileName}`);
 
@@ -64,11 +71,11 @@ export async function sendPermanentActivationAlert(profileName: string, userAge:
     const alertPayload = {
       to_email: destinationEmail,
       user_name: profileName,
-      user_age: userAge,
+      user_age: resolvedAge,
       device_model: device.model,
       device_os: device.os,
       activation_time: timestamp,
-      message: `SECURITY ALERT: Permanent code entered!\n\nUser Name: ${profileName}\nAge: ${userAge}\nDevice Model: ${device.model}\nOS: ${device.os}\nTime: ${timestamp}`,
+      message: `SECURITY ALERT: Permanent code entered!\n\nUser Name: ${profileName}\nAge: ${resolvedAge}\nDevice Model: ${device.model}\nOS: ${device.os}\nTime: ${timestamp}`,
     };
 
     // Ready for integration with your existing transport mechanism
