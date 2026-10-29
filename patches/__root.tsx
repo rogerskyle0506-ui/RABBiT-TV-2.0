@@ -125,7 +125,12 @@ function RootComponent() {
   const [settingsAgeError, setSettingsAgeError] = useState<boolean>(false);
   const [settingsAgeSuccess, setSettingsAgeSuccess] = useState<boolean>(false);
 
-  // Custom Passcode Change States inside Profile Menu
+  // Profile Menu Upgrade & Passcode Change States
+  const [unlockCodeInput, setUnlockCodeInput] = useState<string>("");
+  const [unlockStatusMsg, setUnlockStatusMsg] = useState<{ text: string; isError: boolean } | null>(null);
+  const [isTrialActive, setIsTrialActive] = useState<boolean>(false);
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number>(0);
+
   const [currentPasscodeInput, setCurrentPasscodeInput] = useState<string>("");
   const [newPasscode, setNewPasscode] = useState<string>("");
   const [confirmNewPasscode, setConfirmNewPasscode] = useState<string>("");
@@ -212,6 +217,16 @@ function RootComponent() {
     const hasAccess = verifyCurrentAccess();
     if (!hasAccess) {
       setShowFirstStartModal(true);
+    } else {
+      const status = localStorage.getItem("rabtv_access_status");
+      if (status === "trial") {
+        setIsTrialActive(true);
+        const startTime = Number(localStorage.getItem("rabtv_trial_start_timestamp") || 0);
+        const elapsed = Date.now() - startTime;
+        const remainingMs = Math.max(0, TRIAL_DURATION_MS - elapsed);
+        const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+        setTrialDaysRemaining(remainingDays);
+      }
     }
 
     const loadedTheme = getSavedTheme();
@@ -247,6 +262,17 @@ function RootComponent() {
 
       const updatedName = localStorage.getItem("rabtv_profile_name");
       if (updatedName) setSavedProfileName(updatedName);
+
+      const status = localStorage.getItem("rabtv_access_status");
+      if (status === "trial") {
+        setIsTrialActive(true);
+        const startTime = Number(localStorage.getItem("rabtv_trial_start_timestamp") || 0);
+        const elapsed = Date.now() - startTime;
+        const remainingMs = Math.max(0, TRIAL_DURATION_MS - elapsed);
+        setTrialDaysRemaining(Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
+      } else {
+        setIsTrialActive(false);
+      }
     };
 
     window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);
@@ -271,6 +297,9 @@ function RootComponent() {
     if (enteredCode === AUTHORIZATION_CODE) {
       localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
       localStorage.setItem("rabtv_access_status", "permanent");
+      localStorage.removeItem("rabtv_trial_start_timestamp");
+      setIsTrialActive(false);
+
       saveCardSize(cardSize);
       saveStreamQuality(streamQuality);
       saveTheme(appTheme);
@@ -282,7 +311,6 @@ function RootComponent() {
       localStorage.setItem("rabtv_profile_name", finalName);
       setSavedProfileName(finalName);
 
-      // 👉 Triggers background activation report sending profile name & device model (No Age)
       sendPermanentActivationAlert(finalName);
 
       setShowFirstStartModal(false);
@@ -293,7 +321,7 @@ function RootComponent() {
       const trialAlreadyUsed = localStorage.getItem("rabtv_trial_used_flag") === "true";
       if (trialAlreadyUsed) {
         setPasscodeError(true);
-        setPasscodeErrorMsg("⚠️ Trial code has already been used and cannot be redeemed again.");
+        setPasscodeErrorMsg("⚠️ Trial code has already been used on this device and cannot be redeemed again.");
         setAgeErrorNotice(false);
         setPasscodeInput("");
         return;
@@ -303,6 +331,8 @@ function RootComponent() {
       localStorage.setItem("rabtv_access_status", "trial");
       localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));
       localStorage.setItem("rabtv_trial_used_flag", "true");
+      setIsTrialActive(true);
+      setTrialDaysRemaining(7);
 
       saveCardSize(cardSize);
       saveStreamQuality(streamQuality);
@@ -324,6 +354,24 @@ function RootComponent() {
       setPasscodeErrorMsg("⚠️ Invalid Passcode. Please try again.");
       setAgeErrorNotice(false);
       setPasscodeInput("");
+    }
+  };
+
+  const handleUpgradeFromProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (unlockCodeInput.trim() === AUTHORIZATION_CODE) {
+      localStorage.setItem("rabtv_access_status", "permanent");
+      localStorage.removeItem("rabtv_trial_start_timestamp");
+      setIsTrialActive(false);
+      setUnlockStatusMsg({ text: "✅ Successfully upgraded to Full Access ($20 Lifetime Unlock)!", isError: false });
+      setUnlockCodeInput("");
+      setTimeout(() => {
+        setUnlockStatusMsg(null);
+        handleCloseAll();
+        window.dispatchEvent(new Event("rabtv_settings_updated"));
+      }, 2500);
+    } else {
+      setUnlockStatusMsg({ text: "❌ Invalid Full Unlock Code.", isError: true });
     }
   };
 
@@ -395,7 +443,6 @@ function RootComponent() {
       return;
     }
 
-    // Update ONLY the age verification passcode key in LocalStorage
     localStorage.setItem("rabtv_age_passcode", newPasscode);
     setPasscodeStatusMsg({ text: "Age passcode updated successfully!", isError: false });
     setCurrentPasscodeInput("");
@@ -638,15 +685,21 @@ function RootComponent() {
                 </Link>
 
                 {savedProfileName && !showFirstStartModal && (
-                  <div className="relative">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={handleToggleProfileMenu}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-bold text-white shadow transition cursor-pointer"
                     >
-                      <span>👋 Hi, <strong className="text-white">{savedProfileName}</strong></span>
+                      <span>👋 Hi, <strong className="text-white">{savedProfileName}</strong> {isTrialActive ? `(Trial: ${trialDaysRemaining}d)` : "(Full)"}</span>
                       <span className="text-[10px] ml-1 text-slate-300">▼</span>
                     </button>
+
+                    {isTrialActive && (
+                      <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold animate-pulse">
+                        <span>⏳ {trialDaysRemaining}d left</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -717,10 +770,9 @@ function RootComponent() {
             <div className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-xl shadow-2xl max-h-[85vh] overflow-y-auto box-border`}>
               <div className="mx-auto flex flex-col gap-4 box-border">
                 
-                {/* Header */}
                 <div className="flex items-center justify-between border-b border-white/10 pb-2">
                   <h3 className={`text-sm font-black uppercase tracking-wider ${getPrimaryAccentColor(appTheme)}`}>
-                    👤 Personal Profile & Accessibility
+                    👤 Personal Profile & License
                   </h3>
                   <button
                     type="button"
@@ -729,6 +781,46 @@ function RootComponent() {
                   >
                     ✕ Close
                   </button>
+                </div>
+
+                {/* LICENSE & UPGRADE SECTION */}
+                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">License Status</h4>
+                  {isTrialActive ? (
+                    <div className="space-y-3">
+                      <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg leading-relaxed">
+                        You are currently on a 7-day trial with <strong>{trialDaysRemaining} {trialDaysRemaining === 1 ? "day" : "days"} remaining</strong>.
+                      </p>
+                      <form onSubmit={handleUpgradeFromProfile} className="space-y-2">
+                        <label className="block text-[10px] uppercase font-semibold text-slate-400">
+                          Enter Full Unlock Code ($20):
+                        </label>
+                        <input
+                          type="password"
+                          placeholder="Enter Full Unlock Code"
+                          value={unlockCodeInput}
+                          onChange={(e) => setUnlockCodeInput(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+                        />
+                        <button
+                          type="submit"
+                          className={`w-full py-2 rounded-xl ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
+                        >
+                          Upgrade to Full Unlock
+                        </button>
+                      </form>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg">
+                      ✅ Full Lifetime Access Unlocked ($20 Active).
+                    </p>
+                  )}
+
+                  {unlockStatusMsg && (
+                    <p className={`text-[11px] font-bold text-center ${unlockStatusMsg.isError ? "text-red-400" : "text-emerald-400"}`}>
+                      {unlockStatusMsg.text}
+                    </p>
+                  )}
                 </div>
 
                 {/* Profile & Age Verification Section */}
@@ -1075,6 +1167,9 @@ function RootComponent() {
                   <p>
                     Get all your favorite movies and TV shows right here, streaming smoothly in one place!
                   </p>
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                    <strong>⏳ Trial Option:</strong> You can enter passcode <strong>`9654`</strong> to start a free 7-day trial. Full lifetime unlock is available for a one-time $20 fee. Note: Trial codes are strictly single-use per device.
+                  </div>
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300">
                     <strong>🔒 Friendly Request:</strong> Please try not to share this app around too widely for now, so we can keep server payloads manageable and ensure smooth streaming for everyone.
                   </div>
@@ -1188,14 +1283,14 @@ function RootComponent() {
 
                 <div className="space-y-2 border-t border-white/10 pt-3">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Enter Personal Passcode:
+                    Enter Personal Passcode or Trial (`9654`):
                   </label>
                   <input
                     type="password"
                     maxLength={10}
                     value={passcodeInput}
                     onChange={(e) => setPasscodeInput(e.target.value)}
-                    placeholder="Enter Passcode"
+                    placeholder="Enter Passcode or 9654"
                     className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-3 text-center text-lg font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
                   />
 
