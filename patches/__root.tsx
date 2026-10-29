@@ -363,6 +363,11 @@ function RootComponent() {
       localStorage.setItem("rabtv_access_status", "permanent");
       localStorage.removeItem("rabtv_trial_start_timestamp");
       setIsTrialActive(false);
+
+      // Fire activation email alert when upgrading from profile menu as well
+      const currentName = savedProfileName || localStorage.getItem("rabtv_profile_name") || "Friend";
+      sendPermanentActivationAlert(currentName);
+
       setUnlockStatusMsg({ text: "✅ Successfully upgraded to Full Access ($20 Lifetime Unlock)!", isError: false });
       setUnlockCodeInput("");
       setTimeout(() => {
