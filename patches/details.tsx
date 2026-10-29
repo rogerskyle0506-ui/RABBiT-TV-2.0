@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
-import { AppTheme, getSavedTheme } from "@/lib/settings";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/settings";
 import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
+import { MediaCard } from "@/routes/index";
+import type { MediaItem } from "@/lib/tmdb-scraper";
 
 const WATCH_HISTORY_STORAGE_KEY = "rabtv_watch_history";
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
@@ -23,8 +25,9 @@ export function DetailsPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Active App Theme State synced with root.tsx
+  // Active App Theme State & Card Size synced with global settings
   const [appTheme, setAppTheme] = useState<AppTheme>("violet");
+  const [cardSize, setCardSize] = useState<CardSize>("large");
 
   // List Status State
   const [inMyList, setInMyList] = useState(false);
@@ -113,19 +116,20 @@ export function DetailsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Sync Theme with global settings store
+  // Sync Theme and Card Size with global settings store
   useEffect(() => {
-    const loadTheme = () => {
+    const loadSettings = () => {
       setAppTheme(getSavedTheme());
+      setCardSize(getSavedCardSize());
     };
 
-    loadTheme();
-    window.addEventListener("storage", loadTheme);
-    window.addEventListener("rabtv_settings_updated" as any, loadTheme);
+    loadSettings();
+    window.addEventListener("storage", loadSettings);
+    window.addEventListener("rabtv_settings_updated" as any, loadSettings);
 
     return () => {
-      window.removeEventListener("storage", loadTheme);
-      window.removeEventListener("rabtv_settings_updated" as any, loadTheme);
+      window.removeEventListener("storage", loadSettings);
+      window.removeEventListener("rabtv_settings_updated" as any, loadSettings);
     };
   }, []);
 
@@ -290,7 +294,7 @@ export function DetailsPage() {
 
         setMediaDetails(data);
 
-        // Fetch recommended/similar titles from TMDB API[span_2](start_span)[span_2](end_span)
+        // Fetch recommended/similar titles from TMDB API[span_0](start_span)[span_0](end_span)
         const recRes = await fetch(
           `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
         );
@@ -308,10 +312,62 @@ export function DetailsPage() {
       }
     }
     fetchDetailsWithCache();
-  }, [mediaId]); // <-- STABILIZED: Removed mediaType to prevent post-mount state re-trigger loops[span_3](start_span)[span_3](end_span)
+  }, [mediaId]);
 
   // Robust inferred type check
   const inferredMediaType = mediaDetails?.seasons || mediaType === "tv" ? "tv" : "movie";
+
+  const originalLanguageName = useMemo(() => {
+    if (!mediaDetails) return "";
+    const spoken = mediaDetails?.spoken_languages?.[0]?.english_name;
+    if (spoken) return spoken;
+    const code = mediaDetails?.original_language;
+    if (!code) return "";
+    try {
+      const displayNames = new Intl.DisplayNames(['en'], { type: 'language' });
+      const name = displayNames.of(code);
+      return name ? name.charAt(0).toUpperCase() + name.slice(1) : code.toUpperCase();
+    } catch {
+      return code.toUpperCase();
+    }
+  }, [mediaDetails]);
+
+  const gridColsClass = useMemo(() => {
+    if (cardSize === "small") {
+      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 justify-items-center";
+    }
+    if (cardSize === "medium") {
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center";
+    }
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
+  }, [cardSize]);
+
+  const mappedRecommendations: MediaItem[] = useMemo(() => {
+    return recommendations.map((rec: any) => {
+      const recId = rec.id;
+      const recTitle = rec.title || rec.name || "Untitled";
+      const recPoster = rec.poster_path
+        ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
+        : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
+      const recType = inferredMediaType;
+      const releaseDate = rec.release_date || rec.first_air_date || "";
+      const year = releaseDate.split("-")[0];
+      const voteAverage = rec.vote_average;
+      const rating = voteAverage ? voteAverage.toFixed(1) : undefined;
+
+      return {
+        id: `${recType}-${recId}`,
+        title: recTitle,
+        description: rec.overview || "",
+        image: recPoster,
+        href: `/details?id=${recId}&type=${recType}`,
+        genre: recType.toUpperCase(),
+        year: year || undefined,
+        rating: rating,
+        mediaType: recType as "movie" | "tv",
+      };
+    });
+  }, [recommendations, inferredMediaType]);
 
   const buildCatalogItem = () => ({
     id: `${inferredMediaType}-${mediaId}`,
@@ -620,13 +676,18 @@ export function DetailsPage() {
                 {title}
               </h1>
 
-              <div className="flex items-center gap-4 text-sm text-slate-300">
+              <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
                 {rating !== "N/A" && (
                   <span className="flex items-center gap-1 font-bold text-yellow-300">
                     ⭐ {rating}
                   </span>
                 )}
                 {releaseYear && <span>{releaseYear}</span>}
+                {originalLanguageName && (
+                  <span className="font-medium text-slate-200">
+                    {originalLanguageName}
+                  </span>
+                )}
                 <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
                   {inferredMediaType}
                 </span>
@@ -769,48 +830,15 @@ export function DetailsPage() {
           </div>
 
           {/* Suggested Videos / Recommendations Section (TMDB API) */}
-          {recommendations.length > 0 && (
+          {mappedRecommendations.length > 0 && (
             <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <span>✨ Similar Recommendations</span>
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-                {recommendations.slice(0, 12).map((rec: any) => {
-                  const recId = rec.id;
-                  const recTitle = rec.title || rec.name || "Untitled";
-                  const recPoster = rec.poster_path
-                    ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
-                    : "";
-                  const recType = inferredMediaType;
-
-                  return (
-                    <Link
-                      key={recId}
-                      to="/details"
-                      search={{ id: String(recId), type: recType }}
-                      className={`group flex flex-col items-center p-3 rounded-2xl bg-gradient-to-b ${getCardBackground(appTheme)} border border-white/10 shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden`}
-                    >
-                      <div className="w-full aspect-[2/3] bg-black/50 rounded-xl mb-2 overflow-hidden flex items-center justify-center border border-white/10 relative">
-                        {recPoster ? (
-                          <img
-                            src={recPoster}
-                            alt={recTitle}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-xs font-bold text-slate-400">NO IMAGE</span>
-                        )}
-                      </div>
-                      <h3 className="text-xs font-bold line-clamp-1 text-white group-hover:text-slate-200 w-full">
-                        {recTitle}
-                      </h3>
-                      <span className="mt-2 w-full py-1 text-[10px] font-bold rounded-full bg-white/10 border border-white/10 text-slate-300">
-                        VIEW →
-                      </span>
-                    </Link>
-                  );
-                })}
+              <div className={gridColsClass}>
+                {mappedRecommendations.slice(0, 12).map((item) => (
+                  <MediaCard item={item} key={item.id} />
+                ))}
               </div>
             </div>
           )}
