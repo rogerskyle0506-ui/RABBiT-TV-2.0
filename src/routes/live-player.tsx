@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { fetchLiveCategories, fetchChannelsByCategory, LiveChannel } from '@/lib/live-feed-service';
@@ -24,12 +24,16 @@ type StreamStatus = 'checking' | 'live' | 'offline';
 
 function LivePlayerComponent() {
   const { url: streamUrl, title, logo } = Route.useSearch();
+  const navigate = useNavigate();
   const [appTheme, setAppTheme] = useState<AppTheme>('violet');
   const [suggestedChannels, setSuggestedChannels] = useState<LiveChannel[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState<boolean>(true);
   const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([]);
   const [selectedQuality, setSelectedQuality] = useState<number>(-1);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>('checking');
+  
+  // 10-Second Offline Auto-Boot Timer State
+  const [offlineCountdown, setOfflineCountdown] = useState<number>(10);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
@@ -50,6 +54,24 @@ function LivePlayerComponent() {
       });
     }
   }, [streamUrl, title, logo]);
+
+  // Handle 10-second auto-boot countdown when stream is offline
+  useEffect(() => {
+    if (streamStatus !== 'offline') return;
+
+    const timer = setInterval(() => {
+      setOfflineCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate({ to: '/live-tv' });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [streamStatus, navigate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -85,11 +107,11 @@ function LivePlayerComponent() {
     }
 
     setStreamStatus('checking');
+    setOfflineCountdown(10); // Reset countdown on new stream load
 
     const handlePlaying = () => setStreamStatus('live');
     const handleError = () => setStreamStatus('offline');
     const handleStalled = () => {
-      // If stalled for too long without data, mark offline
       if (video.networkState === HTMLVideoElement.NETWORK_NO_SOURCE) {
         setStreamStatus('offline');
       }
@@ -283,7 +305,7 @@ function LivePlayerComponent() {
               <img
                 src={logo}
                 alt={title}
-                className="h-9 sm:h-11 w-auto max-w-[180px] sm:max-w-[240px] object-contain bg-transparent shrink-0"
+                className="w-[160px] sm:w-[200px] h-[40px] sm:h-[50px] object-contain bg-transparent shrink-0"
               />
             ) : (
               <span className="text-sm sm:text-base font-black text-white tracking-wider uppercase">
@@ -301,7 +323,7 @@ function LivePlayerComponent() {
               ) : streamStatus === 'offline' ? (
                 <>
                   <span className="inline-flex items-center justify-center w-4 h-4 bg-red-600/90 text-white rounded-full text-[10px] font-black shadow-[0_0_8px_rgba(239,68,68,0.8)]">✕</span>
-                  <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider uppercase">STREAM UNAVAILABLE</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-red-400 tracking-wider uppercase">OFF-AIR</span>
                 </>
               ) : (
                 <>
@@ -313,7 +335,7 @@ function LivePlayerComponent() {
           </div>
         </div>
 
-        {/* PLAYER WRAPPER */}
+        {/* PLAYER WRAPPER WITH OFFLINE OVERLAY & 10-SEC AUTO-BOOT */}
         <div className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] aspect-video box-border">
           {streamUrl ? (
             <video
@@ -330,6 +352,30 @@ function LivePlayerComponent() {
               <p className="text-xs sm:text-sm font-medium">Invalid or missing stream URL.</p>
             </div>
           )}
+
+          {/* OFFLINE / OFF-AIR OVERLAY & 10-SECOND AUTO-BOOT */}
+          {streamStatus === 'offline' && (
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30">
+              <div className="w-14 h-14 bg-red-500/20 border border-red-500/40 rounded-full flex items-center justify-center text-red-400 text-2xl mb-3 shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+                📡
+              </div>
+              <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-wider mb-1">
+                Channel Is Off-Air
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-400 max-w-sm mb-6">
+                This channel feed is currently offline or off-air. Returning to the Live TV menu in <span className="text-red-400 font-bold">{offlineCountdown}</span> seconds...
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-2.5 w-full max-w-xs">
+                <Link
+                  to="/live-tv"
+                  className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider transition shadow-lg text-center flex items-center justify-center"
+                >
+                  Return to TV Menu Now
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* WRITTEN DESCRIPTION / CHANNEL NAME BELOW VIDEO */}
@@ -340,10 +386,10 @@ function LivePlayerComponent() {
                 ? 'bg-red-500/20 border-red-500/40 text-red-300' 
                 : 'bg-red-500/20 border-red-500/40 text-red-300'
             }`}>
-              {streamStatus === 'offline' ? 'Broken Link' : 'Live Broadcast'}
+              {streamStatus === 'offline' ? 'Off-Air / Broken Link' : 'Live Broadcast'}
             </span>
             <span className={`text-[11px] sm:text-xs font-medium ${themeStyles.accentText}`}>
-              {streamStatus === 'offline' ? 'Connection Failed' : 'Streaming Now'}
+              {streamStatus === 'offline' ? 'Stream Unavailable' : 'Streaming Now'}
             </span>
           </div>
           <h2 className="text-base sm:text-xl font-black text-white truncate max-w-full px-2">{title}</h2>
