@@ -106,7 +106,7 @@ export function MediaCard({ item }: { item: MediaItem }) {
     return (
       <Link
         to={item.href}
-        className={`group flex ${dimensions.card} ${cardThemeStyles.bg} border ${cardThemeStyles.border} focus:outline-none focus:ring-4 ${cardThemeStyles.ring} hover:scale-105 overflow-hidden relative rounded-xl transition w-full shadow-lg bg-transparent`}
+        className={`group flex ${dimensions.card} ${cardThemeStyles.bg} border ${cardThemeStyles.border} focus:outline-none focus:ring-4 ${cardThemeStyles.ring} hover:scale-105 overflow-hidden relative rounded-xl transition w-full shadow-lg bg-black`}
       >
         <img
           src={item.image}
@@ -127,7 +127,7 @@ export function MediaCard({ item }: { item: MediaItem }) {
     <div
       className={`group relative flex w-full flex-col overflow-hidden rounded-2xl ${cardThemeStyles.bg} border ${cardThemeStyles.border} shadow-xl transition hover:-translate-y-1 ${cardThemeStyles.ring} ${dimensions.card}`}
     >
-      <Link className="block relative overflow-hidden flex-1 focus:outline-none w-full h-full bg-transparent flex items-center justify-center" to={item.href}>
+      <Link className="block relative overflow-hidden flex-1 focus:outline-none w-full h-full bg-black flex items-center justify-center" to={item.href}>
         <img
           src={item.image}
           alt={item.title}
@@ -262,7 +262,6 @@ function Home() {
     };
   }, [items, loading]);
 
-  // Handle 30s user inactivity & reset on user interaction
   useEffect(() => {
     let inactivityTimer: NodeJS.Timeout;
 
@@ -273,7 +272,7 @@ function Home() {
       if (canScrollDown) {
         inactivityTimer = setTimeout(() => {
           setShowScrollReminder(true);
-        }, 30000); // 30 seconds wait time
+        }, 30000);
       }
     };
 
@@ -722,12 +721,12 @@ function Home() {
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
-      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3";
+      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 justify-items-center";
     }
     if (cardSize === "medium") {
-      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4";
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center";
     }
-    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4";
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
   }, [cardSize]);
 
   const themeStyles = {
@@ -815,7 +814,7 @@ function Home() {
 
   return (
     <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20`}>
-      {/* 1. SEPARATE STICKY TOP WRAPPER FOR MAIN NAVIGATION BAR - PERFECTLY CENTERED */}
+      {/* 1. STICKY TOP NAV BAR - STRICTLY CENTERED */}
       <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 bg-black/70 backdrop-blur-xl border-b border-white/10 shadow-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-center text-center">
           <div className="w-full flex justify-center">
@@ -830,11 +829,11 @@ function Home() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 overflow-x-hidden">
-        <section className={`mb-4 w-full overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[420px] flex flex-col group`}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 overflow-x-hidden flex flex-col items-center">
+        {/* HERO BANNER SECTION - FIXED PROPORTIONS FOR PROJECTORS */}
+        <section className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[360px] sm:h-[400px] flex flex-col group`}>
           {activeHeroItem ? (
             <>
-              {/* Header Dots Indicator positioned safely in top right overlay */}
               {heroItems.length > 1 && (
                 <div className="absolute top-3 right-3 z-30 flex items-center gap-1 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
                   {heroItems.map((_, idx) => (
@@ -851,22 +850,21 @@ function Home() {
                 </div>
               )}
 
-              {/* Fully filled hero wrapper snap */}
               <div className="absolute inset-0 w-full h-full overflow-hidden bg-black flex items-center justify-center">
                 <img
                   src={activeHeroItem.image}
                   alt={activeHeroItem.title}
                   className="absolute inset-0 h-full w-full object-cover object-center opacity-90 transition-opacity duration-1000"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050b16] via-black/20 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050b16] via-black/30 to-transparent"></div>
               </div>
 
               <div className="absolute inset-x-0 bottom-0 p-3 sm:p-5 flex flex-col justify-end z-10">
-                <div className="bg-black/80 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="space-y-1 flex-1 min-w-0 w-full">
+                <div className="bg-black/85 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xl">
+                  <div className="space-y-1 flex-1 min-w-0 w-full text-left">
                     <div className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] ${themeStyles.accentText}`}>
                       <span className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 shrink-0">
-                        ⭐ 7.0+ Spotlight ({currentHeroIndex + 1}/{heroItems.length || 1})
+                        ⭐ Spotlight ({currentHeroIndex + 1}/{heroItems.length || 1})
                       </span>
                       <span className="truncate max-w-[140px]">
                         {activeHeroItem.genre ?? "Entertainment"}
@@ -914,10 +912,9 @@ function Home() {
           )}
         </section>
 
-        {/* 2. SEPARATE WRAPPER FOR GENRES & PROVIDER SLIDERS - CENTERED */}
+        {/* 2. GENRES & PROVIDER SLIDERS - PERFECTLY CENTERED */}
         {activeTab !== "My List" && (
-          <section className="mb-4 space-y-2.5 flex flex-col items-center justify-center text-center">
-            {/* Genre Filter Pill Bar */}
+          <section className="mb-4 space-y-2.5 flex flex-col items-center justify-center text-center w-full">
             <div className="flex justify-center w-full">
               <div className="w-full max-w-3xl flex justify-center">
                 <ScrollPillBar
@@ -930,7 +927,6 @@ function Home() {
               </div>
             </div>
 
-            {/* Provider Filter Pill Bar (Netflix, Prime, Disney+) */}
             <div className="flex justify-center w-full">
               <div className="w-full max-w-3xl flex justify-center">
                 <ScrollPillBar
@@ -946,7 +942,7 @@ function Home() {
         )}
 
         {activeTab === "My List" && (
-          <section className="mb-4 flex flex-wrap items-center justify-center gap-2 border-b border-white/10 pb-3 px-2 text-center">
+          <section className="mb-4 flex flex-wrap items-center justify-center gap-2 border-b border-white/10 pb-3 px-2 text-center w-full max-w-4xl mx-auto">
             <button
               type="button"
               onClick={() => setMyListSubTab("all")}
@@ -997,8 +993,9 @@ function Home() {
           </section>
         )}
 
-        <section className="mb-6 px-1">
-          <div className="mb-3 flex items-center justify-between px-1">
+        {/* CATALOG GRID SECTION - FULLY CENTERED CONTAINER */}
+        <section className="mb-6 px-1 w-full max-w-7xl">
+          <div className="mb-3 flex items-center justify-between px-2">
             <h3 className="text-lg font-bold text-white">
               {activeTab === "My List" ? "Saved Catalog" : `${activeTab} Catalog`}
             </h3>
@@ -1026,7 +1023,6 @@ function Home() {
           )}
         </section>
 
-        {/* Scroll Reminder with 30s Inactivity & 8s Flash Twice Animation */}
         {canScrollDown && showScrollReminder && (
           <div 
             className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
@@ -1056,8 +1052,8 @@ function Home() {
         )}
 
         {activeTab === "My List" && suggestedItems.length > 0 && (
-          <section className="mb-8 px-1 pt-4 border-t border-white/10">
-            <div className="mb-3 flex items-center justify-between px-1">
+          <section className="mb-8 px-1 pt-4 border-t border-white/10 w-full max-w-7xl">
+            <div className="mb-3 flex items-center justify-between px-2">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <span>✨ Suggested For You</span>
               </h3>
@@ -1074,7 +1070,7 @@ function Home() {
         )}
 
         {activeTab !== "My List" && totalPages > 1 && (
-          <div className={`mb-6 flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-3 mx-2`}>
+          <div className={`mb-6 flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-3 mx-2 w-full max-w-md`}>
             <button
               type="button"
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
