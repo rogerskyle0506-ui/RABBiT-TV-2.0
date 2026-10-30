@@ -29,13 +29,16 @@ public class MainActivity extends BridgeActivity {
         if (this.bridge != null && this.bridge.getWebView() != null) {
             WebView webView = this.bridge.getWebView();
 
-            // Configure standard WebView settings without disruptive global layout scaling or layer overrides
+            // Configure standard WebView settings
             WebSettings settings = webView.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
             settings.setJavaScriptCanOpenWindowsAutomatically(false);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setSupportZoom(false);
+            
+            // CRITICAL: Required so window.open() & target="_blank" route to onCreateWindow instead of falling back to OS
+            settings.setSupportMultipleWindows(true);
 
             // Extend Capacitor's native BridgeWebViewClient to preserve local app routing while blocking ad redirects
             webView.setWebViewClient(new BridgeWebViewClient(this.bridge) {
@@ -66,11 +69,17 @@ public class MainActivity extends BridgeActivity {
                 }
             });
 
-            // Prevent popups and enable proper Fullscreen video playback expansion
+            // Prevent popups from leaking to Chrome and enable proper Fullscreen video playback expansion
             webView.setWebChromeClient(new WebChromeClient() {
                 @Override
                 public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
-                    return false;
+                    // Swallow the popup completely so Android never falls back to opening Chrome/Silk
+                    if (resultMsg != null) {
+                        WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                        transport.setWebView(null); // Nullify the transport target so nothing loads
+                        resultMsg.sendToTarget();   // Complete the message handler internally
+                    }
+                    return true; // Return true to signal the window request was handled
                 }
 
                 @Override
