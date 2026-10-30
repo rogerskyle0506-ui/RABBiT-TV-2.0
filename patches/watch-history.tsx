@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AppTheme, CardSize, HistoryScale, getSavedTheme, getSavedCardSize, getHistoryOverscale, getLargeButtons } from "@/lib/settings";
 import {
   getWatchHistory,
@@ -34,17 +34,26 @@ function WatchHistoryComponent() {
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [showScrollReminder, setShowScrollReminder] = useState(false);
 
+  const tickingRef = useRef(false);
+
+  // Throttled scroll listener using requestAnimationFrame to prevent layout thrashing on low-spec GPU/projectors
   useEffect(() => {
     const checkVerticalScroll = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = window.innerHeight;
-      setCanScrollDown(scrollTop + clientHeight < scrollHeight - 80);
+      if (!tickingRef.current) {
+        window.requestAnimationFrame(() => {
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          const scrollHeight = document.documentElement.scrollHeight;
+          const clientHeight = window.innerHeight;
+          setCanScrollDown(scrollTop + clientHeight < scrollHeight - 80);
+          tickingRef.current = false;
+        });
+        tickingRef.current = true;
+      }
     };
 
     checkVerticalScroll();
     window.addEventListener("scroll", checkVerticalScroll, { passive: true });
-    window.addEventListener("resize", checkVerticalScroll);
+    window.addEventListener("resize", checkVerticalScroll, { passive: true });
 
     return () => {
       window.removeEventListener("scroll", checkVerticalScroll);
