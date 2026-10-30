@@ -62,13 +62,31 @@ const DISLIKED_TITLES_KEY = "rabbit_tv_disliked_titles";
 const RECENT_LIVE_CHANNELS_KEY = "rabtv_recent_live_channels";
 const MAX_HISTORY_ITEMS = 50; // Hard cap for 2GB device memory optimization
 
+// In-memory cache layer to eliminate redundant JSON parsing on every route check
+let rawHistoryCache: WatchHistoryItem[] | null = null;
+let watchHistoryMapCache: Record<string, ShowWatchHistory> | null = null;
+let dislikedCache: DislikedTitle[] | null = null;
+let recentLiveCache: RecentLiveChannel[] | null = null;
+
+function invalidateCaches() {
+  rawHistoryCache = null;
+  watchHistoryMapCache = null;
+  dislikedCache = null;
+  recentLiveCache = null;
+}
+
 export function getRawWatchHistory(): WatchHistoryItem[] {
   if (typeof window === "undefined") return [];
+  if (rawHistoryCache) return rawHistoryCache;
+
   try {
     const raw = localStorage.getItem(WATCH_HISTORY_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      rawHistoryCache = [];
+      return [];
+    }
     const items = JSON.parse(raw);
-    return items.map((item: any) => {
+    rawHistoryCache = items.map((item: any) => {
       const resolvedId = String(item.mediaId ?? item.id ?? "");
       const cleanId = resolvedId.replace(/^(movie|tv)-/, "");
       const rawType = item.mediaType ?? item.media_type;
@@ -88,12 +106,15 @@ export function getRawWatchHistory(): WatchHistoryItem[] {
         confirmedCompleted: item.confirmedCompleted ?? item.completed ?? false,
       };
     });
+    return rawHistoryCache;
   } catch {
     return [];
   }
 }
 
 export function getWatchHistory(): Record<string, ShowWatchHistory> {
+  if (watchHistoryMapCache) return watchHistoryMapCache;
+
   const rawItems = getRawWatchHistory();
   const map: Record<string, ShowWatchHistory> = {};
 
@@ -139,6 +160,7 @@ export function getWatchHistory(): Record<string, ShowWatchHistory> {
     };
   }
 
+  watchHistoryMapCache = map;
   return map;
 }
 
@@ -176,6 +198,7 @@ export function saveWatchProgress(item: Omit<WatchHistoryItem, "lastWatchedAt">)
   const cappedHistory = history.slice(0, MAX_HISTORY_ITEMS);
 
   localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(cappedHistory));
+  invalidateCaches();
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
 }
 
@@ -188,6 +211,7 @@ export function markAsConfirmedCompleted(id: string, completed: boolean): void {
     item.completed = completed;
     if (completed) item.progressPercent = 100;
     localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS)));
+    invalidateCaches();
     window.dispatchEvent(new Event("rabtv_watch_history_updated"));
   }
 }
@@ -223,6 +247,7 @@ export function markEpisodeCompleted(showId: string, episodeId: string, complete
   }
   
   localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS)));
+  invalidateCaches();
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
 }
 
@@ -230,6 +255,7 @@ export function removeFromWatchHistory(id: string): void {
   if (typeof window === "undefined") return;
   const history = getRawWatchHistory().filter((h) => String(h.id) !== String(id) && String(h.mediaId) !== String(id));
   localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS)));
+  invalidateCaches();
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
 }
 
@@ -256,9 +282,12 @@ export function calculateSeriesProgress(show: ShowWatchHistory | string | number
 
 export function getDislikedTitles(): DislikedTitle[] {
   if (typeof window === "undefined") return [];
+  if (dislikedCache) return dislikedCache;
+
   try {
     const data = localStorage.getItem(DISLIKED_TITLES_KEY);
-    return data ? JSON.parse(data) : [];
+    dislikedCache = data ? JSON.parse(data) : [];
+    return dislikedCache;
   } catch (e) {
     console.error('Failed to get disliked titles:', e);
     return [];
@@ -289,6 +318,7 @@ export function dislikeTitle(item: { id: string | number; title?: string; name?:
       posterPath: item.posterPath ?? null,
     });
     localStorage.setItem(DISLIKED_TITLES_KEY, JSON.stringify(disliked));
+    invalidateCaches();
   }
 
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
@@ -301,6 +331,7 @@ export function removeDislikedTitle(id: number | string): void {
     const cleanId = String(id).replace(/^(movie|tv)-/, "");
     const disliked = getDislikedTitles().filter((item) => String(item.id).replace(/^(movie|tv)-/, "") !== cleanId);
     localStorage.setItem(DISLIKED_TITLES_KEY, JSON.stringify(disliked));
+    invalidateCaches();
     
     window.dispatchEvent(new Event("rabtv_watch_history_updated"));
     window.dispatchEvent(new Event("rabtv_disliked_updated"));
@@ -315,9 +346,12 @@ export function removeDislikedTitle(id: number | string): void {
 
 export function getRecentLiveChannels(): RecentLiveChannel[] {
   if (typeof window === "undefined") return [];
+  if (recentLiveCache) return recentLiveCache;
+
   try {
     const raw = localStorage.getItem(RECENT_LIVE_CHANNELS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    recentLiveCache = raw ? JSON.parse(raw) : [];
+    return recentLiveCache;
   } catch (err) {
     console.error('Error reading recent live channels:', err);
     return [];
@@ -344,6 +378,7 @@ export function logLiveChannelWatch(channel: { title: string; logo: string; stre
     ].slice(0, 5); // Strictly keep the last 5 watched live streams
 
     localStorage.setItem(RECENT_LIVE_CHANNELS_KEY, JSON.stringify(updated));
+    invalidateCaches();
     window.dispatchEvent(new Event('rabtv_watch_history_updated'));
   } catch (err) {
     console.error('Error logging live channel watch:', err);
@@ -356,6 +391,7 @@ export function removeRecentLiveChannel(channelId: string) {
     const currentList = getRecentLiveChannels();
     const updated = currentList.filter((c) => c.channelId !== channelId);
     localStorage.setItem(RECENT_LIVE_CHANNELS_KEY, JSON.stringify(updated));
+    invalidateCaches();
     window.dispatchEvent(new Event('rabtv_watch_history_updated'));
   } catch (err) {
     console.error('Error removing recent live channel:', err);
