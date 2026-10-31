@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { fetchLiveCategories, fetchChannelsByCategory, liveFeedServices, LiveChannel } from '../lib/live-feed-service';
 import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { ScrollPillBar } from '@/components/scroll-pill-bar';
+import { getChannelDescription } from '@/lib/channel-descriptions';
 
 export const Route = createFileRoute('/live-tv')({
   component: LiveTvComponent,
@@ -191,9 +192,12 @@ function LiveTvComponent() {
                     <span className="text-xs font-bold text-slate-400">LIVE</span>
                   )}
                 </div>
-                <span className="text-xs font-bold line-clamp-2 text-white group-hover:text-slate-200">
+                <span className="text-xs font-bold line-clamp-2 text-white group-hover:text-slate-200 w-full">
                   {channel.title}
                 </span>
+                <p className="text-[10px] text-slate-400 line-clamp-2 mt-1 px-1 w-full overflow-hidden text-ellipsis">
+                  {getChannelDescription(channel.title)}
+                </p>
                 <span className="mt-2 w-full py-1 text-[10px] font-bold rounded-full bg-black/60 border border-white/10 text-slate-300">
                   WATCH →
                 </span>
