@@ -32,6 +32,12 @@ function LivePlayerComponent() {
   const [selectedQuality, setSelectedQuality] = useState<number>(-1);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>('checking');
   
+  // Volume & Audio Control States
+  const [volume, setVolume] = useState<number>(1.0);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [previousVolume, setPreviousVolume] = useState<number>(1.0);
+  const [showVolumeSlider, setShowVolumeSlider] = useState<boolean>(false);
+  
   // 10-Second Offline Auto-Boot Timer State
   const [offlineCountdown, setOfflineCountdown] = useState<number>(10);
   
@@ -271,74 +277,82 @@ function LivePlayerComponent() {
     <div className={`min-h-screen ${themeStyles.bg} text-white transition-colors duration-300 pb-16 w-full max-w-full overflow-x-hidden box-border`}>
       <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 pt-3 space-y-4 box-border">
         
-        {/* TOP CONTROL & LOGO HEADER */}
-        <div className="w-full flex flex-col items-center justify-center p-3 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 shadow-lg text-center gap-2 box-border">
-          <div className="w-full flex items-center justify-between">
+        {/* TOP CONTROL & CONSTRAINED HEADER CONTAINER */}
+        <div className="w-full flex items-center justify-between p-3 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 shadow-lg box-border gap-2">
+          <div className="flex items-center gap-2">
             <Link
               to="/live-tv"
-              className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition"
+              className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition shrink-0"
             >
               <span>← TV Menu</span>
             </Link>
 
-            {qualityLevels.length > 0 && (
-              <div className="bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
-                <select
-                  value={selectedQuality}
-                  onChange={handleQualityChange}
-                  className="bg-transparent text-[11px] sm:text-xs font-bold text-white focus:outline-none cursor-pointer"
-                >
-                  <option value={-1} className="bg-zinc-900 text-white">Auto Quality</option>
-                  {qualityLevels.map((lvl) => (
-                    <option key={lvl.index} value={lvl.index} className="bg-zinc-900 text-white">
-                      {lvl.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* SCALED LOGO & STATUS BADGE HEADER */}
-          <div className="w-full flex items-center justify-between px-2 my-1">
-            <div className="flex items-center justify-start w-[210px] sm:w-[260px] h-[55px] sm:h-[65px] shrink-0 bg-transparent">
-              {logo ? (
-                <img
-                  src={logo}
-                  alt={title}
-                  className="w-full h-full object-contain bg-transparent"
-                />
-              ) : (
-                <span className="text-sm sm:text-base font-black text-white tracking-wider uppercase">
-                  LIVE STREAM
-                </span>
-              )}
-            </div>
-
-            {/* DYNAMIC HEALTH BADGE */}
-            <div className="flex items-center space-x-1.5 shrink-0 ml-4">
+            {/* DYNAMIC HEALTH BADGE LOCKED BESIDE PILLBOX */}
+            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-black/40 border border-white/10 shrink-0">
               {streamStatus === 'live' ? (
                 <>
                   <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
-                  <span className="text-xs sm:text-sm font-bold text-red-400 tracking-wider">LIVE</span>
+                  <span className="text-xs font-bold text-red-400 tracking-wider">LIVE</span>
                 </>
               ) : streamStatus === 'offline' ? (
                 <>
-                  <span className="inline-flex items-center justify-center w-4 h-4 bg-red-600/90 text-white rounded-full text-xs font-black shadow-[0_0_8px_rgba(239,68,68,0.8)]">✕</span>
-                  <span className="text-xs sm:text-sm font-bold text-red-400 tracking-wider uppercase">OFF-AIR</span>
+                  <span className="inline-flex items-center justify-center w-4 h-4 bg-red-600/90 text-white rounded-full text-[10px] font-black shadow-[0_0_8px_rgba(239,68,68,0.8)]">✕</span>
+                  <span className="text-xs font-bold text-red-400 tracking-wider uppercase">OFF-AIR</span>
                 </>
               ) : (
                 <>
                   <span className="inline-block w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping"></span>
-                  <span className="text-xs sm:text-sm font-bold text-yellow-400 tracking-wider">CHECKING...</span>
+                  <span className="text-xs font-bold text-yellow-400 tracking-wider">CHECKING...</span>
                 </>
               )}
             </div>
           </div>
+
+          {qualityLevels.length > 0 && (
+            <div className="bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20 shrink-0">
+              <select
+                value={selectedQuality}
+                onChange={handleQualityChange}
+                className="bg-transparent text-[11px] sm:text-xs font-bold text-white focus:outline-none cursor-pointer"
+              >
+                <option value={-1} className="bg-zinc-900 text-white">Auto Quality</option>
+                {qualityLevels.map((lvl) => (
+                  <option key={lvl.index} value={lvl.index} className="bg-zinc-900 text-white">
+                    {lvl.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        {/* PLAYER WRAPPER WITH OFFLINE OVERLAY & 10-SEC AUTO-BOOT */}
-        <div className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] aspect-video box-border">
+        {/* WIDER CHANNEL WATERMARK BANNER HEADER */}
+        <div className={`relative w-full overflow-hidden p-4 sm:p-5 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex items-center justify-center box-border`}>
+          {/* Faded Background Watermark Layer */}
+          {logo && (
+            <div className="absolute inset-0 opacity-15 pointer-events-none flex items-center justify-center overflow-hidden">
+              <img src={logo} alt="" className="w-full h-full object-cover blur-md scale-125" />
+            </div>
+          )}
+
+          {/* Larger & Wider Channel Logo / Title */}
+          <div className="relative z-10 flex items-center justify-center w-[200px] sm:w-[280px] h-[70px] sm:h-[90px] shrink-0">
+            {logo ? (
+              <img
+                src={logo}
+                alt={title}
+                className="w-full h-full object-contain drop-shadow-md"
+              />
+            ) : (
+              <span className="text-base sm:text-xl font-black text-white tracking-wider uppercase">
+                {title}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* PLAYER WRAPPER WITH VOLUME CONTROLS & OFFLINE OVERLAY */}
+        <div className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] aspect-video box-border group">
           {streamUrl ? (
             <video
               ref={videoRef}
@@ -354,6 +368,62 @@ function LivePlayerComponent() {
               <p className="text-xs sm:text-sm font-medium">Invalid or missing stream URL.</p>
             </div>
           )}
+
+          {/* CUSTOM INTERACTIVE VOLUME CONTROL OVERLAY BUTTON */}
+          <div className="absolute bottom-4 right-4 z-20 flex items-center">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  if (videoRef.current) {
+                    if (isMuted) {
+                      videoRef.current.volume = previousVolume;
+                      setVolume(previousVolume);
+                      setIsMuted(false);
+                    } else {
+                      setPreviousVolume(volume);
+                      videoRef.current.volume = 0;
+                      setVolume(0);
+                      setIsMuted(true);
+                    }
+                  }
+                }}
+                onMouseEnter={() => setShowVolumeSlider(true)}
+                className="flex items-center justify-center h-10 w-10 rounded-xl bg-black/80 backdrop-blur-md border border-white/20 text-white hover:bg-zinc-800 transition shadow-xl font-bold text-base cursor-pointer"
+                title="Adjust Volume"
+              >
+                {isMuted || volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
+              </button>
+
+              {/* Popup Vertical Volume Slider */}
+              {showVolumeSlider && (
+                <div 
+                  className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 bg-black/95 border border-white/20 p-3 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col items-center gap-2 z-30"
+                  onMouseLeave={() => setShowVolumeSlider(false)}
+                >
+                  <span className="text-[10px] font-bold text-slate-300">
+                    {Math.round(volume * 100)}%
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={isMuted ? 0 : volume}
+                    onChange={(e) => {
+                      const newVol = parseFloat(e.target.value);
+                      setVolume(newVol);
+                      setIsMuted(newVol === 0);
+                      if (videoRef.current) {
+                        videoRef.current.volume = newVol;
+                      }
+                    }}
+                    className="h-24 w-2 accent-violet-500 bg-slate-800 rounded-lg appearance-none cursor-pointer [writing-mode:vertical-lr] [direction:rtl]"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* OFFLINE / OFF-AIR OVERLAY & 10-SECOND AUTO-BOOT */}
           {streamStatus === 'offline' && (
