@@ -1,4 +1,4 @@
-{
+export const channelDescriptions: Record<string, string> = {
   "ThreeNow Sport 2": "Live sports coverage, high-energy athletic competitions, and tournament highlights.",
   "HGTV": "Home remodeling, interior design, property renovation, and real estate showcases.",
   "CNN Headlines International": "Global news updates, breaking international headlines, and 24/7 current affairs coverage.",
@@ -221,4 +221,8 @@
   "Redbull TV": "Extreme sports action, adventure sports, and high-octane documentary series.",
   "Channel News Asia (CNA)": "Asian economic updates, regional current affairs, and global news reporting.",
   "DW English": "European international news channel covering politics, culture, and global tech."
+};
+
+export function getChannelDescription(name: string): string {
+  return channelDescriptions[name] || "Live broadcast feed, entertainment, and on-demand programming.";
 }
