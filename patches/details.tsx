@@ -16,7 +16,7 @@ export const Route = createFileRoute("/details")({
 export function DetailsPage() {
   const search = Route.useSearch() as { id?: string; type?: string };
   const mediaId = search?.id;
-  
+
   // Dynamic mediaType state that can be corrected immediately upon data fetch
   const [mediaType, setMediaType] = useState<string>(search?.type || "movie");
 
@@ -50,6 +50,7 @@ export function DetailsPage() {
 
   const seasonRef = useRef<HTMLDivElement>(null);
   const episodeRef = useRef<HTMLDivElement>(null);
+  const feedbackTimeoutRef = useRef<number | null>(null);
 
   // Check vertical scroll for reminder banner
   useEffect(() => {
@@ -133,6 +134,15 @@ export function DetailsPage() {
     };
   }, []);
 
+  // Cleanup feedback timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Fetch episodes dynamically whenever the selected season changes for a TV show
   useEffect(() => {
     async function fetchSeasonEpisodes() {
@@ -141,7 +151,7 @@ export function DetailsPage() {
         const apiKey =
           (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
         const res = await fetch(
-          `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
+          `https://api.themoviedb.org/3/tv/\( {mediaId}/season/ \){season}?api_key=${apiKey}`
         );
         const data = await res.json();
         if (data.episodes) {
@@ -229,10 +239,16 @@ export function DetailsPage() {
 
   const activeTheme = getThemeClasses(appTheme);
 
-  // Check saved state for My List & Favorites
+  // Check saved state for My List & Favorites – waits for mediaDetails
   useEffect(() => {
-    if (!mediaId) return;
-    const currentId = `${mediaType}-${mediaId}`;
+    if (!mediaId || !mediaDetails) return;
+
+    const finalType =
+      mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv"
+        ? "tv"
+        : "movie";
+
+    const currentId = `\( {finalType}- \){mediaId}`;
 
     try {
       const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
@@ -243,15 +259,15 @@ export function DetailsPage() {
     } catch (err) {
       console.error("Error reading saved catalog lists", err);
     }
-  }, [mediaId, mediaType]);
+  }, [mediaId, mediaDetails, mediaType]);
 
   // Fetch item details + recommendations with LocalStorage Caching (6-hour expiry) & Type Auto-Correction
   useEffect(() => {
     async function fetchDetailsWithCache() {
       if (!mediaId) return;
-      
+
       let activeFetchType = mediaType;
-      const cacheKey = `rabtv_cache_${activeFetchType}_${mediaId}`;
+      const cacheKey = `rabtv_cache_\( {activeFetchType}_ \){mediaId}`;
 
       try {
         const cachedItem = localStorage.getItem(cacheKey);
@@ -270,7 +286,7 @@ export function DetailsPage() {
           (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
 
         let res = await fetch(
-          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
+          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}?api_key=${apiKey}&append_to_response=credits`
         );
         let data = await res.json();
 
@@ -278,7 +294,7 @@ export function DetailsPage() {
           activeFetchType = "tv";
           setMediaType("tv");
           res = await fetch(
-            `https://api.themoviedb.org/3/tv/${mediaId}?api_key=${apiKey}&append_to_response=credits`
+            `https://api.themoviedb.org/3/tv/\( {mediaId}?api_key= \){apiKey}&append_to_response=credits`
           );
           data = await res.json();
         }
@@ -288,20 +304,20 @@ export function DetailsPage() {
         }
 
         localStorage.setItem(
-          `rabtv_cache_${activeFetchType}_${mediaId}`,
+          `rabtv_cache_\( {activeFetchType}_ \){mediaId}`,
           JSON.stringify({ data, timestamp: Date.now() })
         );
 
         setMediaDetails(data);
 
-        // Fetch recommended/similar titles from TMDB API[span_0](start_span)[span_0](end_span)
+        // Fetch recommended/similar titles from TMDB API
         const recRes = await fetch(
-          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
+          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
         );
         const recData = await recRes.json();
         if (recData?.results) {
           const filteredRecs = recData.results.filter(
-            (item: any) => !isTitleBroken(String(item.id)) && !isTitleBroken(`${activeFetchType}-${item.id}`)
+            (item: any) => !isTitleBroken(String(item.id)) && !isTitleBroken(`\( {activeFetchType}- \){item.id}`)
           );
           setRecommendations(filteredRecs);
         }
@@ -312,10 +328,13 @@ export function DetailsPage() {
       }
     }
     fetchDetailsWithCache();
-  }, [mediaId]);
+  }, [mediaId]); // only mediaId – prevents re-fetch loop
 
-  // Robust inferred type check
-  const inferredMediaType = mediaDetails?.seasons || mediaType === "tv" ? "tv" : "movie";
+  // Stronger, data-driven type detection
+  const inferredMediaType: "tv" | "movie" =
+    mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv"
+      ? "tv"
+      : "movie";
 
   const originalLanguageName = useMemo(() => {
     if (!mediaDetails) return "";
@@ -324,7 +343,7 @@ export function DetailsPage() {
     const code = mediaDetails?.original_language;
     if (!code) return "";
     try {
-      const displayNames = new Intl.DisplayNames(['en'], { type: 'language' });
+      const displayNames = new Intl.DisplayNames(["en"], { type: "language" });
       const name = displayNames.of(code);
       return name ? name.charAt(0).toUpperCase() + name.slice(1) : code.toUpperCase();
     } catch {
@@ -349,44 +368,47 @@ export function DetailsPage() {
       const recPoster = rec.poster_path
         ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
         : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
-      const recType = inferredMediaType;
+
+      // Better per-item type detection
+      const recType: "movie" | "tv" = rec.title ? "movie" : "tv";
+
       const releaseDate = rec.release_date || rec.first_air_date || "";
       const year = releaseDate.split("-")[0];
       const voteAverage = rec.vote_average;
       const rating = voteAverage ? voteAverage.toFixed(1) : undefined;
 
       return {
-        id: `${recType}-${recId}`,
+        id: `\( {recType}- \){recId}`,
         title: recTitle,
         description: rec.overview || "",
         image: recPoster,
-        href: `/details?id=${recId}&type=${recType}`,
+        href: `/details?id=\( {recId}&type= \){recType}`,
         genre: recType.toUpperCase(),
         year: year || undefined,
         rating: rating,
-        mediaType: recType as "movie" | "tv",
+        mediaType: recType,
       };
     });
-  }, [recommendations, inferredMediaType]);
+  }, [recommendations]);
 
   const buildCatalogItem = () => ({
-    id: `${inferredMediaType}-${mediaId}`,
+    id: `\( {inferredMediaType}- \){mediaId}`,
     mediaId: String(mediaId),
     title: mediaDetails?.title || mediaDetails?.name || "Untitled",
     description: mediaDetails?.overview || "",
     image: mediaDetails?.poster_path
       ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
       : "",
-    href: `/details?id=${mediaId}&type=${inferredMediaType}`,
+    href: `/details?id=\( {mediaId}&type= \){inferredMediaType}`,
     year: (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split("-")[0],
     rating: mediaDetails?.vote_average ? mediaDetails.vote_average.toFixed(1) : undefined,
-    mediaType: inferredMediaType as "movie" | "tv",
+    mediaType: inferredMediaType,
     genreIds: mediaDetails?.genres?.map((g: any) => g.id) || [],
   });
 
   const handlePlay = () => {
+    if (!mediaDetails) return; // safety – don’t write history until we know the real type
     setIsPlaying(true);
-    if (!mediaDetails) return;
 
     try {
       const savedHistory = localStorage.getItem(WATCH_HISTORY_STORAGE_KEY);
@@ -398,10 +420,7 @@ export function DetailsPage() {
         ...history.filter((i: any) => i.id !== newItem.id),
       ].slice(0, 20);
 
-      localStorage.setItem(
-        WATCH_HISTORY_STORAGE_KEY,
-        JSON.stringify(updatedHistory)
-      );
+      localStorage.setItem(WATCH_HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
       window.dispatchEvent(new Event("rabtv_watch_history_updated"));
     } catch (err) {
       console.error("Could not save to watch history", err);
@@ -469,7 +488,13 @@ export function DetailsPage() {
 
   const triggerFeedback = (msg: string) => {
     setActionFeedback(msg);
-    setTimeout(() => setActionFeedback(null), 2500);
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current);
+    }
+    feedbackTimeoutRef.current = window.setTimeout(() => {
+      setActionFeedback(null);
+      feedbackTimeoutRef.current = null;
+    }, 2500);
   };
 
   if (loading) {
@@ -493,7 +518,7 @@ export function DetailsPage() {
 
   const embedUrl =
     inferredMediaType === "tv"
-      ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
+      ? `https://vidsrc.to/embed/tv/\( {mediaId}/ \){season}/${episode}`
       : `https://vidsrc.to/embed/movie/${mediaId}`;
 
   const currentSeasonObj = mediaDetails?.seasons?.find((s: any) => s.season_number === season);
@@ -620,9 +645,10 @@ export function DetailsPage() {
             </div>
           )}
 
+          {/* ========== IFRAME BLOCK – COMPLETELY UNTOUCHED ========== */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
             <iframe
-              key={`stable-player-${mediaId}-${season}-${episode}`}
+              key={`stable-player-\( {mediaId}- \){season}-${episode}`}
               srcDoc={`
                 <!DOCTYPE html>
                 <html>
@@ -651,6 +677,7 @@ export function DetailsPage() {
               allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
             ></iframe>
           </div>
+          {/* ========== END IFRAME BLOCK ========== */}
 
           <div className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}>
             <h1 className="text-2xl font-bold text-white">{title}</h1>
@@ -709,7 +736,7 @@ export function DetailsPage() {
                       onClick={() => setIsSeasonOpen(!isSeasonOpen)}
                       className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                     >
-                      <span>{currentSeasonObj ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)` : `Season ${season}`}</span>
+                      <span>{currentSeasonObj ? `\( {currentSeasonObj.name} ( \){currentSeasonObj.episode_count} Episodes)` : `Season ${season}`}</span>
                       <span>▾</span>
                     </button>
 
@@ -784,7 +811,7 @@ export function DetailsPage() {
                   onClick={handlePlay}
                   className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
                 >
-                  ▶ Play {inferredMediaType === "tv" ? `S${season}:E${episode}` : "Movie"}
+                  ▶ Play {inferredMediaType === "tv" ? `S\( {season}:E \){episode}` : "Movie"}
                 </button>
 
                 <button
