@@ -137,7 +137,6 @@ function RootComponent() {
   const [passcodeStatusMsg, setPasscodeStatusMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
-  const [canModalScrollDown, setCanModalScrollDown] = useState<boolean>(true);
 
   const [headerSearchInput, setHeaderSearchInput] = useState("");
 
@@ -199,12 +198,6 @@ function RootComponent() {
     window.addEventListener("scroll", handleWindowScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleWindowScroll);
   }, [showSettings, showProfileMenu]);
-
-  const handleModalScrollCheck = (node: HTMLDivElement | null) => {
-    if (!node) return;
-    const { scrollTop, scrollHeight, clientHeight } = node;
-    setCanModalScrollDown(scrollTop + clientHeight < scrollHeight - 30);
-  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -364,7 +357,6 @@ function RootComponent() {
       localStorage.removeItem("rabtv_trial_start_timestamp");
       setIsTrialActive(false);
 
-      // Fire activation email alert when upgrading from profile menu as well
       const currentName = savedProfileName || localStorage.getItem("rabtv_profile_name") || "Friend";
       sendPermanentActivationAlert(currentName);
 
@@ -1145,18 +1137,15 @@ function RootComponent() {
             <Outlet />
           </main>
 
+          {/* ========== IMPROVED FIRST-START MODAL (normal scroll, no sticky footer) ========== */}
           {showFirstStartModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-md overflow-hidden">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-md overflow-y-auto">
               <form
                 onSubmit={handleFirstTimeAuthorize}
-                className={`relative w-full max-w-xl rounded-2xl border text-white shadow-2xl flex flex-col h-[85vh] max-h-[85vh] ${getCardBackground(appTheme)}`}
+                className={`relative w-full max-w-xl my-8 rounded-2xl border text-white shadow-2xl ${getCardBackground(appTheme)}`}
               >
-                {/* Scrollable Content Container */}
-                <div
-                  ref={(node) => handleModalScrollCheck(node)}
-                  onScroll={(e) => handleModalScrollCheck(e.currentTarget)}
-                  className="p-6 md:p-8 space-y-5 overflow-y-auto flex-1 pb-24"
-                >
+                <div className="p-6 md:p-8 space-y-5">
+                  {/* Header */}
                   <div className="text-center space-y-2">
                     <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl overflow-hidden border border-red-500/30 shadow-lg bg-black">
                       <img
@@ -1179,6 +1168,7 @@ function RootComponent() {
                     </div>
                   </div>
 
+                  {/* Name */}
                   <div className="space-y-2 border-t border-white/10 pt-4">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                       What's your name? <span className="text-slate-400 font-normal lowercase">(For your welcome greeting!)</span>
@@ -1198,6 +1188,7 @@ function RootComponent() {
                     />
                   </div>
 
+                  {/* Age */}
                   <div className="space-y-2 border-t border-white/10 pt-3">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                       How old are you? <span className="text-slate-400 font-normal lowercase">(So we can streamline your experience!)</span>
@@ -1218,6 +1209,7 @@ function RootComponent() {
                     )}
                   </div>
 
+                  {/* Theme */}
                   <div className="space-y-2 border-t border-white/10 pt-3">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                       Select Startup Theme:
@@ -1240,11 +1232,11 @@ function RootComponent() {
                     </div>
                   </div>
 
+                  {/* Display Size */}
                   <div className="space-y-2 border-t border-white/10 pt-3">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                       Select Display Size (Adjustable anytime in settings):
                     </label>
-
                     <div className="grid grid-cols-3 gap-2 sm:gap-3">
                       {(["small", "medium", "large"] as CardSize[]).map((size) => (
                         <button
@@ -1263,6 +1255,7 @@ function RootComponent() {
                     </div>
                   </div>
 
+                  {/* XL Mouse */}
                   <div className="flex items-center justify-between border-t border-white/10 pt-3">
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -1284,52 +1277,40 @@ function RootComponent() {
                       />
                     </button>
                   </div>
-                </div>
 
-                {/* Floating "Scroll Down For Passcode" Indicator pinned at the bottom of the device screen */}
-                {canModalScrollDown && (
-                  <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-bounce">
-                    <div className="flex flex-col items-center gap-0.5 bg-black/90 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-2xl">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white">
-                        Scroll Down For Passcode
-                      </span>
-                      <span className={`text-lg font-black ${getThemeArrowColor(appTheme)}`}>
-                        ⌄
-                      </span>
-                    </div>
+                  {/* Passcode – now part of the normal flow */}
+                  <div className="space-y-3 border-t border-white/10 pt-4">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Enter Personal Passcode or Trial (`9654`):
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={10}
+                      value={passcodeInput}
+                      onChange={(e) => setPasscodeInput(e.target.value)}
+                      placeholder="Enter Passcode or 9654"
+                      className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-3 text-center text-lg font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
+                    />
+
+                    {passcodeError && (
+                      <p className="text-xs font-semibold text-red-400 text-center">
+                        {passcodeErrorMsg}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none focus:ring-4`}
+                    >
+                      Enter RABBiT TV
+                    </button>
                   </div>
-                )}
-
-                {/* Sticky Bottom Footer for Passcode Input & Submit Button */}
-                <div className="p-6 md:p-8 pt-4 border-t border-white/10 bg-slate-950/95 rounded-b-2xl space-y-3 shrink-0 z-20">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Enter Personal Passcode or Trial (`9654`):
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={10}
-                    value={passcodeInput}
-                    onChange={(e) => setPasscodeInput(e.target.value)}
-                    placeholder="Enter Passcode or 9654"
-                    className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-3 text-center text-lg font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
-                  />
-
-                  {passcodeError && (
-                    <p className="text-xs font-semibold text-red-400 text-center">
-                      {passcodeErrorMsg}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none focus:ring-4`}
-                  >
-                    Enter RABBiT TV
-                  </button>
                 </div>
               </form>
             </div>
           )}
+          {/* ========== END IMPROVED FIRST-START MODAL ========== */}
+
         </AuthProvider>
         <Scripts />
       </body>
