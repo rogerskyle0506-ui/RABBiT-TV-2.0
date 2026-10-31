@@ -1,6 +1,7 @@
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { HolidayOverlay } from "@/components/HolidayOverlay";
 import "@/styles.css";
 import { useState, useEffect, useRef } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
@@ -664,6 +665,7 @@ function RootComponent() {
       </head>
       <body className={`min-h-screen max-w-full overflow-x-hidden ${getBodyBackground(appTheme)} text-slate-100 antialiased transition-colors duration-300`}>
         <PreviewHostBridge />
+        <HolidayOverlay />
         <AuthProvider>
           <header className={`sticky top-0 z-40 border-b border-white/10 ${getOuterPanelBackground(appTheme)} backdrop-blur-md transition-colors duration-300`}>
             <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2 sm:px-6 gap-2">
