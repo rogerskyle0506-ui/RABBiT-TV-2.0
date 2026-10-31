@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { fetchLiveCategories, fetchChannelsByCategory, LiveChannel } from '@/lib/live-feed-service';
 import { logLiveChannelWatch } from '@/lib/watch-history';
+import { getChannelDescription } from '@/lib/channel-descriptions';
 
 export const Route = createFileRoute('/live-player')({
   component: LivePlayerComponent,
@@ -451,7 +452,7 @@ function LivePlayerComponent() {
         </div>
 
         {/* WRITTEN DESCRIPTION / CHANNEL NAME BELOW VIDEO */}
-        <div className={`p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex flex-col items-center justify-center text-center space-y-1.5 box-border`}>
+        <div className={`p-4 sm:p-5 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex flex-col items-center justify-center text-center space-y-2 box-border`}>
           <div className="flex items-center justify-center gap-2">
             <span className={`rounded-full px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border ${
               streamStatus === 'offline' 
@@ -465,6 +466,9 @@ function LivePlayerComponent() {
             </span>
           </div>
           <h2 className="text-base sm:text-xl font-black text-white truncate max-w-full px-2">{title}</h2>
+          <p className="text-xs sm:text-sm text-slate-300 max-w-2xl px-2 leading-relaxed">
+            {getChannelDescription(title)}
+          </p>
         </div>
 
         {/* NAVIGATION EXPLORER */}
@@ -520,6 +524,9 @@ function LivePlayerComponent() {
                   <span className="text-xs font-bold line-clamp-2 text-white group-hover:text-slate-200">
                     {channel.title}
                   </span>
+                  <p className="text-[10px] text-slate-400 line-clamp-2 mt-1 px-1">
+                    {getChannelDescription(channel.title)}
+                  </p>
                   <span className="mt-2 w-full py-1 text-[10px] font-bold rounded-full bg-black/60 border border-white/10 text-slate-300">
                     WATCH NOW →
                   </span>
