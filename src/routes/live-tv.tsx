@@ -4,6 +4,7 @@ import { fetchLiveCategories, fetchChannelsByCategory, liveFeedServices, LiveCha
 import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { ScrollPillBar } from '@/components/scroll-pill-bar';
 import { getChannelDescription } from '@/lib/channel-descriptions';
+import { channelCategories } from '@/lib/channel-categories';
 
 export const Route = createFileRoute('/live-tv')({
   component: LiveTvComponent,
@@ -31,6 +32,11 @@ const reverseCategoryMapping: Record<string, string> = Object.fromEntries(
 function LiveTvComponent() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  
+  // Genre / Topic Filtering State
+  const genreOptions = ['All Genres', ...Object.keys(channelCategories)];
+  const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
+
   const [channels, setChannels] = useState<LiveChannel[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [appTheme, setAppTheme] = useState<AppTheme>('violet');
@@ -53,24 +59,46 @@ function LiveTvComponent() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
-    if (selectedCategory === 'All') {
-      const allChannels: LiveChannel[] = liveFeedServices.map((s) => ({
-        ...s,
-        streamUrl: s.url,
-        title: s.name,
-      }));
-      setChannels(allChannels);
-      setLoading(false);
-    } else if (selectedCategory) {
-      // Resolve Canadian display tab back to original underlying category key
-      const originalCategory = reverseCategoryMapping[selectedCategory] || selectedCategory;
-      fetchChannelsByCategory(originalCategory).then((chans) => {
-        setChannels(chans);
-        setLoading(false);
-      });
+
+    async function loadFilteredChannels() {
+      try {
+        let baseChannels: LiveChannel[] = [];
+
+        if (selectedCategory === 'All') {
+          baseChannels = liveFeedServices.map((s) => ({
+            ...s,
+            streamUrl: s.url,
+            title: s.name,
+          }));
+        } else {
+          const originalCategory = reverseCategoryMapping[selectedCategory] || selectedCategory;
+          baseChannels = await fetchChannelsByCategory(originalCategory);
+        }
+
+        // Apply genre filter if selected
+        if (selectedGenre !== 'All Genres') {
+          const allowedChannelNames = channelCategories[selectedGenre] || [];
+          baseChannels = baseChannels.filter((c) => allowedChannelNames.includes(c.title));
+        }
+
+        if (isMounted) {
+          setChannels(baseChannels);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Failed to load channels:', err);
+        if (isMounted) setLoading(false);
+      }
     }
-  }, [selectedCategory]);
+
+    void loadFilteredChannels();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCategory, selectedGenre]);
 
   const themeStyles = useMemo(() => {
     switch (appTheme) {
@@ -149,8 +177,9 @@ function LiveTvComponent() {
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Stream live broadcast feeds, sports channels, and events.</p>
         </div>
 
-        {/* Category Navigation Bar with Canadian Display Names */}
+        {/* Upper Category Navigation Bar (Regions / Feeds) */}
         <div className="w-full pt-2">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Regions & Feeds</p>
           <ScrollPillBar
             options={categories.map((cat) => ({ id: cat, label: cat }))}
             activeId={selectedCategory}
@@ -159,11 +188,25 @@ function LiveTvComponent() {
             getPrimaryBgColor={getPrimaryBgColor}
           />
         </div>
+
+        {/* Lower Genre Navigation Bar */}
+        <div className="w-full pt-2">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Categories & Genres</p>
+          <ScrollPillBar
+            options={genreOptions.map((genre) => ({ id: genre, label: genre }))}
+            activeId={selectedGenre}
+            onSelect={(id) => setSelectedGenre(id)}
+            appTheme={appTheme}
+            getPrimaryBgColor={getPrimaryBgColor}
+          />
+        </div>
       </header>
 
       <div className="max-w-7xl mx-auto box-border">
         <div className="mb-3 flex items-center justify-between px-1">
-          <h3 className="text-lg font-bold text-white">{selectedCategory} Feeds</h3>
+          <h3 className="text-lg font-bold text-white">
+            {selectedGenre !== 'All Genres' ? selectedGenre : selectedCategory} Feeds
+          </h3>
           <span className={`text-xs font-medium ${themeStyles.accentText}`}>{channels.length} channels available</span>
         </div>
 
@@ -206,7 +249,7 @@ function LiveTvComponent() {
           </div>
         ) : (
           <div className={`rounded-[20px] bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-8 text-center`}>
-            <p className="text-sm text-slate-300">No channels found in this category.</p>
+            <p className="text-sm text-slate-300">No channels found matching this filter combination.</p>
           </div>
         )}
       </div>
