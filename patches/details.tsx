@@ -21,7 +21,9 @@ export function DetailsPage() {
   const search = Route.useSearch();
 
   // Clean id for TMDB / embed only (strip movie- / tv- if present)
-  const mediaId = String(search.id || "").replace(/^(movie|tv)-/i, "").trim();
+  const mediaId = String(search.id || "")
+    .replace(/^(movie|tv)-/i, "")
+    .trim();
   const urlType: "movie" | "tv" = search.type === "tv" ? "tv" : "movie";
 
   const [mediaType, setMediaType] = useState<"movie" | "tv">(urlType);
@@ -141,9 +143,10 @@ export function DetailsPage() {
       if (mediaType !== "tv" || !mediaId) return;
       try {
         const apiKey =
-          (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a302cd";
+          (import.meta.env.VITE_TMDB_API_KEY as string) ||
+          "9619884fc9c0e58b374a661ab2a302cd";
         const res = await fetch(
-          `https://api.themoviedb.org/3/tv/\( {mediaId}/season/ \){season}?api_key=${apiKey}`
+          `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
         );
         const data = await res.json();
         setSeasonEpisodes(data.episodes || []);
@@ -227,7 +230,7 @@ export function DetailsPage() {
   const activeTheme = getThemeClasses(appTheme);
 
   // Prefixed id used for My List / Favorites / History separation
-  const prefixedId = `\( {mediaType}- \){mediaId}`;
+  const prefixedId = `${mediaType}-${mediaId}`;
 
   useEffect(() => {
     if (!mediaId || !mediaDetails) return;
@@ -261,17 +264,22 @@ export function DetailsPage() {
       }
 
       const apiKey =
-        (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a302cd";
+        (import.meta.env.VITE_TMDB_API_KEY as string) ||
+        "9619884fc9c0e58b374a661ab2a302cd";
 
       let activeFetchType: "movie" | "tv" = urlType;
 
       try {
         // Cache
-        const cacheKey = `rabtv_cache_\( {activeFetchType}_ \){mediaId}`;
+        const cacheKey = `rabtv_cache_${activeFetchType}_${mediaId}`;
         const cachedItem = localStorage.getItem(cacheKey);
         if (cachedItem) {
           const { data, timestamp } = JSON.parse(cachedItem);
-          if (Date.now() - timestamp < 21600000 && data && data.success !== false) {
+          if (
+            Date.now() - timestamp < 21600000 &&
+            data &&
+            data.success !== false
+          ) {
             if (!cancelled) {
               const isTv = !!(data?.seasons || data?.number_of_seasons);
               setMediaType(isTv ? "tv" : activeFetchType);
@@ -283,15 +291,16 @@ export function DetailsPage() {
 
         // Network
         let res = await fetch(
-          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}?api_key=${apiKey}&append_to_response=credits`
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
         );
         let data = await res.json();
 
         // Fallback to the other protocol if first fails
         if (!data || data.success === false || data.status_code) {
-          const otherType: "movie" | "tv" = activeFetchType === "movie" ? "tv" : "movie";
+          const otherType: "movie" | "tv" =
+            activeFetchType === "movie" ? "tv" : "movie";
           res = await fetch(
-            `https://api.themoviedb.org/3/\( {otherType}/ \){mediaId}?api_key=${apiKey}&append_to_response=credits`
+            `https://api.themoviedb.org/3/${otherType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
           );
           data = await res.json();
           if (data && data.success !== false && !data.status_code) {
@@ -302,10 +311,12 @@ export function DetailsPage() {
         if (cancelled) return;
 
         if (data && data.success !== false && !data.status_code) {
-          const isTv = !!(data?.seasons || data?.number_of_seasons) || activeFetchType === "tv";
+          const isTv =
+            !!(data?.seasons || data?.number_of_seasons) ||
+            activeFetchType === "tv";
           setMediaType(isTv ? "tv" : "movie");
           localStorage.setItem(
-            `rabtv_cache_\( {activeFetchType}_ \){mediaId}`,
+            `rabtv_cache_${activeFetchType}_${mediaId}`,
             JSON.stringify({ data, timestamp: Date.now() })
           );
           setMediaDetails(data);
@@ -315,7 +326,7 @@ export function DetailsPage() {
 
         // Recommendations
         const recRes = await fetch(
-          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
         );
         const recData = await recRes.json();
         if (!cancelled && recData?.results) {
@@ -323,7 +334,7 @@ export function DetailsPage() {
             recData.results.filter(
               (item: any) =>
                 !isTitleBroken(String(item.id)) &&
-                !isTitleBroken(`\( {activeFetchType}- \){item.id}`)
+                !isTitleBroken(`${activeFetchType}-${item.id}`)
             )
           );
         }
@@ -342,7 +353,9 @@ export function DetailsPage() {
   }, [mediaId, urlType]);
 
   const inferredMediaType: "tv" | "movie" =
-    mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv"
+    mediaDetails?.seasons ||
+    mediaDetails?.number_of_seasons ||
+    mediaType === "tv"
       ? "tv"
       : "movie";
 
@@ -355,7 +368,9 @@ export function DetailsPage() {
     try {
       const displayNames = new Intl.DisplayNames(["en"], { type: "language" });
       const name = displayNames.of(code);
-      return name ? name.charAt(0).toUpperCase() + name.slice(1) : code.toUpperCase();
+      return name
+        ? name.charAt(0).toUpperCase() + name.slice(1)
+        : code.toUpperCase();
     } catch {
       return code.toUpperCase();
     }
@@ -381,14 +396,16 @@ export function DetailsPage() {
       const recType: "movie" | "tv" = rec.title ? "movie" : "tv";
       const releaseDate = rec.release_date || rec.first_air_date || "";
       const year = releaseDate.split("-")[0];
-      const rating = rec.vote_average ? rec.vote_average.toFixed(1) : undefined;
+      const rating = rec.vote_average
+        ? rec.vote_average.toFixed(1)
+        : undefined;
 
       return {
-        id: `\( {recType}- \){recId}`,
+        id: `${recType}-${recId}`,
         title: recTitle,
         description: rec.overview || "",
         image: recPoster,
-        href: `/details?id=\( {recId}&type= \){recType}`,
+        href: `/details?id=${recId}&type=${recType}`,
         genre: recType.toUpperCase(),
         year: year || undefined,
         rating,
@@ -398,16 +415,20 @@ export function DetailsPage() {
   }, [recommendations]);
 
   const buildCatalogItem = () => ({
-    id: `\( {inferredMediaType}- \){mediaId}`,
+    id: `${inferredMediaType}-${mediaId}`,
     mediaId: String(mediaId),
     title: mediaDetails?.title || mediaDetails?.name || "Untitled",
     description: mediaDetails?.overview || "",
     image: mediaDetails?.poster_path
       ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
       : "",
-    href: `/details?id=\( {mediaId}&type= \){inferredMediaType}`,
-    year: (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split("-")[0],
-    rating: mediaDetails?.vote_average ? mediaDetails.vote_average.toFixed(1) : undefined,
+    href: `/details?id=${mediaId}&type=${inferredMediaType}`,
+    year: (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split(
+      "-"
+    )[0],
+    rating: mediaDetails?.vote_average
+      ? mediaDetails.vote_average.toFixed(1)
+      : undefined,
     mediaType: inferredMediaType,
     genreIds: mediaDetails?.genres?.map((g: any) => g.id) || [],
   });
@@ -418,8 +439,9 @@ export function DetailsPage() {
 
     try {
       // Prefixed id keeps movie/tv separation in watch history
+      // genreIds feed the home hero "FOR YOU" curation
       saveWatchProgress({
-        id: `\( {inferredMediaType}- \){mediaId}`,
+        id: `${inferredMediaType}-${mediaId}`,
         mediaId: String(mediaId),
         title: mediaDetails.title || mediaDetails.name || "Untitled",
         mediaType: inferredMediaType,
@@ -428,6 +450,7 @@ export function DetailsPage() {
         progressPercent: 0,
         seasonNumber: inferredMediaType === "tv" ? season : undefined,
         episodeNumber: inferredMediaType === "tv" ? episode : undefined,
+        genreIds: mediaDetails?.genres?.map((g: any) => g.id) || [],
       });
     } catch (err) {
       console.error("Could not save to watch history", err);
@@ -449,7 +472,9 @@ export function DetailsPage() {
       } else {
         updatedList = [
           item,
-          ...myList.filter((i: any) => i.id !== item.id && String(i.mediaId) !== mediaId),
+          ...myList.filter(
+            (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+          ),
         ];
         setInMyList(true);
         triggerFeedback("Saved to My List!");
@@ -476,7 +501,9 @@ export function DetailsPage() {
       } else {
         updatedFavs = [
           item,
-          ...favs.filter((i: any) => i.id !== item.id && String(i.mediaId) !== mediaId),
+          ...favs.filter(
+            (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+          ),
         ];
         setInFavorites(true);
         triggerFeedback("Added to Favorites!");
@@ -538,7 +565,7 @@ export function DetailsPage() {
   // Clean id only for embed
   const embedUrl =
     inferredMediaType === "tv"
-      ? `https://vidsrc.to/embed/tv/\( {mediaId}/ \){season}/${episode}`
+      ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
       : `https://vidsrc.to/embed/movie/${mediaId}`;
 
   const currentSeasonObj = mediaDetails?.seasons?.find(
@@ -574,7 +601,9 @@ export function DetailsPage() {
                     className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                   >
                     <span>
-                      {currentSeasonObj ? currentSeasonObj.name : `Season ${season}`}
+                      {currentSeasonObj
+                        ? currentSeasonObj.name
+                        : `Season ${season}`}
                     </span>
                     <span>▾</span>
                   </button>
@@ -607,7 +636,9 @@ export function DetailsPage() {
                 </div>
 
                 <div className="relative" ref={episodeRef}>
-                  <span className="block text-xs text-slate-400 mb-1">Episode</span>
+                  <span className="block text-xs text-slate-400 mb-1">
+                    Episode
+                  </span>
                   <button
                     type="button"
                     onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
@@ -684,7 +715,7 @@ export function DetailsPage() {
           {/* ========== IFRAME – UNTOUCHED ========== */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
             <iframe
-              key={`stable-player-\( {mediaId}- \){season}-${episode}`}
+              key={`stable-player-${mediaId}-${season}-${episode}`}
               srcDoc={`
                 <!DOCTYPE html>
                 <html>
@@ -778,7 +809,7 @@ export function DetailsPage() {
                     >
                       <span>
                         {currentSeasonObj
-                          ? `\( {currentSeasonObj.name} ( \){currentSeasonObj.episode_count} Episodes)`
+                          ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
                           : `Season ${season}`}
                       </span>
                       <span>▾</span>
@@ -867,7 +898,9 @@ export function DetailsPage() {
                   className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
                 >
                   ▶ Play{" "}
-                  {inferredMediaType === "tv" ? `S\( {season}:E \){episode}` : "Movie"}
+                  {inferredMediaType === "tv"
+                    ? `S${season}:E${episode}`
+                    : "Movie"}
                 </button>
 
                 <button
