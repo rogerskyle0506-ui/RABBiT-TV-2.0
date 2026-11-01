@@ -11,14 +11,23 @@ const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 
 export const Route = createFileRoute("/details")({
   component: DetailsPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      id: (search.id as string) || (search.mediaId as string) || "",
+      type: (search.type as string) || (search.mediaType as string) || "movie",
+    };
+  },
 });
 
 export function DetailsPage() {
-  const search = Route.useSearch() as { id?: string; type?: string };
-  const mediaId = search?.id;
+  const search = Route.useSearch();
+  // Clean up mediaId by stripping any accidental prefix like "movie-" or "tv-"
+  const rawId = search?.id;
+  const mediaId = rawId ? rawId.replace(/^(movie|tv)-/, "") : "";
 
-  // Dynamic mediaType state that can be corrected immediately upon data fetch
-  const [mediaType, setMediaType] = useState<string>(search?.type || "movie");
+  // Dynamic mediaType state normalized to "movie" or "tv"
+  const initialType = search?.type?.toLowerCase() === "tv" ? "tv" : "movie";
+  const [mediaType, setMediaType] = useState<string>(initialType);
 
   const [mediaDetails, setMediaDetails] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -83,7 +92,7 @@ export function DetailsPage() {
       if (canScrollDown) {
         inactivityTimer = setTimeout(() => {
           setShowScrollReminder(true);
-        }, 30000); // 30 seconds wait time
+        }, 30000);
       }
     };
 
@@ -151,7 +160,7 @@ export function DetailsPage() {
         const apiKey =
           (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
         const res = await fetch(
-          `https://api.themoviedb.org/3/tv/\( {mediaId}/season/ \){season}?api_key=${apiKey}`
+          `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
         );
         const data = await res.json();
         if (data.episodes) {
@@ -167,157 +176,125 @@ export function DetailsPage() {
     fetchSeasonEpisodes();
   }, [season, mediaId, mediaType]);
 
-  // Theme-aware helpers matching root.tsx
   const getPageBackground = (theme: AppTheme) => {
     switch (theme) {
-      case "red":
-        return "bg-[#120202]";
-      case "midnight":
-        return "bg-[#020617]";
+      case "red": return "bg-[#120202]";
+      case "midnight": return "bg-[#020617]";
       case "violet":
-      default:
-        return "bg-[#050b16]";
+      default: return "bg-[#050b16]";
     }
   };
 
   const getCardBackground = (theme: AppTheme) => {
     switch (theme) {
-      case "red":
-        return "bg-[#160404] border-red-500/20";
-      case "midnight":
-        return "bg-[#03091e] border-blue-500/20";
+      case "red": return "bg-[#160404] border-red-500/20";
+      case "midnight": return "bg-[#03091e] border-blue-500/20";
       case "violet":
-      default:
-        return "bg-[#090e1f] border-violet-500/20";
+      default: return "bg-[#090e1f] border-violet-500/20";
     }
   };
 
   const getThemeClasses = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return {
-          text: "text-red-400",
-          bg: "bg-red-600",
-          hoverBg: "hover:bg-red-500",
-          border: "border-red-500",
-          ring: "focus:ring-red-400",
-          shadow: "shadow-red-600/30",
-        };
+        return { text: "text-red-400", bg: "bg-red-600", hoverBg: "hover:bg-red-500", border: "border-red-500", ring: "focus:ring-red-400", shadow: "shadow-red-600/30" };
       case "midnight":
-        return {
-          text: "text-blue-400",
-          bg: "bg-blue-600",
-          hoverBg: "hover:bg-blue-500",
-          border: "border-blue-500",
-          ring: "focus:ring-blue-400",
-          shadow: "shadow-blue-600/30",
-        };
+        return { text: "text-blue-400", bg: "bg-blue-600", hoverBg: "hover:bg-blue-500", border: "border-blue-500", ring: "focus:ring-blue-400", shadow: "shadow-blue-600/30" };
       case "violet":
       default:
-        return {
-          text: "text-violet-400",
-          bg: "bg-violet-600",
-          hoverBg: "hover:bg-violet-500",
-          border: "border-violet-500",
-          ring: "focus:ring-violet-400",
-          shadow: "shadow-violet-600/30",
-        };
+        return { text: "text-violet-400", bg: "bg-violet-600", hoverBg: "hover:bg-violet-500", border: "border-violet-500", ring: "focus:ring-violet-400", shadow: "shadow-violet-600/30" };
     }
   };
 
   const getThemeArrowColor = (theme: AppTheme) => {
     switch (theme) {
-      case "red":
-        return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
-      case "midnight":
-        return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
+      case "red": return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
+      case "midnight": return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
       case "violet":
-      default:
-        return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
+      default: return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
     }
   };
 
   const activeTheme = getThemeClasses(appTheme);
 
-  // Check saved state for My List & Favorites – waits for mediaDetails
+  // Check saved state for My List & Favorites
   useEffect(() => {
     if (!mediaId || !mediaDetails) return;
 
-    const finalType =
-      mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv"
-        ? "tv"
-        : "movie";
-
-    const currentId = `\( {finalType}- \){mediaId}`;
+    const finalType = mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv" ? "tv" : "movie";
+    const currentId = `${finalType}-${mediaId}`;
 
     try {
       const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
-      setInMyList(myList.some((item: any) => item.id === currentId));
+      setInMyList(myList.some((item: any) => item.id === currentId || item.mediaId === mediaId));
 
       const favs = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
-      setInFavorites(favs.some((item: any) => item.id === currentId));
+      setInFavorites(favs.some((item: any) => item.id === currentId || item.mediaId === mediaId));
     } catch (err) {
       console.error("Error reading saved catalog lists", err);
     }
   }, [mediaId, mediaDetails, mediaType]);
 
-  // Fetch item details + recommendations with LocalStorage Caching (6-hour expiry) & Type Auto-Correction
+  // Fetch item details + recommendations with LocalStorage Caching (6-hour expiry)
   useEffect(() => {
     async function fetchDetailsWithCache() {
-      if (!mediaId) return;
+      if (!mediaId) {
+        setLoading(false);
+        return;
+      }
 
       let activeFetchType = mediaType;
-      const cacheKey = `rabtv_cache_\( {activeFetchType}_ \){mediaId}`;
+      const cacheKey = `rabtv_cache_${activeFetchType}_${mediaId}`;
 
       try {
         const cachedItem = localStorage.getItem(cacheKey);
         if (cachedItem) {
           const { data, timestamp } = JSON.parse(cachedItem);
-          if (Date.now() - timestamp < 21600000) {
-            if (data?.seasons) {
+          if (Date.now() - timestamp < 21600000 && data && data.success !== false) {
+            if (data?.seasons || data?.number_of_seasons) {
               setMediaType("tv");
             }
             setMediaDetails(data);
             setLoading(false);
+            return;
           }
         }
 
-        const apiKey =
-          (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
+        const apiKey = (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
 
-        let res = await fetch(
-          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}?api_key=${apiKey}&append_to_response=credits`
-        );
+        let res = await fetch(`https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`);
         let data = await res.json();
 
+        // If movie fetch failed, try TV endpoint automatically
         if ((!data || data.success === false) && activeFetchType === "movie") {
           activeFetchType = "tv";
           setMediaType("tv");
-          res = await fetch(
-            `https://api.themoviedb.org/3/tv/\( {mediaId}?api_key= \){apiKey}&append_to_response=credits`
-          );
+          res = await fetch(`https://api.themoviedb.org/3/tv/${mediaId}?api_key=${apiKey}&append_to_response=credits`);
+          data = await res.json();
+        } else if ((!data || data.success === false) && activeFetchType === "tv") {
+          activeFetchType = "movie";
+          setMediaType("movie");
+          res = await fetch(`https://api.themoviedb.org/3/movie/${mediaId}?api_key=${apiKey}&append_to_response=credits`);
           data = await res.json();
         }
 
-        if (data?.seasons || activeFetchType === "tv") {
+        if (data?.seasons || data?.number_of_seasons || activeFetchType === "tv") {
           setMediaType("tv");
         }
 
-        localStorage.setItem(
-          `rabtv_cache_\( {activeFetchType}_ \){mediaId}`,
-          JSON.stringify({ data, timestamp: Date.now() })
-        );
+        if (data && data.success !== false) {
+          localStorage.setItem(`rabtv_cache_${activeFetchType}_${mediaId}`, JSON.stringify({ data, timestamp: Date.now() }));
+          setMediaDetails(data);
+        } else {
+          setMediaDetails(null);
+        }
 
-        setMediaDetails(data);
-
-        // Fetch recommended/similar titles from TMDB API
-        const recRes = await fetch(
-          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
-        );
+        // Fetch recommended/similar titles
+        const recRes = await fetch(`https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`);
         const recData = await recRes.json();
         if (recData?.results) {
           const filteredRecs = recData.results.filter(
-            (item: any) => !isTitleBroken(String(item.id)) && !isTitleBroken(`\( {activeFetchType}- \){item.id}`)
+            (item: any) => !isTitleBroken(String(item.id)) && !isTitleBroken(`${activeFetchType}-${item.id}`)
           );
           setRecommendations(filteredRecs);
         }
@@ -328,9 +305,8 @@ export function DetailsPage() {
       }
     }
     fetchDetailsWithCache();
-  }, [mediaId]); // only mediaId – prevents re-fetch loop
+  }, [mediaId, mediaType]);
 
-  // Stronger, data-driven type detection
   const inferredMediaType: "tv" | "movie" =
     mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv"
       ? "tv"
@@ -369,20 +345,18 @@ export function DetailsPage() {
         ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
         : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
 
-      // Better per-item type detection
       const recType: "movie" | "tv" = rec.title ? "movie" : "tv";
-
       const releaseDate = rec.release_date || rec.first_air_date || "";
       const year = releaseDate.split("-")[0];
       const voteAverage = rec.vote_average;
       const rating = voteAverage ? voteAverage.toFixed(1) : undefined;
 
       return {
-        id: `\( {recType}- \){recId}`,
+        id: `${recType}-${recId}`,
         title: recTitle,
         description: rec.overview || "",
         image: recPoster,
-        href: `/details?id=\( {recId}&type= \){recType}`,
+        href: `/details?id=${recId}&type=${recType}`,
         genre: recType.toUpperCase(),
         year: year || undefined,
         rating: rating,
@@ -392,14 +366,14 @@ export function DetailsPage() {
   }, [recommendations]);
 
   const buildCatalogItem = () => ({
-    id: `\( {inferredMediaType}- \){mediaId}`,
+    id: `${inferredMediaType}-${mediaId}`,
     mediaId: String(mediaId),
     title: mediaDetails?.title || mediaDetails?.name || "Untitled",
     description: mediaDetails?.overview || "",
     image: mediaDetails?.poster_path
       ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
       : "",
-    href: `/details?id=\( {mediaId}&type= \){inferredMediaType}`,
+    href: `/details?id=${mediaId}&type=${inferredMediaType}`,
     year: (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split("-")[0],
     rating: mediaDetails?.vote_average ? mediaDetails.vote_average.toFixed(1) : undefined,
     mediaType: inferredMediaType,
@@ -407,7 +381,7 @@ export function DetailsPage() {
   });
 
   const handlePlay = () => {
-    if (!mediaDetails) return; // safety – don’t write history until we know the real type
+    if (!mediaDetails) return;
     setIsPlaying(true);
 
     try {
@@ -436,11 +410,11 @@ export function DetailsPage() {
       let updatedList = [];
 
       if (inMyList) {
-        updatedList = myList.filter((i: any) => i.id !== item.id);
+        updatedList = myList.filter((i: any) => i.id !== item.id && i.mediaId !== mediaId);
         setInMyList(false);
         triggerFeedback("Removed from My List");
       } else {
-        updatedList = [item, ...myList.filter((i: any) => i.id !== item.id)];
+        updatedList = [item, ...myList.filter((i: any) => i.id !== item.id && i.mediaId !== mediaId)];
         setInMyList(true);
         triggerFeedback("Saved to My List!");
       }
@@ -461,11 +435,11 @@ export function DetailsPage() {
       let updatedFavs = [];
 
       if (inFavorites) {
-        updatedFavs = favs.filter((i: any) => i.id !== item.id);
+        updatedFavs = favs.filter((i: any) => i.id !== item.id && i.mediaId !== mediaId);
         setInFavorites(false);
         triggerFeedback("Removed from Favorites");
       } else {
-        updatedFavs = [item, ...favs.filter((i: any) => i.id !== item.id)];
+        updatedFavs = [item, ...favs.filter((i: any) => i.id !== item.id && i.mediaId !== mediaId)];
         setInFavorites(true);
         triggerFeedback("Added to Favorites!");
       }
@@ -518,7 +492,7 @@ export function DetailsPage() {
 
   const embedUrl =
     inferredMediaType === "tv"
-      ? `https://vidsrc.to/embed/tv/\( {mediaId}/ \){season}/${episode}`
+      ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
       : `https://vidsrc.to/embed/movie/${mediaId}`;
 
   const currentSeasonObj = mediaDetails?.seasons?.find((s: any) => s.season_number === season);
@@ -645,10 +619,10 @@ export function DetailsPage() {
             </div>
           )}
 
-          {/* ========== IFRAME BLOCK – COMPLETELY UNTOUCHED ========== */}
+          {/* ========== IFRAME BLOCK ========== */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
             <iframe
-              key={`stable-player-\( {mediaId}- \){season}-${episode}`}
+              key={`stable-player-${mediaId}-${season}-${episode}`}
               srcDoc={`
                 <!DOCTYPE html>
                 <html>
@@ -685,7 +659,6 @@ export function DetailsPage() {
           </div>
         </div>
       ) : (
-        /* Overview Card with Custom Theme-Aware Dropdown Pickers */
         <div className="mx-auto flex max-w-5xl flex-col gap-8">
           <div className="flex flex-col gap-8 md:flex-row md:items-start">
             <img
@@ -724,11 +697,9 @@ export function DetailsPage() {
                 {overview}
               </p>
 
-              {/* Custom Theme-Aware Season & Episode Dropdown Pickers for TV Series */}
               {inferredMediaType === "tv" && mediaDetails?.seasons && (
                 <div className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}>
                   
-                  {/* Custom Season Dropdown */}
                   <div className="relative" ref={seasonRef}>
                     <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Season</label>
                     <button
@@ -736,7 +707,7 @@ export function DetailsPage() {
                       onClick={() => setIsSeasonOpen(!isSeasonOpen)}
                       className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                     >
-                      <span>{currentSeasonObj ? `\( {currentSeasonObj.name} ( \){currentSeasonObj.episode_count} Episodes)` : `Season ${season}`}</span>
+                      <span>{currentSeasonObj ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)` : `Season ${season}`}</span>
                       <span>▾</span>
                     </button>
 
@@ -764,7 +735,6 @@ export function DetailsPage() {
                     )}
                   </div>
 
-                  {/* Custom Episode Dropdown */}
                   <div className="relative" ref={episodeRef}>
                     <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Episode</label>
                     <button
@@ -804,14 +774,13 @@ export function DetailsPage() {
                 </div>
               )}
 
-              {/* Action Bar */}
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={handlePlay}
                   className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
                 >
-                  ▶ Play {inferredMediaType === "tv" ? `S\( {season}:E \){episode}` : "Movie"}
+                  ▶ Play {inferredMediaType === "tv" ? `S${season}:E${episode}` : "Movie"}
                 </button>
 
                 <button
@@ -856,7 +825,6 @@ export function DetailsPage() {
             </div>
           </div>
 
-          {/* Suggested Videos / Recommendations Section (TMDB API) */}
           {mappedRecommendations.length > 0 && (
             <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -872,7 +840,6 @@ export function DetailsPage() {
         </div>
       )}
 
-      {/* Scroll Reminder with 30s Inactivity & 8s Flash Twice Animation */}
       {canScrollDown && showScrollReminder && (
         <div 
           className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
@@ -892,7 +859,7 @@ export function DetailsPage() {
           `}</style>
           <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
-              More Content Below
+              More Content Details
             </span>
             <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
               ⌄
