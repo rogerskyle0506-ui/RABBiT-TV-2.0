@@ -383,7 +383,7 @@ function Home() {
     setPage(1);
   }, [activeTab, selectedGenre, globalFeedOverride]);
 
-  // ——— SMART HERO: Now Playing first → adapt to watch history genres → pad with trending ———
+  // SMART HERO: Now Playing first → adapt to watch history genres → pad with trending (max 10)
   useEffect(() => {
     let active = true;
 
@@ -396,7 +396,6 @@ function Home() {
           rawHistory.map((h) => String(h.mediaId ?? h.id).replace(/^(movie|tv)-/i, ""))
         );
 
-        // Genre seeds from history (for "more like what you watch")
         const genreIdCounts: Record<number, number> = {};
         for (const h of rawHistory) {
           const ids = ((h as any).genreIds as number[] | undefined) || [];
@@ -414,11 +413,7 @@ function Home() {
         const candidates: MediaItem[] = [];
         const seen = new Set<string>();
 
-        const pushItem = (
-          item: any,
-          mediaType: "movie" | "tv",
-          genreLabel: string
-        ) => {
+        const pushItem = (item: any, mediaType: "movie" | "tv", genreLabel: string) => {
           const tmdbId = String(item.id);
           if (!item.backdrop_path) return;
           if (seen.has(tmdbId) || watchedIds.has(tmdbId)) return;
@@ -496,7 +491,6 @@ function Home() {
 
         if (!active) return;
 
-        // Prefer FOR YOU, then in-theater, then trending — max 10
         const forYou = candidates.filter((c) => c.genre === "FOR YOU");
         const inTheater = candidates.filter((c) => c.genre === "🎬 IN THEATER");
         const rest = candidates.filter(
@@ -823,7 +817,6 @@ function Home() {
         >
           {activeHeroItem ? (
             <>
-              {/* Stretch to fill – no black bars */}
               <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
                 <img
                   src={activeHeroItem.image}
@@ -833,7 +826,6 @@ function Home() {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/80 via-black/30 to-transparent"></div>
               </div>
 
-              {/* Dots – centered bottom, larger tap targets */}
               {heroItems.length > 1 && (
                 <div className="absolute bottom-24 sm:bottom-28 left-0 right-0 z-30 flex items-center justify-center">
                   <div className="flex items-center gap-2.5 bg-black/50 backdrop-blur-md px-3.5 py-2 rounded-full border border-white/10">
