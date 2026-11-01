@@ -21,6 +21,8 @@ export interface WatchHistoryItem {
   confirmedCompleted?: boolean;
   completed?: boolean;
   totalEpisodes?: number;
+  /** TMDB genre IDs – used by hero / suggestions to curate "FOR YOU" */
+  genreIds?: number[];
 }
 
 export interface EpisodeWatchRecord {
@@ -90,8 +92,9 @@ export function getRawWatchHistory(): WatchHistoryItem[] {
       const resolvedId = String(item.mediaId ?? item.id ?? "");
       const cleanId = resolvedId.replace(/^(movie|tv)-/, "");
       const rawType = item.mediaType ?? item.media_type;
-      const mediaType = rawType === "tv" || String(item.id).startsWith("tv-") ? "tv" : "movie";
-      
+      const mediaType =
+        rawType === "tv" || String(item.id).startsWith("tv-") ? "tv" : "movie";
+
       return {
         ...item,
         id: resolvedId,
@@ -104,6 +107,7 @@ export function getRawWatchHistory(): WatchHistoryItem[] {
         image: item.image ?? item.posterPath ?? item.poster_path,
         progressPercent: item.progressPercent ?? item.progress ?? 0,
         confirmedCompleted: item.confirmedCompleted ?? item.completed ?? false,
+        genreIds: Array.isArray(item.genreIds) ? item.genreIds : [],
       };
     });
     return rawHistoryCache;
@@ -119,9 +123,13 @@ export function getWatchHistory(): Record<string, ShowWatchHistory> {
   const map: Record<string, ShowWatchHistory> = {};
 
   for (const item of rawItems) {
-    const showId = String(item.mediaId ?? item.id ?? "unknown").replace(/^(movie|tv)-/, "");
+    const showId = String(item.mediaId ?? item.id ?? "unknown").replace(
+      /^(movie|tv)-/,
+      ""
+    );
     const title = item.title ?? item.name ?? "Unknown Title";
-    const mediaType = (item.mediaType ?? item.media_type) === "tv" ? "tv" : "movie";
+    const mediaType =
+      (item.mediaType ?? item.media_type) === "tv" ? "tv" : "movie";
     const posterPath = item.posterPath ?? item.poster_path ?? item.image;
     const seasonNum = item.seasonNumber ?? item.season ?? 1;
     const episodeNum = item.episodeNumber ?? item.episode ?? 1;
@@ -130,15 +138,27 @@ export function getWatchHistory(): Record<string, ShowWatchHistory> {
     if (!map[showId]) {
       map[showId] = {
         showId,
-        title: title === "Episode" || title === "Title" ? "Unknown Title" : title,
+        title:
+          title === "Episode" || title === "Title" ? "Unknown Title" : title,
         mediaType,
         posterPath,
         backdropPath: item.backdropPath ?? item.backdrop_path,
-        totalEpisodes: mediaType === "movie" ? 1 : (item.totalEpisodes && item.totalEpisodes > 1 ? item.totalEpisodes : 24),
+        totalEpisodes:
+          mediaType === "movie"
+            ? 1
+            : item.totalEpisodes && item.totalEpisodes > 1
+            ? item.totalEpisodes
+            : 24,
         episodes: {},
       };
     } else {
-      if ((map[showId].title === "Unknown Title" || map[showId].title === "Episode") && title && title !== "Episode" && title !== "Title") {
+      if (
+        (map[showId].title === "Unknown Title" ||
+          map[showId].title === "Episode") &&
+        title &&
+        title !== "Episode" &&
+        title !== "Title"
+      ) {
         map[showId].title = title;
       }
       if (!map[showId].posterPath && posterPath) {
@@ -146,7 +166,11 @@ export function getWatchHistory(): Record<string, ShowWatchHistory> {
       }
     }
 
-    if (mediaType === "tv" && item.totalEpisodes && item.totalEpisodes > map[showId].totalEpisodes) {
+    if (
+      mediaType === "tv" &&
+      item.totalEpisodes &&
+      item.totalEpisodes > map[showId].totalEpisodes
+    ) {
       map[showId].totalEpisodes = item.totalEpisodes;
     }
 
@@ -155,7 +179,10 @@ export function getWatchHistory(): Record<string, ShowWatchHistory> {
       episodeId: epKey,
       seasonNumber: seasonNum,
       episodeNumber: episodeNum,
-      title: item.title && item.title !== "Episode" ? item.title : `S${seasonNum}E${episodeNum}`,
+      title:
+        item.title && item.title !== "Episode"
+          ? item.title
+          : `S${seasonNum}E${episodeNum}`,
       confirmedCompleted: item.confirmedCompleted ?? false,
     };
   }
@@ -164,16 +191,29 @@ export function getWatchHistory(): Record<string, ShowWatchHistory> {
   return map;
 }
 
-export function saveWatchProgress(item: Omit<WatchHistoryItem, "lastWatchedAt">): void {
+export function saveWatchProgress(
+  item: Omit<WatchHistoryItem, "lastWatchedAt">
+): void {
   if (typeof window === "undefined") return;
   const history = getRawWatchHistory();
-  const existingIndex = history.findIndex((h) => String(h.id) === String(item.id) || String(h.mediaId) === String(item.mediaId));
+  const existingIndex = history.findIndex(
+    (h) =>
+      String(h.id) === String(item.id) ||
+      String(h.mediaId) === String(item.mediaId)
+  );
 
   const progressVal = item.progressPercent ?? item.progress ?? 0;
-  const existingConfirmed = existingIndex >= 0 ? history[existingIndex].confirmedCompleted ?? false : false;
+  const existingConfirmed =
+    existingIndex >= 0
+      ? history[existingIndex].confirmedCompleted ?? false
+      : false;
 
   const rawType = item.mediaType ?? item.media_type;
-  const resolvedType = rawType === "tv" || String(item.id).startsWith("tv-") ? "tv" : "movie";
+  const resolvedType =
+    rawType === "tv" || String(item.id).startsWith("tv-") ? "tv" : "movie";
+
+  const existingGenreIds =
+    existingIndex >= 0 ? history[existingIndex].genreIds || [] : [];
 
   const updatedItem: WatchHistoryItem = {
     ...item,
@@ -187,6 +227,9 @@ export function saveWatchProgress(item: Omit<WatchHistoryItem, "lastWatchedAt">)
     lastWatchedAt: new Date().toISOString(),
     updatedAt: Date.now(),
     confirmedCompleted: progressVal >= 95 ? true : existingConfirmed,
+    genreIds: Array.isArray(item.genreIds)
+      ? item.genreIds
+      : existingGenreIds,
   };
 
   if (existingIndex >= 0) {
@@ -202,29 +245,44 @@ export function saveWatchProgress(item: Omit<WatchHistoryItem, "lastWatchedAt">)
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
 }
 
-export function markAsConfirmedCompleted(id: string, completed: boolean): void {
+export function markAsConfirmedCompleted(
+  id: string,
+  completed: boolean
+): void {
   if (typeof window === "undefined") return;
   const history = getRawWatchHistory();
-  const item = history.find((h) => String(h.id) === String(id) || String(h.mediaId) === String(id));
+  const item = history.find(
+    (h) => String(h.id) === String(id) || String(h.mediaId) === String(id)
+  );
   if (item) {
     item.confirmedCompleted = completed;
     item.completed = completed;
     if (completed) item.progressPercent = 100;
-    localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS)));
+    localStorage.setItem(
+      WATCH_HISTORY_KEY,
+      JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS))
+    );
     invalidateCaches();
     window.dispatchEvent(new Event("rabtv_watch_history_updated"));
   }
 }
 
-export function markEpisodeCompleted(showId: string, episodeId: string, completed: boolean): void {
+export function markEpisodeCompleted(
+  showId: string,
+  episodeId: string,
+  completed: boolean
+): void {
   if (typeof window === "undefined") return;
   const history = getRawWatchHistory();
   const cleanShowId = String(showId).replace(/^(movie|tv)-/, "");
-  
+
   let updated = false;
 
   for (const item of history) {
-    const itemCleanId = String(item.mediaId ?? item.id).replace(/^(movie|tv)-/, "");
+    const itemCleanId = String(item.mediaId ?? item.id).replace(
+      /^(movie|tv)-/,
+      ""
+    );
     if (itemCleanId === cleanShowId || String(item.id) === String(episodeId)) {
       item.confirmedCompleted = completed;
       item.completed = completed;
@@ -242,24 +300,35 @@ export function markEpisodeCompleted(showId: string, episodeId: string, complete
       progressPercent: completed ? 100 : 0,
       confirmedCompleted: completed,
       completed,
-      lastWatchedAt: new Date().toISOString()
+      lastWatchedAt: new Date().toISOString(),
+      genreIds: [],
     });
   }
-  
-  localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS)));
+
+  localStorage.setItem(
+    WATCH_HISTORY_KEY,
+    JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS))
+  );
   invalidateCaches();
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
 }
 
 export function removeFromWatchHistory(id: string): void {
   if (typeof window === "undefined") return;
-  const history = getRawWatchHistory().filter((h) => String(h.id) !== String(id) && String(h.mediaId) !== String(id));
-  localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS)));
+  const history = getRawWatchHistory().filter(
+    (h) => String(h.id) !== String(id) && String(h.mediaId) !== String(id)
+  );
+  localStorage.setItem(
+    WATCH_HISTORY_KEY,
+    JSON.stringify(history.slice(0, MAX_HISTORY_ITEMS))
+  );
   invalidateCaches();
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
 }
 
-export function calculateSeriesProgress(show: ShowWatchHistory | string | number): number {
+export function calculateSeriesProgress(
+  show: ShowWatchHistory | string | number
+): number {
   if (typeof show === "object" && show !== null && "episodes" in show) {
     if (show.mediaType === "movie") {
       const singleEp = Object.values(show.episodes)[0];
@@ -267,15 +336,19 @@ export function calculateSeriesProgress(show: ShowWatchHistory | string | number
     }
     const eps = Object.values(show.episodes);
     if (eps.length === 0 || show.totalEpisodes === 0) return 0;
-    
+
     const completedCount = eps.filter((e) => e.confirmedCompleted).length;
-    const percentage = Math.round((completedCount / show.totalEpisodes) * 100);
+    const percentage = Math.round(
+      (completedCount / show.totalEpisodes) * 100
+    );
     return Math.min(100, percentage);
   }
 
   const history = getRawWatchHistory();
   const cleanId = String(show).replace(/^(movie|tv)-/, "");
-  const item = history.find((h) => String(h.id) === String(show) || String(h.mediaId) === cleanId);
+  const item = history.find(
+    (h) => String(h.id) === String(show) || String(h.mediaId) === cleanId
+  );
   if (!item) return 0;
   return item.progressPercent ?? (item.confirmedCompleted ? 100 : 0);
 }
@@ -289,7 +362,7 @@ export function getDislikedTitles(): DislikedTitle[] {
     dislikedCache = data ? JSON.parse(data) : [];
     return dislikedCache;
   } catch (e) {
-    console.error('Failed to get disliked titles:', e);
+    console.error("Failed to get disliked titles:", e);
     return [];
   }
 }
@@ -298,18 +371,28 @@ export function isTitleDisliked(id: string | number): boolean {
   if (!id) return false;
   const cleanId = String(id).replace(/^(movie|tv)-/, "");
   const disliked = getDislikedTitles();
-  return disliked.some((item) => String(item.id).replace(/^(movie|tv)-/, "") === cleanId);
+  return disliked.some(
+    (item) => String(item.id).replace(/^(movie|tv)-/, "") === cleanId
+  );
 }
 
-export function dislikeTitle(item: { id: string | number; title?: string; name?: string; mediaType?: string; posterPath?: string | null }): void {
+export function dislikeTitle(item: {
+  id: string | number;
+  title?: string;
+  name?: string;
+  mediaType?: string;
+  posterPath?: string | null;
+}): void {
   if (typeof window === "undefined") return;
-  
+
   const cleanId = String(item.id).replace(/^(movie|tv)-/, "");
   removeFromWatchHistory(cleanId);
 
   const disliked = getDislikedTitles();
-  const exists = disliked.some((d) => String(d.id).replace(/^(movie|tv)-/, "") === cleanId);
-  
+  const exists = disliked.some(
+    (d) => String(d.id).replace(/^(movie|tv)-/, "") === cleanId
+  );
+
   if (!exists) {
     disliked.unshift({
       id: cleanId,
@@ -329,14 +412,16 @@ export function removeDislikedTitle(id: number | string): void {
   if (typeof window === "undefined") return;
   try {
     const cleanId = String(id).replace(/^(movie|tv)-/, "");
-    const disliked = getDislikedTitles().filter((item) => String(item.id).replace(/^(movie|tv)-/, "") !== cleanId);
+    const disliked = getDislikedTitles().filter(
+      (item) => String(item.id).replace(/^(movie|tv)-/, "") !== cleanId
+    );
     localStorage.setItem(DISLIKED_TITLES_KEY, JSON.stringify(disliked));
     invalidateCaches();
-    
+
     window.dispatchEvent(new Event("rabtv_watch_history_updated"));
     window.dispatchEvent(new Event("rabtv_disliked_updated"));
   } catch (e) {
-    console.error('Failed to remove disliked title:', e);
+    console.error("Failed to remove disliked title:", e);
   }
 }
 
@@ -353,12 +438,17 @@ export function getRecentLiveChannels(): RecentLiveChannel[] {
     recentLiveCache = raw ? JSON.parse(raw) : [];
     return recentLiveCache;
   } catch (err) {
-    console.error('Error reading recent live channels:', err);
+    console.error("Error reading recent live channels:", err);
     return [];
   }
 }
 
-export function logLiveChannelWatch(channel: { title: string; logo: string; streamUrl: string; channelId?: string }) {
+export function logLiveChannelWatch(channel: {
+  title: string;
+  logo: string;
+  streamUrl: string;
+  channelId?: string;
+}) {
   if (typeof window === "undefined") return;
   try {
     const currentList = getRecentLiveChannels();
@@ -379,9 +469,9 @@ export function logLiveChannelWatch(channel: { title: string; logo: string; stre
 
     localStorage.setItem(RECENT_LIVE_CHANNELS_KEY, JSON.stringify(updated));
     invalidateCaches();
-    window.dispatchEvent(new Event('rabtv_watch_history_updated'));
+    window.dispatchEvent(new Event("rabtv_watch_history_updated"));
   } catch (err) {
-    console.error('Error logging live channel watch:', err);
+    console.error("Error logging live channel watch:", err);
   }
 }
 
@@ -392,8 +482,8 @@ export function removeRecentLiveChannel(channelId: string) {
     const updated = currentList.filter((c) => c.channelId !== channelId);
     localStorage.setItem(RECENT_LIVE_CHANNELS_KEY, JSON.stringify(updated));
     invalidateCaches();
-    window.dispatchEvent(new Event('rabtv_watch_history_updated'));
+    window.dispatchEvent(new Event("rabtv_watch_history_updated"));
   } catch (err) {
-    console.error('Error removing recent live channel:', err);
+    console.error("Error removing recent live channel:", err);
   }
 }
