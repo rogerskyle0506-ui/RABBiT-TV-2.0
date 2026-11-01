@@ -11,17 +11,20 @@ const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 
 export const Route = createFileRoute("/details")({
   component: DetailsPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    id: search.id != null ? String(search.id) : "",
+    type: search.type != null ? String(search.type).toLowerCase() : "movie",
+  }),
 });
 
 export function DetailsPage() {
-  const search = Route.useSearch() as { id?: unknown; type?: unknown };
+  const search = Route.useSearch();
 
-  const rawId = typeof search?.id === "string" ? search.id : search?.id != null ? String(search.id) : "";
-  const mediaId = rawId.replace(/^(movie|tv)-/, "");
+  // Clean id for TMDB / embed only (strip movie- / tv- if present)
+  const mediaId = String(search.id || "").replace(/^(movie|tv)-/i, "").trim();
+  const urlType: "movie" | "tv" = search.type === "tv" ? "tv" : "movie";
 
-  const initialType = typeof search?.type === "string" ? search.type.toLowerCase() : "movie";
-  const [mediaType, setMediaType] = useState<string>(initialType === "tv" ? "tv" : "movie");
-
+  const [mediaType, setMediaType] = useState<"movie" | "tv">(urlType);
   const [mediaDetails, setMediaDetails] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -49,6 +52,17 @@ export function DetailsPage() {
   const episodeRef = useRef<HTMLDivElement>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
 
+  // Reset when navigating to a different title
+  useEffect(() => {
+    setMediaType(urlType);
+    setIsPlaying(false);
+    setSeason(1);
+    setEpisode(1);
+    setMediaDetails(null);
+    setRecommendations([]);
+    setLoading(true);
+  }, [mediaId, urlType]);
+
   useEffect(() => {
     const checkVerticalScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -56,11 +70,9 @@ export function DetailsPage() {
       const clientHeight = window.innerHeight;
       setCanScrollDown(scrollTop + clientHeight < scrollHeight - 100);
     };
-
     checkVerticalScroll();
     window.addEventListener("scroll", checkVerticalScroll, { passive: true });
     window.addEventListener("resize", checkVerticalScroll);
-
     return () => {
       window.removeEventListener("scroll", checkVerticalScroll);
       window.removeEventListener("resize", checkVerticalScroll);
@@ -69,24 +81,18 @@ export function DetailsPage() {
 
   useEffect(() => {
     let inactivityTimer: NodeJS.Timeout;
-
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
       setShowScrollReminder(false);
       if (canScrollDown) {
-        inactivityTimer = setTimeout(() => {
-          setShowScrollReminder(true);
-        }, 30000);
+        inactivityTimer = setTimeout(() => setShowScrollReminder(true), 30000);
       }
     };
-
     resetInactivityTimer();
-
     window.addEventListener("scroll", resetInactivityTimer, { passive: true });
     window.addEventListener("click", resetInactivityTimer);
     window.addEventListener("keydown", resetInactivityTimer);
     window.addEventListener("touchstart", resetInactivityTimer, { passive: true });
-
     return () => {
       clearTimeout(inactivityTimer);
       window.removeEventListener("scroll", resetInactivityTimer);
@@ -114,11 +120,9 @@ export function DetailsPage() {
       setAppTheme(getSavedTheme());
       setCardSize(getSavedCardSize());
     };
-
     loadSettings();
     window.addEventListener("storage", loadSettings);
     window.addEventListener("rabtv_settings_updated" as any, loadSettings);
-
     return () => {
       window.removeEventListener("storage", loadSettings);
       window.removeEventListener("rabtv_settings_updated" as any, loadSettings);
@@ -127,27 +131,22 @@ export function DetailsPage() {
 
   useEffect(() => {
     return () => {
-      if (feedbackTimeoutRef.current) {
-        clearTimeout(feedbackTimeoutRef.current);
-      }
+      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
     };
   }, []);
 
+  // Season episodes (TV only) — uses clean mediaId
   useEffect(() => {
     async function fetchSeasonEpisodes() {
       if (mediaType !== "tv" || !mediaId) return;
       try {
         const apiKey =
-          (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
+          (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a302cd";
         const res = await fetch(
           `https://api.themoviedb.org/3/tv/\( {mediaId}/season/ \){season}?api_key=${apiKey}`
         );
         const data = await res.json();
-        if (data.episodes) {
-          setSeasonEpisodes(data.episodes);
-        } else {
-          setSeasonEpisodes([]);
-        }
+        setSeasonEpisodes(data.episodes || []);
       } catch (err) {
         console.error("Failed to load season episodes", err);
         setSeasonEpisodes([]);
@@ -227,79 +226,84 @@ export function DetailsPage() {
 
   const activeTheme = getThemeClasses(appTheme);
 
+  // Prefixed id used for My List / Favorites / History separation
+  const prefixedId = `\( {mediaType}- \){mediaId}`;
+
   useEffect(() => {
     if (!mediaId || !mediaDetails) return;
-
-    const finalType =
-      mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv"
-        ? "tv"
-        : "movie";
-    const currentId = `\( {finalType}- \){mediaId}`;
-
     try {
       const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
-      setInMyList(myList.some((item: any) => item.id === currentId || item.mediaId === mediaId));
-
+      setInMyList(
+        myList.some(
+          (item: any) => item.id === prefixedId || String(item.mediaId) === mediaId
+        )
+      );
       const favs = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
-      setInFavorites(favs.some((item: any) => item.id === currentId || item.mediaId === mediaId));
+      setInFavorites(
+        favs.some(
+          (item: any) => item.id === prefixedId || String(item.mediaId) === mediaId
+        )
+      );
     } catch (err) {
       console.error("Error reading saved catalog lists", err);
     }
-  }, [mediaId, mediaDetails, mediaType]);
+  }, [mediaId, mediaDetails, mediaType, prefixedId]);
 
+  // Details + recommendations — depends on mediaId + urlType only (no loop)
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchDetailsWithCache() {
       if (!mediaId) {
         setLoading(false);
+        setMediaDetails(null);
         return;
       }
 
-      let activeFetchType = mediaType;
-      const cacheKey = `rabtv_cache_\( {activeFetchType}_ \){mediaId}`;
+      const apiKey =
+        (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a302cd";
+
+      let activeFetchType: "movie" | "tv" = urlType;
 
       try {
+        // Cache
+        const cacheKey = `rabtv_cache_\( {activeFetchType}_ \){mediaId}`;
         const cachedItem = localStorage.getItem(cacheKey);
         if (cachedItem) {
           const { data, timestamp } = JSON.parse(cachedItem);
           if (Date.now() - timestamp < 21600000 && data && data.success !== false) {
-            if (data?.seasons || data?.number_of_seasons) {
-              setMediaType("tv");
+            if (!cancelled) {
+              const isTv = !!(data?.seasons || data?.number_of_seasons);
+              setMediaType(isTv ? "tv" : activeFetchType);
+              setMediaDetails(data);
+              setLoading(false);
             }
-            setMediaDetails(data);
-            setLoading(false);
-            return;
           }
         }
 
-        const apiKey =
-          (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
-
+        // Network
         let res = await fetch(
           `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}?api_key=${apiKey}&append_to_response=credits`
         );
         let data = await res.json();
 
-        if ((!data || data.success === false) && activeFetchType === "movie") {
-          activeFetchType = "tv";
-          setMediaType("tv");
+        // Fallback to the other protocol if first fails
+        if (!data || data.success === false || data.status_code) {
+          const otherType: "movie" | "tv" = activeFetchType === "movie" ? "tv" : "movie";
           res = await fetch(
-            `https://api.themoviedb.org/3/tv/\( {mediaId}?api_key= \){apiKey}&append_to_response=credits`
+            `https://api.themoviedb.org/3/\( {otherType}/ \){mediaId}?api_key=${apiKey}&append_to_response=credits`
           );
           data = await res.json();
-        } else if ((!data || data.success === false) && activeFetchType === "tv") {
-          activeFetchType = "movie";
-          setMediaType("movie");
-          res = await fetch(
-            `https://api.themoviedb.org/3/movie/\( {mediaId}?api_key= \){apiKey}&append_to_response=credits`
-          );
-          data = await res.json();
+          if (data && data.success !== false && !data.status_code) {
+            activeFetchType = otherType;
+          }
         }
 
-        if (data?.seasons || data?.number_of_seasons || activeFetchType === "tv") {
-          setMediaType("tv");
-        }
+        if (cancelled) return;
 
-        if (data && data.success !== false) {
+        if (data && data.success !== false && !data.status_code) {
+          const isTv = !!(data?.seasons || data?.number_of_seasons) || activeFetchType === "tv";
+          setMediaType(isTv ? "tv" : "movie");
           localStorage.setItem(
             `rabtv_cache_\( {activeFetchType}_ \){mediaId}`,
             JSON.stringify({ data, timestamp: Date.now() })
@@ -309,25 +313,33 @@ export function DetailsPage() {
           setMediaDetails(null);
         }
 
+        // Recommendations
         const recRes = await fetch(
           `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
         );
         const recData = await recRes.json();
-        if (recData?.results) {
-          const filteredRecs = recData.results.filter(
-            (item: any) =>
-              !isTitleBroken(String(item.id)) && !isTitleBroken(`\( {activeFetchType}- \){item.id}`)
+        if (!cancelled && recData?.results) {
+          setRecommendations(
+            recData.results.filter(
+              (item: any) =>
+                !isTitleBroken(String(item.id)) &&
+                !isTitleBroken(`\( {activeFetchType}- \){item.id}`)
+            )
           );
-          setRecommendations(filteredRecs);
         }
       } catch (err) {
         console.error("Failed to load details and recommendations", err);
+        if (!cancelled) setMediaDetails(null);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
+
     fetchDetailsWithCache();
-  }, [mediaId, mediaType]);
+    return () => {
+      cancelled = true;
+    };
+  }, [mediaId, urlType]);
 
   const inferredMediaType: "tv" | "movie" =
     mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv"
@@ -361,17 +373,15 @@ export function DetailsPage() {
 
   const mappedRecommendations: MediaItem[] = useMemo(() => {
     return recommendations.map((rec: any) => {
-      const recId = rec.id;
+      const recId = String(rec.id);
       const recTitle = rec.title || rec.name || "Untitled";
       const recPoster = rec.poster_path
         ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
         : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
-
       const recType: "movie" | "tv" = rec.title ? "movie" : "tv";
       const releaseDate = rec.release_date || rec.first_air_date || "";
       const year = releaseDate.split("-")[0];
-      const voteAverage = rec.vote_average;
-      const rating = voteAverage ? voteAverage.toFixed(1) : undefined;
+      const rating = rec.vote_average ? rec.vote_average.toFixed(1) : undefined;
 
       return {
         id: `\( {recType}- \){recId}`,
@@ -381,7 +391,7 @@ export function DetailsPage() {
         href: `/details?id=\( {recId}&type= \){recType}`,
         genre: recType.toUpperCase(),
         year: year || undefined,
-        rating: rating,
+        rating,
         mediaType: recType,
       };
     });
@@ -407,6 +417,7 @@ export function DetailsPage() {
     setIsPlaying(true);
 
     try {
+      // Prefixed id keeps movie/tv separation in watch history
       saveWatchProgress({
         id: `\( {inferredMediaType}- \){mediaId}`,
         mediaId: String(mediaId),
@@ -426,21 +437,23 @@ export function DetailsPage() {
   const toggleMyList = () => {
     if (!mediaDetails) return;
     const item = buildCatalogItem();
-
     try {
       const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
-      let updatedList = [];
-
+      let updatedList;
       if (inMyList) {
-        updatedList = myList.filter((i: any) => i.id !== item.id && i.mediaId !== mediaId);
+        updatedList = myList.filter(
+          (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+        );
         setInMyList(false);
         triggerFeedback("Removed from My List");
       } else {
-        updatedList = [item, ...myList.filter((i: any) => i.id !== item.id && i.mediaId !== mediaId)];
+        updatedList = [
+          item,
+          ...myList.filter((i: any) => i.id !== item.id && String(i.mediaId) !== mediaId),
+        ];
         setInMyList(true);
         triggerFeedback("Saved to My List!");
       }
-
       localStorage.setItem(MY_LIST_STORAGE_KEY, JSON.stringify(updatedList));
       window.dispatchEvent(new Event("rabtv_catalog_updated"));
     } catch (err) {
@@ -451,21 +464,23 @@ export function DetailsPage() {
   const toggleFavorites = () => {
     if (!mediaDetails) return;
     const item = buildCatalogItem();
-
     try {
       const favs = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
-      let updatedFavs = [];
-
+      let updatedFavs;
       if (inFavorites) {
-        updatedFavs = favs.filter((i: any) => i.id !== item.id && i.mediaId !== mediaId);
+        updatedFavs = favs.filter(
+          (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+        );
         setInFavorites(false);
         triggerFeedback("Removed from Favorites");
       } else {
-        updatedFavs = [item, ...favs.filter((i: any) => i.id !== item.id && i.mediaId !== mediaId)];
+        updatedFavs = [
+          item,
+          ...favs.filter((i: any) => i.id !== item.id && String(i.mediaId) !== mediaId),
+        ];
         setInFavorites(true);
         triggerFeedback("Added to Favorites!");
       }
-
       localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(updatedFavs));
       window.dispatchEvent(new Event("rabtv_catalog_updated"));
     } catch (err) {
@@ -484,9 +499,7 @@ export function DetailsPage() {
 
   const triggerFeedback = (msg: string) => {
     setActionFeedback(msg);
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current);
-    }
+    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
     feedbackTimeoutRef.current = window.setTimeout(() => {
       setActionFeedback(null);
       feedbackTimeoutRef.current = null;
@@ -495,7 +508,9 @@ export function DetailsPage() {
 
   if (loading) {
     return (
-      <div className={`flex min-h-screen items-center justify-center ${getPageBackground(appTheme)} text-white`}>
+      <div
+        className={`flex min-h-screen items-center justify-center ${getPageBackground(appTheme)} text-white`}
+      >
         <p className={`text-xl font-medium animate-pulse ${activeTheme.text}`}>
           Loading title details...
         </p>
@@ -504,24 +519,39 @@ export function DetailsPage() {
   }
 
   const title = mediaDetails?.title || mediaDetails?.name || "Sample Content";
-  const overview = mediaDetails?.overview || "No description available for this title.";
+  const overview =
+    mediaDetails?.overview || "No description available for this title.";
   const poster = mediaDetails?.poster_path
     ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
     : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
-  const releaseYear = (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split("-")[0];
-  const rating = mediaDetails?.vote_average ? mediaDetails.vote_average.toFixed(1) : "N/A";
-  const genres = mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
+  const releaseYear = (
+    mediaDetails?.release_date ||
+    mediaDetails?.first_air_date ||
+    ""
+  ).split("-")[0];
+  const rating = mediaDetails?.vote_average
+    ? mediaDetails.vote_average.toFixed(1)
+    : "N/A";
+  const genres =
+    mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
 
+  // Clean id only for embed
   const embedUrl =
     inferredMediaType === "tv"
       ? `https://vidsrc.to/embed/tv/\( {mediaId}/ \){season}/${episode}`
       : `https://vidsrc.to/embed/movie/${mediaId}`;
 
-  const currentSeasonObj = mediaDetails?.seasons?.find((s: any) => s.season_number === season);
-  const currentEpisodeObj = seasonEpisodes?.find((e: any) => e.episode_number === episode);
+  const currentSeasonObj = mediaDetails?.seasons?.find(
+    (s: any) => s.season_number === season
+  );
+  const currentEpisodeObj = seasonEpisodes?.find(
+    (e: any) => e.episode_number === episode
+  );
 
   return (
-    <div className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20`}>
+    <div
+      className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20`}
+    >
       <Link
         className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
         to="/"
@@ -532,7 +562,9 @@ export function DetailsPage() {
       {isPlaying ? (
         <div className="mx-auto flex max-w-5xl flex-col gap-6">
           {inferredMediaType === "tv" && (
-            <div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}>
+            <div
+              className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}
+            >
               <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
                 <div className="relative" ref={seasonRef}>
                   <span className="block text-xs text-slate-400 mb-1">Season</span>
@@ -541,12 +573,15 @@ export function DetailsPage() {
                     onClick={() => setIsSeasonOpen(!isSeasonOpen)}
                     className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                   >
-                    <span>{currentSeasonObj ? currentSeasonObj.name : `Season ${season}`}</span>
+                    <span>
+                      {currentSeasonObj ? currentSeasonObj.name : `Season ${season}`}
+                    </span>
                     <span>▾</span>
                   </button>
-
                   {isSeasonOpen && (
-                    <div className={`absolute left-0 mt-2 z-50 max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}>
+                    <div
+                      className={`absolute left-0 mt-2 z-50 max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                    >
                       {mediaDetails?.seasons
                         ?.filter((s: any) => s.season_number > 0)
                         .map((s: any) => (
@@ -585,9 +620,10 @@ export function DetailsPage() {
                     </span>
                     <span>▾</span>
                   </button>
-
                   {isEpisodeOpen && (
-                    <div className={`absolute left-0 mt-2 z-50 max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}>
+                    <div
+                      className={`absolute left-0 mt-2 z-50 max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                    >
                       {seasonEpisodes.length > 0 ? (
                         seasonEpisodes.map((ep: any) => (
                           <button
@@ -607,7 +643,9 @@ export function DetailsPage() {
                           </button>
                         ))
                       ) : (
-                        <div className="px-3 py-2 text-sm text-slate-400">Loading episodes...</div>
+                        <div className="px-3 py-2 text-sm text-slate-400">
+                          Loading episodes...
+                        </div>
                       )}
                     </div>
                   )}
@@ -623,7 +661,6 @@ export function DetailsPage() {
                 >
                   ◀ Previous
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setEpisode((prev) => prev + 1)}
@@ -631,7 +668,6 @@ export function DetailsPage() {
                 >
                   Next Episode ▶
                 </button>
-
                 <label className="ml-2 flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
                   <input
                     type="checkbox"
@@ -645,7 +681,7 @@ export function DetailsPage() {
             </div>
           )}
 
-          {/* ========== IFRAME BLOCK – UNTOUCHED ========== */}
+          {/* ========== IFRAME – UNTOUCHED ========== */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
             <iframe
               key={`stable-player-\( {mediaId}- \){season}-${episode}`}
@@ -677,9 +713,11 @@ export function DetailsPage() {
               allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
             ></iframe>
           </div>
-          {/* ========== END IFRAME BLOCK ========== */}
+          {/* ========== END IFRAME ========== */}
 
-          <div className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}>
+          <div
+            className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}
+          >
             <h1 className="text-2xl font-bold text-white">{title}</h1>
             <p className="text-sm leading-relaxed text-slate-300">{overview}</p>
           </div>
@@ -700,29 +738,39 @@ export function DetailsPage() {
                 {genres}
               </span>
 
-              <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">{title}</h1>
+              <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+                {title}
+              </h1>
 
               <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
                 {rating !== "N/A" && (
-                  <span className="flex items-center gap-1 font-bold text-yellow-300">⭐ {rating}</span>
+                  <span className="flex items-center gap-1 font-bold text-yellow-300">
+                    ⭐ {rating}
+                  </span>
                 )}
                 {releaseYear && <span>{releaseYear}</span>}
                 {originalLanguageName && (
-                  <span className="font-medium text-slate-200">{originalLanguageName}</span>
+                  <span className="font-medium text-slate-200">
+                    {originalLanguageName}
+                  </span>
                 )}
                 <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
                   {inferredMediaType}
                 </span>
               </div>
 
-              <p className="max-w-2xl text-base leading-relaxed text-slate-300">{overview}</p>
+              <p className="max-w-2xl text-base leading-relaxed text-slate-300">
+                {overview}
+              </p>
 
               {inferredMediaType === "tv" && mediaDetails?.seasons && (
                 <div
                   className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
                 >
                   <div className="relative" ref={seasonRef}>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Season</label>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      Select Season
+                    </label>
                     <button
                       type="button"
                       onClick={() => setIsSeasonOpen(!isSeasonOpen)}
@@ -735,9 +783,10 @@ export function DetailsPage() {
                       </span>
                       <span>▾</span>
                     </button>
-
                     {isSeasonOpen && (
-                      <div className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}>
+                      <div
+                        className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                      >
                         {mediaDetails.seasons
                           .filter((s: any) => s.season_number > 0)
                           .map((s: any) => (
@@ -763,7 +812,9 @@ export function DetailsPage() {
                   </div>
 
                   <div className="relative" ref={episodeRef}>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Episode</label>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      Select Episode
+                    </label>
                     <button
                       type="button"
                       onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
@@ -776,9 +827,10 @@ export function DetailsPage() {
                       </span>
                       <span>▾</span>
                     </button>
-
                     {isEpisodeOpen && (
-                      <div className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}>
+                      <div
+                        className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                      >
                         {seasonEpisodes.length > 0 ? (
                           seasonEpisodes.map((ep: any) => (
                             <button
@@ -798,7 +850,9 @@ export function DetailsPage() {
                             </button>
                           ))
                         ) : (
-                          <div className="px-3 py-2 text-sm text-slate-400">Loading episodes...</div>
+                          <div className="px-3 py-2 text-sm text-slate-400">
+                            Loading episodes...
+                          </div>
                         )}
                       </div>
                     )}
@@ -812,7 +866,8 @@ export function DetailsPage() {
                   onClick={handlePlay}
                   className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
                 >
-                  ▶ Play {inferredMediaType === "tv" ? `S\( {season}:E \){episode}` : "Movie"}
+                  ▶ Play{" "}
+                  {inferredMediaType === "tv" ? `S\( {season}:E \){episode}` : "Movie"}
                 </button>
 
                 <button
@@ -850,7 +905,9 @@ export function DetailsPage() {
               </div>
 
               {actionFeedback && (
-                <p className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}>
+                <p
+                  className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}
+                >
                   {actionFeedback}
                 </p>
               )}
@@ -893,7 +950,9 @@ export function DetailsPage() {
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
               More Content Details
             </span>
-            <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
+            <span
+              className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}
+            >
               ⌄
             </span>
           </div>
