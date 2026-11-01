@@ -29,7 +29,6 @@ import {
 } from "@/lib/settings";
 
 // ——— Unlock algorithm (name + age → 8-digit code) ———
-// Not obvious, but deterministic so you can regenerate from name + age.
 export function generateUnlockCode(name: string, age: number): string {
   const clean = name
     .trim()
@@ -41,12 +40,11 @@ export function generateUnlockCode(name: string, age: number): string {
   for (let i = 0; i < clean.length; i++) {
     sum += clean.charCodeAt(i) * (i + 7);
   }
-  // Mix further so short names still produce full-looking codes
   const mixed = (sum * 7919 + age * 997) % 90000000;
   return String(mixed + 10000000); // always 8 digits
 }
 
-const ADMIN_NAME = "Rabbit"; // capital R required on login
+const ADMIN_NAME = "Rabbit";
 const ADMIN_BIRTH_YEAR = 1988;
 
 function getExpectedAdminAge(): number {
@@ -59,6 +57,7 @@ function isAdminCredentials(name: string, age: number): boolean {
 
 const TRIAL_CODE = "9654";
 const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+const AGE_LOCK_KEY = "rabtv_age_passcode";
 
 const globalFeedOptions = ["All (Default)", "Russian", "British", "Hungarian", "German"] as const;
 export type GlobalFeedOption = (typeof globalFeedOptions)[number];
@@ -81,37 +80,24 @@ async function updateNativeStatusBar(theme: AppTheme) {
     await StatusBar.setBackgroundColor({ color: hex });
     await StatusBar.setStyle({ style: Style.Dark });
   } catch {
-    // Gracefully fallback
+    // ignore
   }
 }
 
 function verifyCurrentAccess(): boolean {
   if (typeof window === "undefined") return false;
-
   const status = localStorage.getItem("rabtv_access_status");
-
-  if (status === "permanent") {
-    return true;
-  }
-
+  if (status === "permanent") return true;
   if (status === "trial") {
     const startTime = Number(localStorage.getItem("rabtv_trial_start_timestamp") || 0);
-    const now = Date.now();
-
-    if (now - startTime < TRIAL_DURATION_MS) {
-      return true;
-    } else {
-      localStorage.setItem("rabtv_access_status", "expired");
-      return false;
-    }
+    if (Date.now() - startTime < TRIAL_DURATION_MS) return true;
+    localStorage.setItem("rabtv_access_status", "expired");
+    return false;
   }
-
-  const legacyAuthorized = localStorage.getItem(DISCLAIMER_ACCEPTED_KEY);
-  if (legacyAuthorized === "true") {
+  if (localStorage.getItem(DISCLAIMER_ACCEPTED_KEY) === "true") {
     localStorage.setItem("rabtv_access_status", "permanent");
     return true;
   }
-
   return false;
 }
 
@@ -135,11 +121,14 @@ function RootComponent() {
     "⚠️ Invalid Passcode. Please try again."
   );
   const [ageErrorNotice, setAgeErrorNotice] = useState(false);
+  const [ageLockError, setAgeLockError] = useState(false);
+
+  // Mandatory 4-digit age lock set on first login (parent PIN)
+  const [ageLockInput, setAgeLockInput] = useState("");
 
   const [showSettings, setShowSettings] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const lastScrollYRef = useRef(0);
-
   const [activeSettingsTab, setActiveSettingsTab] = useState<
     "theme" | "scale" | "backup" | null
   >(null);
@@ -155,33 +144,31 @@ function RootComponent() {
   const [profileNameInput, setProfileNameInput] = useState<string>("");
   const [savedProfileName, setSavedProfileName] = useState<string>("");
   const [settingsAgeCodeInput, setSettingsAgeCodeInput] = useState<string>("");
-  const [settingsAgeError, setSettingsAgeError] = useState<boolean>(false);
-  const [settingsAgeSuccess, setSettingsAgeSuccess] = useState<boolean>(false);
+  const [settingsAgeError, setSettingsAgeError] = useState(false);
+  const [settingsAgeSuccess, setSettingsAgeSuccess] = useState(false);
 
-  const [unlockCodeInput, setUnlockCodeInput] = useState<string>("");
+  const [unlockCodeInput, setUnlockCodeInput] = useState("");
   const [unlockStatusMsg, setUnlockStatusMsg] = useState<{
     text: string;
     isError: boolean;
   } | null>(null);
-  const [isTrialActive, setIsTrialActive] = useState<boolean>(false);
-  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number>(0);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isTrialActive, setIsTrialActive] = useState(false);
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Admin keygen inputs
   const [keygenName, setKeygenName] = useState("");
   const [keygenAge, setKeygenAge] = useState("");
   const [keygenResult, setKeygenResult] = useState<string | null>(null);
 
-  const [currentPasscodeInput, setCurrentPasscodeInput] = useState<string>("");
-  const [newPasscode, setNewPasscode] = useState<string>("");
-  const [confirmNewPasscode, setConfirmNewPasscode] = useState<string>("");
+  const [currentPasscodeInput, setCurrentPasscodeInput] = useState("");
+  const [newPasscode, setNewPasscode] = useState("");
+  const [confirmNewPasscode, setConfirmNewPasscode] = useState("");
   const [passcodeStatusMsg, setPasscodeStatusMsg] = useState<{
     text: string;
     isError: boolean;
   } | null>(null);
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
-
   const [headerSearchInput, setHeaderSearchInput] = useState("");
 
   const [selectedGlobalFeed, setSelectedGlobalFeed] = useState<GlobalFeedOption>(
@@ -217,9 +204,8 @@ function RootComponent() {
   };
 
   const handleToggleSettings = () => {
-    if (showSettings) {
-      handleCloseAll();
-    } else {
+    if (showSettings) handleCloseAll();
+    else {
       handleCloseAll();
       lastScrollYRef.current = window.scrollY;
       setShowSettings(true);
@@ -228,9 +214,8 @@ function RootComponent() {
   };
 
   const handleToggleProfileMenu = () => {
-    if (showProfileMenu) {
-      handleCloseAll();
-    } else {
+    if (showProfileMenu) handleCloseAll();
+    else {
       handleCloseAll();
       lastScrollYRef.current = window.scrollY;
       setShowProfileMenu(true);
@@ -245,7 +230,6 @@ function RootComponent() {
         }
       }
     };
-
     window.addEventListener("scroll", handleWindowScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleWindowScroll);
   }, [showSettings, showProfileMenu]);
@@ -258,8 +242,7 @@ function RootComponent() {
       }
     }
 
-    const hasAccess = verifyCurrentAccess();
-    if (!hasAccess) {
+    if (!verifyCurrentAccess()) {
       setShowFirstStartModal(true);
     } else {
       const status = localStorage.getItem("rabtv_access_status");
@@ -268,10 +251,8 @@ function RootComponent() {
         const startTime = Number(
           localStorage.getItem("rabtv_trial_start_timestamp") || 0
         );
-        const elapsed = Date.now() - startTime;
-        const remainingMs = Math.max(0, TRIAL_DURATION_MS - elapsed);
-        const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
-        setTrialDaysRemaining(remainingDays);
+        const remainingMs = Math.max(0, TRIAL_DURATION_MS - (Date.now() - startTime));
+        setTrialDaysRemaining(Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
       }
     }
 
@@ -284,13 +265,10 @@ function RootComponent() {
     setHelpfulMouseState(getHelpfulMouse());
     setHistoryOverscaleState(getHistoryOverscale());
     setLargeButtonsState(getLargeButtons());
-
     void updateNativeStatusBar(loadedTheme);
 
     const existingAge = localStorage.getItem("rabtv_user_age");
-    if (existingAge) {
-      setUserAgeInput(existingAge);
-    }
+    if (existingAge) setUserAgeInput(existingAge);
 
     const existingName = localStorage.getItem("rabtv_profile_name");
     if (existingName) {
@@ -307,43 +285,49 @@ function RootComponent() {
       setHistoryOverscaleState(getHistoryOverscale());
       setLargeButtonsState(getLargeButtons());
       void updateNativeStatusBar(updatedTheme);
-
       const updatedName = localStorage.getItem("rabtv_profile_name");
       if (updatedName) setSavedProfileName(updatedName);
-
       setIsAdmin(localStorage.getItem("rabtv_is_admin") === "true");
-
       const status = localStorage.getItem("rabtv_access_status");
       if (status === "trial") {
         setIsTrialActive(true);
         const startTime = Number(
           localStorage.getItem("rabtv_trial_start_timestamp") || 0
         );
-        const elapsed = Date.now() - startTime;
-        const remainingMs = Math.max(0, TRIAL_DURATION_MS - elapsed);
-        setTrialDaysRemaining(
-          Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+        const remainingMs = Math.max(
+          0,
+          TRIAL_DURATION_MS - (Date.now() - startTime)
         );
+        setTrialDaysRemaining(Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
       } else {
         setIsTrialActive(false);
       }
     };
 
     window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);
-    return () => {
+    return () =>
       window.removeEventListener("rabtv_settings_updated", handleSettingsUpdate);
-    };
   }, []);
+
+  const saveAgeLockCode = (code: string) => {
+    localStorage.setItem(AGE_LOCK_KEY, code);
+  };
+
+  const getAgeLockCode = () => localStorage.getItem(AGE_LOCK_KEY) || "";
 
   const completePermanentLogin = (
     finalName: string,
     parsedAge: number,
+    ageLockCode: string,
     options?: { admin?: boolean; forceTheme?: AppTheme; forceSize?: CardSize }
   ) => {
     localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
     localStorage.setItem("rabtv_access_status", "permanent");
     localStorage.removeItem("rabtv_trial_start_timestamp");
     setIsTrialActive(false);
+
+    // Always lock age with the 4-digit PIN chosen at first login
+    saveAgeLockCode(ageLockCode);
 
     if (options?.admin) {
       localStorage.setItem("rabtv_is_admin", "true");
@@ -375,6 +359,7 @@ function RootComponent() {
     setShowFirstStartModal(false);
     setPasscodeError(false);
     setAgeErrorNotice(false);
+    setAgeLockError(false);
     window.dispatchEvent(new Event("rabtv_settings_updated"));
   };
 
@@ -385,6 +370,16 @@ function RootComponent() {
     if (!trimmedAge || isNaN(parseInt(trimmedAge, 10))) {
       setAgeErrorNotice(true);
       setPasscodeError(false);
+      setAgeLockError(false);
+      return;
+    }
+
+    // Mandatory 4-digit age lock PIN (parent control)
+    const ageLock = ageLockInput.trim();
+    if (!/^\d{4}$/.test(ageLock)) {
+      setAgeLockError(true);
+      setAgeErrorNotice(false);
+      setPasscodeError(false);
       return;
     }
 
@@ -392,10 +387,9 @@ function RootComponent() {
     const finalName = profileNameInput.trim() || "Friend";
     const enteredCode = passcodeInput.trim();
 
-    // ——— Admin path: Rabbit + age matching 1988 birth year ———
-    // No passcode required; full unlock + red theme + 25% scale + keygen
+    // Admin: Rabbit + expected age → full unlock, red theme, 25% scale
     if (isAdminCredentials(finalName, parsedAge)) {
-      completePermanentLogin(finalName, parsedAge, {
+      completePermanentLogin(finalName, parsedAge, ageLock, {
         admin: true,
         forceTheme: "red",
         forceSize: "small",
@@ -403,7 +397,7 @@ function RootComponent() {
       return;
     }
 
-    // ——— Trial ———
+    // Trial
     if (enteredCode === TRIAL_CODE) {
       const trialAlreadyUsed =
         localStorage.getItem("rabtv_trial_used_flag") === "true";
@@ -413,6 +407,7 @@ function RootComponent() {
           "⚠️ Trial code has already been used on this device and cannot be redeemed again."
         );
         setAgeErrorNotice(false);
+        setAgeLockError(false);
         setPasscodeInput("");
         return;
       }
@@ -426,6 +421,7 @@ function RootComponent() {
       setIsTrialActive(true);
       setTrialDaysRemaining(7);
 
+      saveAgeLockCode(ageLock);
       saveCardSize(cardSize);
       saveStreamQuality(streamQuality);
       saveTheme(appTheme);
@@ -437,14 +433,15 @@ function RootComponent() {
       setShowFirstStartModal(false);
       setPasscodeError(false);
       setAgeErrorNotice(false);
+      setAgeLockError(false);
       window.dispatchEvent(new Event("rabtv_settings_updated"));
       return;
     }
 
-    // ——— Full unlock: code must match name + age algorithm ———
+    // Full unlock via name+age algorithm
     const expectedCode = generateUnlockCode(finalName, parsedAge);
     if (expectedCode && enteredCode === expectedCode) {
-      completePermanentLogin(finalName, parsedAge);
+      completePermanentLogin(finalName, parsedAge, ageLock);
       return;
     }
 
@@ -453,6 +450,7 @@ function RootComponent() {
       "⚠️ Invalid Passcode for this name and age. Please try again."
     );
     setAgeErrorNotice(false);
+    setAgeLockError(false);
     setPasscodeInput("");
   };
 
@@ -527,68 +525,56 @@ function RootComponent() {
     setLargeButtonsState(enabled);
   };
 
+  // Change age only with the 4-digit age lock PIN set at first login
   const handleUpdateAgeInSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    // Age update still gated by current unlock code for this profile
-    const name =
-      savedProfileName ||
-      localStorage.getItem("rabtv_profile_name") ||
-      "";
-    const activeCode = generateUnlockCode(name, getSavedUserAge() || 0);
-    const legacyAdmin =
-      localStorage.getItem("rabtv_is_admin") === "true" &&
-      settingsAgeCodeInput.trim() === "admin";
-
-    if (
-      settingsAgeCodeInput.trim() === activeCode ||
-      legacyAdmin ||
-      (isAdmin && settingsAgeCodeInput.trim().length > 0)
-    ) {
-      const parsedAge = parseInt(userAgeInput, 10);
-      if (isNaN(parsedAge)) {
-        setSettingsAgeError(true);
-        return;
-      }
-      saveUserAge(parsedAge);
-      setSettingsAgeError(false);
-      setSettingsAgeSuccess(true);
-      setSettingsAgeCodeInput("");
-      setTimeout(() => setSettingsAgeSuccess(false), 3000);
-      window.dispatchEvent(new Event("rabtv_settings_updated"));
-    } else {
+    const locked = getAgeLockCode();
+    if (!locked || settingsAgeCodeInput.trim() !== locked) {
       setSettingsAgeError(true);
       setSettingsAgeCodeInput("");
+      return;
     }
+    const parsedAge = parseInt(userAgeInput, 10);
+    if (isNaN(parsedAge) || parsedAge < 1 || parsedAge > 120) {
+      setSettingsAgeError(true);
+      return;
+    }
+    saveUserAge(parsedAge);
+    setSettingsAgeError(false);
+    setSettingsAgeSuccess(true);
+    setSettingsAgeCodeInput("");
+    setTimeout(() => setSettingsAgeSuccess(false), 3000);
+    window.dispatchEvent(new Event("rabtv_settings_updated"));
   };
 
+  // Change the age-lock PIN itself (requires current PIN)
   const handleChangePasscodeInSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    // Kept for UI compatibility; primary unlock is name+age algorithm.
-    // Admins can still set a local "age passcode" helper.
-    if (!isAdmin) {
+    const locked = getAgeLockCode();
+    if (currentPasscodeInput.trim() !== locked) {
       setPasscodeStatusMsg({
-        text: "Passcode changes are managed via your unlock code.",
+        text: "Current age-lock code is incorrect.",
         isError: true,
       });
       return;
     }
-    if (!newPasscode || newPasscode.trim() === "") {
+    if (!/^\d{4}$/.test(newPasscode.trim())) {
       setPasscodeStatusMsg({
-        text: "New passcode cannot be empty.",
+        text: "New age-lock code must be exactly 4 digits.",
         isError: true,
       });
       return;
     }
     if (newPasscode !== confirmNewPasscode) {
       setPasscodeStatusMsg({
-        text: "New passcodes do not match.",
+        text: "New codes do not match.",
         isError: true,
       });
       return;
     }
-    localStorage.setItem("rabtv_age_passcode", newPasscode);
+    saveAgeLockCode(newPasscode.trim());
     setPasscodeStatusMsg({
-      text: "Helper passcode updated.",
+      text: "Age-lock code updated successfully!",
       isError: false,
     });
     setCurrentPasscodeInput("");
@@ -627,7 +613,6 @@ function RootComponent() {
   const handleRestoreBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -876,7 +861,6 @@ function RootComponent() {
                       </span>
                       <span className="text-[10px] ml-1 text-slate-300">▼</span>
                     </button>
-
                     {isTrialActive && (
                       <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold animate-pulse">
                         <span>⏳ {trialDaysRemaining}d left</span>
@@ -928,34 +912,19 @@ function RootComponent() {
                         }
                         className="absolute inset-0 w-full h-full opacity-0 bg-transparent text-white cursor-pointer z-50 appearance-none"
                       >
-                        <option
-                          value="All (Default)"
-                          className="bg-slate-900 text-white p-2"
-                        >
+                        <option value="All (Default)" className="bg-slate-900 text-white p-2">
                           🌐 All (Default)
                         </option>
-                        <option
-                          value="Russian"
-                          className="bg-slate-900 text-white p-2"
-                        >
+                        <option value="Russian" className="bg-slate-900 text-white p-2">
                           🇷🇺 Russian
                         </option>
-                        <option
-                          value="British"
-                          className="bg-slate-900 text-white p-2"
-                        >
+                        <option value="British" className="bg-slate-900 text-white p-2">
                           🇬🇧 British
                         </option>
-                        <option
-                          value="Hungarian"
-                          className="bg-slate-900 text-white p-2"
-                        >
+                        <option value="Hungarian" className="bg-slate-900 text-white p-2">
                           🇭🇺 Hungarian
                         </option>
-                        <option
-                          value="German"
-                          className="bg-slate-900 text-white p-2"
-                        >
+                        <option value="German" className="bg-slate-900 text-white p-2">
                           🇩🇪 German
                         </option>
                       </select>
@@ -1003,7 +972,6 @@ function RootComponent() {
                   </button>
                 </div>
 
-                {/* ADMIN KEYGEN — only for Rabbit admin */}
                 {isAdmin && (
                   <div className="space-y-3 bg-red-950/40 p-3.5 rounded-xl border border-red-500/40 box-border">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-red-300">
@@ -1050,7 +1018,6 @@ function RootComponent() {
                   </div>
                 )}
 
-                {/* LICENSE */}
                 <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
                     License Status
@@ -1096,7 +1063,6 @@ function RootComponent() {
                       ✅ Full Lifetime Access Unlocked.
                     </p>
                   )}
-
                   {unlockStatusMsg && (
                     <p
                       className={`text-[11px] font-bold text-center ${
@@ -1110,11 +1076,15 @@ function RootComponent() {
                   )}
                 </div>
 
-                {/* Profile & Age */}
+                {/* Age lock – change age only with 4-digit PIN */}
                 <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    Age Verification
+                    Age Lock
                   </h4>
+                  <p className="text-[10px] text-slate-400">
+                    Age is locked with the 4-digit code set at first login.
+                    Enter that code to update age.
+                  </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
@@ -1159,17 +1129,20 @@ function RootComponent() {
                   >
                     <div className="flex-1">
                       <span className="block text-[11px] text-slate-400 mb-1">
-                        Unlock / Admin code:
+                        Age-lock code (4 digits):
                       </span>
                       <input
                         type="password"
-                        maxLength={12}
-                        placeholder="Confirm with unlock code"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder="••••"
                         value={settingsAgeCodeInput}
                         onChange={(e) =>
-                          setSettingsAgeCodeInput(e.target.value)
+                          setSettingsAgeCodeInput(
+                            e.target.value.replace(/\D/g, "").slice(0, 4)
+                          )
                         }
-                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
                       />
                     </div>
                     <button
@@ -1182,14 +1155,99 @@ function RootComponent() {
 
                   {settingsAgeError && (
                     <span className="text-[11px] font-semibold text-red-400 text-center block">
-                      ⚠️ Invalid Code or Age
+                      ⚠️ Wrong age-lock code or invalid age
                     </span>
                   )}
                   {settingsAgeSuccess && (
                     <span className="text-[11px] font-semibold text-emerald-400 text-center block">
-                      ✓ Profile Updated!
+                      ✓ Age updated!
                     </span>
                   )}
+                </div>
+
+                {/* Change age-lock PIN */}
+                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Change Age-Lock Code
+                  </h4>
+                  <form
+                    onSubmit={handleChangePasscodeInSettings}
+                    className="space-y-2.5 box-border"
+                  >
+                    <div>
+                      <span className="block text-[11px] text-slate-400 mb-1">
+                        Current 4-digit code:
+                      </span>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder="••••"
+                        value={currentPasscodeInput}
+                        onChange={(e) =>
+                          setCurrentPasscodeInput(
+                            e.target.value.replace(/\D/g, "").slice(0, 4)
+                          )
+                        }
+                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <span className="block text-[11px] text-slate-400 mb-1">
+                          New code:
+                        </span>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          value={newPasscode}
+                          onChange={(e) =>
+                            setNewPasscode(
+                              e.target.value.replace(/\D/g, "").slice(0, 4)
+                            )
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-[11px] text-slate-400 mb-1">
+                          Confirm:
+                        </span>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          value={confirmNewPasscode}
+                          onChange={(e) =>
+                            setConfirmNewPasscode(
+                              e.target.value.replace(/\D/g, "").slice(0, 4)
+                            )
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full mt-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition box-border"
+                    >
+                      Update Age-Lock Code
+                    </button>
+                    {passcodeStatusMsg && (
+                      <p
+                        className={`text-[11px] font-bold mt-1 text-center ${
+                          passcodeStatusMsg.isError
+                            ? "text-red-400"
+                            : "text-emerald-400"
+                        }`}
+                      >
+                        {passcodeStatusMsg.text}
+                      </p>
+                    )}
+                  </form>
                 </div>
 
                 {/* Accessibility */}
@@ -1197,7 +1255,6 @@ function RootComponent() {
                   <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
                     Accessibility
                   </span>
-
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold text-white">
@@ -1223,7 +1280,6 @@ function RootComponent() {
                       />
                     </button>
                   </div>
-
                   <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
                     <div className="flex justify-between items-center">
                       <div>
@@ -1231,7 +1287,7 @@ function RootComponent() {
                           History Page Overscale
                         </p>
                         <p className="text-[10px] text-slate-400">
-                          Choose card size increase on history page.
+                          Card size on history page.
                         </p>
                       </div>
                       <span className="text-xs font-bold text-violet-400">
@@ -1261,14 +1317,13 @@ function RootComponent() {
                       )}
                     </div>
                   </div>
-
                   <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
                     <div>
                       <p className="text-xs font-bold text-white">
-                        Enlarged Action Buttons (+5%)
+                        Enlarged Action Buttons
                       </p>
                       <p className="text-[10px] text-slate-400">
-                        Makes eye, thumb, and X buttons bigger.
+                        Bigger eye / thumb / X buttons.
                       </p>
                     </div>
                     <button
@@ -1292,7 +1347,7 @@ function RootComponent() {
             </div>
           )}
 
-          {/* SETTINGS MENU */}
+          {/* SETTINGS */}
           {showSettings && !showFirstStartModal && (
             <div
               className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-xl shadow-2xl max-h-[80vh] overflow-y-auto`}
@@ -1312,138 +1367,95 @@ function RootComponent() {
                     ✕ Close
                   </button>
                 </div>
-
                 <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-white/10 w-full justify-start sm:justify-center scrollbar-none">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveSettingsTab(
-                        activeSettingsTab === "theme" ? null : "theme"
-                      )
-                    }
-                    className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition shrink-0 ${
-                      activeSettingsTab === "theme"
-                        ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                        : `${getSubtlePillBg(appTheme)}`
-                    }`}
-                  >
-                    Theme
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveSettingsTab(
-                        activeSettingsTab === "scale" ? null : "scale"
-                      )
-                    }
-                    className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition shrink-0 ${
-                      activeSettingsTab === "scale"
-                        ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                        : `${getSubtlePillBg(appTheme)}`
-                    }`}
-                  >
-                    Scale
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveSettingsTab(
-                        activeSettingsTab === "backup" ? null : "backup"
-                      )
-                    }
-                    className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition shrink-0 ${
-                      activeSettingsTab === "backup"
-                        ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                        : `${getSubtlePillBg(appTheme)}`
-                    }`}
-                  >
-                    Backup
-                  </button>
+                  {(["theme", "scale", "backup"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() =>
+                        setActiveSettingsTab(
+                          activeSettingsTab === tab ? null : tab
+                        )
+                      }
+                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition shrink-0 capitalize ${
+                        activeSettingsTab === tab
+                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                          : `${getSubtlePillBg(appTheme)}`
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
                 </div>
-
-                {activeSettingsTab !== null && (
-                  <div className="w-full flex justify-center py-1 max-w-lg mx-auto">
-                    {activeSettingsTab === "theme" && (
-                      <div className="flex flex-wrap items-center justify-center gap-2">
-                        <span className="text-xs font-semibold text-slate-300 mr-2 w-full text-center sm:w-auto">
-                          Choose Theme:
-                        </span>
-                        {allThemesList.map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => handleThemeChange(t.id)}
-                            className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
-                              appTheme === t.id
-                                ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
-                                : `${getSubtlePillBg(appTheme)}`
-                            }`}
-                          >
-                            {t.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {activeSettingsTab === "scale" && (
-                      <div className="flex flex-wrap items-center justify-center gap-2">
-                        <span className="text-xs font-semibold text-slate-300 mr-2 w-full text-center sm:w-auto">
-                          Choose Scale:
-                        </span>
-                        {(["small", "medium", "large"] as CardSize[]).map(
-                          (size) => (
-                            <button
-                              key={size}
-                              type="button"
-                              onClick={() => handleSizeChange(size)}
-                              className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize transition ${
-                                cardSize === size
-                                  ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                                  : `${getSubtlePillBg(appTheme)}`
-                              }`}
-                            >
-                              {size}{" "}
-                              {size === "small"
-                                ? "(25%)"
-                                : size === "medium"
-                                ? "(60%)"
-                                : "(100%)"}
-                            </button>
-                          )
-                        )}
-                      </div>
-                    )}
-
-                    {activeSettingsTab === "backup" && (
-                      <div className="flex flex-col sm:flex-row items-center justify-center gap-2 w-full">
+                {activeSettingsTab === "theme" && (
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {allThemesList.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => handleThemeChange(t.id)}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
+                          appTheme === t.id
+                            ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
+                            : `${getSubtlePillBg(appTheme)}`
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {activeSettingsTab === "scale" && (
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {(["small", "medium", "large"] as CardSize[]).map(
+                      (size) => (
                         <button
+                          key={size}
                           type="button"
-                          onClick={handleSaveBackup}
-                          className={`w-full sm:w-auto rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
+                          onClick={() => handleSizeChange(size)}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize transition ${
+                            cardSize === size
+                              ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                              : `${getSubtlePillBg(appTheme)}`
+                          }`}
                         >
-                          💾 Export Backup
+                          {size}{" "}
+                          {size === "small"
+                            ? "(25%)"
+                            : size === "medium"
+                            ? "(60%)"
+                            : "(100%)"}
                         </button>
-
-                        <label
-                          className={`w-full sm:w-auto text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
-                        >
-                          🔄 Restore Backup
-                          <input
-                            type="file"
-                            accept=".json"
-                            onChange={handleRestoreBackup}
-                            className="hidden"
-                          />
-                        </label>
-
-                        {backupStatus && (
-                          <span
-                            className={`text-xs ${getPrimaryAccentColor(appTheme)} font-semibold text-center w-full`}
-                          >
-                            {backupStatus}
-                          </span>
-                        )}
-                      </div>
+                      )
+                    )}
+                  </div>
+                )}
+                {activeSettingsTab === "backup" && (
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 w-full">
+                    <button
+                      type="button"
+                      onClick={handleSaveBackup}
+                      className={`w-full sm:w-auto rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
+                    >
+                      💾 Export Backup
+                    </button>
+                    <label
+                      className={`w-full sm:w-auto text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
+                    >
+                      🔄 Restore Backup
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleRestoreBackup}
+                        className="hidden"
+                      />
+                    </label>
+                    {backupStatus && (
+                      <span
+                        className={`text-xs ${getPrimaryAccentColor(appTheme)} font-semibold text-center w-full`}
+                      >
+                        {backupStatus}
+                      </span>
                     )}
                   </div>
                 )}
@@ -1517,10 +1529,7 @@ function RootComponent() {
 
                   <div className="space-y-2 border-t border-white/10 pt-3">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                      How old are you?{" "}
-                      <span className="text-slate-400 font-normal lowercase">
-                        (Must match the age used for your unlock code)
-                      </span>
+                      How old are you?
                     </label>
                     <input
                       type="number"
@@ -1533,8 +1542,37 @@ function RootComponent() {
                     />
                     {ageErrorNotice && (
                       <p className="text-xs font-semibold text-red-400 text-center">
-                        ⚠️ Age was not entered! Please enter your age and
-                        passcode to proceed.
+                        ⚠️ Please enter your age.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Mandatory 4-digit age lock */}
+                  <div className="space-y-2 border-t border-white/10 pt-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                      Create Age-Lock Code{" "}
+                      <span className="text-red-400">*</span>
+                    </label>
+                    <p className="text-[11px] text-slate-400 text-center">
+                      Choose a 4-digit PIN parents can use later to change the
+                      age setting. Required.
+                    </p>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={ageLockInput}
+                      onChange={(e) =>
+                        setAgeLockInput(
+                          e.target.value.replace(/\D/g, "").slice(0, 4)
+                        )
+                      }
+                      placeholder="••••"
+                      className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-center text-lg font-bold tracking-[0.4em] text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
+                    />
+                    {ageLockError && (
+                      <p className="text-xs font-semibold text-red-400 text-center">
+                        ⚠️ Enter a 4-digit age-lock code (numbers only).
                       </p>
                     )}
                   </div>
@@ -1563,7 +1601,7 @@ function RootComponent() {
 
                   <div className="space-y-2 border-t border-white/10 pt-3">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Select Display Size (Adjustable anytime in settings):
+                      Select Display Size:
                     </label>
                     <div className="grid grid-cols-3 gap-2 sm:gap-3">
                       {(["small", "medium", "large"] as CardSize[]).map(
@@ -1595,7 +1633,7 @@ function RootComponent() {
                         XL Mouse Pointer
                       </label>
                       <p className="text-[11px] text-slate-400">
-                        Enlarges cursor 3x for easy projector/TV navigation.
+                        Enlarges cursor 3x for projector/TV use.
                       </p>
                     </div>
                     <button
@@ -1615,7 +1653,7 @@ function RootComponent() {
 
                   <div className="space-y-3 border-t border-white/10 pt-4">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Enter Unlock Code or Trial (`9654`):
+                      Unlock Code or Trial (`9654`):
                     </label>
                     <input
                       type="text"
@@ -1625,13 +1663,11 @@ function RootComponent() {
                       placeholder="Unlock code or 9654"
                       className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-3 text-center text-lg font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
                     />
-
                     {passcodeError && (
                       <p className="text-xs font-semibold text-red-400 text-center">
                         {passcodeErrorMsg}
                       </p>
                     )}
-
                     <button
                       type="submit"
                       className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none focus:ring-4`}
