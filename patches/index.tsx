@@ -264,7 +264,6 @@ function Home() {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const scrollHeight = document.documentElement.scrollHeight;
       const clientHeight = window.innerHeight;
-
       setCanScrollDown(scrollTop + clientHeight < scrollHeight - 100);
     };
 
@@ -284,7 +283,6 @@ function Home() {
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
       setShowScrollReminder(false);
-
       if (canScrollDown) {
         inactivityTimer = setTimeout(() => {
           setShowScrollReminder(true);
@@ -333,7 +331,13 @@ function Home() {
           mediaType: type as "movie" | "tv",
           progressPercent: h.progressPercent ?? (h.confirmedCompleted ? 100 : 0),
           confirmedCompleted: h.confirmedCompleted ?? false,
-        } as MediaItem & { progressPercent?: number; confirmedCompleted?: boolean; mediaType?: "movie" | "tv" };
+          genreIds: (h as any).genreIds || [],
+        } as MediaItem & {
+          progressPercent?: number;
+          confirmedCompleted?: boolean;
+          mediaType?: "movie" | "tv";
+          genreIds?: number[];
+        };
       });
 
       setSavedMyList(listData);
@@ -379,221 +383,129 @@ function Home() {
     setPage(1);
   }, [activeTab, selectedGenre, globalFeedOverride]);
 
+  // ——— SMART HERO: Now Playing first → adapt to watch history genres → pad with trending ———
   useEffect(() => {
     let active = true;
 
     async function fetchSmartHeroBanner() {
       try {
-        const currentYear = String(new Date().getFullYear());
         const apiKey = TMDB_API_KEY;
-        const watchHistoryMap = getRawWatchHistory().reduce((acc: Record<string, any>, h) => {
-          const key = String(h.mediaId ?? h.id).replace(/^(movie|tv)-/, "");
-          acc[key] = h;
-          return acc;
-        }, {});
+        const rawHistory = getRawWatchHistory();
 
-        const freshCandidates: MediaItem[] = [];
-        const inProgressCandidates: MediaItem[] = [];
+        const watchedIds = new Set(
+          rawHistory.map((h) => String(h.mediaId ?? h.id).replace(/^(movie|tv)-/i, ""))
+        );
 
-        const discoverParams = new URLSearchParams({
-          api_key: apiKey,
-          sort_by: "popularity.desc",
-          "vote_average.gte": "7.0",
-          "vote_count.gte": "50",
-        });
-
-        if (activeTab === "Home") {
-          const inTheaterRes = await fetch(`${TMDB_BASE_URL}movie/now_playing?api_key=${apiKey}&language=en-US&page=1`);
-          const inTheaterData = await inTheaterRes.json();
-
-          for (const item of inTheaterData.results || []) {
-            if (!item.title || !item.backdrop_path) continue;
-            const voteAvg = item.vote_average || 0;
-            if (voteAvg < 7.0) continue;
-
-            const tmdbId = String(item.id);
-            if (
-              isTitleDisliked(tmdbId) ||
-              isTitleDisliked(`movie-${tmdbId}`) ||
-              isTitleBroken(tmdbId) ||
-              isTitleBroken(`movie-${tmdbId}`)
-            )
-              continue;
-
-            const historyEntry = watchHistoryMap[tmdbId];
-            const isCompleted =
-              historyEntry &&
-              (historyEntry.confirmedCompleted ||
-                (historyEntry.progressPercent ?? 0) >= 100 ||
-                Object.values(historyEntry.episodes || {}).some((e: any) => e.confirmedCompleted));
-            if (isCompleted) continue;
-
-            const mediaObj: MediaItem = {
-              id: `movie-${tmdbId}`,
-              title: item.title,
-              description: item.overview || "No description available.",
-              image: `https://image.tmdb.org/t/p/original${item.backdrop_path}`,
-              href: `/details?id=${tmdbId}&type=movie`,
-              genre: "🎬 IN THEATER",
-              year: currentYear,
-              rating: voteAvg.toFixed(1),
-              mediaType: "movie",
-            };
-
-            if (historyEntry && !isCompleted) {
-              inProgressCandidates.push(mediaObj);
-            } else {
-              freshCandidates.push(mediaObj);
+        // Genre seeds from history (for "more like what you watch")
+        const genreIdCounts: Record<number, number> = {};
+        for (const h of rawHistory) {
+          const ids = ((h as any).genreIds as number[] | undefined) || [];
+          for (const gid of ids) {
+            if (typeof gid === "number") {
+              genreIdCounts[gid] = (genreIdCounts[gid] || 0) + 1;
             }
           }
+        }
+        const topGenreIds = Object.entries(genreIdCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([id]) => id);
 
-          const movieParams = new URLSearchParams(discoverParams);
-          movieParams.set("primary_release_year", currentYear);
-          const tvParams = new URLSearchParams(discoverParams);
-          tvParams.set("first_air_date_year", currentYear);
+        const candidates: MediaItem[] = [];
+        const seen = new Set<string>();
 
-          const [mRes, tRes] = await Promise.all([
-            fetch(`${TMDB_BASE_URL}discover/movie?${movieParams.toString()}`),
-            fetch(`${TMDB_BASE_URL}discover/tv?${tvParams.toString()}`),
+        const pushItem = (
+          item: any,
+          mediaType: "movie" | "tv",
+          genreLabel: string
+        ) => {
+          const tmdbId = String(item.id);
+          if (!item.backdrop_path) return;
+          if (seen.has(tmdbId) || watchedIds.has(tmdbId)) return;
+          if (
+            isTitleDisliked(tmdbId) ||
+            isTitleDisliked(`${mediaType}-${tmdbId}`) ||
+            isTitleBroken(tmdbId) ||
+            isTitleBroken(`${mediaType}-${tmdbId}`)
+          )
+            return;
+
+          const title = item.title || item.name;
+          if (!title) return;
+
+          seen.add(tmdbId);
+          candidates.push({
+            id: `${mediaType}-${tmdbId}`,
+            title,
+            description: item.overview || "No description available.",
+            image: `https://image.tmdb.org/t/p/original${item.backdrop_path}`,
+            href: `/details?id=${tmdbId}&type=${mediaType}`,
+            genre: genreLabel,
+            year: (item.release_date || item.first_air_date || "").split("-")[0] || undefined,
+            rating: item.vote_average ? Number(item.vote_average).toFixed(1) : undefined,
+            mediaType,
+          });
+        };
+
+        // 1) Always seed with Now Playing (theaters)
+        const nowPlayingRes = await fetch(
+          `${TMDB_BASE_URL}movie/now_playing?api_key=${apiKey}&language=en-US&page=1`
+        );
+        const nowPlayingData = await nowPlayingRes.json();
+        for (const item of nowPlayingData.results || []) {
+          pushItem(item, "movie", "🎬 IN THEATER");
+        }
+
+        // 2) If user has history genres, ask TMDB for similar tastes
+        if (topGenreIds.length > 0 && candidates.length < 10) {
+          const genreParam = topGenreIds.join(",");
+          const [movieRes, tvRes] = await Promise.all([
+            fetch(
+              `${TMDB_BASE_URL}discover/movie?api_key=${apiKey}&with_genres=${genreParam}&sort_by=popularity.desc&vote_count.gte=20&page=1`
+            ),
+            fetch(
+              `${TMDB_BASE_URL}discover/tv?api_key=${apiKey}&with_genres=${genreParam}&sort_by=popularity.desc&vote_count.gte=20&page=1`
+            ),
           ]);
-          const mData = await mRes.json();
-          const tData = await tRes.json();
+          const movieData = await movieRes.json();
+          const tvData = await tvRes.json();
 
-          if (!active) return;
-
-          for (const item of [...(mData.results || []), ...(tData.results || [])]) {
-            const isTv = !!item.name;
-            const title = item.title || item.name;
-            const tmdbId = String(item.id);
-            const voteAvg = item.vote_average || 0;
-            if (!title || !item.backdrop_path || voteAvg < 7.0) continue;
-
-            if (
-              isTitleDisliked(tmdbId) ||
-              isTitleDisliked(`${isTv ? "tv" : "movie"}-${tmdbId}`) ||
-              isTitleBroken(tmdbId) ||
-              isTitleBroken(`${isTv ? "tv" : "movie"}-${tmdbId}`)
-            )
-              continue;
-
-            const historyEntry = watchHistoryMap[tmdbId];
-            const isCompleted =
-              historyEntry &&
-              (historyEntry.confirmedCompleted ||
-                (historyEntry.progressPercent ?? 0) >= 100 ||
-                Object.values(historyEntry.episodes || {}).some((e: any) => e.confirmedCompleted));
-            if (isCompleted) continue;
-
-            const mediaObj: MediaItem = {
-              id: `${isTv ? "tv" : "movie"}-${tmdbId}`,
-              title,
-              description: item.overview || "No description available.",
-              image: `https://image.tmdb.org/t/p/original${item.backdrop_path}`,
-              href: `/details?id=${tmdbId}&type=${isTv ? "tv" : "movie"}`,
-              genre: isTv ? `TV SHOW (${currentYear})` : `MOVIE (${currentYear})`,
-              year: currentYear,
-              rating: voteAvg.toFixed(1),
-              mediaType: isTv ? "tv" : "movie",
-            };
-
-            if (historyEntry && !isCompleted) {
-              inProgressCandidates.push(mediaObj);
-            } else {
-              freshCandidates.push(mediaObj);
-            }
+          for (const item of movieData.results || []) {
+            pushItem(item, "movie", "FOR YOU");
           }
-        } else if (activeTab === "TV Shows") {
-          const tvParams = new URLSearchParams(discoverParams);
-          tvParams.set("first_air_date_year", currentYear);
-
-          const res = await fetch(`${TMDB_BASE_URL}discover/tv?${tvParams.toString()}`);
-          const data = await res.json();
-
-          if (!active) return;
-
-          for (const item of data.results || []) {
-            const tmdbId = String(item.id);
-            const voteAvg = item.vote_average || 0;
-            if (!item.name || !item.backdrop_path || voteAvg < 7.0) continue;
-
-            if (
-              isTitleDisliked(tmdbId) ||
-              isTitleDisliked(`tv-${tmdbId}`) ||
-              isTitleBroken(tmdbId) ||
-              isTitleBroken(`tv-${tmdbId}`)
-            )
-              continue;
-
-            const historyEntry = watchHistoryMap[tmdbId];
-            const isCompleted =
-              historyEntry &&
-              (historyEntry.confirmedCompleted ||
-                (historyEntry.progressPercent ?? 0) >= 100 ||
-                Object.values(historyEntry.episodes || {}).some((e: any) => e.confirmedCompleted));
-            if (isCompleted) continue;
-
-            const mediaObj: MediaItem = {
-              id: `tv-${tmdbId}`,
-              title: item.name,
-              description: item.overview || "No description available.",
-              image: `https://image.tmdb.org/t/p/original${item.backdrop_path}`,
-              href: `/details?id=${tmdbId}&type=tv`,
-              genre: `TOP TV (${currentYear})`,
-              year: currentYear,
-              rating: voteAvg.toFixed(1),
-              mediaType: "tv",
-            };
-
-            if (historyEntry && !isCompleted) {
-              inProgressCandidates.push(mediaObj);
-            } else {
-              freshCandidates.push(mediaObj);
-            }
-          }
-        } else {
-          const res = await scrapeCategoryContent(activeTab === "TV Shows" ? "Series" : activeTab, 1);
-          if (res?.items && active) {
-            for (const item of res.items) {
-              const tmdbId = String(item.id).replace(/^(movie|tv)-/, "");
-              const voteAvg = Number(item.rating ?? 7.0);
-              if (voteAvg < 7.0) continue;
-
-              if (
-                isTitleDisliked(item.id) ||
-                isTitleDisliked(tmdbId) ||
-                isTitleBroken(item.id) ||
-                isTitleBroken(tmdbId)
-              )
-                continue;
-
-              const historyEntry = watchHistoryMap[tmdbId];
-              const isCompleted =
-                historyEntry &&
-                (historyEntry.confirmedCompleted || (historyEntry.progressPercent ?? 0) >= 100);
-              if (isCompleted) continue;
-
-              if (historyEntry) {
-                inProgressCandidates.push(item);
-              } else {
-                freshCandidates.push(item);
-              }
-            }
+          for (const item of tvData.results || []) {
+            pushItem(item, "tv", "FOR YOU");
           }
         }
 
-        const combinedQueue = [...freshCandidates, ...inProgressCandidates];
-        const uniqueMap = new Map<string, MediaItem>();
-        for (const item of combinedQueue) {
-          if (!uniqueMap.has(item.id)) {
-            uniqueMap.set(item.id, item);
+        // 3) Pad with trending if still under 10
+        if (candidates.length < 10) {
+          const [trendMovie, trendTv] = await Promise.all([
+            fetch(`${TMDB_BASE_URL}trending/movie/week?api_key=${apiKey}&page=1`),
+            fetch(`${TMDB_BASE_URL}trending/tv/week?api_key=${apiKey}&page=1`),
+          ]);
+          const tm = await trendMovie.json();
+          const tt = await trendTv.json();
+          for (const item of tm.results || []) {
+            pushItem(item, "movie", "TRENDING");
+          }
+          for (const item of tt.results || []) {
+            pushItem(item, "tv", "TRENDING");
           }
         }
 
-        const finalHeroList = Array.from(uniqueMap.values()).slice(0, 10);
-        if (active) {
-          setHeroItems(finalHeroList);
-          setCurrentHeroIndex(0);
-        }
+        if (!active) return;
+
+        // Prefer FOR YOU, then in-theater, then trending — max 10
+        const forYou = candidates.filter((c) => c.genre === "FOR YOU");
+        const inTheater = candidates.filter((c) => c.genre === "🎬 IN THEATER");
+        const rest = candidates.filter(
+          (c) => c.genre !== "FOR YOU" && c.genre !== "🎬 IN THEATER"
+        );
+        const ordered = [...forYou, ...inTheater, ...rest].slice(0, 10);
+
+        setHeroItems(ordered);
+        setCurrentHeroIndex(0);
       } catch (err) {
         console.error("Failed to load smart hero banner queue:", err);
       }
@@ -603,7 +515,7 @@ function Home() {
     return () => {
       active = false;
     };
-  }, [activeTab, userAge, historyItems]);
+  }, [activeTab, historyItems]);
 
   useEffect(() => {
     if (heroItems.length <= 1) return;
@@ -683,7 +595,7 @@ function Home() {
           : "28,12";
 
         const res = await fetch(
-          `${TMDB_BASE_URL}discover/movie?api_key=${apiKey}&with_genres=${genreQueryParam}&sort_by=popularity.desc&vote_average.gte=7.0&page=1`
+          `${TMDB_BASE_URL}discover/movie?api_key=${apiKey}&with_genres=${genreQueryParam}&sort_by=popularity.desc&vote_average.gte=6.0&page=1`
         );
         const data = await res.json();
         const actionPool: MediaItem[] = [];
@@ -886,7 +798,7 @@ function Home() {
     }
   };
 
-  const activeHeroItem = heroItems[currentHeroIndex] || filteredItems[0] || null;
+  const activeHeroItem = heroItems.length > 0 ? heroItems[currentHeroIndex] : null;
   const heroDetailsSearch = activeHeroItem ? getDetailsSearch(activeHeroItem) : null;
 
   return (
@@ -911,22 +823,6 @@ function Home() {
         >
           {activeHeroItem ? (
             <>
-              {heroItems.length > 1 && (
-                <div className="absolute top-3 right-3 z-30 flex items-center gap-1 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
-                  {heroItems.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setCurrentHeroIndex(idx)}
-                      className={`h-1.5 rounded-full transition-all ${
-                        idx === currentHeroIndex ? "w-5 bg-white" : "w-1.5 bg-white/40 hover:bg-white/70"
-                      }`}
-                      aria-label={`Go to slide ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-
               {/* Stretch to fill – no black bars */}
               <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
                 <img
@@ -936,6 +832,27 @@ function Home() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/80 via-black/30 to-transparent"></div>
               </div>
+
+              {/* Dots – centered bottom, larger tap targets */}
+              {heroItems.length > 1 && (
+                <div className="absolute bottom-24 sm:bottom-28 left-0 right-0 z-30 flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 bg-black/50 backdrop-blur-md px-3.5 py-2 rounded-full border border-white/10">
+                    {heroItems.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCurrentHeroIndex(idx)}
+                        className={`rounded-full transition-all focus:outline-none ${
+                          idx === currentHeroIndex
+                            ? "h-3.5 w-3.5 bg-white shadow"
+                            : "h-3 w-3 bg-white/40 hover:bg-white/70"
+                        }`}
+                        aria-label={`Go to slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="absolute inset-x-0 bottom-0 p-3 sm:p-5 flex flex-col justify-end z-10">
                 <div className="bg-black/55 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xl">
