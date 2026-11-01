@@ -4,8 +4,8 @@ import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/setti
 import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
 import { MediaCard } from "@/routes/index";
 import type { MediaItem } from "@/lib/tmdb-scraper";
+import { saveWatchProgress } from "@/lib/watch-history";
 
-const WATCH_HISTORY_STORAGE_KEY = "rabtv_watch_history";
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 
@@ -15,8 +15,7 @@ export const Route = createFileRoute("/details")({
 
 export function DetailsPage() {
   const search = Route.useSearch() as { id?: unknown; type?: unknown };
-  
-  // Safely coerce search ID to a string before cleaning prefixes
+
   const rawId = typeof search?.id === "string" ? search.id : search?.id != null ? String(search.id) : "";
   const mediaId = rawId.replace(/^(movie|tv)-/, "");
 
@@ -28,26 +27,21 @@ export function DetailsPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Active App Theme State & Card Size synced with global settings
   const [appTheme, setAppTheme] = useState<AppTheme>("violet");
   const [cardSize, setCardSize] = useState<CardSize>("large");
 
-  // List Status State
   const [inMyList, setInMyList] = useState(false);
   const [inFavorites, setInFavorites] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
-  // TV Series Episode State & Season Episodes List
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
   const [seasonEpisodes, setSeasonEpisodes] = useState<any[]>([]);
   const [autoPlayNext, setAutoPlayNext] = useState(true);
 
-  // Custom Dropdown Open States
   const [isSeasonOpen, setIsSeasonOpen] = useState(false);
   const [isEpisodeOpen, setIsEpisodeOpen] = useState(false);
 
-  // Scroll reminder states
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [showScrollReminder, setShowScrollReminder] = useState(false);
 
@@ -55,13 +49,11 @@ export function DetailsPage() {
   const episodeRef = useRef<HTMLDivElement>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
 
-  // Check vertical scroll for reminder banner
   useEffect(() => {
     const checkVerticalScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const scrollHeight = document.documentElement.scrollHeight;
       const clientHeight = window.innerHeight;
-
       setCanScrollDown(scrollTop + clientHeight < scrollHeight - 100);
     };
 
@@ -75,14 +67,12 @@ export function DetailsPage() {
     };
   }, [recommendations, loading, isPlaying]);
 
-  // Handle 30s user inactivity & reset on user interaction
   useEffect(() => {
     let inactivityTimer: NodeJS.Timeout;
 
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
       setShowScrollReminder(false);
-
       if (canScrollDown) {
         inactivityTimer = setTimeout(() => {
           setShowScrollReminder(true);
@@ -106,7 +96,6 @@ export function DetailsPage() {
     };
   }, [canScrollDown]);
 
-  // Close custom dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (seasonRef.current && !seasonRef.current.contains(event.target as Node)) {
@@ -120,7 +109,6 @@ export function DetailsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Sync Theme and Card Size with global settings store
   useEffect(() => {
     const loadSettings = () => {
       setAppTheme(getSavedTheme());
@@ -137,7 +125,6 @@ export function DetailsPage() {
     };
   }, []);
 
-  // Cleanup feedback timeout on unmount
   useEffect(() => {
     return () => {
       if (feedbackTimeoutRef.current) {
@@ -146,7 +133,6 @@ export function DetailsPage() {
     };
   }, []);
 
-  // Fetch episodes dynamically whenever the selected season changes for a TV show
   useEffect(() => {
     async function fetchSeasonEpisodes() {
       if (mediaType !== "tv" || !mediaId) return;
@@ -154,7 +140,7 @@ export function DetailsPage() {
         const apiKey =
           (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
         const res = await fetch(
-          `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
+          `https://api.themoviedb.org/3/tv/\( {mediaId}/season/ \){season}?api_key=${apiKey}`
         );
         const data = await res.json();
         if (data.episodes) {
@@ -172,51 +158,83 @@ export function DetailsPage() {
 
   const getPageBackground = (theme: AppTheme) => {
     switch (theme) {
-      case "red": return "bg-[#120202]";
-      case "midnight": return "bg-[#020617]";
+      case "red":
+        return "bg-[#120202]";
+      case "midnight":
+        return "bg-[#020617]";
       case "violet":
-      default: return "bg-[#050b16]";
+      default:
+        return "bg-[#050b16]";
     }
   };
 
   const getCardBackground = (theme: AppTheme) => {
     switch (theme) {
-      case "red": return "bg-[#160404] border-red-500/20";
-      case "midnight": return "bg-[#03091e] border-blue-500/20";
+      case "red":
+        return "bg-[#160404] border-red-500/20";
+      case "midnight":
+        return "bg-[#03091e] border-blue-500/20";
       case "violet":
-      default: return "bg-[#090e1f] border-violet-500/20";
+      default:
+        return "bg-[#090e1f] border-violet-500/20";
     }
   };
 
   const getThemeClasses = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return { text: "text-red-400", bg: "bg-red-600", hoverBg: "hover:bg-red-500", border: "border-red-500", ring: "focus:ring-red-400", shadow: "shadow-red-600/30" };
+        return {
+          text: "text-red-400",
+          bg: "bg-red-600",
+          hoverBg: "hover:bg-red-500",
+          border: "border-red-500",
+          ring: "focus:ring-red-400",
+          shadow: "shadow-red-600/30",
+        };
       case "midnight":
-        return { text: "text-blue-400", bg: "bg-blue-600", hoverBg: "hover:bg-blue-500", border: "border-blue-500", ring: "focus:ring-blue-400", shadow: "shadow-blue-600/30" };
+        return {
+          text: "text-blue-400",
+          bg: "bg-blue-600",
+          hoverBg: "hover:bg-blue-500",
+          border: "border-blue-500",
+          ring: "focus:ring-blue-400",
+          shadow: "shadow-blue-600/30",
+        };
       case "violet":
       default:
-        return { text: "text-violet-400", bg: "bg-violet-600", hoverBg: "hover:bg-violet-500", border: "border-violet-500", ring: "focus:ring-violet-400", shadow: "shadow-violet-600/30" };
+        return {
+          text: "text-violet-400",
+          bg: "bg-violet-600",
+          hoverBg: "hover:bg-violet-500",
+          border: "border-violet-500",
+          ring: "focus:ring-violet-400",
+          shadow: "shadow-violet-600/30",
+        };
     }
   };
 
   const getThemeArrowColor = (theme: AppTheme) => {
     switch (theme) {
-      case "red": return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
-      case "midnight": return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
+      case "red":
+        return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
+      case "midnight":
+        return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
       case "violet":
-      default: return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
+      default:
+        return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
     }
   };
 
   const activeTheme = getThemeClasses(appTheme);
 
-  // Check saved state for My List & Favorites
   useEffect(() => {
     if (!mediaId || !mediaDetails) return;
 
-    const finalType = mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv" ? "tv" : "movie";
-    const currentId = `${finalType}-${mediaId}`;
+    const finalType =
+      mediaDetails?.seasons || mediaDetails?.number_of_seasons || mediaType === "tv"
+        ? "tv"
+        : "movie";
+    const currentId = `\( {finalType}- \){mediaId}`;
 
     try {
       const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
@@ -229,7 +247,6 @@ export function DetailsPage() {
     }
   }, [mediaId, mediaDetails, mediaType]);
 
-  // Fetch item details + recommendations with LocalStorage Caching (6-hour expiry)
   useEffect(() => {
     async function fetchDetailsWithCache() {
       if (!mediaId) {
@@ -238,7 +255,7 @@ export function DetailsPage() {
       }
 
       let activeFetchType = mediaType;
-      const cacheKey = `rabtv_cache_${activeFetchType}_${mediaId}`;
+      const cacheKey = `rabtv_cache_\( {activeFetchType}_ \){mediaId}`;
 
       try {
         const cachedItem = localStorage.getItem(cacheKey);
@@ -254,20 +271,27 @@ export function DetailsPage() {
           }
         }
 
-        const apiKey = (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
+        const apiKey =
+          (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
 
-        let res = await fetch(`https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`);
+        let res = await fetch(
+          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}?api_key=${apiKey}&append_to_response=credits`
+        );
         let data = await res.json();
 
         if ((!data || data.success === false) && activeFetchType === "movie") {
           activeFetchType = "tv";
           setMediaType("tv");
-          res = await fetch(`https://api.themoviedb.org/3/tv/${mediaId}?api_key=${apiKey}&append_to_response=credits`);
+          res = await fetch(
+            `https://api.themoviedb.org/3/tv/\( {mediaId}?api_key= \){apiKey}&append_to_response=credits`
+          );
           data = await res.json();
         } else if ((!data || data.success === false) && activeFetchType === "tv") {
           activeFetchType = "movie";
           setMediaType("movie");
-          res = await fetch(`https://api.themoviedb.org/3/movie/${mediaId}?api_key=${apiKey}&append_to_response=credits`);
+          res = await fetch(
+            `https://api.themoviedb.org/3/movie/\( {mediaId}?api_key= \){apiKey}&append_to_response=credits`
+          );
           data = await res.json();
         }
 
@@ -276,17 +300,23 @@ export function DetailsPage() {
         }
 
         if (data && data.success !== false) {
-          localStorage.setItem(`rabtv_cache_${activeFetchType}_${mediaId}`, JSON.stringify({ data, timestamp: Date.now() }));
+          localStorage.setItem(
+            `rabtv_cache_\( {activeFetchType}_ \){mediaId}`,
+            JSON.stringify({ data, timestamp: Date.now() })
+          );
           setMediaDetails(data);
         } else {
           setMediaDetails(null);
         }
 
-        const recRes = await fetch(`https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`);
+        const recRes = await fetch(
+          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
+        );
         const recData = await recRes.json();
         if (recData?.results) {
           const filteredRecs = recData.results.filter(
-            (item: any) => !isTitleBroken(String(item.id)) && !isTitleBroken(`${activeFetchType}-${item.id}`)
+            (item: any) =>
+              !isTitleBroken(String(item.id)) && !isTitleBroken(`\( {activeFetchType}- \){item.id}`)
           );
           setRecommendations(filteredRecs);
         }
@@ -344,11 +374,11 @@ export function DetailsPage() {
       const rating = voteAverage ? voteAverage.toFixed(1) : undefined;
 
       return {
-        id: `${recType}-${recId}`,
+        id: `\( {recType}- \){recId}`,
         title: recTitle,
         description: rec.overview || "",
         image: recPoster,
-        href: `/details?id=${recId}&type=${recType}`,
+        href: `/details?id=\( {recId}&type= \){recType}`,
         genre: recType.toUpperCase(),
         year: year || undefined,
         rating: rating,
@@ -358,14 +388,14 @@ export function DetailsPage() {
   }, [recommendations]);
 
   const buildCatalogItem = () => ({
-    id: `${inferredMediaType}-${mediaId}`,
+    id: `\( {inferredMediaType}- \){mediaId}`,
     mediaId: String(mediaId),
     title: mediaDetails?.title || mediaDetails?.name || "Untitled",
     description: mediaDetails?.overview || "",
     image: mediaDetails?.poster_path
       ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
       : "",
-    href: `/details?id=${mediaId}&type=${inferredMediaType}`,
+    href: `/details?id=\( {mediaId}&type= \){inferredMediaType}`,
     year: (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split("-")[0],
     rating: mediaDetails?.vote_average ? mediaDetails.vote_average.toFixed(1) : undefined,
     mediaType: inferredMediaType,
@@ -373,21 +403,21 @@ export function DetailsPage() {
   });
 
   const handlePlay = () => {
-    if (!mediaDetails) return;
+    if (!mediaDetails || !mediaId) return;
     setIsPlaying(true);
 
     try {
-      const savedHistory = localStorage.getItem(WATCH_HISTORY_STORAGE_KEY);
-      const history = savedHistory ? JSON.parse(savedHistory) : [];
-      const newItem = buildCatalogItem();
-
-      const updatedHistory = [
-        newItem,
-        ...history.filter((i: any) => i.id !== newItem.id),
-      ].slice(0, 20);
-
-      localStorage.setItem(WATCH_HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
-      window.dispatchEvent(new Event("rabtv_watch_history_updated"));
+      saveWatchProgress({
+        id: `\( {inferredMediaType}- \){mediaId}`,
+        mediaId: String(mediaId),
+        title: mediaDetails.title || mediaDetails.name || "Untitled",
+        mediaType: inferredMediaType,
+        posterPath: mediaDetails.poster_path || null,
+        backdropPath: mediaDetails.backdrop_path || null,
+        progressPercent: 0,
+        seasonNumber: inferredMediaType === "tv" ? season : undefined,
+        episodeNumber: inferredMediaType === "tv" ? episode : undefined,
+      });
     } catch (err) {
       console.error("Could not save to watch history", err);
     }
@@ -484,7 +514,7 @@ export function DetailsPage() {
 
   const embedUrl =
     inferredMediaType === "tv"
-      ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
+      ? `https://vidsrc.to/embed/tv/\( {mediaId}/ \){season}/${episode}`
       : `https://vidsrc.to/embed/movie/${mediaId}`;
 
   const currentSeasonObj = mediaDetails?.seasons?.find((s: any) => s.season_number === season);
@@ -504,7 +534,6 @@ export function DetailsPage() {
           {inferredMediaType === "tv" && (
             <div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}>
               <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
-                
                 <div className="relative" ref={seasonRef}>
                   <span className="block text-xs text-slate-400 mb-1">Season</span>
                   <button
@@ -530,7 +559,9 @@ export function DetailsPage() {
                               setIsSeasonOpen(false);
                             }}
                             className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                              season === s.season_number ? `${activeTheme.bg} text-white font-bold` : "text-slate-200 hover:bg-white/10"
+                              season === s.season_number
+                                ? `${activeTheme.bg} text-white font-bold`
+                                : "text-slate-200 hover:bg-white/10"
                             }`}
                           >
                             {s.name} ({s.episode_count} Eps)
@@ -547,7 +578,11 @@ export function DetailsPage() {
                     onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
                     className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                   >
-                    <span>{currentEpisodeObj ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}` : `Episode ${episode}`}</span>
+                    <span>
+                      {currentEpisodeObj
+                        ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
+                        : `Episode ${episode}`}
+                    </span>
                     <span>▾</span>
                   </button>
 
@@ -563,7 +598,9 @@ export function DetailsPage() {
                               setIsEpisodeOpen(false);
                             }}
                             className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                              episode === ep.episode_number ? `${activeTheme.bg} text-white font-bold` : "text-slate-200 hover:bg-white/10"
+                              episode === ep.episode_number
+                                ? `${activeTheme.bg} text-white font-bold`
+                                : "text-slate-200 hover:bg-white/10"
                             }`}
                           >
                             Ep {ep.episode_number}: {ep.name}
@@ -575,7 +612,6 @@ export function DetailsPage() {
                     </div>
                   )}
                 </div>
-
               </div>
 
               <div className="flex items-center gap-3">
@@ -609,9 +645,10 @@ export function DetailsPage() {
             </div>
           )}
 
+          {/* ========== IFRAME BLOCK – UNTOUCHED ========== */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
             <iframe
-              key={`stable-player-${mediaId}-${season}-${episode}`}
+              key={`stable-player-\( {mediaId}- \){season}-${episode}`}
               srcDoc={`
                 <!DOCTYPE html>
                 <html>
@@ -640,6 +677,7 @@ export function DetailsPage() {
               allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
             ></iframe>
           </div>
+          {/* ========== END IFRAME BLOCK ========== */}
 
           <div className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}>
             <h1 className="text-2xl font-bold text-white">{title}</h1>
@@ -656,38 +694,33 @@ export function DetailsPage() {
             />
 
             <div className="flex flex-col justify-center gap-4 flex-1">
-              <span className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}>
+              <span
+                className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
+              >
                 {genres}
               </span>
 
-              <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
-                {title}
-              </h1>
+              <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">{title}</h1>
 
               <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
                 {rating !== "N/A" && (
-                  <span className="flex items-center gap-1 font-bold text-yellow-300">
-                    ⭐ {rating}
-                  </span>
+                  <span className="flex items-center gap-1 font-bold text-yellow-300">⭐ {rating}</span>
                 )}
                 {releaseYear && <span>{releaseYear}</span>}
                 {originalLanguageName && (
-                  <span className="font-medium text-slate-200">
-                    {originalLanguageName}
-                  </span>
+                  <span className="font-medium text-slate-200">{originalLanguageName}</span>
                 )}
                 <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
                   {inferredMediaType}
                 </span>
               </div>
 
-              <p className="max-w-2xl text-base leading-relaxed text-slate-300">
-                {overview}
-              </p>
+              <p className="max-w-2xl text-base leading-relaxed text-slate-300">{overview}</p>
 
               {inferredMediaType === "tv" && mediaDetails?.seasons && (
-                <div className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}>
-                  
+                <div
+                  className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
+                >
                   <div className="relative" ref={seasonRef}>
                     <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Season</label>
                     <button
@@ -695,7 +728,11 @@ export function DetailsPage() {
                       onClick={() => setIsSeasonOpen(!isSeasonOpen)}
                       className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                     >
-                      <span>{currentSeasonObj ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)` : `Season ${season}`}</span>
+                      <span>
+                        {currentSeasonObj
+                          ? `\( {currentSeasonObj.name} ( \){currentSeasonObj.episode_count} Episodes)`
+                          : `Season ${season}`}
+                      </span>
                       <span>▾</span>
                     </button>
 
@@ -713,7 +750,9 @@ export function DetailsPage() {
                                 setIsSeasonOpen(false);
                               }}
                               className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                                season === s.season_number ? `${activeTheme.bg} text-white font-bold` : "text-slate-200 hover:bg-white/10"
+                                season === s.season_number
+                                  ? `${activeTheme.bg} text-white font-bold`
+                                  : "text-slate-200 hover:bg-white/10"
                               }`}
                             >
                               {s.name} ({s.episode_count} Episodes)
@@ -730,7 +769,11 @@ export function DetailsPage() {
                       onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
                       className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                     >
-                      <span>{currentEpisodeObj ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}` : `Episode ${episode}`}</span>
+                      <span>
+                        {currentEpisodeObj
+                          ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
+                          : `Episode ${episode}`}
+                      </span>
                       <span>▾</span>
                     </button>
 
@@ -746,7 +789,9 @@ export function DetailsPage() {
                                 setIsEpisodeOpen(false);
                               }}
                               className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                                episode === ep.episode_number ? `${activeTheme.bg} text-white font-bold` : "text-slate-200 hover:bg-white/10"
+                                episode === ep.episode_number
+                                  ? `${activeTheme.bg} text-white font-bold`
+                                  : "text-slate-200 hover:bg-white/10"
                               }`}
                             >
                               Ep {ep.episode_number}: {ep.name}
@@ -758,7 +803,6 @@ export function DetailsPage() {
                       </div>
                     )}
                   </div>
-
                 </div>
               )}
 
@@ -768,7 +812,7 @@ export function DetailsPage() {
                   onClick={handlePlay}
                   className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
                 >
-                  ▶ Play {inferredMediaType === "tv" ? `S${season}:E${episode}` : "Movie"}
+                  ▶ Play {inferredMediaType === "tv" ? `S\( {season}:E \){episode}` : "Movie"}
                 </button>
 
                 <button
@@ -829,7 +873,7 @@ export function DetailsPage() {
       )}
 
       {canScrollDown && showScrollReminder && (
-        <div 
+        <div
           className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
           onAnimationEnd={() => setShowScrollReminder(false)}
         >
