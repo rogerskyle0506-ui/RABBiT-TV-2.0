@@ -37,8 +37,17 @@ const providerCategories = [
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
-const TMDB_API_KEY = (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
+const TMDB_API_KEY = (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a302cd";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
+
+function getDetailsSearch(item: MediaItem): { id: string; type: "movie" | "tv" } {
+  const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
+  const type: "movie" | "tv" =
+    item.mediaType === "tv" || String(item.id).toLowerCase().startsWith("tv-")
+      ? "tv"
+      : "movie";
+  return { id: cleanId, type };
+}
 
 export function MediaCard({ item }: { item: MediaItem }) {
   const [cardSize, setCardSize] = useState<CardSize>("large");
@@ -101,11 +110,13 @@ export function MediaCard({ item }: { item: MediaItem }) {
   }, [appTheme]);
 
   const dimensions = getPosterDimensions(cardSize);
+  const detailsSearch = getDetailsSearch(item);
 
   if (cardSize === "small") {
     return (
       <Link
-        to={item.href}
+        to="/details"
+        search={detailsSearch}
         className={`group flex ${dimensions.card} ${cardThemeStyles.bg} border ${cardThemeStyles.border} focus:outline-none focus:ring-4 ${cardThemeStyles.ring} hover:scale-105 overflow-hidden relative rounded-xl transition w-full shadow-lg bg-black`}
       >
         <img
@@ -127,7 +138,11 @@ export function MediaCard({ item }: { item: MediaItem }) {
     <div
       className={`group relative flex w-full flex-col overflow-hidden rounded-2xl ${cardThemeStyles.bg} border ${cardThemeStyles.border} shadow-xl transition hover:-translate-y-1 ${cardThemeStyles.ring} ${dimensions.card}`}
     >
-      <Link className="block relative overflow-hidden flex-1 focus:outline-none w-full h-full bg-black flex items-center justify-center" to={item.href}>
+      <Link
+        to="/details"
+        search={detailsSearch}
+        className="block relative overflow-hidden flex-1 focus:outline-none w-full h-full bg-black flex items-center justify-center"
+      >
         <img
           src={item.image}
           alt={item.title}
@@ -154,7 +169,8 @@ export function MediaCard({ item }: { item: MediaItem }) {
 
       <div className="p-2 bg-black/90 border-t border-white/10 flex items-center justify-between z-20">
         <Link
-          to={item.href}
+          to="/details"
+          search={detailsSearch}
           className={`w-full text-center rounded-full bg-gradient-to-r from-black/80 via-black to-black/80 border border-white/10 py-1 text-[10px] font-bold text-white shadow-inner hover:bg-white/20 transition focus:outline-none focus:ring-2 ${cardThemeStyles.ring}`}
         >
           WATCH →
@@ -296,10 +312,10 @@ function Home() {
     try {
       const listData = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
       const favData = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
-      
+
       const rawHistory = getRawWatchHistory();
       const mappedHistory: MediaItem[] = rawHistory.map((h) => {
-        const type = h.mediaType ?? h.media_type ?? (h.id?.startsWith("tv-") ? "tv" : "movie");
+        const type = h.mediaType ?? h.media_type ?? (String(h.id).startsWith("tv-") ? "tv" : "movie");
         const cleanId = String(h.mediaId ?? h.id).replace(/^(movie|tv)-/, "");
         const imagePath = h.posterPath ?? h.poster_path ?? h.image;
         const imageUrl = imagePath?.startsWith("http")
@@ -390,20 +406,26 @@ function Home() {
           const inTheaterRes = await fetch(`${TMDB_BASE_URL}movie/now_playing?api_key=${apiKey}&language=en-US&page=1`);
           const inTheaterData = await inTheaterRes.json();
 
-          for (const item of (inTheaterData.results || [])) {
+          for (const item of inTheaterData.results || []) {
             if (!item.title || !item.backdrop_path) continue;
             const voteAvg = item.vote_average || 0;
             if (voteAvg < 7.0) continue;
 
             const tmdbId = String(item.id);
-            if (isTitleDisliked(tmdbId) || isTitleDisliked(`movie-${tmdbId}`) || isTitleBroken(tmdbId) || isTitleBroken(`movie-${tmdbId}`)) continue;
+            if (
+              isTitleDisliked(tmdbId) ||
+              isTitleDisliked(`movie-${tmdbId}`) ||
+              isTitleBroken(tmdbId) ||
+              isTitleBroken(`movie-${tmdbId}`)
+            )
+              continue;
 
             const historyEntry = watchHistoryMap[tmdbId];
-            const isCompleted = historyEntry && (
-              historyEntry.confirmedCompleted || 
-              (historyEntry.progressPercent ?? 0) >= 100 ||
-              Object.values(historyEntry.episodes || {}).some((e: any) => e.confirmedCompleted)
-            );
+            const isCompleted =
+              historyEntry &&
+              (historyEntry.confirmedCompleted ||
+                (historyEntry.progressPercent ?? 0) >= 100 ||
+                Object.values(historyEntry.episodes || {}).some((e: any) => e.confirmedCompleted));
             if (isCompleted) continue;
 
             const mediaObj: MediaItem = {
@@ -446,14 +468,20 @@ function Home() {
             const voteAvg = item.vote_average || 0;
             if (!title || !item.backdrop_path || voteAvg < 7.0) continue;
 
-            if (isTitleDisliked(tmdbId) || isTitleDisliked(`${isTv ? "tv" : "movie"}-${tmdbId}`) || isTitleBroken(tmdbId) || isTitleBroken(`${isTv ? "tv" : "movie"}-${tmdbId}`)) continue;
+            if (
+              isTitleDisliked(tmdbId) ||
+              isTitleDisliked(`${isTv ? "tv" : "movie"}-${tmdbId}`) ||
+              isTitleBroken(tmdbId) ||
+              isTitleBroken(`${isTv ? "tv" : "movie"}-${tmdbId}`)
+            )
+              continue;
 
             const historyEntry = watchHistoryMap[tmdbId];
-            const isCompleted = historyEntry && (
-              historyEntry.confirmedCompleted || 
-              (historyEntry.progressPercent ?? 0) >= 100 ||
-              Object.values(historyEntry.episodes || {}).some((e: any) => e.confirmedCompleted)
-            );
+            const isCompleted =
+              historyEntry &&
+              (historyEntry.confirmedCompleted ||
+                (historyEntry.progressPercent ?? 0) >= 100 ||
+                Object.values(historyEntry.episodes || {}).some((e: any) => e.confirmedCompleted));
             if (isCompleted) continue;
 
             const mediaObj: MediaItem = {
@@ -474,7 +502,6 @@ function Home() {
               freshCandidates.push(mediaObj);
             }
           }
-
         } else if (activeTab === "TV Shows") {
           const tvParams = new URLSearchParams(discoverParams);
           tvParams.set("first_air_date_year", currentYear);
@@ -484,19 +511,25 @@ function Home() {
 
           if (!active) return;
 
-          for (const item of (data.results || [])) {
+          for (const item of data.results || []) {
             const tmdbId = String(item.id);
             const voteAvg = item.vote_average || 0;
             if (!item.name || !item.backdrop_path || voteAvg < 7.0) continue;
 
-            if (isTitleDisliked(tmdbId) || isTitleDisliked(`tv-${tmdbId}`) || isTitleBroken(tmdbId) || isTitleBroken(`tv-${tmdbId}`)) continue;
+            if (
+              isTitleDisliked(tmdbId) ||
+              isTitleDisliked(`tv-${tmdbId}`) ||
+              isTitleBroken(tmdbId) ||
+              isTitleBroken(`tv-${tmdbId}`)
+            )
+              continue;
 
             const historyEntry = watchHistoryMap[tmdbId];
-            const isCompleted = historyEntry && (
-              historyEntry.confirmedCompleted || 
-              (historyEntry.progressPercent ?? 0) >= 100 ||
-              Object.values(historyEntry.episodes || {}).some((e: any) => e.confirmedCompleted)
-            );
+            const isCompleted =
+              historyEntry &&
+              (historyEntry.confirmedCompleted ||
+                (historyEntry.progressPercent ?? 0) >= 100 ||
+                Object.values(historyEntry.episodes || {}).some((e: any) => e.confirmedCompleted));
             if (isCompleted) continue;
 
             const mediaObj: MediaItem = {
@@ -525,13 +558,18 @@ function Home() {
               const voteAvg = Number(item.rating ?? 7.0);
               if (voteAvg < 7.0) continue;
 
-              if (isTitleDisliked(item.id) || isTitleDisliked(tmdbId) || isTitleBroken(item.id) || isTitleBroken(tmdbId)) continue;
+              if (
+                isTitleDisliked(item.id) ||
+                isTitleDisliked(tmdbId) ||
+                isTitleBroken(item.id) ||
+                isTitleBroken(tmdbId)
+              )
+                continue;
 
               const historyEntry = watchHistoryMap[tmdbId];
-              const isCompleted = historyEntry && (
-                historyEntry.confirmedCompleted || 
-                (historyEntry.progressPercent ?? 0) >= 100
-              );
+              const isCompleted =
+                historyEntry &&
+                (historyEntry.confirmedCompleted || (historyEntry.progressPercent ?? 0) >= 100);
               if (isCompleted) continue;
 
               if (historyEntry) {
@@ -593,7 +631,8 @@ function Home() {
       }
 
       const scraperCategory = activeTab === "TV Shows" ? "Series" : activeTab;
-      const activeSubFeed = globalFeedOverride && globalFeedOverride !== "All (Default)" ? globalFeedOverride : undefined;
+      const activeSubFeed =
+        globalFeedOverride && globalFeedOverride !== "All (Default)" ? globalFeedOverride : undefined;
 
       try {
         const result = await scrapeCategoryContent(scraperCategory, page, selectedGenre, activeSubFeed);
@@ -608,9 +647,7 @@ function Home() {
         }
       } catch (caught) {
         if (!active) return;
-        setError(
-          caught instanceof Error ? caught.message : "Failed to load media"
-        );
+        setError(caught instanceof Error ? caught.message : "Failed to load media");
       } finally {
         if (active) {
           setLoading(false);
@@ -624,7 +661,6 @@ function Home() {
     };
   }, [activeTab, page, selectedGenre, globalFeedOverride]);
 
-  // SMART SUGGESTIONS SCRUBBER BASED ON WATCH HISTORY & FAVORITES GENRES
   useEffect(() => {
     let active = true;
     async function fetchSmartSuggestions() {
@@ -632,25 +668,38 @@ function Home() {
       try {
         const apiKey = TMDB_API_KEY;
         const seedItems = [
-          ...savedFavorites, 
-          ...historyItems.filter((h: any) => h.confirmedCompleted || (h.progressPercent ?? 0) > 50)
+          ...savedFavorites,
+          ...historyItems.filter((h: any) => h.confirmedCompleted || (h.progressPercent ?? 0) > 50),
         ];
 
-        // Gather genre query parameters based on user's watched/favorited media
-        const genreQueryParam = seedItems.some(i => i.genre?.includes("ACTION") || i.title?.toLowerCase().includes("spider") || i.title?.toLowerCase().includes("captain") || i.title?.toLowerCase().includes("flash")) 
-          ? "28,12,878" // Action, Adventure, Sci-Fi (Marvel/DC/Superhero style)
+        const genreQueryParam = seedItems.some(
+          (i) =>
+            i.genre?.includes("ACTION") ||
+            i.title?.toLowerCase().includes("spider") ||
+            i.title?.toLowerCase().includes("captain") ||
+            i.title?.toLowerCase().includes("flash")
+        )
+          ? "28,12,878"
           : "28,12";
 
-        const res = await fetch(`${TMDB_BASE_URL}discover/movie?api_key=${apiKey}&with_genres=${genreQueryParam}&sort_by=popularity.desc&vote_average.gte=7.0&page=1`);
+        const res = await fetch(
+          `${TMDB_BASE_URL}discover/movie?api_key=${apiKey}&with_genres=${genreQueryParam}&sort_by=popularity.desc&vote_average.gte=7.0&page=1`
+        );
         const data = await res.json();
         const actionPool: MediaItem[] = [];
 
-        for (const item of (data.results || [])) {
+        for (const item of data.results || []) {
           const tmdbId = String(item.id);
           const title = item.title || item.name;
           if (!title || !item.poster_path) continue;
 
-          if (isTitleDisliked(tmdbId) || isTitleDisliked(`movie-${tmdbId}`) || isTitleBroken(tmdbId) || isTitleBroken(`movie-${tmdbId}`)) continue;
+          if (
+            isTitleDisliked(tmdbId) ||
+            isTitleDisliked(`movie-${tmdbId}`) ||
+            isTitleBroken(tmdbId) ||
+            isTitleBroken(`movie-${tmdbId}`)
+          )
+            continue;
 
           actionPool.push({
             id: `movie-${tmdbId}`,
@@ -670,7 +719,7 @@ function Home() {
         const watchedIds = new Set([
           ...historyItems.map((h) => String(h.id).replace(/^(movie|tv)-/, "")),
           ...savedFavorites.map((f) => String(f.id).replace(/^(movie|tv)-/, "")),
-          ...savedMyList.map((m) => String(m.id).replace(/^(movie|tv)-/, ""))
+          ...savedMyList.map((m) => String(m.id).replace(/^(movie|tv)-/, "")),
         ]);
 
         const uniqueSuggestions = new Map<string, MediaItem>();
@@ -681,7 +730,6 @@ function Home() {
           uniqueSuggestions.set(cleanId, candidate);
         }
 
-        // Expanded to 15 items as requested
         const finalSuggestions = Array.from(uniqueSuggestions.values()).slice(0, 15);
         setSuggestedItems(finalSuggestions);
       } catch (e) {
@@ -716,7 +764,7 @@ function Home() {
 
       const normalizedTitle = (item.title ?? "").trim().toLowerCase();
       const uniqueKey = normalizedTitle || String(item.id);
-      
+
       if (!map.has(uniqueKey)) {
         map.set(uniqueKey, item);
       }
@@ -726,7 +774,7 @@ function Home() {
 
   const filteredItems = useMemo(() => {
     const baseList = activeTab === "My List" ? savedCatalogItems : items;
-    
+
     return baseList.filter((item) => {
       if (isTitleDisliked(item.id) || isTitleBroken(item.id)) return false;
       return isAllowedForAge((item as any).certification, item.genre, userAge);
@@ -743,66 +791,80 @@ function Home() {
     return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
   }, [cardSize]);
 
-  const themeStyles = {
-    violet: {
+  const themeStyles =
+    {
+      violet: {
+        bg: "bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-950",
+        cardGradient: "from-purple-950/80 via-slate-900 to-indigo-950/80",
+        btnActive:
+          "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
+        accentText: "text-violet-300",
+        borderGlow: "border-violet-500/30",
+      },
+      red: {
+        bg: "bg-gradient-to-br from-zinc-950 via-red-950/40 to-black",
+        cardGradient: "from-red-950/80 via-zinc-900 to-neutral-950",
+        btnActive:
+          "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
+        accentText: "text-red-400",
+        borderGlow: "border-red-500/30",
+      },
+      midnight: {
+        bg: "bg-gradient-to-br from-slate-950 via-blue-950/40 to-slate-950",
+        cardGradient: "from-blue-950/80 via-slate-900 to-sky-950/80",
+        btnActive:
+          "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
+        accentText: "text-sky-300",
+        borderGlow: "border-sky-500/30",
+      },
+      emerald: {
+        bg: "bg-gradient-to-br from-slate-950 via-emerald-950/40 to-slate-950",
+        cardGradient: "from-emerald-950/80 via-slate-900 to-teal-950/80",
+        btnActive:
+          "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
+        accentText: "text-emerald-300",
+        borderGlow: "border-emerald-500/30",
+      },
+      amber: {
+        bg: "bg-gradient-to-br from-stone-950 via-yellow-950/40 to-neutral-950",
+        cardGradient: "from-yellow-950/80 via-stone-900 to-amber-950/80",
+        btnActive:
+          "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
+        accentText: "text-amber-300",
+        borderGlow: "border-amber-500/30",
+      },
+      cyan: {
+        bg: "bg-gradient-to-br from-slate-950 via-cyan-950/40 to-slate-950",
+        cardGradient: "from-cyan-950/80 via-slate-900 to-blue-950/80",
+        btnActive:
+          "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
+        accentText: "text-cyan-300",
+        borderGlow: "border-cyan-500/30",
+      },
+    }[appTheme] ?? {
       bg: "bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-950",
       cardGradient: "from-purple-950/80 via-slate-900 to-indigo-950/80",
-      btnActive: "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
+      btnActive:
+        "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
       accentText: "text-violet-300",
       borderGlow: "border-violet-500/30",
-    },
-    red: {
-      bg: "bg-gradient-to-br from-zinc-950 via-red-950/40 to-black",
-      cardGradient: "from-red-950/80 via-zinc-900 to-neutral-950",
-      btnActive: "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
-      accentText: "text-red-400",
-      borderGlow: "border-red-500/30",
-    },
-    midnight: {
-      bg: "bg-gradient-to-br from-slate-950 via-blue-950/40 to-slate-950",
-      cardGradient: "from-blue-950/80 via-slate-900 to-sky-950/80",
-      btnActive: "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
-      accentText: "text-sky-300",
-      borderGlow: "border-sky-500/30",
-    },
-    emerald: {
-      bg: "bg-gradient-to-br from-slate-950 via-emerald-950/40 to-slate-950",
-      cardGradient: "from-emerald-950/80 via-slate-900 to-teal-950/80",
-      btnActive: "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
-      accentText: "text-emerald-300",
-      borderGlow: "border-emerald-500/30",
-    },
-    amber: {
-      bg: "bg-gradient-to-br from-stone-950 via-yellow-950/40 to-neutral-950",
-      cardGradient: "from-yellow-950/80 via-stone-900 to-amber-950/80",
-      btnActive: "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
-      accentText: "text-amber-300",
-      borderGlow: "border-amber-500/30",
-    },
-    cyan: {
-      bg: "bg-gradient-to-br from-slate-950 via-cyan-950/40 to-slate-950",
-      cardGradient: "from-cyan-950/80 via-slate-900 to-blue-950/80",
-      btnActive: "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
-      accentText: "text-cyan-300",
-      borderGlow: "border-cyan-500/30",
-    },
-  }[appTheme] ?? {
-    bg: "bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-950",
-    cardGradient: "from-purple-950/80 via-slate-900 to-indigo-950/80",
-    btnActive: "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
-    accentText: "text-violet-300",
-    borderGlow: "border-violet-500/30",
-  };
+    };
 
   const getPrimaryBgColor = (theme: AppTheme) => {
     switch (theme) {
-      case "red": return "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30";
-      case "midnight": return "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30";
-      case "emerald": return "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30";
-      case "amber": return "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30";
-      case "cyan": return "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30";
+      case "red":
+        return "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30";
+      case "midnight":
+        return "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30";
+      case "emerald":
+        return "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30";
+      case "amber":
+        return "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30";
+      case "cyan":
+        return "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30";
       case "violet":
-      default: return "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30";
+      default:
+        return "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30";
     }
   };
 
@@ -825,10 +887,10 @@ function Home() {
   };
 
   const activeHeroItem = heroItems[currentHeroIndex] || filteredItems[0] || null;
+  const heroDetailsSearch = activeHeroItem ? getDetailsSearch(activeHeroItem) : null;
 
   return (
     <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20`}>
-      {/* 1. STICKY TOP NAV BAR - STRICTLY CENTERED */}
       <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 bg-black/70 backdrop-blur-xl border-b border-white/10 shadow-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-center text-center">
           <div className="w-full flex justify-center">
@@ -844,8 +906,9 @@ function Home() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 overflow-x-hidden flex flex-col items-center">
-        {/* SPOTLIGHT HERO BANNER - FULLY CONSTRAINED WITH NO CROPPING */}
-        <section className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[360px] sm:h-[400px] flex flex-col group`}>
+        <section
+          className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[360px] sm:h-[400px] flex flex-col group`}
+        >
           {activeHeroItem ? (
             <>
               {heroItems.length > 1 && (
@@ -864,20 +927,22 @@ function Home() {
                 </div>
               )}
 
-              {/* CONSTRAINED IMAGE CONTAINER WITH object-contain TO PREVENT CROPPING */}
-              <div className="absolute inset-0 w-full h-full overflow-hidden bg-black flex items-center justify-center">
+              {/* Stretch to fill – no black bars */}
+              <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
                 <img
                   src={activeHeroItem.image}
                   alt={activeHeroItem.title}
-                  className="absolute inset-0 h-full w-full object-contain object-center opacity-95 transition-opacity duration-1000 bg-black"
+                  className="absolute inset-0 h-full w-full object-fill object-center opacity-95 transition-opacity duration-1000"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050b16] via-black/40 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/80 via-black/30 to-transparent"></div>
               </div>
 
               <div className="absolute inset-x-0 bottom-0 p-3 sm:p-5 flex flex-col justify-end z-10">
-                <div className="bg-black/85 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xl">
+                <div className="bg-black/55 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xl">
                   <div className="space-y-1 flex-1 min-w-0 w-full text-left">
-                    <div className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] ${themeStyles.accentText}`}>
+                    <div
+                      className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] ${themeStyles.accentText}`}
+                    >
                       <span className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 shrink-0">
                         ⭐ Spotlight ({currentHeroIndex + 1}/{heroItems.length || 1})
                       </span>
@@ -908,26 +973,26 @@ function Home() {
                   </div>
 
                   <div className="shrink-0 w-full sm:w-auto flex items-center gap-3">
-                    <Link
-                      to={activeHeroItem.href}
-                      className={`w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-full shadow-lg text-xs font-bold transition whitespace-nowrap border border-white/10 ${themeStyles.btnActive}`}
-                    >
-                      WATCH NOW
-                    </Link>
+                    {heroDetailsSearch && (
+                      <Link
+                        to="/details"
+                        search={heroDetailsSearch}
+                        className={`w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-full shadow-lg text-xs font-bold transition whitespace-nowrap border border-white/10 ${themeStyles.btnActive}`}
+                      >
+                        WATCH NOW
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
             </>
           ) : (
             <div className="flex h-full items-center justify-center text-slate-300 z-10">
-              {loading
-                ? `Loading ${activeTab}...`
-                : error ?? "No media found in this section."}
+              {loading ? `Loading ${activeTab}...` : error ?? "No media found in this section."}
             </div>
           )}
         </section>
 
-        {/* 2. GENRES & PROVIDER SLIDERS - PERFECTLY CENTERED */}
         {activeTab !== "My List" && (
           <section className="mb-4 space-y-2.5 flex flex-col items-center justify-center text-center w-full">
             <div className="flex justify-center w-full">
@@ -964,7 +1029,7 @@ function Home() {
               className={`rounded-xl px-4 py-2 text-xs font-bold transition border ${
                 myListSubTab === "all"
                   ? themeStyles.btnActive
-                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200${themeStyles.borderGlow} hover:brightness-125`
+                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200 ${themeStyles.borderGlow} hover:brightness-125`
               }`}
             >
               All Saved ({savedMyList.length + savedFavorites.length + inProgressHistory.length})
@@ -976,7 +1041,7 @@ function Home() {
               className={`rounded-xl px-4 py-2 text-xs font-bold transition border ${
                 myListSubTab === "in_progress"
                   ? "bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/30 border-cyan-400/30"
-                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200${themeStyles.borderGlow} hover:brightness-125`
+                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200 ${themeStyles.borderGlow} hover:brightness-125`
               }`}
             >
               ⏳ In Progress ({inProgressHistory.length})
@@ -988,7 +1053,7 @@ function Home() {
               className={`rounded-xl px-4 py-2 text-xs font-bold transition border ${
                 myListSubTab === "mylist"
                   ? themeStyles.btnActive
-                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200${themeStyles.borderGlow} hover:brightness-125`
+                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200 ${themeStyles.borderGlow} hover:brightness-125`
               }`}
             >
               🔖 Watch Later ({savedMyList.length})
@@ -1000,7 +1065,7 @@ function Home() {
               className={`rounded-xl px-4 py-2 text-xs font-bold transition border ${
                 myListSubTab === "favorites"
                   ? "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30 border-amber-400/30"
-                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200${themeStyles.borderGlow} hover:brightness-125`
+                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200 ${themeStyles.borderGlow} hover:brightness-125`
               }`}
             >
               ⭐ Favorites ({savedFavorites.length})
@@ -1008,7 +1073,6 @@ function Home() {
           </section>
         )}
 
-        {/* CATALOG GRID SECTION - FULLY CENTERED CONTAINER */}
         <section className="mb-6 px-1 w-full max-w-7xl">
           <div className="mb-3 flex items-center justify-between px-2">
             <h3 className="text-lg font-bold text-white">
@@ -1026,7 +1090,9 @@ function Home() {
               ))}
             </div>
           ) : (
-            <div className={`rounded-[20px] bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-6 text-center mx-2`}>
+            <div
+              className={`rounded-[20px] bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-6 text-center mx-2`}
+            >
               <p className="text-sm text-slate-300">
                 {activeTab === "My List"
                   ? "No saved titles in this section yet. Open any movie or show to save it!"
@@ -1039,7 +1105,7 @@ function Home() {
         </section>
 
         {canScrollDown && showScrollReminder && (
-          <div 
+          <div
             className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
             onAnimationEnd={() => setShowScrollReminder(false)}
           >
@@ -1085,7 +1151,9 @@ function Home() {
         )}
 
         {activeTab !== "My List" && totalPages > 1 && (
-          <div className={`mb-6 flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-3 mx-2 w-full max-w-md`}>
+          <div
+            className={`mb-6 flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-3 mx-2 w-full max-w-md`}
+          >
             <button
               type="button"
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
