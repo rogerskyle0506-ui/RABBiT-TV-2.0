@@ -11,23 +11,17 @@ const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 
 export const Route = createFileRoute("/details")({
   component: DetailsPage,
-  validateSearch: (search: Record<string, unknown>) => {
-    return {
-      id: (search.id as string) || (search.mediaId as string) || "",
-      type: (search.type as string) || (search.mediaType as string) || "movie",
-    };
-  },
 });
 
 export function DetailsPage() {
-  const search = Route.useSearch();
-  // Clean up mediaId by stripping any accidental prefix like "movie-" or "tv-"
-  const rawId = search?.id;
-  const mediaId = rawId ? rawId.replace(/^(movie|tv)-/, "") : "";
+  const search = Route.useSearch() as { id?: unknown; type?: unknown };
+  
+  // Safely coerce search ID to a string before cleaning prefixes
+  const rawId = typeof search?.id === "string" ? search.id : search?.id != null ? String(search.id) : "";
+  const mediaId = rawId.replace(/^(movie|tv)-/, "");
 
-  // Dynamic mediaType state normalized to "movie" or "tv"
-  const initialType = search?.type?.toLowerCase() === "tv" ? "tv" : "movie";
-  const [mediaType, setMediaType] = useState<string>(initialType);
+  const initialType = typeof search?.type === "string" ? search.type.toLowerCase() : "movie";
+  const [mediaType, setMediaType] = useState<string>(initialType === "tv" ? "tv" : "movie");
 
   const [mediaDetails, setMediaDetails] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -265,7 +259,6 @@ export function DetailsPage() {
         let res = await fetch(`https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`);
         let data = await res.json();
 
-        // If movie fetch failed, try TV endpoint automatically
         if ((!data || data.success === false) && activeFetchType === "movie") {
           activeFetchType = "tv";
           setMediaType("tv");
@@ -289,7 +282,6 @@ export function DetailsPage() {
           setMediaDetails(null);
         }
 
-        // Fetch recommended/similar titles
         const recRes = await fetch(`https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`);
         const recData = await recRes.json();
         if (recData?.results) {
@@ -513,7 +505,6 @@ export function DetailsPage() {
             <div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}>
               <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
                 
-                {/* Custom Active Player Season Dropdown */}
                 <div className="relative" ref={seasonRef}>
                   <span className="block text-xs text-slate-400 mb-1">Season</span>
                   <button
@@ -549,7 +540,6 @@ export function DetailsPage() {
                   )}
                 </div>
 
-                {/* Custom Active Player Episode Dropdown */}
                 <div className="relative" ref={episodeRef}>
                   <span className="block text-xs text-slate-400 mb-1">Episode</span>
                   <button
@@ -619,7 +609,6 @@ export function DetailsPage() {
             </div>
           )}
 
-          {/* ========== IFRAME BLOCK ========== */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
             <iframe
               key={`stable-player-${mediaId}-${season}-${episode}`}
@@ -651,7 +640,6 @@ export function DetailsPage() {
               allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
             ></iframe>
           </div>
-          {/* ========== END IFRAME BLOCK ========== */}
 
           <div className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}>
             <h1 className="text-2xl font-bold text-white">{title}</h1>
