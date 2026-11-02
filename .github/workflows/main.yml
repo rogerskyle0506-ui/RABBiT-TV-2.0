@@ -161,8 +161,17 @@ jobs:
       - name: Sync Capacitor
         run: npx @capacitor/cli sync android
 
-      - name: Inject Custom MainActivity, TV Banner, Manifest & Clean Dark Splash Styles
+      - name: Prepare TV Banner from HeaderFamily.jpg & Inject Custom Files
         run: |
+          # Ensure tv_banner.png exists using HeaderFamily.jpg
+          if [ -f assets/HeaderFamily.jpg ]; then
+            cp assets/HeaderFamily.jpg assets/tv_banner.png
+            echo "Successfully copied HeaderFamily.jpg to tv_banner.png"
+          else
+            echo "Error: assets/HeaderFamily.jpg not found!"
+            exit 1
+          fi
+
           mkdir -p android/app/src/main/java/com/rabbittv/app
           cp patches/MainActivity.java android/app/src/main/java/com/rabbittv/app/MainActivity.java
 
