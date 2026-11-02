@@ -155,12 +155,27 @@ jobs:
           mkdir -p www
           cp dist/client/index.html www/index.html
 
-      - name: Initialize or Sync Capacitor Android Platform First
+      - name: Initialize or Sync Capacitor Android Platform Safely
         run: |
-          if [ ! -d android ]; then
+          if [ -f android/app/rabbittv.keystore ]; then
+            mkdir -p /tmp/keystore_backup
+            cp android/app/rabbittv.keystore /tmp/keystore_backup/rabbittv.keystore
+            echo "Backed up existing keystore."
+          fi
+
+          if [ ! -d android ] || [ ! -f android/app/build.gradle ]; then
+            echo "Android platform missing or incomplete, re-creating..."
+            rm -rf android
             npx @capacitor/cli add android
           else
+            echo "Android platform exists, syncing..."
             npx @capacitor/cli sync android
+          fi
+
+          if [ -f /tmp/keystore_backup/rabbittv.keystore ]; then
+            mkdir -p android/app
+            cp /tmp/keystore_backup/rabbittv.keystore android/app/rabbittv.keystore
+            echo "Restored keystore to android/app/"
           fi
 
       - name: Generate App Icons and Splash Screens from Standard Assets
@@ -219,12 +234,6 @@ jobs:
             echo "Error: android directory was not created!"
             exit 1
           fi
-
-      - name: Ensure Gradle Wrapper Exists
-        run: |
-          cd android
-          gradle wrapper --gradle-version 8.2.1
-          chmod +x gradlew
 
       - name: Build Signed Release APK with Custom Keystore
         run: |
