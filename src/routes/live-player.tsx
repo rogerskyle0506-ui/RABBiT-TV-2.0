@@ -35,14 +35,20 @@ function LivePlayerComponent() {
   const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([]);
   const [selectedQuality, setSelectedQuality] = useState<number>(-1);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>('checking');
+  
   const [volume, setVolume] = useState(1.0);
   const [isMuted, setIsMuted] = useState(false);
   const [previousVolume, setPreviousVolume] = useState(1.0);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
-  const [offlineCountdown, setOfflineCountdown] = useState(10);
+  
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<any>(null);
+  const controlsTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const handler = () => setAppTheme(getSavedTheme());
@@ -92,6 +98,48 @@ function LivePlayerComponent() {
     }
   }, [volume, isMuted]);
 
+  const handleMouseMove = () => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = window.setTimeout(() => {
+      if (isPlaying) {
+        setShowControls(false);
+      }
+    }, 4000);
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!playerContainerRef.current) return;
+    if (!document.fullscreenElement) {
+      playerContainerRef.current.requestFullscreen().catch((err) => {
+        console.error('Error attempting to enable fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen().catch((err) => {
+        console.error('Error attempting to exit fullscreen:', err);
+      });
+    }
+  };
+
+  const togglePlayPause = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().then(() => setIsPlaying(true)).catch(() => {});
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
+  };
+
   const destroyHls = () => {
     if (hlsRef.current) {
       try {
@@ -104,13 +152,11 @@ function LivePlayerComponent() {
 
   const pickPreferredQualityIndex = (levels: QualityLevel[]) => {
     if (!levels.length) return -1;
-
     const preferredHeights = [2160, 1080, 720, 480, 360];
     for (const target of preferredHeights) {
       const match = levels.find((level) => level.height === target || (level.label && level.label.replace(/\D+/g, '') === String(target)));
       if (match) return match.index;
     }
-
     return 0;
   };
 
@@ -125,7 +171,6 @@ function LivePlayerComponent() {
     let timeoutId: number | null = null;
 
     setStreamStatus('checking');
-    setOfflineCountdown(10);
     setQualityLevels([]);
     setSelectedQuality(-1);
     destroyHls();
@@ -133,7 +178,10 @@ function LivePlayerComponent() {
     video.load();
 
     const onPlaying = () => {
-      if (!cancelled) setStreamStatus('live');
+      if (!cancelled) {
+        setStreamStatus('live');
+        setIsPlaying(true);
+      }
     };
     const onError = () => {
       if (!cancelled) setStreamStatus('offline');
@@ -161,7 +209,12 @@ function LivePlayerComponent() {
         video.src = streamUrl;
         video
           .play()
-          .then(() => !cancelled && setStreamStatus('live'))
+          .then(() => {
+            if (!cancelled) {
+              setStreamStatus('live');
+              setIsPlaying(true);
+            }
+          })
           .catch(() => !cancelled && setStreamStatus('offline'));
         return;
       }
@@ -219,7 +272,12 @@ function LivePlayerComponent() {
 
         video
           .play()
-          .then(() => !cancelled && setStreamStatus('live'))
+          .then(() => {
+            if (!cancelled) {
+              setStreamStatus('live');
+              setIsPlaying(true);
+            }
+          })
           .catch(() => !cancelled && setStreamStatus('offline'));
       });
 
@@ -262,7 +320,12 @@ function LivePlayerComponent() {
       video.src = streamUrl;
       video
         .play()
-        .then(() => !cancelled && setStreamStatus('live'))
+        .then(() => {
+          if (!cancelled) {
+            setStreamStatus('live');
+            setIsPlaying(true);
+          }
+        })
         .catch(() => !cancelled && setStreamStatus('offline'));
     }
 
@@ -381,26 +444,6 @@ function LivePlayerComponent() {
               )}
             </div>
           </div>
-
-          {qualityLevels.length > 0 && (
-            <div className="bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20 shrink-0 max-w-[170px]">
-              <label className="sr-only">Select player quality</label>
-              <select
-                value={selectedQuality}
-                onChange={handleQualityChange}
-                className="bg-transparent text-[11px] sm:text-xs font-bold text-white focus:outline-none cursor-pointer max-w-full"
-              >
-                <option value={-1} className="bg-zinc-900 text-white">
-                  Auto (1080p)
-                </option>
-                {qualityLevels.map((lvl) => (
-                  <option key={lvl.index} value={lvl.index} className="bg-zinc-900 text-white">
-                    {lvl.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
 
         <div className={`relative w-full overflow-hidden p-4 sm:p-5 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl flex items-center justify-center box-border`}>
@@ -419,14 +462,19 @@ function LivePlayerComponent() {
           </div>
         </div>
 
-        <div className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl aspect-video box-border group">
+        <div 
+          ref={playerContainerRef}
+          onMouseMove={handleMouseMove}
+          className="w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl aspect-video box-border group"
+        >
           {streamUrl ? (
             <video
               ref={videoRef}
               autoPlay
               playsInline
               controls={false}
-              className="w-full h-full object-contain bg-black"
+              onClick={togglePlayPause}
+              className="w-full h-full object-contain bg-black cursor-pointer"
             >
               Your browser does not support live video playback.
             </video>
@@ -436,62 +484,98 @@ function LivePlayerComponent() {
             </div>
           )}
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-3 p-3 sm:p-4">
-            <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-white/15 bg-black/70 px-2 py-1.5 backdrop-blur-md">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">Q</span>
+          <div className={`absolute inset-x-0 bottom-0 z-20 flex items-center justify-between gap-3 p-3 sm:p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={togglePlayPause}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/80 backdrop-blur-md border border-white/20 text-white hover:bg-zinc-800 transition shadow-xl text-base"
+                title={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isPlaying ? '⏸' : '▶'}
+              </button>
+
               {qualityLevels.length > 0 && (
-                <select
-                  value={selectedQuality}
-                  onChange={handleQualityChange}
-                  className="bg-transparent text-[11px] sm:text-xs font-bold text-white focus:outline-none cursor-pointer"
-                >
-                  <option value={-1} className="bg-zinc-900 text-white">
-                    Auto (1080p)
-                  </option>
-                  {qualityLevels.map((lvl) => (
-                    <option key={lvl.index} value={lvl.index} className="bg-zinc-900 text-white">
-                      {lvl.label}
+                <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-black/80 px-3 py-2 backdrop-blur-md">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">Quality:</span>
+                  <select
+                    value={selectedQuality}
+                    onChange={handleQualityChange}
+                    className="bg-transparent text-[11px] sm:text-xs font-bold text-white focus:outline-none cursor-pointer"
+                  >
+                    <option value={-1} className="bg-zinc-900 text-white">
+                      Auto (1080p)
                     </option>
-                  ))}
-                </select>
+                    {qualityLevels.map((lvl) => (
+                      <option key={lvl.index} value={lvl.index} className="bg-zinc-900 text-white">
+                        {lvl.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 
-            <div
-              className="pointer-events-auto relative"
-              onMouseEnter={() => setShowVolumeSlider(true)}
-              onMouseLeave={() => setShowVolumeSlider(false)}
-            >
+            <div className="flex items-center gap-2">
+              <div
+                className="relative"
+                onMouseEnter={() => setShowVolumeSlider(true)}
+                onMouseLeave={() => setShowVolumeSlider(false)}
+              >
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/80 backdrop-blur-md border border-white/20 text-white hover:bg-zinc-800 transition shadow-xl text-base"
+                  title="Volume / Mute"
+                >
+                  {isMuted || volume === 0 ? '🔇' : volume < 0.45 ? '🔉' : '🔊'}
+                </button>
+
+                {showVolumeSlider && (
+                  <div className="absolute bottom-full right-0 mb-3 bg-black/95 border border-white/20 p-3 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col items-center gap-2 z-30 min-w-[140px]">
+                    <span className="text-[10px] font-bold text-slate-300">
+                      {isMuted ? 0 : Math.round(volume * 100)}%
+                    </span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={isMuted ? 0 : volume}
+                      onChange={(e) => {
+                        const newVol = parseFloat(e.target.value);
+                        setVolume(newVol);
+                        setIsMuted(newVol === 0);
+                        if (newVol > 0) setPreviousVolume(newVol);
+                      }}
+                      className="h-24 w-2 accent-violet-500 bg-slate-800 rounded-lg appearance-none cursor-pointer [writing-mode:vertical-lr] [direction:rtl]"
+                    />
+                  </div>
+                )}
+              </div>
+
               <button
                 type="button"
-                onClick={toggleMute}
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/80 backdrop-blur-md border border-white/20 text-white hover:bg-zinc-800 transition shadow-xl text-base"
-                title="Volume / Mute"
+                onClick={toggleFullscreen}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/80 backdrop-blur-md border border-white/20 text-white hover:bg-zinc-800 transition shadow-xl text-sm font-bold"
+                title="Fullscreen Toggle"
               >
-                {isMuted || volume === 0 ? '🔇' : volume < 0.45 ? '🔉' : '🔊'}
+                {isFullscreen ? '↙' : '⤢'}
               </button>
 
-              {showVolumeSlider && (
-                <div className="absolute bottom-full right-0 mb-3 bg-black/95 border border-white/20 p-3 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col items-center gap-2 z-30 min-w-[140px]">
-                  <span className="text-[10px] font-bold text-slate-300">
-                    {isMuted ? 0 : Math.round(volume * 100)}%
-                  </span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={isMuted ? 0 : volume}
-                    onChange={(e) => {
-                      const newVol = parseFloat(e.target.value);
-                      setVolume(newVol);
-                      setIsMuted(newVol === 0);
-                      if (newVol > 0) setPreviousVolume(newVol);
-                    }}
-                    className="h-24 w-2 accent-violet-500 bg-slate-800 rounded-lg appearance-none cursor-pointer [writing-mode:vertical-lr] [direction:rtl]"
-                  />
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                  }
+                  setShowControls(false);
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/80 backdrop-blur-md border border-red-400/30 text-white hover:bg-red-600 transition shadow-xl text-xs font-black"
+                title="Dismiss Controls / Exit Fullscreen"
+              >
+                ✕
+              </button>
             </div>
           </div>
 
@@ -544,7 +628,7 @@ function LivePlayerComponent() {
             <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-[0.18em]">More Channels</h2>
             <button
               type="button"
-              onClick={() => navigate('/live-tv')}
+              onClick={() => navigate({ to: '/live-tv' })}
               className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] sm:text-[11px] font-bold text-slate-200"
             >
               Browse All
