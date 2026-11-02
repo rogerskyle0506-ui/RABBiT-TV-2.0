@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main, master ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -204,15 +207,39 @@ jobs:
             exit 1
           fi
 
-      - name: Build APK with Gradle
+      - name: Auto-Generate & Commit Permanent Keystore (Once)
+        run: |
+          KEYSTORE_PATH="android/app/rabbittv.keystore"
+          if [ ! -f "$KEYSTORE_PATH" ]; then
+            echo "Generating permanent signing keystore for RABBITV34688643..."
+            mkdir -p android/app
+            keytool -genkey -v -keystore "$KEYSTORE_PATH" \
+              -alias RABBITV34688643 -keyalg RSA -keysize 2048 -validity 10000 \
+              -passin pass:RABBITV34688643 -passout pass:RABBITV34688643 \
+              -dname "CN=RabbitTV, OU=Streaming, O=Rabbit, L=Toronto, S=ON, C=CA"
+            
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add android/app/rabbittv.keystore
+            git commit -m "chore: auto-generate persistent signing keystore [skip ci]"
+            git push
+          else
+            echo "Persistent keystore already exists in repository."
+          fi
+
+      - name: Build Signed Release APK with Custom Keystore
         run: |
           cd android
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=app/rabbittv.keystore \
+            -Pandroid.injected.signing.store.password=RABBITV34688643 \
+            -Pandroid.injected.signing.key.alias=RABBITV34688643 \
+            -Pandroid.injected.signing.key.password=RABBITV34688643
 
       - name: Rename and Prepare APK Artifact
         run: |
           mkdir -p rabbittv
-          cp android/app/build/outputs/apk/debug/app-debug.apk rabbittv/${{ steps.version-extractor.outputs.apk_filename }}
+          cp android/app/build/outputs/apk/release/app-release.apk rabbittv/${{ steps.version-extractor.outputs.apk_filename }}
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
