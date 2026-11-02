@@ -15,6 +15,7 @@ import {
   DislikedTitle,
   RecentLiveChannel,
 } from "@/lib/watch-history";
+import { AppWallpaper } from "@/components/AppWallpaper";
 
 export const Route = createFileRoute("/watch-history")({
   component: WatchHistoryComponent,
@@ -36,7 +37,6 @@ function WatchHistoryComponent() {
 
   const tickingRef = useRef(false);
 
-  // Throttled scroll listener using requestAnimationFrame to prevent layout thrashing on low-spec GPU/projectors
   useEffect(() => {
     const checkVerticalScroll = () => {
       if (!tickingRef.current) {
@@ -224,285 +224,288 @@ function WatchHistoryComponent() {
   const iconBtnClass = largeButtons ? "h-7 w-7 text-sm" : "h-6 w-6 text-xs";
 
   return (
-    <div className={`min-h-screen w-full ${getPageBackground(appTheme)} p-4 md:p-12 text-white space-y-6 transition-colors duration-300 pb-20 overflow-x-hidden`}>
-      <div className="flex items-center justify-between border-b border-white/10 pb-3">
-        <h1 className="text-xl font-bold tracking-wide flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-red-950 via-red-900 to-black border border-red-500/30 shadow-lg text-lg">
-            🐰
+    <div className={`min-h-screen w-full ${getPageBackground(appTheme)} p-4 md:p-12 text-white space-y-6 transition-colors duration-300 pb-20 overflow-x-hidden relative`}>
+      <AppWallpaper />
+      <div className="relative z-10 space-y-6">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <h1 className="text-xl font-bold tracking-wide flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-red-950 via-red-900 to-black border border-red-500/30 shadow-lg text-lg">
+              🐰
+            </div>
+            <span>Watch History & Activity</span>
+          </h1>
+          <span className="text-xs text-slate-400 font-semibold">
+            {allEntries.length + recentLiveChannels.length} Tracked Items
+          </span>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 shadow-md backdrop-blur-md flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm">💡</span>
+            <span><strong className="text-white">👁️</strong> = Confirm Progress</span>
+            <span className="text-slate-600">•</span>
+            <span><strong className="text-white">👎</strong> = Scrub & Hide from Catalogs</span>
+            <span className="text-slate-600">•</span>
+            <span><strong className="text-white">✕</strong> = Reset to Un-tracked</span>
           </div>
-          <span>Watch History & Activity</span>
-        </h1>
-        <span className="text-xs text-slate-400 font-semibold">
-          {allEntries.length + recentLiveChannels.length} Tracked Items
-        </span>
-      </div>
-
-      <div className="rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 shadow-md backdrop-blur-md flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm">💡</span>
-          <span><strong className="text-white">👁️</strong> = Confirm Progress</span>
-          <span className="text-slate-600">•</span>
-          <span><strong className="text-white">👎</strong> = Scrub & Hide from Catalogs</span>
-          <span className="text-slate-600">•</span>
-          <span><strong className="text-white">✕</strong> = Reset to Un-tracked</span>
+          <div className="text-violet-400 font-medium">
+            ✨ More saved items are also on your{" "}
+            <Link
+              to="/"
+              search={{ tab: "My List" }}
+              className="text-white underline hover:text-violet-300 transition font-bold"
+            >
+              My List
+            </Link>{" "}
+            tab!
+          </div>
         </div>
-        <div className="text-violet-400 font-medium">
-          ✨ More saved items are also on your{" "}
-          <Link
-            to="/"
-            search={{ tab: "My List" }}
-            className="text-white underline hover:text-violet-300 transition font-bold"
-          >
-            My List
-          </Link>{" "}
-          tab!
-        </div>
-      </div>
 
-      {allEntries.length === 0 && recentLiveChannels.length === 0 && dislikedTitles.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-black/40 p-8 text-center text-slate-400 backdrop-blur-md">
-          <p className="text-sm font-bold">No watch history recorded yet.</p>
-          <p className="text-xs mt-1">Start watching movies, shows, or live streams to automatically populate your history.</p>
-        </div>
-      ) : (
-        <div className="space-y-12">
-          {recentLiveChannels.length > 0 && (
-            <section className="space-y-4">
-              <h2 className="text-sm font-bold text-slate-200 border-l-4 border-red-500 pl-3 uppercase tracking-wider flex items-center gap-2">
-                <span>🔴 Recently Watched Live TV</span>
-                <span className="text-[10px] text-red-400 font-bold lowercase">(Last {recentLiveChannels.length})</span>
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-2 items-start">
-                {recentLiveChannels.map((channel) => (
-                  <div
-                    key={channel.channelId}
-                    className="group relative rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/90 to-black p-3 shadow-xl hover:-translate-y-1 transition text-center flex flex-col items-center justify-between overflow-hidden"
-                  >
-                    <div className="absolute top-1.5 right-1.5 z-10">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeRecentLiveChannel(channel.channelId);
-                          refreshData();
-                        }}
-                        className={`flex items-center justify-center rounded-lg bg-red-950/90 text-red-300 backdrop-blur-md border border-red-500/30 transition hover:bg-red-600 hover:text-white focus:outline-none font-bold ${iconBtnClass}`}
-                        title="Remove from history"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <Link
-                      to="/live-player"
-                      search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || "" }}
-                      className="w-full flex flex-col items-center"
+        {allEntries.length === 0 && recentLiveChannels.length === 0 && dislikedTitles.length === 0 ? (
+          <div className="rounded-xl border border-white/10 bg-black/40 p-8 text-center text-slate-400 backdrop-blur-md">
+            <p className="text-sm font-bold">No watch history recorded yet.</p>
+            <p className="text-xs mt-1">Start watching movies, shows, or live streams to automatically populate your history.</p>
+          </div>
+        ) : (
+          <div className="space-y-12">
+            {recentLiveChannels.length > 0 && (
+              <section className="space-y-4">
+                <h2 className="text-sm font-bold text-slate-200 border-l-4 border-red-500 pl-3 uppercase tracking-wider flex items-center gap-2">
+                  <span>🔴 Recently Watched Live TV</span>
+                  <span className="text-[10px] text-red-400 font-bold lowercase">(Last {recentLiveChannels.length})</span>
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-2 items-start">
+                  {recentLiveChannels.map((channel) => (
+                    <div
+                      key={channel.channelId}
+                      className="group relative rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/90 to-black p-3 shadow-xl hover:-translate-y-1 transition text-center flex flex-col items-center justify-between overflow-hidden"
                     >
-                      <div className="w-full h-20 bg-black/50 rounded-xl mb-2 overflow-hidden flex items-center justify-center border border-white/10 p-2">
-                        {channel.logo ? (
-                          <img
-                            src={channel.logo}
-                            alt={channel.title}
-                            className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-xs font-bold text-slate-400">LIVE</span>
-                        )}
-                      </div>
-                      <span className="text-xs font-bold line-clamp-1 text-white group-hover:text-slate-200">
-                        {channel.title}
-                      </span>
-                      <span className="mt-2 w-full py-1 text-[10px] font-bold rounded-full bg-red-600/80 border border-red-400/30 text-white shadow">
-                        RESUME STREAM →
-                      </span>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {inProgressMovies.length > 0 && (
-            <section className="space-y-4">
-              <h2 className={`text-sm font-bold text-slate-200 border-l-4 pl-3 uppercase tracking-wider ${getPrimaryAccentColor(appTheme)}`}>
-                Movies - In Progress
-              </h2>
-              <div className={`grid ${gridColsClass} gap-x-6 gap-y-10 pt-2 items-start`}>
-                {inProgressMovies.map((movie) => (
-                  <MovieCard
-                    key={movie.showId}
-                    movie={movie}
-                    appTheme={appTheme}
-                    historyOverscale={historyOverscale}
-                    largeButtons={largeButtons}
-                    onEyeballClick={handleEyeballClick}
-                    onRemove={() => {
-                      removeFromWatchHistory(movie.showId);
-                      refreshData();
-                    }}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {inProgressShows.length > 0 && (
-            <section className="space-y-4">
-              <h2 className="text-sm font-bold text-slate-200 border-l-4 border-blue-500 pl-3 uppercase tracking-wider">
-                TV Shows - In Progress
-              </h2>
-              <div className={`grid ${gridColsClass} gap-x-6 gap-y-10 pt-2 items-start`}>
-                {inProgressShows.map((show) => (
-                  <TvShowCard
-                    key={show.showId}
-                    show={show}
-                    appTheme={appTheme}
-                    historyOverscale={historyOverscale}
-                    largeButtons={largeButtons}
-                    onEyeballClick={handleEyeballClick}
-                    onRemove={() => {
-                      removeFromWatchHistory(show.showId);
-                      refreshData();
-                    }}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {(completedMovies.length > 0 || completedShows.length > 0) && (
-            <section className="space-y-4">
-              <h2 className="text-sm font-bold text-slate-200 border-l-4 border-emerald-500 pl-3 uppercase tracking-wider">
-                Completed
-              </h2>
-              <div className={`grid ${gridColsClass} gap-x-6 gap-y-10 pt-2 items-start`}>
-                {completedMovies.map((movie) => (
-                  <MovieCard
-                    key={movie.showId}
-                    movie={movie}
-                    appTheme={appTheme}
-                    historyOverscale={historyOverscale}
-                    largeButtons={largeButtons}
-                    onEyeballClick={handleEyeballClick}
-                    onRemove={() => {
-                      removeFromWatchHistory(movie.showId);
-                      refreshData();
-                    }}
-                  />
-                ))}
-                {completedShows.map((show) => (
-                  <TvShowCard
-                    key={show.showId}
-                    show={show}
-                    appTheme={appTheme}
-                    historyOverscale={historyOverscale}
-                    largeButtons={largeButtons}
-                    onEyeballClick={handleEyeballClick}
-                    onRemove={() => {
-                      removeFromWatchHistory(show.showId);
-                      refreshData();
-                    }}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {dislikedTitles.length > 0 && (
-            <section className="space-y-4">
-              <h2 className="text-sm font-bold text-slate-200 border-l-4 border-red-500 pl-3 uppercase tracking-wider">
-                Disliked / Removed
-              </h2>
-              <div className={`grid ${gridColsClass} gap-4 pt-2 items-start`}>
-                {dislikedTitles.map((item) => (
-                  <div
-                    key={item.id}
-                    className="group relative rounded-xl border border-red-500/20 bg-black/60 backdrop-blur-md overflow-hidden shadow-md flex flex-col justify-between p-3"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-red-400 uppercase">{item.mediaType}</span>
+                      <div className="absolute top-1.5 right-1.5 z-10">
                         <button
                           type="button"
-                          onClick={() => {
-                            removeDislikedTitle(item.id);
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeRecentLiveChannel(channel.channelId);
                             refreshData();
                           }}
-                          className={`text-slate-400 hover:text-white font-bold ${largeButtons ? "text-sm p-1" : "text-xs p-0.5"}`}
-                          title="Restore"
+                          className={`flex items-center justify-center rounded-lg bg-red-950/90 text-red-300 backdrop-blur-md border border-red-500/30 transition hover:bg-red-600 hover:text-white focus:outline-none font-bold ${iconBtnClass}`}
+                          title="Remove from history"
                         >
-                          ↺
+                          ✕
                         </button>
                       </div>
-                      <h3 className="text-xs font-bold text-white truncate" title={item.title}>
-                        {item.title}
-                      </h3>
+
+                      <Link
+                        to="/live-player"
+                        search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || "" }}
+                        className="w-full flex flex-col items-center"
+                      >
+                        <div className="w-full h-20 bg-black/50 rounded-xl mb-2 overflow-hidden flex items-center justify-center border border-white/10 p-2">
+                          {channel.logo ? (
+                            <img
+                              src={channel.logo}
+                              alt={channel.title}
+                              className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-xs font-bold text-slate-400">LIVE</span>
+                          )}
+                        </div>
+                        <span className="text-xs font-bold line-clamp-1 text-white group-hover:text-slate-200">
+                          {channel.title}
+                        </span>
+                        <span className="mt-2 w-full py-1 text-[10px] font-bold rounded-full bg-red-600/80 border border-red-400/30 text-white shadow">
+                          RESUME STREAM →
+                        </span>
+                      </Link>
                     </div>
-                    <span className="text-[9px] text-slate-500 pt-2">Excluded from catalog</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
+                  ))}
+                </div>
+              </section>
+            )}
 
-      {canScrollDown && showScrollReminder && (
-        <div 
-          className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
-          onAnimationEnd={() => setShowScrollReminder(false)}
-        >
-          <style>{`
-            @keyframes flashTwice {
-              0% { opacity: 0; }
-              25% { opacity: 1; }
-              50% { opacity: 0; }
-              75% { opacity: 1; }
-              100% { opacity: 0; }
-            }
-            .animate-flash-twice {
-              animation: flashTwice 8s ease-in-out forwards;
-            }
-          `}</style>
-          <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
-              More History Below
-            </span>
-            <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
-              ⌄
-            </span>
+            {inProgressMovies.length > 0 && (
+              <section className="space-y-4">
+                <h2 className={`text-sm font-bold text-slate-200 border-l-4 pl-3 uppercase tracking-wider ${getPrimaryAccentColor(appTheme)}`}>
+                  Movies - In Progress
+                </h2>
+                <div className={`grid ${gridColsClass} gap-x-6 gap-y-10 pt-2 items-start`}>
+                  {inProgressMovies.map((movie) => (
+                    <MovieCard
+                      key={movie.showId}
+                      movie={movie}
+                      appTheme={appTheme}
+                      historyOverscale={historyOverscale}
+                      largeButtons={largeButtons}
+                      onEyeballClick={handleEyeballClick}
+                      onRemove={() => {
+                        removeFromWatchHistory(movie.showId);
+                        refreshData();
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {inProgressShows.length > 0 && (
+              <section className="space-y-4">
+                <h2 className="text-sm font-bold text-slate-200 border-l-4 border-blue-500 pl-3 uppercase tracking-wider">
+                  TV Shows - In Progress
+                </h2>
+                <div className={`grid ${gridColsClass} gap-x-6 gap-y-10 pt-2 items-start`}>
+                  {inProgressShows.map((show) => (
+                    <TvShowCard
+                      key={show.showId}
+                      show={show}
+                      appTheme={appTheme}
+                      historyOverscale={historyOverscale}
+                      largeButtons={largeButtons}
+                      onEyeballClick={handleEyeballClick}
+                      onRemove={() => {
+                        removeFromWatchHistory(show.showId);
+                        refreshData();
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {(completedMovies.length > 0 || completedShows.length > 0) && (
+              <section className="space-y-4">
+                <h2 className="text-sm font-bold text-slate-200 border-l-4 border-emerald-500 pl-3 uppercase tracking-wider">
+                  Completed
+                </h2>
+                <div className={`grid ${gridColsClass} gap-x-6 gap-y-10 pt-2 items-start`}>
+                  {completedMovies.map((movie) => (
+                    <MovieCard
+                      key={movie.showId}
+                      movie={movie}
+                      appTheme={appTheme}
+                      historyOverscale={historyOverscale}
+                      largeButtons={largeButtons}
+                      onEyeballClick={handleEyeballClick}
+                      onRemove={() => {
+                        removeFromWatchHistory(movie.showId);
+                        refreshData();
+                      }}
+                    />
+                  ))}
+                  {completedShows.map((show) => (
+                    <TvShowCard
+                      key={show.showId}
+                      show={show}
+                      appTheme={appTheme}
+                      historyOverscale={historyOverscale}
+                      largeButtons={largeButtons}
+                      onEyeballClick={handleEyeballClick}
+                      onRemove={() => {
+                        removeFromWatchHistory(show.showId);
+                        refreshData();
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {dislikedTitles.length > 0 && (
+              <section className="space-y-4">
+                <h2 className="text-sm font-bold text-slate-200 border-l-4 border-red-500 pl-3 uppercase tracking-wider">
+                  Disliked / Removed
+                </h2>
+                <div className={`grid ${gridColsClass} gap-4 pt-2 items-start`}>
+                  {dislikedTitles.map((item) => (
+                    <div
+                      key={item.id}
+                      className="group relative rounded-xl border border-red-500/20 bg-black/60 backdrop-blur-md overflow-hidden shadow-md flex flex-col justify-between p-3"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-red-400 uppercase">{item.mediaType}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              removeDislikedTitle(item.id);
+                              refreshData();
+                            }}
+                            className={`text-slate-400 hover:text-white font-bold ${largeButtons ? "text-sm p-1" : "text-xs p-0.5"}`}
+                            title="Restore"
+                          >
+                            ↺
+                          </button>
+                        </div>
+                        <h3 className="text-xs font-bold text-white truncate" title={item.title}>
+                          {item.title}
+                        </h3>
+                      </div>
+                      <span className="text-[9px] text-slate-500 pt-2">Excluded from catalog</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
-        </div>
-      )}
+        )}
 
-      {verifyingTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl text-center">
-            <div className="text-3xl">👁️</div>
-            <h3 className="text-lg font-bold text-white">Verify Completion</h3>
-            <p className="text-xs text-slate-300">
-              Did you complete watching <strong className="text-violet-400">{verifyingTarget.title}</strong>?
-            </p>
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
-              <button
-                type="button"
-                onClick={() => handleConfirmModal(true)}
-                className="rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 text-xs font-bold text-white shadow-lg transition"
-              >
-                Yes (✓)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleConfirmModal(false)}
-                className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 py-2.5 text-xs font-bold text-slate-300 transition"
-              >
-                No (?)
-              </button>
+        {canScrollDown && showScrollReminder && (
+          <div 
+            className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
+            onAnimationEnd={() => setShowScrollReminder(false)}
+          >
+            <style>{`
+              @keyframes flashTwice {
+                0% { opacity: 0; }
+                25% { opacity: 1; }
+                50% { opacity: 0; }
+                75% { opacity: 1; }
+                100% { opacity: 0; }
+              }
+              .animate-flash-twice {
+                animation: flashTwice 8s ease-in-out forwards;
+              }
+            `}</style>
+            <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
+                More History Below
+              </span>
+              <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
+                ⌄
+              </span>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {verifyingTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl text-center">
+              <div className="text-3xl">👁️</div>
+              <h3 className="text-lg font-bold text-white">Verify Completion</h3>
+              <p className="text-xs text-slate-300">
+                Did you complete watching <strong className="text-violet-400">{verifyingTarget.title}</strong>?
+              </p>
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleConfirmModal(true)}
+                  className="rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 text-xs font-bold text-white shadow-lg transition"
+                >
+                  Yes (✓)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleConfirmModal(false)}
+                  className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 py-2.5 text-xs font-bold text-slate-300 transition"
+                >
+                  No (?)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
