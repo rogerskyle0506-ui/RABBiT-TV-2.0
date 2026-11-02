@@ -38,7 +38,7 @@ const providerCategories = [
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
-const TMDB_API_KEY = (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
+const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY as string;
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 
 function getDetailsSearch(item: MediaItem): { id: string; type: "movie" | "tv" } {
@@ -546,7 +546,6 @@ function Home() {
       if (isTitleDisliked(item.id) || isTitleBroken(item.id)) continue;
       if (!isAllowedForAge((item as any).certification, item.genre, userAge)) continue;
 
-      // Pre-release check: remove if release date is more than 1 week in the future
       const releaseDateStr = (item as any).releaseDate || (item as any).release_date || (item as any).first_air_date;
       if (releaseDateStr) {
         const releaseTime = new Date(releaseDateStr).getTime();
@@ -574,7 +573,6 @@ function Home() {
       if (isTitleDisliked(item.id) || isTitleBroken(item.id)) return false;
       if (!isAllowedForAge((item as any).certification, item.genre, userAge)) return false;
 
-      // Pre-release check: remove if release date is more than 1 week in the future
       const releaseDateStr = (item as any).releaseDate || (item as any).release_date || (item as any).first_air_date;
       if (releaseDateStr) {
         const releaseTime = new Date(releaseDateStr).getTime();
@@ -642,7 +640,6 @@ function Home() {
     return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
   }, [cardSize]);
 
-  // More transparent backgrounds so wallpaper shows through
   const themeStyles =
     {
       violet: {
