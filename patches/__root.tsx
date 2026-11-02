@@ -77,7 +77,7 @@ const globalFeedOptions = [
 export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 
 const HEADER_ICON_URL =
-  "https://avatars.githubusercontent.com/u/330663733?s=400&u=911c6843a369d9d42e99a852c6bf65a49c779b9d&v=4";
+  "https://avatars.githubusercontent.com/u/330663733?v=4";
 
 const themeStatusBarMap: Record<AppTheme, string> = {
   violet: "#0f0728",
