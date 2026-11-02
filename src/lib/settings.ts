@@ -1,3 +1,5 @@
+export type CardSize = "small" | "medium" | "large";
+export type StreamQuality = "1080p" | "720p" | "480p" | "auto";
 export type AppTheme = "violet" | "red" | "midnight" | "emerald" | "amber" | "cyan";
 
 export const DISCLAIMER_ACCEPTED_KEY = "rabtv_disclaimer_accepted";
@@ -62,6 +64,17 @@ export const THEME_PRESETS: Record<
   },
 };
 
+export function applyThemeToDocument(theme: AppTheme) {
+  const target = typeof document !== "undefined" ? document.documentElement : null;
+  if (!target) return;
+
+  const preset = THEME_PRESETS[theme] ?? THEME_PRESETS.violet;
+  target.dataset.theme = theme;
+  target.style.setProperty("--app-bg", preset.background);
+  target.style.setProperty("--app-panel", preset.panel);
+  target.style.setProperty("--app-accent", preset.accent);
+}
+
 export function getSavedCardSize(): CardSize {
   if (typeof window === "undefined") return "large";
   const saved = localStorage.getItem(CARD_SIZE_KEY) as CardSize | null;
@@ -95,6 +108,7 @@ export function getSavedTheme(): AppTheme {
 export function saveTheme(theme: AppTheme) {
   if (typeof window !== "undefined") {
     localStorage.setItem(THEME_KEY, theme);
+    applyThemeToDocument(theme);
   }
 }
 
