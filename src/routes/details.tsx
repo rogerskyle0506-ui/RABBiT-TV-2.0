@@ -78,7 +78,7 @@ export function DetailsPage() {
       if (mediaType !== "tv" || !mediaId) return;
       try {
         const apiKey =
-          (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
+          (import.meta.env.VITE_TMDB_API_KEY as string) || "61b51c2af00119474c16fb4c36c4bb58";
         const res = await fetch(
           `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
         );
