@@ -5,6 +5,7 @@ import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
 import { MediaCard } from "@/routes/index";
 import type { MediaItem } from "@/lib/tmdb-scraper";
 import { saveWatchProgress } from "@/lib/watch-history";
+import { AppWallpaper } from "@/components/AppWallpaper";
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
@@ -166,24 +167,24 @@ export function DetailsPage() {
   const getPageBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-[#120202]";
+        return "bg-[#120202]/85";
       case "midnight":
-        return "bg-[#020617]";
+        return "bg-[#020617]/85";
       case "violet":
       default:
-        return "bg-[#050b16]";
+        return "bg-[#050b16]/85";
     }
   };
 
   const getCardBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-[#160404] border-red-500/20";
+        return "bg-[#160404]/90 border-red-500/20";
       case "midnight":
-        return "bg-[#03091e] border-blue-500/20";
+        return "bg-[#03091e]/90 border-blue-500/20";
       case "violet":
       default:
-        return "bg-[#090e1f] border-violet-500/20";
+        return "bg-[#090e1f]/90 border-violet-500/20";
     }
   };
 
@@ -573,8 +574,9 @@ export function DetailsPage() {
 
   return (
     <div
-      className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20`}
+      className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative`}
     >
+      <AppWallpaper />
       <Link
         className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
         to="/"
