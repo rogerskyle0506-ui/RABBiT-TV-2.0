@@ -20,11 +20,17 @@ export const Route = createFileRoute("/details")({
 export function DetailsPage() {
   const search = Route.useSearch();
 
-  // Clean id for TMDB / embed only (strip movie- / tv- if present)
-  const mediaId = String(search.id || "")
-    .replace(/^(movie|tv)-/i, "")
-    .trim();
-  const urlType: "movie" | "tv" = search.type === "tv" ? "tv" : "movie";
+  // Robustly infer media type and clean ID from search parameters
+  const rawId = String(search.id || "").trim();
+  const inferredType: "tv" | "movie" | null = rawId.toLowerCase().startsWith("tv-")
+    ? "tv"
+    : rawId.toLowerCase().startsWith("movie-")
+    ? "movie"
+    : null;
+
+  const mediaId = rawId.replace(/^(movie|tv)-/i, "").trim();
+  const urlType: "movie" | "tv" =
+    inferredType || (search.type === "tv" ? "tv" : "movie");
 
   const [mediaType, setMediaType] = useState<"movie" | "tv">(urlType);
   const [mediaDetails, setMediaDetails] = useState<any>(null);
@@ -137,14 +143,13 @@ export function DetailsPage() {
     };
   }, []);
 
-  // Season episodes (TV only) — uses clean mediaId
   useEffect(() => {
     async function fetchSeasonEpisodes() {
       if (mediaType !== "tv" || !mediaId) return;
       try {
         const apiKey =
           (import.meta.env.VITE_TMDB_API_KEY as string) ||
-          "9619884fc9c0e58b374a661ab2a302cd";
+          "9619884fc9c0e58b374a661ab2a692cd";
         const res = await fetch(
           `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
         );
@@ -228,8 +233,6 @@ export function DetailsPage() {
   };
 
   const activeTheme = getThemeClasses(appTheme);
-
-  // Prefixed id used for My List / Favorites / History separation
   const prefixedId = `${mediaType}-${mediaId}`;
 
   useEffect(() => {
@@ -252,7 +255,6 @@ export function DetailsPage() {
     }
   }, [mediaId, mediaDetails, mediaType, prefixedId]);
 
-  // Details + recommendations — depends on mediaId + urlType only (no loop)
   useEffect(() => {
     let cancelled = false;
 
@@ -265,12 +267,11 @@ export function DetailsPage() {
 
       const apiKey =
         (import.meta.env.VITE_TMDB_API_KEY as string) ||
-        "9619884fc9c0e58b374a661ab2a302cd";
+        "9619884fc9c0e58b374a661ab2a692cd";
 
       let activeFetchType: "movie" | "tv" = urlType;
 
       try {
-        // Cache
         const cacheKey = `rabtv_cache_${activeFetchType}_${mediaId}`;
         const cachedItem = localStorage.getItem(cacheKey);
         if (cachedItem) {
@@ -289,13 +290,11 @@ export function DetailsPage() {
           }
         }
 
-        // Network
         let res = await fetch(
           `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
         );
         let data = await res.json();
 
-        // Fallback to the other protocol if first fails
         if (!data || data.success === false || data.status_code) {
           const otherType: "movie" | "tv" =
             activeFetchType === "movie" ? "tv" : "movie";
@@ -324,7 +323,6 @@ export function DetailsPage() {
           setMediaDetails(null);
         }
 
-        // Recommendations
         const recRes = await fetch(
           `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
         );
@@ -393,7 +391,8 @@ export function DetailsPage() {
       const recPoster = rec.poster_path
         ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
         : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
-      const recType: "movie" | "tv" = rec.title ? "movie" : "tv";
+      const recType: "movie" | "tv" =
+        rec.media_type === "tv" || rec.name || !rec.title ? "tv" : "movie";
       const releaseDate = rec.release_date || rec.first_air_date || "";
       const year = releaseDate.split("-")[0];
       const rating = rec.vote_average
@@ -406,7 +405,7 @@ export function DetailsPage() {
         description: rec.overview || "",
         image: recPoster,
         href: `/details?id=${recId}&type=${recType}`,
-        genre: recType.toUpperCase(),
+        genre: recType === "tv" ? "TV SHOW" : "MOVIE",
         year: year || undefined,
         rating,
         mediaType: recType,
@@ -438,8 +437,6 @@ export function DetailsPage() {
     setIsPlaying(true);
 
     try {
-      // Prefixed id keeps movie/tv separation in watch history
-      // genreIds feed the home hero "FOR YOU" curation
       saveWatchProgress({
         id: `${inferredMediaType}-${mediaId}`,
         mediaId: String(mediaId),
@@ -562,7 +559,6 @@ export function DetailsPage() {
   const genres =
     mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
 
-  // Clean id only for embed
   const embedUrl =
     inferredMediaType === "tv"
       ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
@@ -712,7 +708,6 @@ export function DetailsPage() {
             </div>
           )}
 
-          {/* ========== IFRAME – UNTOUCHED ========== */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
             <iframe
               key={`stable-player-${mediaId}-${season}-${episode}`}
@@ -744,7 +739,6 @@ export function DetailsPage() {
               allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
             ></iframe>
           </div>
-          {/* ========== END IFRAME ========== */}
 
           <div
             className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}
