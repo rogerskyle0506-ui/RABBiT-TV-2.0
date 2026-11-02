@@ -4,6 +4,7 @@ import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { fetchLiveCategories, fetchChannelsByCategory, LiveChannel } from '@/lib/live-feed-service';
 import { logLiveChannelWatch } from '@/lib/watch-history';
 import { getChannelDescription } from '@/lib/channel-descriptions';
+import { AppWallpaper } from '@/components/AppWallpaper';
 
 export const Route = createFileRoute('/live-player')({
   component: LivePlayerComponent,
@@ -191,7 +192,7 @@ function LivePlayerComponent() {
         liveMaxLatencyDurationCount: 6,
         maxBufferLength: 12,          // tighter
         maxMaxBufferLength: 24,       // tighter
-        maxBufferSize: 20 * 1024 * 1024, // \~20 MB cap
+        maxBufferSize: 20 * 1024 * 1024, // ~20 MB cap
         backBufferLength: 8,
         startLevel: -1,               // auto
       });
@@ -212,7 +213,6 @@ function LivePlayerComponent() {
           const levels: QualityLevel[] = hlsInstance.levels.map((lvl: any, idx: number) => {
             let label = '';
             if (lvl.height) {
-              // Prefer clean labels
               if (lvl.height >= 1080) label = '1080p';
               else if (lvl.height >= 720) label = '720p';
               else if (lvl.height >= 480) label = '480p';
@@ -351,8 +351,9 @@ function LivePlayerComponent() {
   }, [appTheme]);
 
   return (
-    <div className={`min-h-screen ${themeStyles.bg} text-white transition-colors duration-300 pb-16 w-full max-w-full overflow-x-hidden box-border`}>
-      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 pt-3 space-y-4 box-border">
+    <div className={`min-h-screen ${themeStyles.bg} text-white transition-colors duration-300 pb-16 w-full max-w-full overflow-x-hidden box-border relative`}>
+      <AppWallpaper />
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 pt-3 space-y-4 box-border relative z-10">
 
         {/* TOP BAR */}
         <div className="w-full flex items-center justify-between p-3 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 shadow-lg box-border gap-2">
@@ -439,7 +440,7 @@ function LivePlayerComponent() {
             </div>
           )}
 
-          {/* COMBINED VOLUME CONTROL (mute + slider in one) */}
+          {/* COMBINED VOLUME CONTROL */}
           <div
             className="absolute bottom-4 right-4 z-20"
             onMouseEnter={() => setShowVolumeSlider(true)}
