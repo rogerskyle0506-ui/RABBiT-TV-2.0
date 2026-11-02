@@ -14,6 +14,7 @@ import {
 import { getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
 import { isTitleBroken } from "@/lib/broken-links";
 import { ScrollPillBar } from "@/components/scroll-pill-bar";
+import { AppWallpaper } from "@/components/AppWallpaper";
 import React from "react";
 
 const navTabs = ["Home", "TV Shows", "Movies", "In Theaters", "Live TV & Sports", "My List"] as const;
@@ -609,7 +610,7 @@ function Home() {
   const themeStyles =
     {
       violet: {
-        bg: "bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-950",
+        bg: "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/90",
         cardGradient: "from-purple-950/80 via-slate-900 to-indigo-950/80",
         btnActive:
           "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
@@ -617,7 +618,7 @@ function Home() {
         borderGlow: "border-violet-500/30",
       },
       red: {
-        bg: "bg-gradient-to-br from-zinc-950 via-red-950/40 to-black",
+        bg: "bg-gradient-to-br from-zinc-950/85 via-red-950/45 to-black/90",
         cardGradient: "from-red-950/80 via-zinc-900 to-neutral-950",
         btnActive:
           "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
@@ -625,7 +626,7 @@ function Home() {
         borderGlow: "border-red-500/30",
       },
       midnight: {
-        bg: "bg-gradient-to-br from-slate-950 via-blue-950/40 to-slate-950",
+        bg: "bg-gradient-to-br from-slate-950/85 via-blue-950/45 to-slate-950/90",
         cardGradient: "from-blue-950/80 via-slate-900 to-sky-950/80",
         btnActive:
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
@@ -633,7 +634,7 @@ function Home() {
         borderGlow: "border-sky-500/30",
       },
       emerald: {
-        bg: "bg-gradient-to-br from-slate-950 via-emerald-950/40 to-slate-950",
+        bg: "bg-gradient-to-br from-slate-950/85 via-emerald-950/45 to-slate-950/90",
         cardGradient: "from-emerald-950/80 via-slate-900 to-teal-950/80",
         btnActive:
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
@@ -641,7 +642,7 @@ function Home() {
         borderGlow: "border-emerald-500/30",
       },
       amber: {
-        bg: "bg-gradient-to-br from-stone-950 via-yellow-950/40 to-neutral-950",
+        bg: "bg-gradient-to-br from-stone-950/85 via-yellow-950/45 to-neutral-950/90",
         cardGradient: "from-yellow-950/80 via-stone-900 to-amber-950/80",
         btnActive:
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
@@ -649,7 +650,7 @@ function Home() {
         borderGlow: "border-amber-500/30",
       },
       cyan: {
-        bg: "bg-gradient-to-br from-slate-950 via-cyan-950/40 to-slate-950",
+        bg: "bg-gradient-to-br from-slate-950/85 via-cyan-950/45 to-slate-950/90",
         cardGradient: "from-cyan-950/80 via-slate-900 to-blue-950/80",
         btnActive:
           "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
@@ -657,7 +658,7 @@ function Home() {
         borderGlow: "border-cyan-500/30",
       },
     }[appTheme] ?? {
-      bg: "bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-950",
+      bg: "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/90",
       cardGradient: "from-purple-950/80 via-slate-900 to-indigo-950/80",
       btnActive:
         "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
@@ -705,7 +706,8 @@ function Home() {
   const heroDetailsSearch = activeHeroItem ? getDetailsSearch(activeHeroItem) : null;
 
   return (
-    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20`}>
+    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 relative`}>
+      <AppWallpaper />
       <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 bg-black/70 backdrop-blur-xl border-b border-white/10 shadow-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-center text-center">
           <div className="w-full flex justify-center">
