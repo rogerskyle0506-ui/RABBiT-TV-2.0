@@ -27,7 +27,6 @@ import {
   setHistoryOverscale,
   getLargeButtons,
   setLargeButtons,
-  GlobalFeedOption,
   generateUnlockCode,
 } from "@/lib/settings";
 
@@ -45,6 +44,9 @@ function isAdminCredentials(name: string, age: number): boolean {
 const TRIAL_CODE = "9654";
 const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 const AGE_LOCK_KEY = "rabtv_age_passcode";
+
+const globalFeedOptions = ["All (Default)", "Russian", "British", "Hungarian", "German"] as const;
+export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 
 const HEADER_ICON_URL =
   "https://avatars.githubusercontent.com/u/330663733?s=400&u=911c6843a369d9d42e99a852c6bf65a49c779b9d&v=4";
@@ -812,7 +814,6 @@ function RootComponent() {
                 className="w-full h-full object-fill brightness-90"
               />
             </div>
-            {/* Balanced dimmer overlay with minute 1px blur so header wallpaper shows through clearly without being too bright */}
             <div className="absolute inset-0 bg-black/25 backdrop-blur-[1px]" />
 
             <div className="relative z-10 mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2 sm:px-6 gap-2">
@@ -893,21 +894,11 @@ function RootComponent() {
                         }
                         className="absolute inset-0 w-full h-full opacity-0 bg-transparent text-white cursor-pointer z-50 appearance-none"
                       >
-                        <option value="All (Default)" className="bg-slate-900 text-white p-2">
-                          🌐 All (Default)
-                        </option>
-                        <option value="Russian" className="bg-slate-900 text-white p-2">
-                          🇷🇺 Russian
-                        </option>
-                        <option value="British" className="bg-slate-900 text-white p-2">
-                          🇬🇧 British
-                        </option>
-                        <option value="Hungarian" className="bg-slate-900 text-white p-2">
-                          🇭🇺 Hungarian
-                        </option>
-                        <option value="German" className="bg-slate-900 text-white p-2">
-                          🇩🇪 German
-                        </option>
+                        {globalFeedOptions.map((opt) => (
+                          <option key={opt} value={opt} className="bg-slate-900 text-white p-2">
+                            🌐 {opt}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
