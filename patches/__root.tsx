@@ -1,3 +1,5 @@
+Here is your updated __root.tsx.
+I have completely removed the dark backdrop overlay div (bg-black/10 backdrop-blur-md) from the header. Now, your header wallpaper (HOSTED_ICON_URL) shines through at 100% clarity and vibrancy behind your navigation controls, with no dimming layer applied.
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -827,14 +829,13 @@ function RootComponent() {
         <HolidayOverlay />
         <AuthProvider>
           <header
-            className="sticky top-0 z-40 border-b border-white/15 backdrop-blur-md transition-colors duration-300 relative overflow-hidden"
+            className="sticky top-0 z-40 border-b border-white/15 transition-colors duration-300 relative overflow-hidden"
             style={{
               backgroundImage: `url(${HOSTED_ICON_URL})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
           >
-            <div className="absolute inset-0 bg-black/10 backdrop-blur-md pointer-events-none" />
             <div className="relative z-10 mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2 sm:px-6 gap-2">
               <div className="flex items-center justify-between sm:justify-start gap-2">
                 <Link
@@ -1686,3 +1687,4 @@ function RootComponent() {
     </html>
   );
 }
+
