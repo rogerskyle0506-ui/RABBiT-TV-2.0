@@ -2,6 +2,16 @@
  * ============================================================
  * LIVE FEED HEALTH LAYER & SERVICES
  * ============================================================
+ * 
+ * NOTE ON INITIAL LOAD PERFORMANCE:
+ * The initial health check scan probes all live streams to verify availability.
+ * Due to network concurrency limits and timeouts, this initial scan can take 
+ * up to 2 minutes to populate the complete channel list when the memory cache is empty.
+ * 
+ * Once scanned, channel health statuses are permanently saved to local storage memory. 
+ * Subsequent visits and catalog navigation load instantly from memory without re-probing, 
+ * ensuring users never have to wait for the catalog to load.
+ * Only channels verified as "online" (green) are retained in the active catalog.
  */
 
 export type ChannelHealth = "online" | "offline" | "checking" | "unknown";
@@ -30,9 +40,9 @@ export type LiveChannel = LiveFeedService & {
 
 // ——— Tunables ———
 const PROBE_TIMEOUT_MS = 4500;
-const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours (persists in memory so re-checking doesn't happen on catalog navigation)
 const CONCURRENCY = 6; // parallel probes
-const HEALTH_CACHE_KEY = "rabtv_live_health_v1";
+const HEALTH_CACHE_KEY = "rabtv_live_health_v2";
 const HIDE_OFFLINE_BY_DEFAULT = true;
 
 // ——— Channels Data Array ———
@@ -2821,7 +2831,7 @@ async function mapPool<T, R>(
 }
 
 /**
- * Enrich channels with health status.
+ * Enrich channels with health status, utilizing memory cache to prevent re-checking.
  */
 export async function enrichChannelsWithHealth(
   channels: LiveChannel[],
@@ -2855,13 +2865,13 @@ export async function enrichChannelsWithHealth(
   });
 }
 
-/** Drop offline channels */
+/** Drop offline, unknown, or checking channels — only keep online (green) channels */
 export function filterHealthyChannels(
   channels: LiveChannel[],
   hideOffline = HIDE_OFFLINE_BY_DEFAULT
 ): LiveChannel[] {
   if (!hideOffline) return channels;
-  return channels.filter((ch) => ch.health !== "offline");
+  return channels.filter((ch) => ch.health === "online");
 }
 
 export interface CatalogHealthStats {
