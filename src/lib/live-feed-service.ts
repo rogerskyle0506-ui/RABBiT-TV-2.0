@@ -1,4 +1,11 @@
-// Updated live-feed-service.ts
+/**
+ * ============================================================
+ * LIVE FEED HEALTH LAYER & SERVICES
+ * ============================================================
+ */
+
+export type ChannelHealth = "online" | "offline" | "checking" | "unknown";
+
 export interface LiveFeedService {
   channelId: string;
   name: string;
@@ -13,6 +20,22 @@ export interface LiveFeedService {
   licenseKey?: string;
 }
 
+/** What the rest of the app imports */
+export type LiveChannel = LiveFeedService & {
+  streamUrl: string;
+  title: string;
+  health?: ChannelHealth;
+  healthCheckedAt?: number;
+};
+
+// ——— Tunables ———
+const PROBE_TIMEOUT_MS = 4500;
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const CONCURRENCY = 6; // parallel probes
+const HEALTH_CACHE_KEY = "rabtv_live_health_v1";
+const HIDE_OFFLINE_BY_DEFAULT = true;
+
+// ——— Channels Data Array ———
 export const liveFeedServices: LiveFeedService[] = [
   {
     channelId: "mjh-sky-popup2",
@@ -2704,30 +2727,264 @@ export const liveFeedServices: LiveFeedService[] = [
   }
 ];
 
-// Ensure your type alias matches what components import, or alias it:
-export type LiveChannel = LiveFeedService & {
-  streamUrl: string;
-  title: string;
-};
+// ——— In-memory + localStorage cache ———
+type HealthCacheEntry = { health: ChannelHealth; checkedAt: number };
+type HealthCache = Record<string, HealthCacheEntry>;
 
-// Make these async or return Promises so .then() works seamlessly:
-export async function fetchLiveCategories(): Promise<string[]> {
-  const categories = new Set<string>();
-  liveFeedServices.forEach((service) => {
-    if (service.groupTitle) {
-      categories.add(service.groupTitle);
+function loadHealthCache(): HealthCache {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(HEALTH_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as HealthCache;
+    const now = Date.now();
+    const fresh: HealthCache = {};
+    for (const [id, entry] of Object.entries(parsed)) {
+      if (entry && now - entry.checkedAt < CACHE_TTL_MS) {
+        fresh[id] = entry;
+      }
     }
-  });
-  return Array.from(categories);
+    return fresh;
+  } catch {
+    return {};
+  }
 }
 
-export async function fetchChannelsByCategory(category: string): Promise<LiveChannel[]> {
-  const filtered = liveFeedServices.filter(
-    (service) => service.groupTitle.toLowerCase() === category.toLowerCase()
+function saveHealthCache(cache: HealthCache) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(HEALTH_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // quota / private mode — ignore
+  }
+}
+
+let healthCache: HealthCache = loadHealthCache();
+
+/**
+ * Probe a single stream URL.
+ */
+export async function probeStream(url: string): Promise<ChannelHealth> {
+  if (!url || typeof url !== "string") return "offline";
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+      mode: "cors",
+      cache: "no-store",
+      credentials: "omit",
+    });
+
+    clearTimeout(timer);
+
+    if (res.ok) {
+      return "online";
+    }
+
+    if (res.status >= 400) return "offline";
+    return "unknown";
+  } catch (err: any) {
+    clearTimeout(timer);
+
+    if (err?.name === "AbortError") return "offline";
+    if (err?.name === "TypeError") return "unknown";
+
+    return "offline";
+  }
+}
+
+/** Run probes with a concurrency limit */
+async function mapPool<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+
+  async function run() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await worker(items[i], i);
+    }
+  }
+
+  const runners = Array.from({ length: Math.min(limit, items.length) }, () =>
+    run()
   );
-  return filtered.map((s) => ({
+  await Promise.all(runners);
+  return results;
+}
+
+/**
+ * Enrich channels with health status.
+ */
+export async function enrichChannelsWithHealth(
+  channels: LiveChannel[],
+  options?: { force?: boolean }
+): Promise<LiveChannel[]> {
+  const now = Date.now();
+  const force = options?.force === true;
+
+  const needsProbe = channels.filter((ch) => {
+    if (force) return true;
+    const cached = healthCache[ch.channelId];
+    return !cached || now - cached.checkedAt >= CACHE_TTL_MS;
+  });
+
+  if (needsProbe.length > 0) {
+    await mapPool(needsProbe, CONCURRENCY, async (ch) => {
+      const health = await probeStream(ch.url || ch.streamUrl);
+      healthCache[ch.channelId] = { health, checkedAt: Date.now() };
+      return health;
+    });
+    saveHealthCache(healthCache);
+  }
+
+  return channels.map((ch) => {
+    const entry = healthCache[ch.channelId];
+    return {
+      ...ch,
+      health: entry?.health ?? "unknown",
+      healthCheckedAt: entry?.checkedAt,
+    };
+  });
+}
+
+/** Drop offline channels */
+export function filterHealthyChannels(
+  channels: LiveChannel[],
+  hideOffline = HIDE_OFFLINE_BY_DEFAULT
+): LiveChannel[] {
+  if (!hideOffline) return channels;
+  return channels.filter((ch) => ch.health !== "offline");
+}
+
+export interface CatalogHealthStats {
+  total: number;
+  online: number;
+  offline: number;
+  unknown: number;
+  checking: number;
+}
+
+export function getCatalogHealthStats(
+  channels: LiveChannel[]
+): CatalogHealthStats {
+  const stats: CatalogHealthStats = {
+    total: channels.length,
+    online: 0,
+    offline: 0,
+    unknown: 0,
+    checking: 0,
+  };
+  for (const ch of channels) {
+    switch (ch.health) {
+      case "online":
+        stats.online++;
+        break;
+      case "offline":
+        stats.offline++;
+        break;
+      case "checking":
+        stats.checking++;
+        break;
+      default:
+        stats.unknown++;
+    }
+  }
+  return stats;
+}
+
+// ——— Catalog API Exports ———
+
+export async function fetchLiveCategories(): Promise<string[]> {
+  const categories = new Set<string>();
+  for (const service of liveFeedServices) {
+    if (service.groupTitle) categories.add(service.groupTitle);
+  }
+  return ["All", ...Array.from(categories).sort((a, b) => a.localeCompare(b))];
+}
+
+function toLiveChannel(s: LiveFeedService): LiveChannel {
+  return {
     ...s,
     streamUrl: s.url,
     title: s.name,
-  }));
+    health: "checking",
+  };
+}
+
+export async function fetchChannelsByCategory(
+  category: string,
+  options?: { probe?: boolean; hideOffline?: boolean; forceProbe?: boolean }
+): Promise<LiveChannel[]> {
+  const probe = options?.probe !== false;
+  const hideOffline = options?.hideOffline ?? HIDE_OFFLINE_BY_DEFAULT;
+
+  const filtered =
+    !category || category === "All"
+      ? liveFeedServices
+      : liveFeedServices.filter(
+          (service) =>
+            service.groupTitle.toLowerCase() === category.toLowerCase()
+        );
+
+  let channels = filtered.map(toLiveChannel);
+
+  if (probe) {
+    channels = await enrichChannelsWithHealth(channels, {
+      force: options?.forceProbe,
+    });
+    channels = filterHealthyChannels(channels, hideOffline);
+  }
+
+  channels.sort((a, b) => {
+    const na = a.channelNumber ?? 9999;
+    const nb = b.channelNumber ?? 9999;
+    if (na !== nb) return na - nb;
+    return a.name.localeCompare(b.name);
+  });
+
+  return channels;
+}
+
+export async function fetchAllChannels(options?: {
+  probe?: boolean;
+  hideOffline?: boolean;
+  forceProbe?: boolean;
+}): Promise<LiveChannel[]> {
+  const probe = options?.probe !== false;
+  const hideOffline = options?.hideOffline ?? HIDE_OFFLINE_BY_DEFAULT;
+
+  let channels = liveFeedServices.map(toLiveChannel);
+  if (probe) {
+    channels = await enrichChannelsWithHealth(channels, {
+      force: options?.forceProbe,
+    });
+    channels = filterHealthyChannels(channels, hideOffline);
+  }
+  return channels;
+}
+
+export async function refreshLiveHealth(): Promise<Record<string, "online" | "offline">> {
+  const allChannels = liveFeedServices.map(toLiveChannel);
+  const enriched = await enrichChannelsWithHealth(allChannels, { force: true });
+  
+  const healthResults: Record<string, "online" | "offline"> = {};
+  for (const ch of enriched) {
+    healthResults[ch.channelId] = ch.health === "offline" ? "offline" : "online";
+  }
+  return healthResults;
+}
+
+export function clearLiveHealthCache() {
+  healthCache = {};
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(HEALTH_CACHE_KEY);
+  }
 }
