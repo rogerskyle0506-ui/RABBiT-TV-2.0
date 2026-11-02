@@ -47,6 +47,7 @@ jobs:
 
       - name: Use HeaderFamily.jpg for TV Banner & Validate Assets
         run: |
+          pip install Pillow
           python3 -c "
           import os
           from PIL import Image, ImageDraw
