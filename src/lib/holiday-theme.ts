@@ -8,13 +8,13 @@ export function getActiveHoliday(date: Date = new Date()): Holiday {
   const month = date.getMonth() + 1; // 1–12
   const day = date.getDate();
 
-  // Halloween: Oct 25 – Nov 2
-  if ((month === 10 && day >= 25) || (month === 11 && day <= 2)) {
+  // Halloween: Oct 20 – Oct 31
+  if ((month === 10 && day >= 20) || (month === 10 && day <= 31)) {
     return "halloween";
   }
 
-  // Christmas: Dec 15 – Jan 2
-  if ((month === 12 && day >= 15) || (month === 1 && day <= 2)) {
+  // Christmas: Dec 15 – Dec 31
+  if ((month === 12 && day >= 15) || (month === 12 && day <= 31)) {
     return "christmas";
   }
 
