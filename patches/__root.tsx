@@ -689,24 +689,6 @@ function RootComponent() {
     }
   };
 
-  const getOuterPanelBackground = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-red-950/80 border-red-500/20 shadow-red-950/40";
-      case "midnight":
-        return "bg-blue-950/80 border-blue-500/20 shadow-blue-950/40";
-      case "emerald":
-        return "bg-emerald-950/80 border-emerald-500/20 shadow-emerald-950/40";
-      case "amber":
-        return "bg-yellow-950/80 border-amber-500/20 shadow-yellow-950/40";
-      case "cyan":
-        return "bg-cyan-950/80 border-cyan-500/20 shadow-cyan-950/40";
-      case "violet":
-      default:
-        return "bg-purple-950/80 border-violet-500/20 shadow-purple-950/40";
-    }
-  };
-
   const getThemeHeaderStyles = (theme: AppTheme) => {
     switch (theme) {
       case "red":
@@ -781,6 +763,24 @@ function RootComponent() {
     }
   };
 
+  const getThemeGlowClass = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "border-red-500/60 shadow-[0_0_20px_rgba(239,68,68,0.6)]";
+      case "midnight":
+        return "border-blue-500/60 shadow-[0_0_20px_rgba(59,130,246,0.6)]";
+      case "emerald":
+        return "border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.6)]";
+      case "amber":
+        return "border-amber-500/60 shadow-[0_0_20px_rgba(245,158,11,0.6)]";
+      case "cyan":
+        return "border-cyan-500/60 shadow-[0_0_20px_rgba(6,182,212,0.6)]";
+      case "violet":
+      default:
+        return "border-violet-500/60 shadow-[0_0_20px_rgba(139,92,246,0.6)]";
+    }
+  };
+
   const getSubtlePillBg = (theme: AppTheme) => {
     switch (theme) {
       case "red":
@@ -827,19 +827,20 @@ function RootComponent() {
         <HolidayOverlay />
         <AuthProvider>
           <header
-            className={`sticky top-0 z-40 border-b border-white/10 ${getOuterPanelBackground(appTheme)} backdrop-blur-md transition-colors duration-300`}
+            className="sticky top-0 z-40 border-b border-white/15 backdrop-blur-md transition-colors duration-300 relative overflow-hidden"
+            style={{
+              backgroundImage: `url(${HOSTED_ICON_URL})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
           >
-            <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2 sm:px-6 gap-2">
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-md pointer-events-none" />
+            <div className="relative z-10 mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2 sm:px-6 gap-2">
               <div className="flex items-center justify-between sm:justify-start gap-2">
                 <Link
                   to="/"
-                  className="flex items-center gap-2 text-sm sm:text-xl font-black tracking-wider text-white focus:outline-none shrink-0 group"
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                 >
-                  <img
-                    src={HOSTED_ICON_URL}
-                    alt="RABBiT TV Icon"
-                    className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl object-cover border border-red-500/30 shadow-lg transition-transform group-hover:scale-105 shrink-0"
-                  />
                   <span className="whitespace-nowrap">RABBiT TV</span>
                 </Link>
 
