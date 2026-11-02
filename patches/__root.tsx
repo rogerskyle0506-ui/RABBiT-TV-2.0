@@ -678,6 +678,24 @@ function RootComponent() {
     }
   };
 
+  const getHeaderThemeBg = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "bg-red-950/50 backdrop-blur-md";
+      case "midnight":
+        return "bg-blue-950/50 backdrop-blur-md";
+      case "emerald":
+        return "bg-emerald-950/50 backdrop-blur-md";
+      case "amber":
+        return "bg-yellow-950/50 backdrop-blur-md";
+      case "cyan":
+        return "bg-cyan-950/50 backdrop-blur-md";
+      case "violet":
+      default:
+        return "bg-purple-950/50 backdrop-blur-md";
+    }
+  };
+
   const getCardBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
@@ -834,15 +852,14 @@ function RootComponent() {
         <HolidayOverlay />
         <AppWallpaper />
         <AuthProvider>
-          <header className="sticky top-0 z-40 border-b border-white/15 transition-colors duration-300 relative overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none">
+          <header className={`sticky top-0 z-40 border-b border-white/15 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)}`}>
+            <div className="absolute inset-0 pointer-events-none opacity-25">
               <img
                 src={HEADER_ICON_URL}
                 alt="Header Background"
-                className="w-full h-full object-fill brightness-90"
+                className="w-full h-full object-fill"
               />
             </div>
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
 
             <div className="relative z-10 mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2 sm:px-6 gap-2">
               <div className="flex items-center justify-between sm:justify-start gap-2">
