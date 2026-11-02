@@ -8,6 +8,9 @@ export type MediaItem = {
   year?: string;
   rating?: string;
   mediaType?: "movie" | "tv";
+  releaseDate?: string;
+  genreIds?: number[];
+  certification?: string;
 };
 
 export type ScrapeResult = {
@@ -24,7 +27,7 @@ const TMDB_API_KEY =
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
-const STORAGE_PREFIX = "rabtv_catalog_cache_v16_"; // Incremented cache version
+const STORAGE_PREFIX = "rabtv_catalog_cache_v17_";
 const ITEMS_PER_PAGE = 20;
 
 let lastRequestTimestamp = 0;
@@ -92,10 +95,13 @@ const genreNameToId: Record<string, number> = {
   western: 37,
 };
 
+// Official TMDB Watch Provider IDs for Canada (watch_region=CA)
 const providerIdMap: Record<string, string> = {
   Netflix: "8",
   Prime: "119",
+  "Prime Video": "119",
   "Disney+": "337",
+  Disney: "337",
 };
 
 function getGenreName(genreIds: number[]): string {
@@ -113,8 +119,7 @@ function mapTmdbItemToMediaItem(
 
   const releaseDate = (item.release_date || item.first_air_date || "") as string;
 
-  // 🛑 UNIVERSAL RELEASE DATE SCRUBBER (Applies globally to Home, Netflix, Prime, Disney+, Search, etc.)
-  // If a release date is slated more than 30 days into the future, return null so it is discarded everywhere.
+  // 🛑 UNIVERSAL RELEASE DATE SCRUBBER (Discard titles > 30 days into the future)
   if (releaseDate) {
     const releaseTime = new Date(releaseDate).getTime();
     const maxAllowedTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
@@ -147,10 +152,16 @@ function mapTmdbItemToMediaItem(
     year: year || undefined,
     rating: rating !== "N/A" ? rating : undefined,
     mediaType,
+    releaseDate,
+    genreIds: (item.genre_ids as number[]) || [],
   };
 }
 
-async function fetchTmdb(endpoint: string, page = 1, extraParams: Record<string, string> = {}): Promise<Record<string, unknown>> {
+async function fetchTmdb(
+  endpoint: string,
+  page = 1,
+  extraParams: Record<string, string> = {}
+): Promise<Record<string, unknown>> {
   await throttleRequest();
 
   const url = new URL(endpoint, TMDB_BASE_URL);
@@ -214,16 +225,19 @@ export async function scrapeCategoryContent(
         const nextApiPage = maxApiPageReached + 1;
         const batch: MediaItem[] = [];
 
-        const providerId = providerIdMap[category];
+        // Check if category is a provider (Netflix, Prime, Disney+) or set via subFeed
+        const providerId = providerIdMap[category] || (cleanSubFeed ? providerIdMap[cleanSubFeed] : undefined);
         const genreId = genreFilter && genreFilter !== "Trending" ? genreNameToId[genreFilter.toLowerCase()] : null;
+        
         const isTvTab = category === "Series" || category === "TV Shows";
+        const isMovieTab = category === "Movies";
         const isInTheaters = category === "In Theaters";
 
         const discoverParams: Record<string, string> = {
           sort_by: "popularity.desc",
         };
 
-        if (cleanSubFeed) {
+        if (cleanSubFeed && !providerIdMap[cleanSubFeed]) {
           if (cleanSubFeed === "Russian") {
             discoverParams.with_original_language = "ru";
           } else if (cleanSubFeed === "British") {
@@ -241,9 +255,11 @@ export async function scrapeCategoryContent(
           discoverParams.with_genres = genreId.toString();
         }
 
-        if (providerId) {
+        // Apply provider filtering with CA watch region if provider is selected (ignored for In Theaters)
+        if (providerId && !isInTheaters) {
           discoverParams.with_watch_providers = providerId;
           discoverParams.watch_region = "CA";
+          discoverParams.with_watch_monetization_types = "flatrate";
         }
 
         let endpoint = isTvTab ? "discover/tv" : "discover/movie";
@@ -252,11 +268,11 @@ export async function scrapeCategoryContent(
           endpoint = "movie/now_playing";
         }
 
-        if (providerId || cleanSubFeed || isInTheaters) {
+        if (providerId || cleanSubFeed || isInTheaters || isMovieTab || isTvTab) {
           let data = await fetchTmdb(endpoint, nextApiPage, discoverParams);
           let results = (data.results as Record<string, unknown>[]) || [];
 
-          if (results.length === 0 && genreId && cleanSubFeed && !isInTheaters) {
+          if (results.length === 0 && genreId && !isInTheaters) {
             delete discoverParams.with_genres;
             data = await fetchTmdb(endpoint, nextApiPage, discoverParams);
             results = (data.results as Record<string, unknown>[]) || [];
@@ -268,7 +284,8 @@ export async function scrapeCategoryContent(
             if (mapped) batch.push(mapped);
           });
 
-          if (category === "Home" && !isTvTab && !isInTheaters) {
+          // If on Home tab with a provider active, fetch both Movies & TV Shows
+          if (category === "Home" && !isTvTab && !isMovieTab && !isInTheaters) {
             const tvData = await fetchTmdb("discover/tv", nextApiPage, discoverParams);
             const tvResults = (tvData.results as Record<string, unknown>[]) || [];
             tvResults.forEach((item) => {
@@ -298,7 +315,11 @@ export async function scrapeCategoryContent(
           });
         } else {
           let standardEndpoint = isTvTab ? "tv/popular" : "movie/popular";
-          let data = await fetchTmdb(standardEndpoint, nextApiPage, genreId ? { with_genres: genreId.toString() } : {});
+          let data = await fetchTmdb(
+            standardEndpoint,
+            nextApiPage,
+            genreId ? { with_genres: genreId.toString() } : {}
+          );
           let results = (data.results as Record<string, unknown>[]) || [];
 
           if (results.length === 0 && genreId) {
@@ -329,6 +350,7 @@ export async function scrapeCategoryContent(
 
       if (catalogItems.length < requiredItemsCount) {
         try {
+          const isTvTab = category === "Series" || category === "TV Shows";
           const fallbackEndpoint = isTvTab ? "tv/popular" : "movie/popular";
           const fallbackData = await fetchTmdb(fallbackEndpoint, 1);
           const fallbackResults = (fallbackData.results as Record<string, unknown>[]) || [];
