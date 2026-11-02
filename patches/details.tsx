@@ -21,7 +21,6 @@ export const Route = createFileRoute("/details")({
 export function DetailsPage() {
   const search = Route.useSearch();
 
-  // Robustly infer media type and clean ID from search parameters
   const rawId = String(search.id || "").trim();
   const inferredType: "tv" | "movie" | null = rawId.toLowerCase().startsWith("tv-")
     ? "tv"
@@ -61,7 +60,6 @@ export function DetailsPage() {
   const episodeRef = useRef<HTMLDivElement>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
 
-  // Reset when navigating to a different title
   useEffect(() => {
     setMediaType(urlType);
     setIsPlaying(false);
@@ -164,15 +162,22 @@ export function DetailsPage() {
     fetchSeasonEpisodes();
   }, [season, mediaId, mediaType]);
 
+  // More transparent backgrounds so wallpaper shows through
   const getPageBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-[#120202]/85";
+        return "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80";
       case "midnight":
-        return "bg-[#020617]/85";
+        return "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80";
+      case "emerald":
+        return "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80";
+      case "amber":
+        return "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80";
+      case "cyan":
+        return "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80";
       case "violet":
       default:
-        return "bg-[#050b16]/85";
+        return "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80";
     }
   };
 
@@ -534,9 +539,10 @@ export function DetailsPage() {
   if (loading) {
     return (
       <div
-        className={`flex min-h-screen items-center justify-center ${getPageBackground(appTheme)} text-white`}
+        className={`flex min-h-screen items-center justify-center ${getPageBackground(appTheme)} text-white relative`}
       >
-        <p className={`text-xl font-medium animate-pulse ${activeTheme.text}`}>
+        <AppWallpaper />
+        <p className={`text-xl font-medium animate-pulse ${activeTheme.text} relative z-10`}>
           Loading title details...
         </p>
       </div>
@@ -577,245 +583,41 @@ export function DetailsPage() {
       className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative`}
     >
       <AppWallpaper />
-      <Link
-        className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
-        to="/"
-      >
-        ← Back to Home
-      </Link>
+      <div className="relative z-10">
+        <Link
+          className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
+          to="/"
+        >
+          ← Back to Home
+        </Link>
 
-      {isPlaying ? (
-        <div className="mx-auto flex max-w-5xl flex-col gap-6">
-          {inferredMediaType === "tv" && (
-            <div
-              className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}
-            >
-              <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
-                <div className="relative" ref={seasonRef}>
-                  <span className="block text-xs text-slate-400 mb-1">Season</span>
-                  <button
-                    type="button"
-                    onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                    className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                  >
-                    <span>
-                      {currentSeasonObj
-                        ? currentSeasonObj.name
-                        : `Season ${season}`}
-                    </span>
-                    <span>▾</span>
-                  </button>
-                  {isSeasonOpen && (
-                    <div
-                      className={`absolute left-0 mt-2 z-50 max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
-                    >
-                      {mediaDetails?.seasons
-                        ?.filter((s: any) => s.season_number > 0)
-                        .map((s: any) => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => {
-                              setSeason(s.season_number);
-                              setEpisode(1);
-                              setIsSeasonOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                              season === s.season_number
-                                ? `${activeTheme.bg} text-white font-bold`
-                                : "text-slate-200 hover:bg-white/10"
-                            }`}
-                          >
-                            {s.name} ({s.episode_count} Eps)
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative" ref={episodeRef}>
-                  <span className="block text-xs text-slate-400 mb-1">
-                    Episode
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                    className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                  >
-                    <span>
-                      {currentEpisodeObj
-                        ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
-                        : `Episode ${episode}`}
-                    </span>
-                    <span>▾</span>
-                  </button>
-                  {isEpisodeOpen && (
-                    <div
-                      className={`absolute left-0 mt-2 z-50 max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
-                    >
-                      {seasonEpisodes.length > 0 ? (
-                        seasonEpisodes.map((ep: any) => (
-                          <button
-                            key={ep.id}
-                            type="button"
-                            onClick={() => {
-                              setEpisode(ep.episode_number);
-                              setIsEpisodeOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                              episode === ep.episode_number
-                                ? `${activeTheme.bg} text-white font-bold`
-                                : "text-slate-200 hover:bg-white/10"
-                            }`}
-                          >
-                            Ep {ep.episode_number}: {ep.name}
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-3 py-2 text-sm text-slate-400">
-                          Loading episodes...
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setEpisode((prev) => Math.max(1, prev - 1))}
-                  disabled={episode <= 1}
-                  className={`rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:opacity-40 focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                >
-                  ◀ Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEpisode((prev) => prev + 1)}
-                  className={`rounded-xl ${activeTheme.bg} px-4 py-2 text-xs font-semibold text-white shadow transition ${activeTheme.hoverBg} focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                >
-                  Next Episode ▶
-                </button>
-                <label className="ml-2 flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoPlayNext}
-                    onChange={(e) => setAutoPlayNext(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-violet-600 focus:ring-violet-500 focus:outline-none"
-                  />
-                  Autoplay Next
-                </label>
-              </div>
-            </div>
-          )}
-
-          <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
-            <iframe
-              key={`stable-player-${mediaId}-${season}-${episode}`}
-              srcDoc={`
-                <!DOCTYPE html>
-                <html>
-                  <head>
-                    <style>
-                      body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
-                      iframe { width: 100%; height: 100%; border: none; }
-                    </style>
-                    <script>
-                      window.open = function() { console.log("Blocked timed popup injection"); return null; };
-                      window.alert = function() {};
-                      window.confirm = function() { return true; };
-                    </script>
-                  </head>
-                  <body>
-                    <iframe 
-                      src="${embedUrl}" 
-                      allowfullscreen 
-                      allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
-                    ></iframe>
-                  </body>
-                </html>
-              `}
-              className="h-full w-full border-0"
-              allowFullScreen
-              allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
-            ></iframe>
-          </div>
-
-          <div
-            className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}
-          >
-            <h1 className="text-2xl font-bold text-white">{title}</h1>
-            <p className="text-sm leading-relaxed text-slate-300">{overview}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="mx-auto flex max-w-5xl flex-col gap-8">
-          <div className="flex flex-col gap-8 md:flex-row md:items-start">
-            <img
-              src={poster}
-              alt={title}
-              className="h-[450px] w-[300px] rounded-2xl object-cover shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start"
-            />
-
-            <div className="flex flex-col justify-center gap-4 flex-1">
-              <span
-                className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
+        {isPlaying ? (
+          <div className="mx-auto flex max-w-5xl flex-col gap-6">
+            {inferredMediaType === "tv" && (
+              <div
+                className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}
               >
-                {genres}
-              </span>
-
-              <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
-                {title}
-              </h1>
-
-              <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
-                {rating !== "N/A" && (
-                  <span className="flex items-center gap-1 font-bold text-yellow-300">
-                    ⭐ {rating}
-                  </span>
-                )}
-                {releaseYear && <span>{releaseYear}</span>}
-                {originalLanguageName && (
-                  <span className="font-medium text-slate-200">
-                    {originalLanguageName}
-                  </span>
-                )}
-                <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
-                  {inferredMediaType}
-                </span>
-              </div>
-
-              <p className="max-w-2xl text-base leading-relaxed text-slate-300">
-                {overview}
-              </p>
-
-              {inferredMediaType === "tv" && mediaDetails?.seasons && (
-                <div
-                  className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
-                >
+                <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
                   <div className="relative" ref={seasonRef}>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                      Select Season
-                    </label>
+                    <span className="block text-xs text-slate-400 mb-1">Season</span>
                     <button
                       type="button"
                       onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                      className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                     >
                       <span>
                         {currentSeasonObj
-                          ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
+                          ? currentSeasonObj.name
                           : `Season ${season}`}
                       </span>
                       <span>▾</span>
                     </button>
                     {isSeasonOpen && (
                       <div
-                        className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        className={`absolute left-0 mt-2 z-50 max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
                       >
-                        {mediaDetails.seasons
-                          .filter((s: any) => s.season_number > 0)
+                        {mediaDetails?.seasons
+                          ?.filter((s: any) => s.season_number > 0)
                           .map((s: any) => (
                             <button
                               key={s.id}
@@ -831,7 +633,7 @@ export function DetailsPage() {
                                   : "text-slate-200 hover:bg-white/10"
                               }`}
                             >
-                              {s.name} ({s.episode_count} Episodes)
+                              {s.name} ({s.episode_count} Eps)
                             </button>
                           ))}
                       </div>
@@ -839,13 +641,13 @@ export function DetailsPage() {
                   </div>
 
                   <div className="relative" ref={episodeRef}>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                      Select Episode
-                    </label>
+                    <span className="block text-xs text-slate-400 mb-1">
+                      Episode
+                    </span>
                     <button
                       type="button"
                       onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                      className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                     >
                       <span>
                         {currentEpisodeObj
@@ -856,7 +658,7 @@ export function DetailsPage() {
                     </button>
                     {isEpisodeOpen && (
                       <div
-                        className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        className={`absolute left-0 mt-2 z-50 max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
                       >
                         {seasonEpisodes.length > 0 ? (
                           seasonEpisodes.map((ep: any) => (
@@ -885,108 +687,314 @@ export function DetailsPage() {
                     )}
                   </div>
                 </div>
-              )}
 
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handlePlay}
-                  className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
-                >
-                  ▶ Play{" "}
-                  {inferredMediaType === "tv"
-                    ? `S${season}:E${episode}`
-                    : "Movie"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={toggleMyList}
-                  className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} ${
-                    inMyList
-                      ? `${activeTheme.border} bg-white/10 ${activeTheme.text}`
-                      : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
-                  }`}
-                >
-                  {inMyList ? "✓ In My List" : "🔖 + Save to My List"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={toggleFavorites}
-                  className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 ${
-                    inFavorites
-                      ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
-                      : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
-                  }`}
-                >
-                  {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleReportBroken}
-                  className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500"
-                  title="Report link as broken and hide globally"
-                >
-                  ⚠️ Report Broken
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEpisode((prev) => Math.max(1, prev - 1))}
+                    disabled={episode <= 1}
+                    className={`rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:opacity-40 focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  >
+                    ◀ Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEpisode((prev) => prev + 1)}
+                    className={`rounded-xl ${activeTheme.bg} px-4 py-2 text-xs font-semibold text-white shadow transition ${activeTheme.hoverBg} focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  >
+                    Next Episode ▶
+                  </button>
+                  <label className="ml-2 flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={autoPlayNext}
+                      onChange={(e) => setAutoPlayNext(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-violet-600 focus:ring-violet-500 focus:outline-none"
+                    />
+                    Autoplay Next
+                  </label>
+                </div>
               </div>
+            )}
 
-              {actionFeedback && (
-                <p
-                  className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}
-                >
-                  {actionFeedback}
-                </p>
-              )}
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
+              <iframe
+                key={`stable-player-${mediaId}-${season}-${episode}`}
+                srcDoc={`
+                  <!DOCTYPE html>
+                  <html>
+                    <head>
+                      <style>
+                        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+                        iframe { width: 100%; height: 100%; border: none; }
+                      </style>
+                      <script>
+                        window.open = function() { console.log("Blocked timed popup injection"); return null; };
+                        window.alert = function() {};
+                        window.confirm = function() { return true; };
+                      </script>
+                    </head>
+                    <body>
+                      <iframe 
+                        src="${embedUrl}" 
+                        allowfullscreen 
+                        allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
+                      ></iframe>
+                    </body>
+                  </html>
+                `}
+                className="h-full w-full border-0"
+                allowFullScreen
+                allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
+              ></iframe>
             </div>
-          </div>
 
-          {mappedRecommendations.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <span>✨ Similar Recommendations</span>
-              </h2>
-              <div className={gridColsClass}>
-                {mappedRecommendations.slice(0, 12).map((item) => (
-                  <MediaCard item={item} key={item.id} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {canScrollDown && showScrollReminder && (
-        <div
-          className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
-          onAnimationEnd={() => setShowScrollReminder(false)}
-        >
-          <style>{`
-            @keyframes flashTwice {
-              0% { opacity: 0; }
-              25% { opacity: 1; }
-              50% { opacity: 0; }
-              75% { opacity: 1; }
-              100% { opacity: 0; }
-            }
-            .animate-flash-twice {
-              animation: flashTwice 8s ease-in-out forwards;
-            }
-          `}</style>
-          <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
-              More Content Details
-            </span>
-            <span
-              className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}
+            <div
+              className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}
             >
-              ⌄
-            </span>
+              <h1 className="text-2xl font-bold text-white">{title}</h1>
+              <p className="text-sm leading-relaxed text-slate-300">{overview}</p>
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="mx-auto flex max-w-5xl flex-col gap-8">
+            <div className="flex flex-col gap-8 md:flex-row md:items-start">
+              <img
+                src={poster}
+                alt={title}
+                className="h-[450px] w-[300px] rounded-2xl object-cover shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start"
+              />
+
+              <div className="flex flex-col justify-center gap-4 flex-1">
+                <span
+                  className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
+                >
+                  {genres}
+                </span>
+
+                <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+                  {title}
+                </h1>
+
+                <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
+                  {rating !== "N/A" && (
+                    <span className="flex items-center gap-1 font-bold text-yellow-300">
+                      ⭐ {rating}
+                    </span>
+                  )}
+                  {releaseYear && <span>{releaseYear}</span>}
+                  {originalLanguageName && (
+                    <span className="font-medium text-slate-200">
+                      {originalLanguageName}
+                    </span>
+                  )}
+                  <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
+                    {inferredMediaType}
+                  </span>
+                </div>
+
+                <p className="max-w-2xl text-base leading-relaxed text-slate-300">
+                  {overview}
+                </p>
+
+                {inferredMediaType === "tv" && mediaDetails?.seasons && (
+                  <div
+                    className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
+                  >
+                    <div className="relative" ref={seasonRef}>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                        Select Season
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsSeasonOpen(!isSeasonOpen)}
+                        className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      >
+                        <span>
+                          {currentSeasonObj
+                            ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
+                            : `Season ${season}`}
+                        </span>
+                        <span>▾</span>
+                      </button>
+                      {isSeasonOpen && (
+                        <div
+                          className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        >
+                          {mediaDetails.seasons
+                            .filter((s: any) => s.season_number > 0)
+                            .map((s: any) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                  setSeason(s.season_number);
+                                  setEpisode(1);
+                                  setIsSeasonOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                  season === s.season_number
+                                    ? `${activeTheme.bg} text-white font-bold`
+                                    : "text-slate-200 hover:bg-white/10"
+                                }`}
+                              >
+                                {s.name} ({s.episode_count} Episodes)
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="relative" ref={episodeRef}>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                        Select Episode
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
+                        className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      >
+                        <span>
+                          {currentEpisodeObj
+                            ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
+                            : `Episode ${episode}`}
+                        </span>
+                        <span>▾</span>
+                      </button>
+                      {isEpisodeOpen && (
+                        <div
+                          className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        >
+                          {seasonEpisodes.length > 0 ? (
+                            seasonEpisodes.map((ep: any) => (
+                              <button
+                                key={ep.id}
+                                type="button"
+                                onClick={() => {
+                                  setEpisode(ep.episode_number);
+                                  setIsEpisodeOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                  episode === ep.episode_number
+                                    ? `${activeTheme.bg} text-white font-bold`
+                                    : "text-slate-200 hover:bg-white/10"
+                                }`}
+                              >
+                                Ep {ep.episode_number}: {ep.name}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-slate-400">
+                              Loading episodes...
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handlePlay}
+                    className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
+                  >
+                    ▶ Play{" "}
+                    {inferredMediaType === "tv"
+                      ? `S${season}:E${episode}`
+                      : "Movie"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleMyList}
+                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} ${
+                      inMyList
+                        ? `${activeTheme.border} bg-white/10 ${activeTheme.text}`
+                        : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                    }`}
+                  >
+                    {inMyList ? "✓ In My List" : "🔖 + Save to My List"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleFavorites}
+                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 ${
+                      inFavorites
+                        ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
+                        : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                    }`}
+                  >
+                    {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleReportBroken}
+                    className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500"
+                    title="Report link as broken and hide globally"
+                  >
+                    ⚠️ Report Broken
+                  </button>
+                </div>
+
+                {actionFeedback && (
+                  <p
+                    className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}
+                  >
+                    {actionFeedback}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {mappedRecommendations.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>✨ Similar Recommendations</span>
+                </h2>
+                <div className={gridColsClass}>
+                  {mappedRecommendations.slice(0, 12).map((item) => (
+                    <MediaCard item={item} key={item.id} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {canScrollDown && showScrollReminder && (
+          <div
+            className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
+            onAnimationEnd={() => setShowScrollReminder(false)}
+          >
+            <style>{`
+              @keyframes flashTwice {
+                0% { opacity: 0; }
+                25% { opacity: 1; }
+                50% { opacity: 0; }
+                75% { opacity: 1; }
+                100% { opacity: 0; }
+              }
+              .animate-flash-twice {
+                animation: flashTwice 8s ease-in-out forwards;
+              }
+            `}</style>
+            <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
+                More Content Details
+              </span>
+              <span
+                className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}
+              >
+                ⌄
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
