@@ -7,91 +7,73 @@ export const CARD_SIZE_KEY = "rabtv_card_size";
 export const STREAM_QUALITY_KEY = "rabtv_stream_quality";
 export const THEME_KEY = "rabtv_app_theme";
 export const HELPFUL_MOUSE_KEY = "rabtv_helpful_mouse";
-export const WALLPAPER_URL_KEY = "rabtv_wallpaper_url";
-export const DEFAULT_WALLPAPER_URL = "https://i.postimg.cc/y6r1Fv8k/grok-image-1793587579614.jpg";
 
-export const THEME_PRESETS: Record<
+export const THEME_OPTIONS: AppTheme[] = [
+  "violet",
+  "red",
+  "midnight",
+  "emerald",
+  "amber",
+  "cyan",
+];
+
+export const APP_THEME_STYLES: Record<
   AppTheme,
   {
-    background: string;
-    panel: string;
+    bg: string;
+    card: string;
     accent: string;
-    primaryButton: string;
+    border: string;
     glow: string;
   }
 > = {
   violet: {
-    background: "#050b16",
-    panel: "#090e1f",
-    accent: "#a855f7",
-    primaryButton: "bg-violet-600 hover:bg-violet-500 shadow-violet-600/40",
+    bg: "bg-gradient-to-br from-slate-950 via-violet-950/40 to-slate-950",
+    card: "from-violet-950/80 via-slate-900 to-indigo-950/80",
+    accent: "text-violet-300",
+    border: "border-violet-500/30",
     glow: "shadow-violet-600/30",
   },
   red: {
-    background: "#120202",
-    panel: "#160404",
-    accent: "#f87171",
-    primaryButton: "bg-red-600 hover:bg-red-500 shadow-red-600/40",
+    bg: "bg-gradient-to-br from-zinc-950 via-red-950/40 to-black",
+    card: "from-red-950/80 via-zinc-900 to-neutral-950",
+    accent: "text-red-400",
+    border: "border-red-500/30",
     glow: "shadow-red-600/30",
   },
   midnight: {
-    background: "#020617",
-    panel: "#03091e",
-    accent: "#60a5fa",
-    primaryButton: "bg-blue-600 hover:bg-blue-500 shadow-blue-600/40",
+    bg: "bg-gradient-to-br from-slate-950 via-blue-950/40 to-slate-950",
+    card: "from-blue-950/80 via-slate-900 to-sky-950/80",
+    accent: "text-sky-300",
+    border: "border-blue-500/30",
     glow: "shadow-blue-600/30",
   },
   emerald: {
-    background: "#02140d",
-    panel: "#031b13",
-    accent: "#34d399",
-    primaryButton: "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/40",
+    bg: "bg-gradient-to-br from-slate-950 via-emerald-950/40 to-slate-950",
+    card: "from-emerald-950/80 via-slate-900 to-teal-950/80",
+    accent: "text-emerald-300",
+    border: "border-emerald-500/30",
     glow: "shadow-emerald-600/30",
   },
   amber: {
-    background: "#1b1204",
-    panel: "#221507",
-    accent: "#fbbf24",
-    primaryButton: "bg-amber-500 hover:bg-amber-400 shadow-amber-600/40",
+    bg: "bg-gradient-to-br from-stone-950 via-yellow-950/40 to-neutral-950",
+    card: "from-yellow-950/80 via-stone-900 to-amber-950/80",
+    accent: "text-amber-300",
+    border: "border-amber-500/30",
     glow: "shadow-amber-600/30",
   },
   cyan: {
-    background: "#021417",
-    panel: "#031d20",
-    accent: "#67e8f9",
-    primaryButton: "bg-cyan-600 hover:bg-cyan-500 shadow-cyan-600/40",
+    bg: "bg-gradient-to-br from-slate-950 via-cyan-950/40 to-slate-950",
+    card: "from-cyan-950/80 via-slate-900 to-blue-950/80",
+    accent: "text-cyan-300",
+    border: "border-cyan-500/30",
     glow: "shadow-cyan-600/30",
   },
 };
 
-export const THEME_OPTIONS: { id: AppTheme; label: string }[] = [
-  { id: "violet", label: "🟣 Violet / Neon" },
-  { id: "red", label: "🔴 Red & Black" },
-  { id: "midnight", label: "🔵 Midnight & Black" },
-  { id: "emerald", label: "🟢 Emerald / Teal" },
-  { id: "amber", label: "🟠 Amber / Gold" },
-  { id: "cyan", label: "🔷 Cyan / Sky" },
-];
-
-const VALID_CARD_SIZES = ["small", "medium", "large"] as const;
-const VALID_STREAM_QUALITIES = ["1080p", "720p", "480p", "auto"] as const;
-
-export function applyThemeToDocument(theme: AppTheme) {
-  if (typeof document === "undefined") return;
-
-  const preset = THEME_PRESETS[theme] ?? THEME_PRESETS.violet;
-  const root = document.documentElement;
-
-  root.dataset.theme = theme;
-  root.style.setProperty("--app-bg", preset.background);
-  root.style.setProperty("--app-panel", preset.panel);
-  root.style.setProperty("--app-accent", preset.accent);
-}
-
 export function getSavedCardSize(): CardSize {
   if (typeof window === "undefined") return "large";
-  const saved = localStorage.getItem(CARD_SIZE_KEY) as CardSize | null;
-  return saved && VALID_CARD_SIZES.includes(saved as (typeof VALID_CARD_SIZES)[number]) ? saved : "large";
+  return (localStorage.getItem(CARD_SIZE_KEY) as CardSize) || "large";
 }
 
 export function saveCardSize(size: CardSize) {
@@ -102,8 +84,7 @@ export function saveCardSize(size: CardSize) {
 
 export function getSavedStreamQuality(): StreamQuality {
   if (typeof window === "undefined") return "1080p";
-  const saved = localStorage.getItem(STREAM_QUALITY_KEY) as StreamQuality | null;
-  return saved && VALID_STREAM_QUALITIES.includes(saved as (typeof VALID_STREAM_QUALITIES)[number]) ? saved : "1080p";
+  return (localStorage.getItem(STREAM_QUALITY_KEY) as StreamQuality) || "1080p";
 }
 
 export function saveStreamQuality(quality: StreamQuality) {
@@ -115,36 +96,18 @@ export function saveStreamQuality(quality: StreamQuality) {
 export function getSavedTheme(): AppTheme {
   if (typeof window === "undefined") return "violet";
   const saved = localStorage.getItem(THEME_KEY) as AppTheme | null;
-  return saved && THEME_PRESETS[saved] ? saved : "violet";
+  return THEME_OPTIONS.includes(saved as AppTheme) ? (saved as AppTheme) : "violet";
 }
 
 export function saveTheme(theme: AppTheme) {
-  if (typeof window === "undefined") return;
-
-  localStorage.setItem(THEME_KEY, theme);
-  applyThemeToDocument(theme);
-}
-
-export function getSavedWallpaperUrl(): string {
-  if (typeof window === "undefined") return DEFAULT_WALLPAPER_URL;
-
-  const saved = localStorage.getItem(WALLPAPER_URL_KEY)?.trim();
-  if (!saved) return DEFAULT_WALLPAPER_URL;
-
-  if (/^(https?:|data:|\/)/i.test(saved)) {
-    return saved;
+  if (typeof window !== "undefined") {
+    localStorage.setItem(THEME_KEY, theme);
+    window.dispatchEvent(new Event("rabtv_settings_updated"));
   }
-
-  return DEFAULT_WALLPAPER_URL;
 }
 
-export function saveWallpaperUrl(url: string) {
-  if (typeof window === "undefined") return;
-
-  const next = url.trim();
-  const resolved = /^(https?:|data:|\/)/i.test(next) ? next : DEFAULT_WALLPAPER_URL;
-  localStorage.setItem(WALLPAPER_URL_KEY, resolved);
-  window.dispatchEvent(new Event("rabtv_settings_updated"));
+export function getThemeStyles(theme: AppTheme = "violet") {
+  return APP_THEME_STYLES[theme] ?? APP_THEME_STYLES.violet;
 }
 
 export function getHelpfulMouse(): boolean {
@@ -159,6 +122,7 @@ export function setHelpfulMouse(enabled: boolean) {
   }
 }
 
+// Helper to get Tailwind CSS width/height classes + responsive container constraints
 export function getPosterDimensions(size: CardSize) {
   switch (size) {
     case "small":
