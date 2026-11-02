@@ -834,7 +834,7 @@ function RootComponent() {
               backgroundPosition: "center",
             }}
           >
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-md pointer-events-none" />
+            <div className="absolute inset-0 bg-black/10 backdrop-blur-md pointer-events-none" />
             <div className="relative z-10 mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2 sm:px-6 gap-2">
               <div className="flex items-center justify-between sm:justify-start gap-2">
                 <Link
