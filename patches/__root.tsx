@@ -1,12 +1,12 @@
-import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";[span_1](start_span)[span_1](end_span)
-import { AuthProvider } from "@/components/auth-provider";[span_2](start_span)[span_2](end_span)
-import { PreviewHostBridge } from "@/components/preview-host-bridge";[span_3](start_span)[span_3](end_span)
-import { HolidayOverlay } from "@/components/HolidayOverlay";[span_4](start_span)[span_4](end_span)
-import { AppWallpaper } from "@/components/AppWallpaper";[span_5](start_span)[span_5](end_span)
-import "@/styles.css";[span_6](start_span)[span_6](end_span)
-import { useState, useEffect, useRef } from "react";[span_7](start_span)[span_7](end_span)
-import { StatusBar, Style } from "@capacitor/status-bar";[span_8](start_span)[span_8](end_span)
-import { sendPermanentActivationAlert } from "@/lib/report";[span_9](start_span)[span_9](end_span)
+import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
+import { AuthProvider } from "@/components/auth-provider";
+import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { HolidayOverlay } from "@/components/HolidayOverlay";
+import { AppWallpaper } from "@/components/AppWallpaper";
+import "@/styles.css";
+import { useState, useEffect, useRef } from "react";
+import { StatusBar, Style } from "@capacitor/status-bar";
+import { sendPermanentActivationAlert } from "@/lib/report";
 import {
   CardSize,
   StreamQuality,
@@ -27,46 +27,29 @@ import {
   setHistoryOverscale,
   getLargeButtons,
   setLargeButtons,
-} from "@/lib/settings";[span_10](start_span)[span_10](end_span)
+  GlobalFeedOption,
+  generateUnlockCode,
+} from "@/lib/settings";
 
-// ——— Unlock algorithm (name + age → 8-digit code) ———
-export function generateUnlockCode(name: string, age: number): string {[span_11](start_span)[span_11](end_span)
-  const clean = name[span_12](start_span)[span_12](end_span)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-  if (!clean || !age || age < 1 || age > 120) return "";[span_13](start_span)[span_13](end_span)
+const ADMIN_NAME = "Rabbit";
+const ADMIN_BIRTH_YEAR = 1988;
 
-  let sum = age * 17;[span_14](start_span)[span_14](end_span)
-  for (let i = 0; i < clean.length; i++) {[span_15](start_span)[span_15](end_span)
-    sum += clean.charCodeAt(i) * (i + 7);
-  }
-  const mixed = (sum * 7919 + age * 997) % 90000000;[span_16](start_span)[span_16](end_span)
-  return String(mixed + 10000000); // always 8 digits[span_17](start_span)[span_17](end_span)
+function getExpectedAdminAge(): number {
+  return new Date().getFullYear() - ADMIN_BIRTH_YEAR;
 }
 
-const ADMIN_NAME = "Rabbit";[span_18](start_span)[span_18](end_span)
-const ADMIN_BIRTH_YEAR = 1988;[span_19](start_span)[span_19](end_span)
-
-function getExpectedAdminAge(): number {[span_20](start_span)[span_20](end_span)
-  return new Date().getFullYear() - ADMIN_BIRTH_YEAR;[span_21](start_span)[span_21](end_span)
+function isAdminCredentials(name: string, age: number): boolean {
+  return name.trim() === ADMIN_NAME && age === getExpectedAdminAge();
 }
 
-function isAdminCredentials(name: string, age: number): boolean {[span_22](start_span)[span_22](end_span)
-  return name.trim() === ADMIN_NAME && age === getExpectedAdminAge();[span_23](start_span)[span_23](end_span)
-}
-
-const TRIAL_CODE = "9654";[span_24](start_span)[span_24](end_span)
-const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;[span_25](start_span)[span_25](end_span)
-const AGE_LOCK_KEY = "rabtv_age_passcode";[span_26](start_span)[span_26](end_span)
-
-const globalFeedOptions = ["All (Default)", "Russian", "British", "Hungarian", "German"] as const;[span_27](start_span)[span_27](end_span)
-export type GlobalFeedOption = (typeof globalFeedOptions)[number];[span_28](start_span)[span_28](end_span)
+const TRIAL_CODE = "9654";
+const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+const AGE_LOCK_KEY = "rabtv_age_passcode";
 
 const HEADER_ICON_URL =
-  "https://avatars.githubusercontent.com/u/330663733?s=400&u=911c6843a369d9d42e99a852c6bf65a49c779b9d&v=4";[span_29](start_span)[span_29](end_span)
+  "https://avatars.githubusercontent.com/u/330663733?s=400&u=911c6843a369d9d42e99a852c6bf65a49c779b9d&v=4";
 
-const themeStatusBarMap: Record<AppTheme, string> = {[span_30](start_span)[span_30](end_span)
+const themeStatusBarMap: Record<AppTheme, string> = {
   violet: "#0f0728",
   red: "#180505",
   midnight: "#050b1a",
@@ -75,104 +58,104 @@ const themeStatusBarMap: Record<AppTheme, string> = {[span_30](start_span)[span_
   cyan: "#021820",
 };
 
-async function updateNativeStatusBar(theme: AppTheme) {[span_31](start_span)[span_31](end_span)
-  if (typeof window === "undefined") return;[span_32](start_span)[span_32](end_span)
+async function updateNativeStatusBar(theme: AppTheme) {
+  if (typeof window === "undefined") return;
   try {
-    const hex = themeStatusBarMap[theme] || "#050b1a";[span_33](start_span)[span_33](end_span)
-    await StatusBar.setBackgroundColor({ color: hex });[span_34](start_span)[span_34](end_span)
-    await StatusBar.setStyle({ style: Style.Dark });[span_35](start_span)[span_35](end_span)
+    const hex = themeStatusBarMap[theme] || "#050b1a";
+    await StatusBar.setBackgroundColor({ color: hex });
+    await StatusBar.setStyle({ style: Style.Dark });
   } catch {
     // ignore
   }
 }
 
-function verifyCurrentAccess(): boolean {[span_36](start_span)[span_36](end_span)
-  if (typeof window === "undefined") return false;[span_37](start_span)[span_37](end_span)
-  const status = localStorage.getItem("rabtv_access_status");[span_38](start_span)[span_38](end_span)
-  if (status === "permanent") return true;[span_39](start_span)[span_39](end_span)
-  if (status === "trial") {[span_40](start_span)[span_40](end_span)
-    const startTime = Number(localStorage.getItem("rabtv_trial_start_timestamp") || 0);[span_41](start_span)[span_41](end_span)
-    if (Date.now() - startTime < TRIAL_DURATION_MS) return true;[span_42](start_span)[span_42](end_span)
-    localStorage.setItem("rabtv_access_status", "expired");[span_43](start_span)[span_43](end_span)
-    return false;[span_44](start_span)[span_44](end_span)
+function verifyCurrentAccess(): boolean {
+  if (typeof window === "undefined") return false;
+  const status = localStorage.getItem("rabtv_access_status");
+  if (status === "permanent") return true;
+  if (status === "trial") {
+    const startTime = Number(localStorage.getItem("rabtv_trial_start_timestamp") || 0);
+    if (Date.now() - startTime < TRIAL_DURATION_MS) return true;
+    localStorage.setItem("rabtv_access_status", "expired");
+    return false;
   }
-  if (localStorage.getItem(DISCLAIMER_ACCEPTED_KEY) === "true") {[span_45](start_span)[span_45](end_span)
-    localStorage.setItem("rabtv_access_status", "permanent");[span_46](start_span)[span_46](end_span)
-    return true;[span_47](start_span)[span_47](end_span)
+  if (localStorage.getItem(DISCLAIMER_ACCEPTED_KEY) === "true") {
+    localStorage.setItem("rabtv_access_status", "permanent");
+    return true;
   }
-  return false;[span_48](start_span)[span_48](end_span)
+  return false;
 }
 
-export const Route = createRootRoute({[span_49](start_span)[span_49](end_span)
+export const Route = createRootRoute({
   component: RootComponent,
   head: () => ({
     meta: [
-      { charSet: "utf-8" },[span_50](start_span)[span_50](end_span)
-      { name: "viewport", content: "width=device-width, initial-scale=1" },[span_51](start_span)[span_51](end_span)
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
     ],
-    title: "RABTV - Stream Your Favorite Shows",[span_52](start_span)[span_52](end_span)
+    title: "RABTV - Stream Your Favorite Shows",
   }),
 });
 
-function RootComponent() {[span_53](start_span)[span_53](end_span)
-  const navigate = useNavigate();[span_54](start_span)[span_54](end_span)
-  const [showFirstStartModal, setShowFirstStartModal] = useState(false);[span_55](start_span)[span_55](end_span)
-  const [passcodeInput, setPasscodeInput] = useState("");[span_56](start_span)[span_56](end_span)
-  const [passcodeError, setPasscodeError] = useState(false);[span_57](start_span)[span_57](end_span)
-  const [passcodeErrorMsg, setPasscodeErrorMsg] = useState([span_58](start_span)[span_58](end_span)
+function RootComponent() {
+  const navigate = useNavigate();
+  const [showFirstStartModal, setShowFirstStartModal] = useState(false);
+  const [passcodeInput, setPasscodeInput] = useState("");
+  const [passcodeError, setPasscodeError] = useState(false);
+  const [passcodeErrorMsg, setPasscodeErrorMsg] = useState(
     "⚠️ Invalid Passcode. Please try again."
   );
-  const [ageErrorNotice, setAgeErrorNotice] = useState(false);[span_59](start_span)[span_59](end_span)
-  const [ageLockError, setAgeLockError] = useState(false);[span_60](start_span)[span_60](end_span)
+  const [ageErrorNotice, setAgeErrorNotice] = useState(false);
+  const [ageLockError, setAgeLockError] = useState(false);
 
-  const [ageLockInput, setAgeLockInput] = useState("");[span_61](start_span)[span_61](end_span)
+  const [ageLockInput, setAgeLockInput] = useState("");
 
-  const [showSettings, setShowSettings] = useState(false);[span_62](start_span)[span_62](end_span)
-  const [showProfileMenu, setShowProfileMenu] = useState(false);[span_63](start_span)[span_63](end_span)
-  const lastScrollYRef = useRef(0);[span_64](start_span)[span_64](end_span)
-  const [activeSettingsTab, setActiveSettingsTab] = useState<[span_65](start_span)[span_65](end_span)
+  const [showSettings, setShowSettings] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const lastScrollYRef = useRef(0);
+  const [activeSettingsTab, setActiveSettingsTab] = useState<
     "theme" | "scale" | "backup" | null
   >(null);
 
-  const [cardSize, setCardSize] = useState<CardSize>("large");[span_66](start_span)[span_66](end_span)
-  const [streamQuality, setStreamQuality] = useState<StreamQuality>("1080p");[span_67](start_span)[span_67](end_span)
-  const [appTheme, setAppTheme] = useState<AppTheme>("violet");[span_68](start_span)[span_68](end_span)
-  const [helpfulMouse, setHelpfulMouseState] = useState(false);[span_69](start_span)[span_69](end_span)
-  const [historyOverscale, setHistoryOverscaleState] =[span_70](start_span)[span_70](end_span)
+  const [cardSize, setCardSize] = useState<CardSize>("large");
+  const [streamQuality, setStreamQuality] = useState<StreamQuality>("1080p");
+  const [appTheme, setAppTheme] = useState<AppTheme>("violet");
+  const [helpfulMouse, setHelpfulMouseState] = useState(false);
+  const [historyOverscale, setHistoryOverscaleState] =
     useState<HistoryScale>("off");
-  const [largeButtons, setLargeButtonsState] = useState(false);[span_71](start_span)[span_71](end_span)
-  const [userAgeInput, setUserAgeInput] = useState<string>("");[span_72](start_span)[span_72](end_span)
-  const [profileNameInput, setProfileNameInput] = useState<string>("");[span_73](start_span)[span_73](end_span)
-  const [savedProfileName, setSavedProfileName] = useState<string>("");[span_74](start_span)[span_74](end_span)
-  const [settingsAgeCodeInput, setSettingsAgeCodeInput] = useState<string>("");[span_75](start_span)[span_75](end_span)
-  const [settingsAgeError, setSettingsAgeError] = useState(false);[span_76](start_span)[span_76](end_span)
-  const [settingsAgeSuccess, setSettingsAgeSuccess] = useState(false);[span_77](start_span)[span_77](end_span)
+  const [largeButtons, setLargeButtonsState] = useState(false);
+  const [userAgeInput, setUserAgeInput] = useState<string>("");
+  const [profileNameInput, setProfileNameInput] = useState<string>("");
+  const [savedProfileName, setSavedProfileName] = useState<string>("");
+  const [settingsAgeCodeInput, setSettingsAgeCodeInput] = useState<string>("");
+  const [settingsAgeError, setSettingsAgeError] = useState(false);
+  const [settingsAgeSuccess, setSettingsAgeSuccess] = useState(false);
 
-  const [unlockCodeInput, setUnlockCodeInput] = useState("");[span_78](start_span)[span_78](end_span)
-  const [unlockStatusMsg, setUnlockStatusMsg] = useState<{[span_79](start_span)[span_79](end_span)
+  const [unlockCodeInput, setUnlockCodeInput] = useState("");
+  const [unlockStatusMsg, setUnlockStatusMsg] = useState<{
     text: string;
     isError: boolean;
   } | null>(null);
-  const [isTrialActive, setIsTrialActive] = useState(false);[span_80](start_span)[span_80](end_span)
-  const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);[span_81](start_span)[span_81](end_span)
-  const [isAdmin, setIsAdmin] = useState(false);[span_82](start_span)[span_82](end_span)
+  const [isTrialActive, setIsTrialActive] = useState(false);
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const [keygenName, setKeygenName] = useState("");[span_83](start_span)[span_83](end_span)
-  const [keygenAge, setKeygenAge] = useState("");[span_84](start_span)[span_84](end_span)
-  const [keygenResult, setKeygenResult] = useState<string | null>(null);[span_85](start_span)[span_85](end_span)
+  const [keygenName, setKeygenName] = useState("");
+  const [keygenAge, setKeygenAge] = useState("");
+  const [keygenResult, setKeygenResult] = useState<string | null>(null);
 
-  const [currentPasscodeInput, setCurrentPasscodeInput] = useState("");[span_86](start_span)[span_86](end_span)
-  const [newPasscode, setNewPasscode] = useState("");[span_87](start_span)[span_87](end_span)
-  const [confirmNewPasscode, setConfirmNewPasscode] = useState("");[span_88](start_span)[span_88](end_span)
-  const [passcodeStatusMsg, setPasscodeStatusMsg] = useState<{[span_89](start_span)[span_89](end_span)
+  const [currentPasscodeInput, setCurrentPasscodeInput] = useState("");
+  const [newPasscode, setNewPasscode] = useState("");
+  const [confirmNewPasscode, setConfirmNewPasscode] = useState("");
+  const [passcodeStatusMsg, setPasscodeStatusMsg] = useState<{
     text: string;
     isError: boolean;
   } | null>(null);
 
-  const [backupStatus, setBackupStatus] = useState<string | null>(null);[span_90](start_span)[span_90](end_span)
-  const [headerSearchInput, setHeaderSearchInput] = useState("");[span_91](start_span)[span_91](end_span)
+  const [backupStatus, setBackupStatus] = useState<string | null>(null);
+  const [headerSearchInput, setHeaderSearchInput] = useState("");
 
-  const [selectedGlobalFeed, setSelectedGlobalFeed] = useState<GlobalFeedOption>([span_92](start_span)[span_92](end_span)
+  const [selectedGlobalFeed, setSelectedGlobalFeed] = useState<GlobalFeedOption>(
     () => {
       if (typeof window !== "undefined") {
         return (
@@ -184,210 +167,210 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
     }
   );
 
-  const handleGlobalFeedChange = (feed: GlobalFeedOption) => {[span_93](start_span)[span_93](end_span)
-    setSelectedGlobalFeed(feed);[span_94](start_span)[span_94](end_span)
-    localStorage.setItem("rabtv_global_feed", feed);[span_95](start_span)[span_95](end_span)
-    window.dispatchEvent([span_96](start_span)[span_96](end_span)
+  const handleGlobalFeedChange = (feed: GlobalFeedOption) => {
+    setSelectedGlobalFeed(feed);
+    localStorage.setItem("rabtv_global_feed", feed);
+    window.dispatchEvent(
       new CustomEvent("rabtv_global_feed_updated", { detail: feed })
     );
   };
 
-  const handleHeaderSearchSubmit = (e: React.FormEvent) => {[span_97](start_span)[span_97](end_span)
-    e.preventDefault();[span_98](start_span)[span_98](end_span)
-    navigate({ to: "/search", search: { q: headerSearchInput.trim() } });[span_99](start_span)[span_99](end_span)
-    setHeaderSearchInput("");[span_100](start_span)[span_100](end_span)
+  const handleHeaderSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigate({ to: "/search", search: { q: headerSearchInput.trim() } });
+    setHeaderSearchInput("");
   };
 
-  const handleCloseAll = () => {[span_101](start_span)[span_101](end_span)
-    setShowSettings(false);[span_102](start_span)[span_102](end_span)
-    setShowProfileMenu(false);[span_103](start_span)[span_103](end_span)
-    setActiveSettingsTab(null);[span_104](start_span)[span_104](end_span)
+  const handleCloseAll = () => {
+    setShowSettings(false);
+    setShowProfileMenu(false);
+    setActiveSettingsTab(null);
   };
 
-  const handleToggleSettings = () => {[span_105](start_span)[span_105](end_span)
-    if (showSettings) handleCloseAll();[span_106](start_span)[span_106](end_span)
+  const handleToggleSettings = () => {
+    if (showSettings) handleCloseAll();
     else {
-      handleCloseAll();[span_107](start_span)[span_107](end_span)
-      lastScrollYRef.current = window.scrollY;[span_108](start_span)[span_108](end_span)
-      setShowSettings(true);[span_109](start_span)[span_109](end_span)
-      setActiveSettingsTab(null);[span_110](start_span)[span_110](end_span)
+      handleCloseAll();
+      lastScrollYRef.current = window.scrollY;
+      setShowSettings(true);
+      setActiveSettingsTab(null);
     }
   };
 
-  const handleToggleProfileMenu = () => {[span_111](start_span)[span_111](end_span)
-    if (showProfileMenu) handleCloseAll();[span_112](start_span)[span_112](end_span)
+  const handleToggleProfileMenu = () => {
+    if (showProfileMenu) handleCloseAll();
     else {
-      handleCloseAll();[span_113](start_span)[span_113](end_span)
-      lastScrollYRef.current = window.scrollY;[span_114](start_span)[span_114](end_span)
-      setShowProfileMenu(true);[span_115](start_span)[span_115](end_span)
+      handleCloseAll();
+      lastScrollYRef.current = window.scrollY;
+      setShowProfileMenu(true);
     }
   };
 
-  useEffect(() => {[span_116](start_span)[span_116](end_span)
-    const handleWindowScroll = () => {[span_117](start_span)[span_117](end_span)
-      if (showSettings || showProfileMenu) {[span_118](start_span)[span_118](end_span)
-        if (Math.abs(window.scrollY - lastScrollYRef.current) > 60) {[span_119](start_span)[span_119](end_span)
-          handleCloseAll();[span_120](start_span)[span_120](end_span)
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      if (showSettings || showProfileMenu) {
+        if (Math.abs(window.scrollY - lastScrollYRef.current) > 60) {
+          handleCloseAll();
         }
       }
     };
-    window.addEventListener("scroll", handleWindowScroll, { passive: true });[span_121](start_span)[span_121](end_span)
-    return () => window.removeEventListener("scroll", handleWindowScroll);[span_122](start_span)[span_122](end_span)
+    window.addEventListener("scroll", handleWindowScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleWindowScroll);
   }, [showSettings, showProfileMenu]);
 
-  useEffect(() => {[span_123](start_span)[span_123](end_span)
-    if (typeof window !== "undefined") {[span_124](start_span)[span_124](end_span)
-      const ua = navigator.userAgent.toLowerCase();[span_125](start_span)[span_125](end_span)
-      if (ua.includes("silk") || ua.includes("firetv") || ua.includes("amazon")) {[span_126](start_span)[span_126](end_span)
-        document.documentElement.classList.add("fire-os");[span_127](start_span)[span_127](end_span)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const ua = navigator.userAgent.toLowerCase();
+      if (ua.includes("silk") || ua.includes("firetv") || ua.includes("amazon")) {
+        document.documentElement.classList.add("fire-os");
       }
     }
 
-    if (!verifyCurrentAccess()) {[span_128](start_span)[span_128](end_span)
-      setShowFirstStartModal(true);[span_129](start_span)[span_129](end_span)
+    if (!verifyCurrentAccess()) {
+      setShowFirstStartModal(true);
     } else {
-      const status = localStorage.getItem("rabtv_access_status");[span_130](start_span)[span_130](end_span)
-      if (status === "trial") {[span_131](start_span)[span_131](end_span)
-        setIsTrialActive(true);[span_132](start_span)[span_132](end_span)
-        const startTime = Number([span_133](start_span)[span_133](end_span)
+      const status = localStorage.getItem("rabtv_access_status");
+      if (status === "trial") {
+        setIsTrialActive(true);
+        const startTime = Number(
           localStorage.getItem("rabtv_trial_start_timestamp") || 0
         );
-        const remainingMs = Math.max(0, TRIAL_DURATION_MS - (Date.now() - startTime));[span_134](start_span)[span_134](end_span)
-        setTrialDaysRemaining(Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));[span_135](start_span)[span_135](end_span)
+        const remainingMs = Math.max(0, TRIAL_DURATION_MS - (Date.now() - startTime));
+        setTrialDaysRemaining(Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
       }
     }
 
-    setIsAdmin(localStorage.getItem("rabtv_is_admin") === "true");[span_136](start_span)[span_136](end_span)
+    setIsAdmin(localStorage.getItem("rabtv_is_admin") === "true");
 
-    const loadedTheme = getSavedTheme();[span_137](start_span)[span_137](end_span)
-    setCardSize(getSavedCardSize());[span_138](start_span)[span_138](end_span)
-    setStreamQuality(getSavedStreamQuality());[span_139](start_span)[span_139](end_span)
-    setAppTheme(loadedTheme);[span_140](start_span)[span_140](end_span)
-    setHelpfulMouseState(getHelpfulMouse());[span_141](start_span)[span_141](end_span)
-    setHistoryOverscaleState(getHistoryOverscale());[span_142](start_span)[span_142](end_span)
-    setLargeButtonsState(getLargeButtons());[span_143](start_span)[span_143](end_span)
-    void updateNativeStatusBar(loadedTheme);[span_144](start_span)[span_144](end_span)
+    const loadedTheme = getSavedTheme();
+    setCardSize(getSavedCardSize());
+    setStreamQuality(getSavedStreamQuality());
+    setAppTheme(loadedTheme);
+    setHelpfulMouseState(getHelpfulMouse());
+    setHistoryOverscaleState(getHistoryOverscale());
+    setLargeButtonsState(getLargeButtons());
+    void updateNativeStatusBar(loadedTheme);
 
-    const existingAge = localStorage.getItem("rabtv_user_age");[span_145](start_span)[span_145](end_span)
-    if (existingAge) setUserAgeInput(existingAge);[span_146](start_span)[span_146](end_span)
+    const existingAge = localStorage.getItem("rabtv_user_age");
+    if (existingAge) setUserAgeInput(existingAge);
 
-    const existingName = localStorage.getItem("rabtv_profile_name");[span_147](start_span)[span_147](end_span)
-    if (existingName) {[span_148](start_span)[span_148](end_span)
-      setProfileNameInput(existingName);[span_149](start_span)[span_149](end_span)
-      setSavedProfileName(existingName);[span_150](start_span)[span_150](end_span)
+    const existingName = localStorage.getItem("rabtv_profile_name");
+    if (existingName) {
+      setProfileNameInput(existingName);
+      setSavedProfileName(existingName);
     }
 
-    const handleSettingsUpdate = () => {[span_151](start_span)[span_151](end_span)
-      const updatedTheme = getSavedTheme();[span_152](start_span)[span_152](end_span)
-      setCardSize(getSavedCardSize());[span_153](start_span)[span_153](end_span)
-      setStreamQuality(getSavedStreamQuality());[span_154](start_span)[span_154](end_span)
-      setAppTheme(updatedTheme);[span_155](start_span)[span_155](end_span)
-      setHelpfulMouseState(getHelpfulMouse());[span_156](start_span)[span_156](end_span)
-      setHistoryOverscaleState(getHistoryOverscale());[span_157](start_span)[span_157](end_span)
-      setLargeButtonsState(getLargeButtons());[span_158](start_span)[span_158](end_span)
-      void updateNativeStatusBar(updatedTheme);[span_159](start_span)[span_159](end_span)
-      const updatedName = localStorage.getItem("rabtv_profile_name");[span_160](start_span)[span_160](end_span)
-      if (updatedName) setSavedProfileName(updatedName);[span_161](start_span)[span_161](end_span)
-      setIsAdmin(localStorage.getItem("rabtv_is_admin") === "true");[span_162](start_span)[span_162](end_span)
-      const status = localStorage.getItem("rabtv_access_status");[span_163](start_span)[span_163](end_span)
-      if (status === "trial") {[span_164](start_span)[span_164](end_span)
-        setIsTrialActive(true);[span_165](start_span)[span_165](end_span)
-        const startTime = Number([span_166](start_span)[span_166](end_span)
+    const handleSettingsUpdate = () => {
+      const updatedTheme = getSavedTheme();
+      setCardSize(getSavedCardSize());
+      setStreamQuality(getSavedStreamQuality());
+      setAppTheme(updatedTheme);
+      setHelpfulMouseState(getHelpfulMouse());
+      setHistoryOverscaleState(getHistoryOverscale());
+      setLargeButtonsState(getLargeButtons());
+      void updateNativeStatusBar(updatedTheme);
+      const updatedName = localStorage.getItem("rabtv_profile_name");
+      if (updatedName) setSavedProfileName(updatedName);
+      setIsAdmin(localStorage.getItem("rabtv_is_admin") === "true");
+      const status = localStorage.getItem("rabtv_access_status");
+      if (status === "trial") {
+        setIsTrialActive(true);
+        const startTime = Number(
           localStorage.getItem("rabtv_trial_start_timestamp") || 0
         );
-        const remainingMs = Math.max([span_167](start_span)[span_167](end_span)
+        const remainingMs = Math.max(
           0,
           TRIAL_DURATION_MS - (Date.now() - startTime)
         );
-        setTrialDaysRemaining(Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));[span_168](start_span)[span_168](end_span)
+        setTrialDaysRemaining(Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
       } else {
-        setIsTrialActive(false);[span_169](start_span)[span_169](end_span)
+        setIsTrialActive(false);
       }
     };
 
-    window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);[span_170](start_span)[span_170](end_span)
-    return () =>[span_171](start_span)[span_171](end_span)
+    window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);
+    return () =>
       window.removeEventListener("rabtv_settings_updated", handleSettingsUpdate);
   }, []);
 
-  const saveAgeLockCode = (code: string) => {[span_172](start_span)[span_172](end_span)
-    localStorage.setItem(AGE_LOCK_KEY, code);[span_173](start_span)[span_173](end_span)
+  const saveAgeLockCode = (code: string) => {
+    localStorage.setItem(AGE_LOCK_KEY, code);
   };
 
-  const getAgeLockCode = () => localStorage.getItem(AGE_LOCK_KEY) || "";[span_174](start_span)[span_174](end_span)
+  const getAgeLockCode = () => localStorage.getItem(AGE_LOCK_KEY) || "";
 
-  const completePermanentLogin = ([span_175](start_span)[span_175](end_span)
+  const completePermanentLogin = (
     finalName: string,
     parsedAge: number,
     ageLockCode: string,
     options?: { admin?: boolean; forceTheme?: AppTheme; forceSize?: CardSize }
   ) => {
-    localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");[span_176](start_span)[span_176](end_span)
-    localStorage.setItem("rabtv_access_status", "permanent");[span_177](start_span)[span_177](end_span)
-    localStorage.removeItem("rabtv_trial_start_timestamp");[span_178](start_span)[span_178](end_span)
-    setIsTrialActive(false);[span_179](start_span)[span_179](end_span)
+    localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
+    localStorage.setItem("rabtv_access_status", "permanent");
+    localStorage.removeItem("rabtv_trial_start_timestamp");
+    setIsTrialActive(false);
 
-    saveAgeLockCode(ageLockCode);[span_180](start_span)[span_180](end_span)
+    saveAgeLockCode(ageLockCode);
 
-    if (options?.admin) {[span_181](start_span)[span_181](end_span)
-      localStorage.setItem("rabtv_is_admin", "true");[span_182](start_span)[span_182](end_span)
-      setIsAdmin(true);[span_183](start_span)[span_183](end_span)
+    if (options?.admin) {
+      localStorage.setItem("rabtv_is_admin", "true");
+      setIsAdmin(true);
     } else {
-      localStorage.removeItem("rabtv_is_admin");[span_184](start_span)[span_184](end_span)
-      setIsAdmin(false);[span_185](start_span)[span_185](end_span)
+      localStorage.removeItem("rabtv_is_admin");
+      setIsAdmin(false);
     }
 
-    const themeToUse = options?.forceTheme ?? appTheme;[span_186](start_span)[span_186](end_span)
-    const sizeToUse = options?.forceSize ?? cardSize;[span_187](start_span)[span_187](end_span)
+    const themeToUse = options?.forceTheme ?? appTheme;
+    const sizeToUse = options?.forceSize ?? cardSize;
 
-    saveCardSize(sizeToUse);[span_188](start_span)[span_188](end_span)
-    setCardSize(sizeToUse);[span_189](start_span)[span_189](end_span)
-    saveStreamQuality(streamQuality);[span_190](start_span)[span_190](end_span)
-    saveTheme(themeToUse);[span_191](start_span)[span_191](end_span)
-    setAppTheme(themeToUse);[span_192](start_span)[span_192](end_span)
-    void updateNativeStatusBar(themeToUse);[span_193](start_span)[span_193](end_span)
-    setHelpfulMouse(helpfulMouse);[span_194](start_span)[span_194](end_span)
+    saveCardSize(sizeToUse);
+    setCardSize(sizeToUse);
+    saveStreamQuality(streamQuality);
+    saveTheme(themeToUse);
+    setAppTheme(themeToUse);
+    void updateNativeStatusBar(themeToUse);
+    setHelpfulMouse(helpfulMouse);
 
-    saveUserAge(parsedAge);[span_195](start_span)[span_195](end_span)
-    localStorage.setItem("rabtv_profile_name", finalName);[span_196](start_span)[span_196](end_span)
-    setSavedProfileName(finalName);[span_197](start_span)[span_197](end_span)
+    saveUserAge(parsedAge);
+    localStorage.setItem("rabtv_profile_name", finalName);
+    setSavedProfileName(finalName);
 
-    if (!options?.admin) {[span_198](start_span)[span_198](end_span)
-      sendPermanentActivationAlert(finalName);[span_199](start_span)[span_199](end_span)
+    if (!options?.admin) {
+      sendPermanentActivationAlert(finalName);
     }
 
-    setShowFirstStartModal(false);[span_200](start_span)[span_200](end_span)
-    setPasscodeError(false);[span_201](start_span)[span_201](end_span)
-    setAgeErrorNotice(false);[span_202](start_span)[span_202](end_span)
-    setAgeLockError(false);[span_203](start_span)[span_203](end_span)
-    window.dispatchEvent(new Event("rabtv_settings_updated"));[span_204](start_span)[span_204](end_span)
+    setShowFirstStartModal(false);
+    setPasscodeError(false);
+    setAgeErrorNotice(false);
+    setAgeLockError(false);
+    window.dispatchEvent(new Event("rabtv_settings_updated"));
   };
 
-  const handleFirstTimeAuthorize = (e: React.FormEvent) => {[span_205](start_span)[span_205](end_span)
-    e.preventDefault();[span_206](start_span)[span_206](end_span)
+  const handleFirstTimeAuthorize = (e: React.FormEvent) => {
+    e.preventDefault();
 
-    const trimmedAge = userAgeInput.trim();[span_207](start_span)[span_207](end_span)
-    if (!trimmedAge || isNaN(parseInt(trimmedAge, 10))) {[span_208](start_span)[span_208](end_span)
-      setAgeErrorNotice(true);[span_209](start_span)[span_209](end_span)
-      setPasscodeError(false);[span_210](start_span)[span_210](end_span)
-      setAgeLockError(false);[span_211](start_span)[span_211](end_span)
+    const trimmedAge = userAgeInput.trim();
+    if (!trimmedAge || isNaN(parseInt(trimmedAge, 10))) {
+      setAgeErrorNotice(true);
+      setPasscodeError(false);
+      setAgeLockError(false);
       return;
     }
 
-    const ageLock = ageLockInput.trim();[span_212](start_span)[span_212](end_span)
-    if (!/^\d{4}$/.test(ageLock)) {[span_213](start_span)[span_213](end_span)
-      setAgeLockError(true);[span_214](start_span)[span_214](end_span)
-      setAgeErrorNotice(false);[span_215](start_span)[span_215](end_span)
-      setPasscodeError(false);[span_216](start_span)[span_216](end_span)
+    const ageLock = ageLockInput.trim();
+    if (!/^\d{4}$/.test(ageLock)) {
+      setAgeLockError(true);
+      setAgeErrorNotice(false);
+      setPasscodeError(false);
       return;
     }
 
-    const parsedAge = parseInt(trimmedAge, 10);[span_217](start_span)[span_217](end_span)
-    const finalName = profileNameInput.trim() || "Friend";[span_218](start_span)[span_218](end_span)
-    const enteredCode = passcodeInput.trim();[span_219](start_span)[span_219](end_span)
+    const parsedAge = parseInt(trimmedAge, 10);
+    const finalName = profileNameInput.trim() || "Friend";
+    const enteredCode = passcodeInput.trim();
 
-    if (isAdminCredentials(finalName, parsedAge)) {[span_220](start_span)[span_220](end_span)
-      completePermanentLogin(finalName, parsedAge, ageLock, {[span_221](start_span)[span_221](end_span)
+    if (isAdminCredentials(finalName, parsedAge)) {
+      completePermanentLogin(finalName, parsedAge, ageLock, {
         admin: true,
         forceTheme: "red",
         forceSize: "small",
@@ -395,190 +378,190 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
       return;
     }
 
-    if (enteredCode === TRIAL_CODE) {[span_222](start_span)[span_222](end_span)
-      const trialAlreadyUsed =[span_223](start_span)[span_223](end_span)
+    if (enteredCode === TRIAL_CODE) {
+      const trialAlreadyUsed =
         localStorage.getItem("rabtv_trial_used_flag") === "true";
-      if (trialAlreadyUsed) {[span_224](start_span)[span_224](end_span)
-        setPasscodeError(true);[span_225](start_span)[span_225](end_span)
-        setPasscodeErrorMsg([span_226](start_span)[span_226](end_span)
+      if (trialAlreadyUsed) {
+        setPasscodeError(true);
+        setPasscodeErrorMsg(
           "⚠️ Trial code has already been used on this device and cannot be redeemed again."
         );
-        setAgeErrorNotice(false);[span_227](start_span)[span_227](end_span)
-        setAgeLockError(false);[span_228](start_span)[span_228](end_span)
-        setPasscodeInput("");[span_229](start_span)[span_229](end_span)
+        setAgeErrorNotice(false);
+        setAgeLockError(false);
+        setPasscodeInput("");
         return;
       }
 
-      localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");[span_230](start_span)[span_230](end_span)
-      localStorage.setItem("rabtv_access_status", "trial");[span_231](start_span)[span_231](end_span)
-      localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));[span_232](start_span)[span_232](end_span)
-      localStorage.setItem("rabtv_trial_used_flag", "true");[span_233](start_span)[span_233](end_span)
-      localStorage.removeItem("rabtv_is_admin");[span_234](start_span)[span_234](end_span)
-      setIsAdmin(false);[span_235](start_span)[span_235](end_span)
-      setIsTrialActive(true);[span_236](start_span)[span_236](end_span)
-      setTrialDaysRemaining(7);[span_237](start_span)[span_237](end_span)
+      localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
+      localStorage.setItem("rabtv_access_status", "trial");
+      localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));
+      localStorage.setItem("rabtv_trial_used_flag", "true");
+      localStorage.removeItem("rabtv_is_admin");
+      setIsAdmin(false);
+      setIsTrialActive(true);
+      setTrialDaysRemaining(7);
 
-      saveAgeLockCode(ageLock);[span_238](start_span)[span_238](end_span)
-      saveCardSize(cardSize);[span_239](start_span)[span_239](end_span)
-      saveStreamQuality(streamQuality);[span_240](start_span)[span_240](end_span)
-      saveTheme(appTheme);[span_241](start_span)[span_241](end_span)
-      setHelpfulMouse(helpfulMouse);[span_242](start_span)[span_242](end_span)
-      saveUserAge(parsedAge);[span_243](start_span)[span_243](end_span)
-      localStorage.setItem("rabtv_profile_name", finalName);[span_244](start_span)[span_244](end_span)
-      setSavedProfileName(finalName);[span_245](start_span)[span_245](end_span)
+      saveAgeLockCode(ageLock);
+      saveCardSize(cardSize);
+      saveStreamQuality(streamQuality);
+      saveTheme(appTheme);
+      setHelpfulMouse(helpfulMouse);
+      saveUserAge(parsedAge);
+      localStorage.setItem("rabtv_profile_name", finalName);
+      setSavedProfileName(finalName);
 
-      setShowFirstStartModal(false);[span_246](start_span)[span_246](end_span)
-      setPasscodeError(false);[span_247](start_span)[span_247](end_span)
-      setAgeErrorNotice(false);[span_248](start_span)[span_248](end_span)
-      setAgeLockError(false);[span_249](start_span)[span_249](end_span)
-      window.dispatchEvent(new Event("rabtv_settings_updated"));[span_250](start_span)[span_250](end_span)
+      setShowFirstStartModal(false);
+      setPasscodeError(false);
+      setAgeErrorNotice(false);
+      setAgeLockError(false);
+      window.dispatchEvent(new Event("rabtv_settings_updated"));
       return;
     }
 
-    const expectedCode = generateUnlockCode(finalName, parsedAge);[span_251](start_span)[span_251](end_span)
-    if (expectedCode && enteredCode === expectedCode) {[span_252](start_span)[span_252](end_span)
-      completePermanentLogin(finalName, parsedAge, ageLock);[span_253](start_span)[span_253](end_span)
+    const expectedCode = generateUnlockCode(finalName, parsedAge);
+    if (expectedCode && enteredCode === expectedCode) {
+      completePermanentLogin(finalName, parsedAge, ageLock);
       return;
     }
 
-    setPasscodeError(true);[span_254](start_span)[span_254](end_span)
-    setPasscodeErrorMsg([span_255](start_span)[span_255](end_span)
+    setPasscodeError(true);
+    setPasscodeErrorMsg(
       "⚠️ Invalid Passcode for this name and age. Please try again."
     );
-    setAgeErrorNotice(false);[span_256](start_span)[span_256](end_span)
-    setAgeLockError(false);[span_257](start_span)[span_257](end_span)
-    setPasscodeInput("");[span_258](start_span)[span_258](end_span)
+    setAgeErrorNotice(false);
+    setAgeLockError(false);
+    setPasscodeInput("");
   };
 
-  const handleUpgradeFromProfile = (e: React.FormEvent) => {[span_259](start_span)[span_259](end_span)
-    e.preventDefault();[span_260](start_span)[span_260](end_span)
-    const name =[span_261](start_span)[span_261](end_span)
+  const handleUpgradeFromProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name =
       savedProfileName ||
       localStorage.getItem("rabtv_profile_name") ||
       "Friend";
-    const age = getSavedUserAge() || parseInt(userAgeInput, 10) || 0;[span_262](start_span)[span_262](end_span)
-    const expected = generateUnlockCode(name, age);[span_263](start_span)[span_263](end_span)
+    const age = getSavedUserAge() || parseInt(userAgeInput, 10) || 0;
+    const expected = generateUnlockCode(name, age);
 
-    if (unlockCodeInput.trim() === expected && expected) {[span_264](start_span)[span_264](end_span)
-      localStorage.setItem("rabtv_access_status", "permanent");[span_265](start_span)[span_265](end_span)
-      localStorage.removeItem("rabtv_trial_start_timestamp");[span_266](start_span)[span_266](end_span)
-      setIsTrialActive(false);[span_267](start_span)[span_267](end_span)
-      sendPermanentActivationAlert(name);[span_268](start_span)[span_268](end_span)
-      setUnlockStatusMsg({[span_269](start_span)[span_269](end_span)
+    if (unlockCodeInput.trim() === expected && expected) {
+      localStorage.setItem("rabtv_access_status", "permanent");
+      localStorage.removeItem("rabtv_trial_start_timestamp");
+      setIsTrialActive(false);
+      sendPermanentActivationAlert(name);
+      setUnlockStatusMsg({
         text: "✅ Successfully upgraded to Full Access!",
         isError: false,
       });
-      setUnlockCodeInput("");[span_270](start_span)[span_270](end_span)
-      setTimeout(() => {[span_271](start_span)[span_271](end_span)
-        setUnlockStatusMsg(null);[span_272](start_span)[span_272](end_span)
-        handleCloseAll();[span_273](start_span)[span_273](end_span)
-        window.dispatchEvent(new Event("rabtv_settings_updated"));[span_274](start_span)[span_274](end_span)
+      setUnlockCodeInput("");
+      setTimeout(() => {
+        setUnlockStatusMsg(null);
+        handleCloseAll();
+        window.dispatchEvent(new Event("rabtv_settings_updated"));
       }, 2500);
     } else {
-      setUnlockStatusMsg({[span_275](start_span)[span_275](end_span)
+      setUnlockStatusMsg({
         text: "❌ Invalid unlock code for this profile name and age.",
         isError: true,
       });
     }
   };
 
-  const handleKeygen = (e: React.FormEvent) => {[span_276](start_span)[span_276](end_span)
-    e.preventDefault();[span_277](start_span)[span_277](end_span)
-    const age = parseInt(keygenAge.trim(), 10);[span_278](start_span)[span_278](end_span)
-    const code = generateUnlockCode(keygenName, age);[span_279](start_span)[span_279](end_span)
-    if (!code) {[span_280](start_span)[span_280](end_span)
-      setKeygenResult("Enter a valid name and age (1–120).");[span_281](start_span)[span_281](end_span)
+  const handleKeygen = (e: React.FormEvent) => {
+    e.preventDefault();
+    const age = parseInt(keygenAge.trim(), 10);
+    const code = generateUnlockCode(keygenName, age);
+    if (!code) {
+      setKeygenResult("Enter a valid name and age (1–120).");
       return;
     }
-    setKeygenResult(code);[span_282](start_span)[span_282](end_span)
+    setKeygenResult(code);
   };
 
-  const handleSizeChange = (newSize: CardSize) => {[span_283](start_span)[span_283](end_span)
-    saveCardSize(newSize);[span_284](start_span)[span_284](end_span)
-    setCardSize(newSize);[span_285](start_span)[span_285](end_span)
-    window.dispatchEvent(new Event("rabtv_settings_updated"));[span_286](start_span)[span_286](end_span)
+  const handleSizeChange = (newSize: CardSize) => {
+    saveCardSize(newSize);
+    setCardSize(newSize);
+    window.dispatchEvent(new Event("rabtv_settings_updated"));
   };
 
-  const handleThemeChange = (newTheme: AppTheme) => {[span_287](start_span)[span_287](end_span)
-    saveTheme(newTheme);[span_288](start_span)[span_288](end_span)
-    setAppTheme(newTheme);[span_289](start_span)[span_289](end_span)
-    void updateNativeStatusBar(newTheme);[span_290](start_span)[span_290](end_span)
-    window.dispatchEvent(new Event("rabtv_settings_updated"));[span_291](start_span)[span_291](end_span)
+  const handleThemeChange = (newTheme: AppTheme) => {
+    saveTheme(newTheme);
+    setAppTheme(newTheme);
+    void updateNativeStatusBar(newTheme);
+    window.dispatchEvent(new Event("rabtv_settings_updated"));
   };
 
-  const handleMouseToggle = (enabled: boolean) => {[span_292](start_span)[span_292](end_span)
-    setHelpfulMouse(enabled);[span_293](start_span)[span_293](end_span)
-    setHelpfulMouseState(enabled);[span_294](start_span)[span_294](end_span)
+  const handleMouseToggle = (enabled: boolean) => {
+    setHelpfulMouse(enabled);
+    setHelpfulMouseState(enabled);
   };
 
-  const handleHistoryOverscaleChange = (scale: HistoryScale) => {[span_295](start_span)[span_295](end_span)
-    setHistoryOverscale(scale);[span_296](start_span)[span_296](end_span)
-    setHistoryOverscaleState(scale);[span_297](start_span)[span_297](end_span)
+  const handleHistoryOverscaleChange = (scale: HistoryScale) => {
+    setHistoryOverscale(scale);
+    setHistoryOverscaleState(scale);
   };
 
-  const handleLargeButtonsToggle = (enabled: boolean) => {[span_298](start_span)[span_298](end_span)
-    setLargeButtons(enabled);[span_299](start_span)[span_299](end_span)
-    setLargeButtonsState(enabled);[span_300](start_span)[span_300](end_span)
+  const handleLargeButtonsToggle = (enabled: boolean) => {
+    setLargeButtons(enabled);
+    setLargeButtonsState(enabled);
   };
 
-  const handleUpdateAgeInSettings = (e: React.FormEvent) => {[span_301](start_span)[span_301](end_span)
-    e.preventDefault();[span_302](start_span)[span_302](end_span)
-    const locked = getAgeLockCode();[span_303](start_span)[span_303](end_span)
-    if (!locked || settingsAgeCodeInput.trim() !== locked) {[span_304](start_span)[span_304](end_span)
-      setSettingsAgeError(true);[span_305](start_span)[span_305](end_span)
-      setSettingsAgeCodeInput("");[span_306](start_span)[span_306](end_span)
+  const handleUpdateAgeInSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    const locked = getAgeLockCode();
+    if (!locked || settingsAgeCodeInput.trim() !== locked) {
+      setSettingsAgeError(true);
+      setSettingsAgeCodeInput("");
       return;
     }
-    const parsedAge = parseInt(userAgeInput, 10);[span_307](start_span)[span_307](end_span)
-    if (isNaN(parsedAge) || parsedAge < 1 || parsedAge > 120) {[span_308](start_span)[span_308](end_span)
-      setSettingsAgeError(true);[span_309](start_span)[span_309](end_span)
+    const parsedAge = parseInt(userAgeInput, 10);
+    if (isNaN(parsedAge) || parsedAge < 1 || parsedAge > 120) {
+      setSettingsAgeError(true);
       return;
     }
-    saveUserAge(parsedAge);[span_310](start_span)[span_310](end_span)
-    setSettingsAgeError(false);[span_311](start_span)[span_311](end_span)
-    setSettingsAgeSuccess(true);[span_312](start_span)[span_312](end_span)
-    setSettingsAgeCodeInput("");[span_313](start_span)[span_313](end_span)
-    setTimeout(() => setSettingsAgeSuccess(false), 3000);[span_314](start_span)[span_314](end_span)
-    window.dispatchEvent(new Event("rabtv_settings_updated"));[span_315](start_span)[span_315](end_span)
+    saveUserAge(parsedAge);
+    setSettingsAgeError(false);
+    setSettingsAgeSuccess(true);
+    setSettingsAgeCodeInput("");
+    setTimeout(() => setSettingsAgeSuccess(false), 3000);
+    window.dispatchEvent(new Event("rabtv_settings_updated"));
   };
 
-  const handleChangePasscodeInSettings = (e: React.FormEvent) => {[span_316](start_span)[span_316](end_span)
-    e.preventDefault();[span_317](start_span)[span_317](end_span)
-    const locked = getAgeLockCode();[span_318](start_span)[span_318](end_span)
-    if (currentPasscodeInput.trim() !== locked) {[span_319](start_span)[span_319](end_span)
-      setPasscodeStatusMsg({[span_320](start_span)[span_320](end_span)
+  const handleChangePasscodeInSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    const locked = getAgeLockCode();
+    if (currentPasscodeInput.trim() !== locked) {
+      setPasscodeStatusMsg({
         text: "Current age-lock code is incorrect.",
         isError: true,
       });
       return;
     }
-    if (!/^\d{4}$/.test(newPasscode.trim())) {[span_321](start_span)[span_321](end_span)
-      setPasscodeStatusMsg({[span_322](start_span)[span_322](end_span)
+    if (!/^\d{4}$/.test(newPasscode.trim())) {
+      setPasscodeStatusMsg({
         text: "New age-lock code must be exactly 4 digits.",
         isError: true,
       });
       return;
     }
-    if (newPasscode !== confirmNewPasscode) {[span_323](start_span)[span_323](end_span)
-      setPasscodeStatusMsg({[span_324](start_span)[span_324](end_span)
+    if (newPasscode !== confirmNewPasscode) {
+      setPasscodeStatusMsg({
         text: "New codes do not match.",
         isError: true,
       });
       return;
     }
-    saveAgeLockCode(newPasscode.trim());[span_325](start_span)[span_325](end_span)
-    setPasscodeStatusMsg({[span_326](start_span)[span_326](end_span)
+    saveAgeLockCode(newPasscode.trim());
+    setPasscodeStatusMsg({
       text: "Age-lock code updated successfully!",
       isError: false,
     });
-    setCurrentPasscodeInput("");[span_327](start_span)[span_327](end_span)
-    setNewPasscode("");[span_328](start_span)[span_328](end_span)
-    setConfirmNewPasscode("");[span_329](start_span)[span_329](end_span)
-    setTimeout(() => setPasscodeStatusMsg(null), 3000);[span_330](start_span)[span_330](end_span)
+    setCurrentPasscodeInput("");
+    setNewPasscode("");
+    setConfirmNewPasscode("");
+    setTimeout(() => setPasscodeStatusMsg(null), 3000);
   };
 
-  const handleSaveBackup = () => {[span_331](start_span)[span_331](end_span)
-    const backupData = {[span_332](start_span)[span_332](end_span)
+  const handleSaveBackup = () => {
+    const backupData = {
       cardSize,
       streamQuality,
       appTheme,
@@ -591,63 +574,63 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
       favorites: localStorage.getItem("rabtv_favorites"),
       backedUpAt: new Date().toISOString(),
     };
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], {[span_333](start_span)[span_333](end_span)
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], {
       type: "application/json",
     });
-    const url = URL.createObjectURL(blob);[span_334](start_span)[span_334](end_span)
-    const a = document.createElement("a");[span_335](start_span)[span_335](end_span)
-    a.href = url;[span_336](start_span)[span_336](end_span)
-    a.download = "rabtv_profile_backup.json";[span_337](start_span)[span_337](end_span)
-    a.click();[span_338](start_span)[span_338](end_span)
-    URL.revokeObjectURL(url);[span_339](start_span)[span_339](end_span)
-    setBackupStatus("Profile settings backup saved!");[span_340](start_span)[span_340](end_span)
-    setTimeout(() => setBackupStatus(null), 3000);[span_341](start_span)[span_341](end_span)
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "rabtv_profile_backup.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    setBackupStatus("Profile settings backup saved!");
+    setTimeout(() => setBackupStatus(null), 3000);
   };
 
-  const handleRestoreBackup = (e: React.ChangeEvent<HTMLInputElement>) => {[span_342](start_span)[span_342](end_span)
-    const file = e.target.files?.[0];[span_343](start_span)[span_343](end_span)
-    if (!file) return;[span_344](start_span)[span_344](end_span)
-    const reader = new FileReader();[span_345](start_span)[span_345](end_span)
-    reader.onload = (event) => {[span_346](start_span)[span_346](end_span)
+  const handleRestoreBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
       try {
-        const data = JSON.parse(event.target?.result as string);[span_347](start_span)[span_347](end_span)
-        if (data.cardSize) saveCardSize(data.cardSize);[span_348](start_span)[span_348](end_span)
-        if (data.streamQuality) saveStreamQuality(data.streamQuality);[span_349](start_span)[span_349](end_span)
-        if (data.appTheme) {[span_350](start_span)[span_350](end_span)
-          saveTheme(data.appTheme);[span_351](start_span)[span_351](end_span)
-          setAppTheme(data.appTheme);[span_352](start_span)[span_352](end_span)
-          void updateNativeStatusBar(data.appTheme);[span_353](start_span)[span_353](end_span)
+        const data = JSON.parse(event.target?.result as string);
+        if (data.cardSize) saveCardSize(data.cardSize);
+        if (data.streamQuality) saveStreamQuality(data.streamQuality);
+        if (data.appTheme) {
+          saveTheme(data.appTheme);
+          setAppTheme(data.appTheme);
+          void updateNativeStatusBar(data.appTheme);
         }
-        if (typeof data.helpfulMouse === "boolean")[span_354](start_span)[span_354](end_span)
+        if (typeof data.helpfulMouse === "boolean")
           setHelpfulMouse(data.helpfulMouse);
-        if (data.historyOverscale) setHistoryOverscale(data.historyOverscale);[span_355](start_span)[span_355](end_span)
-        if (typeof data.largeButtons === "boolean")[span_356](start_span)[span_356](end_span)
+        if (data.historyOverscale) setHistoryOverscale(data.historyOverscale);
+        if (typeof data.largeButtons === "boolean")
           setLargeButtons(data.largeButtons);
-        if (data.userAge) saveUserAge(data.userAge);[span_357](start_span)[span_357](end_span)
-        if (data.profileName) {[span_358](start_span)[span_358](end_span)
-          localStorage.setItem("rabtv_profile_name", data.profileName);[span_359](start_span)[span_359](end_span)
-          setSavedProfileName(data.profileName);[span_360](start_span)[span_360](end_span)
+        if (data.userAge) saveUserAge(data.userAge);
+        if (data.profileName) {
+          localStorage.setItem("rabtv_profile_name", data.profileName);
+          setSavedProfileName(data.profileName);
         }
-        if (data.myList) localStorage.setItem("rabtv_my_list", data.myList);[span_361](start_span)[span_361](end_span)
-        if (data.favorites)[span_362](start_span)[span_362](end_span)
+        if (data.myList) localStorage.setItem("rabtv_my_list", data.myList);
+        if (data.favorites)
           localStorage.setItem("rabtv_favorites", data.favorites);
 
-        localStorage.removeItem(DISCLAIMER_ACCEPTED_KEY);[span_363](start_span)[span_363](end_span)
-        localStorage.removeItem("rabtv_access_status");[span_364](start_span)[span_364](end_span)
-        localStorage.removeItem("rabtv_is_admin");[span_365](start_span)[span_365](end_span)
-        setShowFirstStartModal(true);[span_366](start_span)[span_366](end_span)
-        handleCloseAll();[span_367](start_span)[span_367](end_span)
-        setBackupStatus([span_368](start_span)[span_368](end_span)
+        localStorage.removeItem(DISCLAIMER_ACCEPTED_KEY);
+        localStorage.removeItem("rabtv_access_status");
+        localStorage.removeItem("rabtv_is_admin");
+        setShowFirstStartModal(true);
+        handleCloseAll();
+        setBackupStatus(
           "Settings restored. Please reinstate your passcode agreement."
         );
       } catch {
-        setBackupStatus("Failed to restore backup file.");[span_369](start_span)[span_369](end_span)
+        setBackupStatus("Failed to restore backup file.");
       }
     };
     reader.readAsText(file);
   };
 
-  const getBodyBackground = (theme: AppTheme) => {[span_370](start_span)[span_370](end_span)
+  const getBodyBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
         return "bg-gradient-to-br from-zinc-950/85 via-red-950/45 to-black/90";
@@ -665,7 +648,7 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
     }
   };
 
-  const getCardBackground = (theme: AppTheme) => {[span_371](start_span)[span_371](end_span)
+  const getCardBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
         return "bg-zinc-900/95 border-red-500/30";
@@ -683,7 +666,7 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
     }
   };
 
-  const getThemeHeaderStyles = (theme: AppTheme) => {[span_372](start_span)[span_372](end_span)
+  const getThemeHeaderStyles = (theme: AppTheme) => {
     switch (theme) {
       case "red":
         return {
@@ -719,9 +702,9 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
     }
   };
 
-  const activeHeader = getThemeHeaderStyles(appTheme);[span_373](start_span)[span_373](end_span)
+  const activeHeader = getThemeHeaderStyles(appTheme);
 
-  const getPrimaryAccentColor = (theme: AppTheme) => {[span_374](start_span)[span_374](end_span)
+  const getPrimaryAccentColor = (theme: AppTheme) => {
     switch (theme) {
       case "red":
         return "text-red-400";
@@ -739,7 +722,7 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
     }
   };
 
-  const getPrimaryBgColor = (theme: AppTheme) => {[span_375](start_span)[span_375](end_span)
+  const getPrimaryBgColor = (theme: AppTheme) => {
     switch (theme) {
       case "red":
         return "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30";
@@ -750,14 +733,14 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
       case "amber":
         return "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30";
       case "cyan":
-        return "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-blue-600/30";
+        return "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30";
       case "violet":
       default:
         return "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30";
     }
   };
 
-  const getThemeGlowClass = (theme: AppTheme) => {[span_376](start_span)[span_376](end_span)
+  const getThemeGlowClass = (theme: AppTheme) => {
     switch (theme) {
       case "red":
         return "border-red-500/60 shadow-[0_0_20px_rgba(239,68,68,0.6)]";
@@ -775,7 +758,7 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
     }
   };
 
-  const getSubtlePillBg = (theme: AppTheme) => {[span_377](start_span)[span_377](end_span)
+  const getSubtlePillBg = (theme: AppTheme) => {
     switch (theme) {
       case "red":
         return "bg-red-950/50 border-red-500/30 text-red-200 hover:bg-red-900/60";
@@ -793,7 +776,7 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
     }
   };
 
-  const allThemesList: { id: AppTheme; label: string }[] = [[span_378](start_span)[span_378](end_span)
+  const allThemesList: { id: AppTheme; label: string }[] = [
     { id: "violet", label: "🟣 Violet / Neon" },
     { id: "red", label: "🔴 Red & Black" },
     { id: "midnight", label: "🔵 Midnight & Black" },
@@ -803,10 +786,10 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
   ];
 
   return (
-    <html lang="en" data-theme={appTheme}>[span_379](start_span)[span_379](end_span)
+    <html lang="en" data-theme={appTheme}>
       <head>
-        <HeadContent />[span_380](start_span)[span_380](end_span)
-        {helpfulMouse && ([span_381](start_span)[span_381](end_span)
+        <HeadContent />
+        {helpfulMouse && (
           <style>{`
             *, button, a, select, input, [role="button"] {
               cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 24 24' fill='%23ffffff' stroke='%23000000' stroke-width='2'%3E%3Cpath d='M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z'/%3E%3C/svg%3E"), auto !important;
@@ -817,9 +800,9 @@ function RootComponent() {[span_53](start_span)[span_53](end_span)
       <body
         className={`min-h-screen max-w-full overflow-x-hidden ${getBodyBackground(appTheme)} text-slate-100 antialiased transition-colors duration-300 relative`}
       >
-        <PreviewHostBridge />[span_382](start_span)[span_382](end_span)
-        <HolidayOverlay />[span_383](start_span)[span_383](end_span)
-        <AppWallpaper />[span_384](start_span)[span_384](end_span)
+        <PreviewHostBridge />
+        <HolidayOverlay />
+        <AppWallpaper />
         <AuthProvider>
           <header className="sticky top-0 z-40 border-b border-white/15 transition-colors duration-300 relative overflow-hidden">
             <div className="absolute inset-0 pointer-events-none">
