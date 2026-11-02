@@ -324,12 +324,15 @@ function LiveTvComponent() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col justify-center items-center h-64 gap-3">
+          <div className="flex flex-col justify-center items-center h-72 gap-3 max-w-md mx-auto text-center px-4">
             <div
               className={`animate-spin rounded-full h-10 w-10 border-t-2 ${themeStyles.accentText}`}
             />
-            <p className="text-xs text-slate-400">
+            <p className="text-xs font-bold text-slate-200 mt-1">
               {probing ? 'Probing stream health…' : 'Loading channels…'}
+            </p>
+            <p className="text-[11px] text-slate-400 leading-relaxed bg-black/30 border border-white/10 rounded-xl p-3">
+              Note: On initial load, checking the health status of your TV guide may take up to 2 minutes depending on your network speed. Subsequent visits will load instantly from memory.
             </p>
           </div>
         ) : channels.length > 0 ? (
