@@ -197,9 +197,6 @@ jobs:
           mkdir -p www
           cp dist/client/index.html www/index.html
 
-      - name: Add Android Platform
-        run: npx @capacitor/cli add android
-
       - name: Generate App Icons and Splash Screens from Standard Assets
         run: npx @capacitor/assets generate --android
 
