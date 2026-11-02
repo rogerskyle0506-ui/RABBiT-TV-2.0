@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getSavedWallpaperUrl, saveWallpaperUrl } from "@/lib/settings";
 
+const FALLBACK_WALLPAPER = "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80";
+
 export function AppWallpaper() {
   const [wallpaperUrl, setWallpaperUrl] = useState<string>(getSavedWallpaperUrl());
 
@@ -14,7 +16,7 @@ export function AppWallpaper() {
     return () => window.removeEventListener("rabtv_settings_updated", syncWallpaper);
   }, []);
 
-  const resolvedUrl = wallpaperUrl || getSavedWallpaperUrl();
+  const resolvedUrl = wallpaperUrl || FALLBACK_WALLPAPER;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[-1] overflow-hidden">
@@ -25,8 +27,8 @@ export function AppWallpaper() {
         loading="eager"
         decoding="async"
         onError={(event) => {
-          event.currentTarget.src = "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80";
-          saveWallpaperUrl("https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80");
+          event.currentTarget.src = FALLBACK_WALLPAPER;
+          saveWallpaperUrl(FALLBACK_WALLPAPER);
         }}
       />
       <div className="absolute inset-0 bg-black/45" />

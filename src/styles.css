@@ -4,25 +4,51 @@
   color-scheme: dark;
   font-family: "Inter", "Segoe UI", sans-serif;
   --app-bg: #050b16;
+  --app-panel: #090e1f;
+  --app-accent: #a855f7;
   --selection-bg: rgba(168, 85, 247, 0.45);
 }
 
-/* Theme: Violet (Default) */
 html[data-theme="violet"] {
   --app-bg: #050b16;
+  --app-panel: #090e1f;
+  --app-accent: #a855f7;
   --selection-bg: rgba(168, 85, 247, 0.45);
 }
 
-/* Theme: Red & Black */
 html[data-theme="red"] {
   --app-bg: #120202;
+  --app-panel: #160404;
+  --app-accent: #f87171;
   --selection-bg: rgba(239, 68, 68, 0.45);
 }
 
-/* Theme: Midnight & Black */
 html[data-theme="midnight"] {
   --app-bg: #020617;
+  --app-panel: #03091e;
+  --app-accent: #60a5fa;
   --selection-bg: rgba(59, 130, 246, 0.45);
+}
+
+html[data-theme="emerald"] {
+  --app-bg: #02140d;
+  --app-panel: #031b13;
+  --app-accent: #34d399;
+  --selection-bg: rgba(16, 185, 129, 0.4);
+}
+
+html[data-theme="amber"] {
+  --app-bg: #1b1204;
+  --app-panel: #221507;
+  --app-accent: #fbbf24;
+  --selection-bg: rgba(245, 158, 11, 0.38);
+}
+
+html[data-theme="cyan"] {
+  --app-bg: #021417;
+  --app-panel: #031d20;
+  --app-accent: #67e8f9;
+  --selection-bg: rgba(14, 165, 233, 0.35);
 }
 
 html,
@@ -35,6 +61,7 @@ body {
 body {
   min-height: 100vh;
   background-color: var(--app-bg);
+  background-attachment: fixed;
 }
 
 button,
@@ -64,10 +91,6 @@ img {
   overflow: hidden;
 }
 
-/* ==========================================================
-   Fire OS 7 / Fire Stick Specific Iframe & Viewport Corrections
-   (Only applies when the 'fire-os' class is detected at runtime)
-   ================================================---------- */
 html.fire-os iframe,
 html.fire-os .video-player-container,
 html.fire-os video {
@@ -79,7 +102,6 @@ html.fire-os video {
   max-height: 100vh !important;
 }
 
-/* Ensure Fire OS doesn't collapse flex containers on player views */
 html.fire-os .player-view-wrapper {
   display: block !important;
   min-height: 100vh !important;

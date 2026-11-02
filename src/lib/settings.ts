@@ -64,21 +64,34 @@ export const THEME_PRESETS: Record<
   },
 };
 
+export const THEME_OPTIONS: { id: AppTheme; label: string }[] = [
+  { id: "violet", label: "🟣 Violet / Neon" },
+  { id: "red", label: "🔴 Red & Black" },
+  { id: "midnight", label: "🔵 Midnight & Black" },
+  { id: "emerald", label: "🟢 Emerald / Teal" },
+  { id: "amber", label: "🟠 Amber / Gold" },
+  { id: "cyan", label: "🔷 Cyan / Sky" },
+];
+
+const VALID_CARD_SIZES = ["small", "medium", "large"] as const;
+const VALID_STREAM_QUALITIES = ["1080p", "720p", "480p", "auto"] as const;
+
 export function applyThemeToDocument(theme: AppTheme) {
-  const target = typeof document !== "undefined" ? document.documentElement : null;
-  if (!target) return;
+  if (typeof document === "undefined") return;
 
   const preset = THEME_PRESETS[theme] ?? THEME_PRESETS.violet;
-  target.dataset.theme = theme;
-  target.style.setProperty("--app-bg", preset.background);
-  target.style.setProperty("--app-panel", preset.panel);
-  target.style.setProperty("--app-accent", preset.accent);
+  const root = document.documentElement;
+
+  root.dataset.theme = theme;
+  root.style.setProperty("--app-bg", preset.background);
+  root.style.setProperty("--app-panel", preset.panel);
+  root.style.setProperty("--app-accent", preset.accent);
 }
 
 export function getSavedCardSize(): CardSize {
   if (typeof window === "undefined") return "large";
   const saved = localStorage.getItem(CARD_SIZE_KEY) as CardSize | null;
-  return saved && ["small", "medium", "large"].includes(saved) ? saved : "large";
+  return saved && VALID_CARD_SIZES.includes(saved as (typeof VALID_CARD_SIZES)[number]) ? saved : "large";
 }
 
 export function saveCardSize(size: CardSize) {
@@ -90,7 +103,7 @@ export function saveCardSize(size: CardSize) {
 export function getSavedStreamQuality(): StreamQuality {
   if (typeof window === "undefined") return "1080p";
   const saved = localStorage.getItem(STREAM_QUALITY_KEY) as StreamQuality | null;
-  return saved && ["1080p", "720p", "480p", "auto"].includes(saved) ? saved : "1080p";
+  return saved && VALID_STREAM_QUALITIES.includes(saved as (typeof VALID_STREAM_QUALITIES)[number]) ? saved : "1080p";
 }
 
 export function saveStreamQuality(quality: StreamQuality) {
@@ -106,10 +119,10 @@ export function getSavedTheme(): AppTheme {
 }
 
 export function saveTheme(theme: AppTheme) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(THEME_KEY, theme);
-    applyThemeToDocument(theme);
-  }
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem(THEME_KEY, theme);
+  applyThemeToDocument(theme);
 }
 
 export function getSavedWallpaperUrl(): string {
@@ -129,8 +142,8 @@ export function saveWallpaperUrl(url: string) {
   if (typeof window === "undefined") return;
 
   const next = url.trim();
-  const finalUrl = /^(https?:|data:|\/)/i.test(next) ? next : DEFAULT_WALLPAPER_URL;
-  localStorage.setItem(WALLPAPER_URL_KEY, finalUrl);
+  const resolved = /^(https?:|data:|\/)/i.test(next) ? next : DEFAULT_WALLPAPER_URL;
+  localStorage.setItem(WALLPAPER_URL_KEY, resolved);
   window.dispatchEvent(new Event("rabtv_settings_updated"));
 }
 
