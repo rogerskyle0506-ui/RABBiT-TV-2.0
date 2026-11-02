@@ -63,7 +63,8 @@ const AGE_LOCK_KEY = "rabtv_age_passcode";
 const globalFeedOptions = ["All (Default)", "Russian", "British", "Hungarian", "German"] as const;
 export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 
-const HEADER_WALLPAPER_URL = "https://i.postimg.cc/y6r1Fv8k/grok-image-1793587579614.jpg";
+const HEADER_ICON_URL =
+  "https://avatars.githubusercontent.com/u/330663733?s=400&u=911c6843a369d9d42e99a852c6bf65a49c779b9d&v=4";
 
 const themeStatusBarMap: Record<AppTheme, string> = {
   violet: "#0f0728",
@@ -124,7 +125,6 @@ function RootComponent() {
   const [ageErrorNotice, setAgeErrorNotice] = useState(false);
   const [ageLockError, setAgeLockError] = useState(false);
 
-  // Mandatory 4-digit age lock set on first login (parent PIN)
   const [ageLockInput, setAgeLockInput] = useState("");
 
   const [showSettings, setShowSettings] = useState(false);
@@ -824,7 +824,7 @@ function RootComponent() {
           <header className="sticky top-0 z-40 border-b border-white/15 transition-colors duration-300 relative overflow-hidden">
             <div className="absolute inset-0 pointer-events-none">
               <img
-                src={HEADER_WALLPAPER_URL}
+                src={HEADER_ICON_URL}
                 alt="Header Background"
                 className="w-full h-full object-fill"
               />
@@ -1473,7 +1473,7 @@ function RootComponent() {
                   <div className="text-center space-y-2">
                     <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl overflow-hidden border border-red-500/30 shadow-lg bg-black">
                       <img
-                        src={HEADER_WALLPAPER_URL}
+                        src={HEADER_ICON_URL}
                         alt="RABBiT TV Logo"
                         className="h-full w-full object-fill"
                       />
