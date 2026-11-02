@@ -1,37 +1,17 @@
-import { useEffect, useState } from "react";
-import { getSavedWallpaperUrl, saveWallpaperUrl } from "@/lib/settings";
+import React from "react";
 
-const FALLBACK_WALLPAPER = "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80";
+const APP_WALLPAPER_URL = "https://i.postimg.cc/y6r1Fv8k/grok-image-1793587579614.jpg";
 
 export function AppWallpaper() {
-  const [wallpaperUrl, setWallpaperUrl] = useState<string>(getSavedWallpaperUrl());
-
-  useEffect(() => {
-    const syncWallpaper = () => {
-      setWallpaperUrl(getSavedWallpaperUrl());
-    };
-
-    syncWallpaper();
-    window.addEventListener("rabtv_settings_updated", syncWallpaper);
-    return () => window.removeEventListener("rabtv_settings_updated", syncWallpaper);
-  }, []);
-
-  const resolvedUrl = wallpaperUrl || FALLBACK_WALLPAPER;
-
   return (
-    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       <img
-        src={resolvedUrl}
+        src={APP_WALLPAPER_URL}
         alt=""
-        className="h-full w-full object-cover opacity-50"
-        loading="eager"
-        decoding="async"
-        onError={(event) => {
-          event.currentTarget.src = FALLBACK_WALLPAPER;
-          saveWallpaperUrl(FALLBACK_WALLPAPER);
-        }}
+        className="h-full w-full object-cover opacity-45"
       />
-      <div className="absolute inset-0 bg-black/45" />
+      <div className="absolute inset-0 bg-slate-950/35" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_55%)]" />
     </div>
   );
 }
