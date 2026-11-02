@@ -45,6 +45,44 @@ jobs:
       - name: Install Capacitor CLI, Android & Assets Packages
         run: npm install @capacitor/cli@^6 @capacitor/android@^6 @capacitor/assets --save-dev
 
+      - name: Use HeaderFamily.jpg for TV Banner & Validate Assets
+        run: |
+          python3 -c "
+          import os
+          from PIL import Image, ImageDraw
+          
+          os.makedirs('assets', exist_ok=True)
+          
+          # Automatically use HeaderFamily.jpg as tv_banner.png if present
+          if os.path.exists('assets/HeaderFamily.jpg'):
+              try:
+                  img = Image.open('assets/HeaderFamily.jpg')
+                  img.save('assets/tv_banner.png', 'PNG')
+                  print('Successfully set HeaderFamily.jpg as tv_banner.png')
+              except Exception as e:
+                  print('Error processing HeaderFamily.jpg:', e)
+          
+          # Ensure icon.png is a valid PNG
+          try:
+              img = Image.open('assets/icon.png')
+              img.verify()
+          except Exception:
+              print('Regenerating valid icon.png...')
+              img_icon = Image.new('RGBA', (512, 512), color=(5, 11, 22, 255))
+              d = ImageDraw.Draw(img_icon)
+              d.rectangle([50, 50, 462, 462], outline=(139, 92, 246, 255), width=12)
+              img_icon.save('assets/icon.png', 'PNG')
+          
+          # Fallback check for tv_banner.png
+          if not os.path.exists('assets/tv_banner.png'):
+              img_banner = Image.new('RGBA', (320, 180), color=(5, 11, 22, 255))
+              d = ImageDraw.Draw(img_banner)
+              d.rectangle([10, 10, 310, 170], outline=(139, 92, 246, 255), width=4)
+              img_banner.save('assets/tv_banner.png', 'PNG')
+              
+          print('Asset configuration complete.')
+          "
+
       - name: Verify Capacitor Config & Icon Exists
         run: |
           if [ ! -f capacitor.config.json ]; then
