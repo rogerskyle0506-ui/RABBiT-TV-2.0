@@ -215,7 +215,7 @@ jobs:
             mkdir -p android/app
             keytool -genkey -v -keystore "$KEYSTORE_PATH" \
               -alias RABBITV34688643 -keyalg RSA -keysize 2048 -validity 10000 \
-              -passin pass:RABBITV34688643 -passout pass:RABBITV34688643 \
+              -storepass RABBITV34688643 -keypass RABBITV34688643 \
               -dname "CN=RabbitTV, OU=Streaming, O=Rabbit, L=Toronto, S=ON, C=CA"
             
             git config --global user.name "github-actions[bot]"
