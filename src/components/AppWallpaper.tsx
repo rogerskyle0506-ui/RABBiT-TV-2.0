@@ -8,8 +8,10 @@ export function AppWallpaper() {
       <img
         src={APP_WALLPAPER_URL}
         alt="App Wallpaper"
-        className="w-full h-full object-fill opacity-35"
+        className="w-full h-full object-cover opacity-45"
       />
+      {/* subtle dark veil so text stays readable while the wallpaper still shows */}
+      <div className="absolute inset-0 bg-black/40" />
     </div>
   );
 }
