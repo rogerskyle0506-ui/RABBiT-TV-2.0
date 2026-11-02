@@ -27,8 +27,23 @@ import {
   setHistoryOverscale,
   getLargeButtons,
   setLargeButtons,
-  generateUnlockCode,
 } from "@/lib/settings";
+
+// ——— Unlock algorithm (name + age → 8-digit code) ———
+function generateUnlockCode(name: string, age: number): string {
+  const clean = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  if (!clean || !age || age < 1 || age > 120) return "";
+
+  let sum = age * 17;
+  for (let i = 0; i < clean.length; i++) {
+    sum += clean.charCodeAt(i) * (i + 7);
+  }
+  const mixed = (sum * 7919 + age * 997) % 90000000;
+  return String(mixed + 10000000);
+}
 
 const ADMIN_NAME = "Rabbit";
 const ADMIN_BIRTH_YEAR = 1988;
@@ -814,7 +829,7 @@ function RootComponent() {
                 className="w-full h-full object-fill brightness-90"
               />
             </div>
-            <div className="absolute inset-0 bg-black/25 backdrop-blur-[1px]" />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
 
             <div className="relative z-10 mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2 sm:px-6 gap-2">
               <div className="flex items-center justify-between sm:justify-start gap-2">
