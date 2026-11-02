@@ -52,16 +52,31 @@ html[data-theme="cyan"] {
 }
 
 html,
-body {
+body,
+#root {
   margin: 0;
+  width: 100%;
+  max-width: 100%;
   min-height: 100%;
   background-color: var(--app-bg);
 }
 
+html {
+  overflow-x: hidden;
+  background: var(--app-bg);
+}
+
 body {
+  position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--app-bg);
   background-attachment: fixed;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  isolation: isolate;
 }
 
 button,
@@ -105,4 +120,16 @@ html.fire-os video {
 html.fire-os .player-view-wrapper {
   display: block !important;
   min-height: 100vh !important;
+}
+
+@media (max-width: 640px) {
+  html,
+  body,
+  #root {
+    min-width: 0;
+  }
+
+  body {
+    background-position: center center;
+  }
 }

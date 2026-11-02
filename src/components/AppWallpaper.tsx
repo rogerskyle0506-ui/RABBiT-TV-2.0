@@ -19,10 +19,10 @@ export function AppWallpaper() {
   const resolvedUrl = wallpaperUrl || FALLBACK_WALLPAPER;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[-1] overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
       <img
         src={resolvedUrl}
-        alt="App Wallpaper"
+        alt=""
         className="h-full w-full object-cover opacity-50"
         loading="eager"
         decoding="async"
