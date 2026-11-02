@@ -428,6 +428,7 @@ function Home() {
     };
   }, [activeTab, page, selectedGenre, globalFeedOverride]);
 
+  // SMART SUGGESTIONS: Percentage-weighted genre curation based on watch history & favorites
   useEffect(() => {
     let active = true;
     async function fetchSmartSuggestions() {
@@ -436,24 +437,37 @@ function Home() {
         const apiKey = TMDB_API_KEY;
         const seedItems = [
           ...savedFavorites,
-          ...historyItems.filter((h: any) => h.confirmedCompleted || (h.progressPercent ?? 0) > 50),
+          ...savedMyList,
+          ...historyItems.filter((h: any) => h.confirmedCompleted || (h.progressPercent ?? 0) > 20),
         ];
 
-        const genreQueryParam = seedItems.some(
-          (i) =>
-            i.genre?.includes("ACTION") ||
-            i.title?.toLowerCase().includes("spider") ||
-            i.title?.toLowerCase().includes("captain") ||
-            i.title?.toLowerCase().includes("flash")
-        )
-          ? "28,12,878"
-          : "28,12";
+        const genreCounts: Record<number, number> = {};
+        let totalGenresLogged = 0;
 
+        for (const item of seedItems) {
+          const ids = (item as any).genreIds || [];
+          for (const gid of ids) {
+            if (typeof gid === "number") {
+              genreCounts[gid] = (genreCounts[gid] || 0) + 1;
+              totalGenresLogged++;
+            }
+          }
+        }
+
+        let targetGenreIds: number[] = [28, 12];
+        if (totalGenresLogged > 0) {
+          const sortedGenres = Object.entries(genreCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([id]) => Number(id));
+          targetGenreIds = sortedGenres.slice(0, 3);
+        }
+
+        const genreQueryParam = targetGenreIds.join(",");
         const res = await fetch(
           `${TMDB_BASE_URL}discover/movie?api_key=${apiKey}&with_genres=${genreQueryParam}&sort_by=popularity.desc&vote_average.gte=6.0&page=1`
         );
         const data = await res.json();
-        const actionPool: MediaItem[] = [];
+        const pool: MediaItem[] = [];
 
         for (const item of data.results || []) {
           const tmdbId = String(item.id);
@@ -468,13 +482,13 @@ function Home() {
           )
             continue;
 
-          actionPool.push({
+          pool.push({
             id: `movie-${tmdbId}`,
             title,
             description: item.overview || "",
             image: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
             href: `/details?id=${tmdbId}&type=movie`,
-            genre: "ACTION / HERO",
+            genre: "SUGGESTED FOR YOU",
             year: (item.release_date || "").split("-")[0],
             rating: item.vote_average ? item.vote_average.toFixed(1) : undefined,
             mediaType: "movie",
@@ -490,15 +504,14 @@ function Home() {
         ]);
 
         const uniqueSuggestions = new Map<string, MediaItem>();
-        for (const candidate of actionPool) {
+        for (const candidate of pool) {
           const cleanId = String(candidate.id).replace(/^(movie|tv)-/, "");
           if (watchedIds.has(cleanId)) continue;
           if (!isAllowedForAge((candidate as any).certification, candidate.genre, userAge)) continue;
           uniqueSuggestions.set(cleanId, candidate);
         }
 
-        const finalSuggestions = Array.from(uniqueSuggestions.values()).slice(0, 15);
-        setSuggestedItems(finalSuggestions);
+        setSuggestedItems(Array.from(uniqueSuggestions.values()).slice(0, 15));
       } catch (e) {
         console.error("Failed to load smart genre suggestions", e);
       }
@@ -548,19 +561,26 @@ function Home() {
     });
   }, [items, activeTab, savedCatalogItems, userAge]);
 
-  // HERO BANNER: Uses all items from the current page, removing disliked or already watched items
+  // HERO BANNER SOURCE: On "My List", reads from suggestedItems (falling back to savedCatalogItems if empty); otherwise uses catalog items.
+  const heroSourceList = useMemo(() => {
+    if (activeTab === "My List") {
+      return suggestedItems.length > 0 ? suggestedItems : savedCatalogItems;
+    }
+    return items;
+  }, [activeTab, suggestedItems, savedCatalogItems, items]);
+
   const heroItems = useMemo(() => {
     const watchedIds = new Set(
       historyItems.map((h) => String(h.mediaId ?? h.id).replace(/^(movie|tv)-/i, ""))
     );
 
-    return filteredItems.filter((item) => {
+    return heroSourceList.filter((item) => {
       const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
       if (watchedIds.has(cleanId)) return false;
       if (isTitleDisliked(item.id) || isTitleDisliked(cleanId)) return false;
       return true;
     });
-  }, [filteredItems, historyItems]);
+  }, [heroSourceList, historyItems]);
 
   useEffect(() => {
     setCurrentHeroIndex(0);
@@ -701,95 +721,63 @@ function Home() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 overflow-x-hidden flex flex-col items-center">
-        <section
-          className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[360px] sm:h-[400px] flex flex-col group`}
-        >
-          {activeHeroItem ? (
-            <>
-              <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
-                <img
-                  src={activeHeroItem.image}
-                  alt={activeHeroItem.title}
-                  className="absolute inset-0 h-full w-full object-fill object-center opacity-95 transition-opacity duration-1000"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/80 via-black/30 to-transparent"></div>
-              </div>
+        {/* HERO BANNER: Full container acts as Watch Now link, stripped of dots, spotlight counts, and button */}
+        {activeHeroItem && heroDetailsSearch ? (
+          <Link
+            to="/details"
+            search={heroDetailsSearch}
+            className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[320px] sm:h-[360px] flex flex-col group focus:outline-none focus:ring-4 ${themeStyles.borderGlow}`}
+          >
+            <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
+              <img
+                src={activeHeroItem.image}
+                alt={activeHeroItem.title}
+                className="absolute inset-0 h-full w-full object-fill object-center opacity-95 transition duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/90 via-black/30 to-transparent"></div>
+            </div>
 
-              {heroItems.length > 1 && (
-                <div className="absolute bottom-24 sm:bottom-28 left-0 right-0 z-30 flex items-center justify-center">
-                  <div className="flex items-center gap-2.5 bg-black/50 backdrop-blur-md px-3.5 py-2 rounded-full border border-white/10">
-                    {heroItems.map((_, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setCurrentHeroIndex(idx)}
-                        className={`rounded-full transition-all focus:outline-none ${
-                          idx === currentHeroIndex
-                            ? "h-3.5 w-3.5 bg-white shadow"
-                            : "h-3 w-3 bg-white/40 hover:bg-white/70"
-                        }`}
-                        aria-label={`Go to slide ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
+            <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 flex flex-col justify-end z-10">
+              <div className="bg-black/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-white/10 flex flex-col space-y-1 shadow-2xl text-left">
+                <div
+                  className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] ${themeStyles.accentText}`}
+                >
+                  <span className="truncate max-w-[200px]">
+                    {activeHeroItem.genre ?? "Entertainment"}
+                  </span>
                 </div>
-              )}
 
-              <div className="absolute inset-x-0 bottom-0 p-3 sm:p-5 flex flex-col justify-end z-10">
-                <div className="bg-black/55 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xl">
-                  <div className="space-y-1 flex-1 min-w-0 w-full text-left">
-                    <div
-                      className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] ${themeStyles.accentText}`}
-                    >
-                      <span className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 shrink-0">
-                        ⭐ Spotlight ({currentHeroIndex + 1}/{heroItems.length || 1})
-                      </span>
-                      <span className="truncate max-w-[140px]">
-                        {activeHeroItem.genre ?? "Entertainment"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center flex-wrap gap-2 min-w-0">
-                      <h2 className="text-lg sm:text-xl font-black text-white leading-snug truncate max-w-full">
-                        {activeHeroItem.title}
-                      </h2>
-                      {activeHeroItem.rating && (
-                        <span className="rounded-full border border-yellow-400/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 px-2 py-0.5 uppercase tracking-[0.2em] text-yellow-200 text-[10px] font-semibold shrink-0">
-                          ⭐ {activeHeroItem.rating}
-                        </span>
-                      )}
-                      {activeHeroItem.year && (
-                        <span className="text-[11px] text-slate-300 font-medium shrink-0">
-                          {activeHeroItem.year}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs leading-relaxed text-slate-300 line-clamp-2">
-                      {activeHeroItem.description}
-                    </p>
-                  </div>
-
-                  <div className="shrink-0 w-full sm:w-auto flex items-center gap-3">
-                    {heroDetailsSearch && (
-                      <Link
-                        to="/details"
-                        search={heroDetailsSearch}
-                        className={`w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-full shadow-lg text-xs font-bold transition whitespace-nowrap border border-white/10 ${themeStyles.btnActive}`}
-                      >
-                        WATCH NOW
-                      </Link>
-                    )}
-                  </div>
+                <div className="flex items-center flex-wrap gap-2 min-w-0">
+                  <h2 className="text-base sm:text-lg font-black text-white leading-snug truncate max-w-full">
+                    {activeHeroItem.title}
+                  </h2>
+                  {activeHeroItem.rating && (
+                    <span className="rounded-full border border-yellow-400/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 px-2 py-0.5 uppercase tracking-[0.2em] text-yellow-200 text-[10px] font-semibold shrink-0">
+                      ⭐ {activeHeroItem.rating}
+                    </span>
+                  )}
+                  {activeHeroItem.year && (
+                    <span className="text-[11px] text-slate-300 font-medium shrink-0">
+                      {activeHeroItem.year}
+                    </span>
+                  )}
                 </div>
+
+                <p className="text-xs leading-relaxed text-slate-300 line-clamp-1">
+                  {activeHeroItem.description}
+                </p>
               </div>
-            </>
-          ) : (
-            <div className="flex h-full items-center justify-center text-slate-300 z-10">
+            </div>
+          </Link>
+        ) : (
+          <section
+            className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[320px] sm:h-[360px] flex flex-col items-center justify-center`}
+          >
+            <div className="text-slate-300 text-center px-4">
               {loading ? `Loading ${activeTab}...` : error ?? "No media found in this section."}
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
         {activeTab !== "My List" && (
           <section className="mb-4 space-y-2.5 flex flex-col items-center justify-center text-center w-full">
@@ -928,6 +916,24 @@ function Home() {
               </span>
             </div>
           </div>
+        )}
+
+        {activeTab === "My List" && suggestedItems.length > 0 && (
+          <section className="mb-8 px-1 pt-4 border-t border-white/10 w-full max-w-7xl">
+            <div className="mb-3 flex items-center justify-between px-2">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span>✨ Suggested For You</span>
+              </h3>
+              <span className={`text-xs font-medium ${themeStyles.accentText}`}>
+                Curated based on your favorites & history genres
+              </span>
+            </div>
+            <div className={gridColsClass}>
+              {suggestedItems.map((item) => (
+                <MemoizedMediaCard item={item} key={`suggested-${item.id}`} />
+              ))}
+            </div>
+          </section>
         )}
 
         {activeTab !== "My List" && totalPages > 1 && (
