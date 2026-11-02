@@ -166,8 +166,9 @@ jobs:
       - name: Generate App Icons and Splash Screens from Standard Assets
         run: npx @capacitor/assets generate --android
 
-      - name: Properly Convert HeaderFamily.jpg to Real PNG TV Banner & Inject Custom Files
+      - name: Install Pillow & Convert HeaderFamily.jpg to True PNG TV Banner
         run: |
+          pip install Pillow
           python3 -c "
           import os
           from PIL import Image
