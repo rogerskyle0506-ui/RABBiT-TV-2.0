@@ -220,6 +220,12 @@ jobs:
             exit 1
           fi
 
+      - name: Ensure Gradle Wrapper Exists
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.2.1
+          chmod +x gradlew
+
       - name: Build Signed Release APK with Custom Keystore
         run: |
           cd android
