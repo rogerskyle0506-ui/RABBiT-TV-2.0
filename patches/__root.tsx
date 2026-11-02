@@ -60,7 +60,20 @@ const TRIAL_CODE = "9654";
 const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 const AGE_LOCK_KEY = "rabtv_age_passcode";
 
-const globalFeedOptions = ["All (Default)", "Russian", "British", "Hungarian", "German"] as const;
+const globalFeedOptions = [
+  "All (Default)",
+  "Canada (All)",
+  "Ontario / Toronto",
+  "Atlantic Canada",
+  "Western Canada",
+  "English",
+  "German",
+  "Ukrainian",
+  "Arabic / Islamic",
+  "Russian",
+  "British",
+  "Hungarian",
+] as const;
 export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 
 const HEADER_ICON_URL =
@@ -1005,6 +1018,27 @@ function RootComponent() {
                   </div>
                 )}
 
+                {/* Catalog Language & Region Preference */}
+                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    🌐 Catalog Language & Region
+                  </h4>
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    Set your preferred regional feed or language to directly customize your stream catalog.
+                  </p>
+                  <select
+                    value={selectedGlobalFeed}
+                    onChange={(e) => handleGlobalFeedChange(e.target.value as GlobalFeedOption)}
+                    className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none"
+                  >
+                    {globalFeedOptions.map((opt) => (
+                      <option key={opt} value={opt} className="bg-slate-900 text-white">
+                        🌐 {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
                     License Status
@@ -1656,11 +1690,11 @@ function RootComponent() {
                       </p>
                     )}
 
-                    {/* Contact Me / Help Info just below the passcode and above the button */}
+                    {/* Contact Me info just below passcode and right above enter button */}
                     <div className="rounded-xl border border-white/10 bg-black/40 p-3 text-center text-xs text-slate-300 space-y-1">
                       <p className="font-semibold text-white">Need an activation code or support?</p>
                       <p className="text-[11px] text-slate-400">
-                        Message me on WhatsApp (<span className="text-emerald-400 font-bold">RabbitProductions</span> or text my private number at <span className="text-amber-300 font-bold">(705) 809-3865</span>.
+                        Message me on WhatsApp (<span className="text-emerald-400 font-bold">RabbitProductions</span>[span_0](start_span)[span_0](end_span)) or text my private number at <span className="text-amber-300 font-bold">(705) 809-3865</span>.
                       </p>
                     </div>
 
