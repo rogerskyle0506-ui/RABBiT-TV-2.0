@@ -37,7 +37,7 @@ const providerCategories = [
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
-const TMDB_API_KEY = (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a302cd";
+const TMDB_API_KEY = (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 
 function getDetailsSearch(item: MediaItem): { id: string; type: "movie" | "tv" } {
@@ -250,7 +250,6 @@ function Home() {
   const [historyItems, setHistoryItems] = useState<MediaItem[]>([]);
   const [suggestedItems, setSuggestedItems] = useState<MediaItem[]>([]);
 
-  const [heroItems, setHeroItems] = useState<MediaItem[]>([]);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
   const [page, setPage] = useState(1);
@@ -382,144 +381,6 @@ function Home() {
   useEffect(() => {
     setPage(1);
   }, [activeTab, selectedGenre, globalFeedOverride]);
-
-  // SMART HERO: Now Playing first → adapt to watch history genres → pad with trending (max 10)
-  useEffect(() => {
-    let active = true;
-
-    async function fetchSmartHeroBanner() {
-      try {
-        const apiKey = TMDB_API_KEY;
-        const rawHistory = getRawWatchHistory();
-
-        const watchedIds = new Set(
-          rawHistory.map((h) => String(h.mediaId ?? h.id).replace(/^(movie|tv)-/i, ""))
-        );
-
-        const genreIdCounts: Record<number, number> = {};
-        for (const h of rawHistory) {
-          const ids = ((h as any).genreIds as number[] | undefined) || [];
-          for (const gid of ids) {
-            if (typeof gid === "number") {
-              genreIdCounts[gid] = (genreIdCounts[gid] || 0) + 1;
-            }
-          }
-        }
-        const topGenreIds = Object.entries(genreIdCounts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
-          .map(([id]) => id);
-
-        const candidates: MediaItem[] = [];
-        const seen = new Set<string>();
-
-        const pushItem = (item: any, mediaType: "movie" | "tv", genreLabel: string) => {
-          const tmdbId = String(item.id);
-          if (!item.backdrop_path) return;
-          if (seen.has(tmdbId) || watchedIds.has(tmdbId)) return;
-          if (
-            isTitleDisliked(tmdbId) ||
-            isTitleDisliked(`${mediaType}-${tmdbId}`) ||
-            isTitleBroken(tmdbId) ||
-            isTitleBroken(`${mediaType}-${tmdbId}`)
-          )
-            return;
-
-          const title = item.title || item.name;
-          if (!title) return;
-
-          seen.add(tmdbId);
-          candidates.push({
-            id: `${mediaType}-${tmdbId}`,
-            title,
-            description: item.overview || "No description available.",
-            image: `https://image.tmdb.org/t/p/original${item.backdrop_path}`,
-            href: `/details?id=${tmdbId}&type=${mediaType}`,
-            genre: genreLabel,
-            year: (item.release_date || item.first_air_date || "").split("-")[0] || undefined,
-            rating: item.vote_average ? Number(item.vote_average).toFixed(1) : undefined,
-            mediaType,
-          });
-        };
-
-        // 1) Always seed with Now Playing (theaters)
-        const nowPlayingRes = await fetch(
-          `${TMDB_BASE_URL}movie/now_playing?api_key=${apiKey}&language=en-US&page=1`
-        );
-        const nowPlayingData = await nowPlayingRes.json();
-        for (const item of nowPlayingData.results || []) {
-          pushItem(item, "movie", "🎬 IN THEATER");
-        }
-
-        // 2) If user has history genres, ask TMDB for similar tastes
-        if (topGenreIds.length > 0 && candidates.length < 10) {
-          const genreParam = topGenreIds.join(",");
-          const [movieRes, tvRes] = await Promise.all([
-            fetch(
-              `${TMDB_BASE_URL}discover/movie?api_key=${apiKey}&with_genres=${genreParam}&sort_by=popularity.desc&vote_count.gte=20&page=1`
-            ),
-            fetch(
-              `${TMDB_BASE_URL}discover/tv?api_key=${apiKey}&with_genres=${genreParam}&sort_by=popularity.desc&vote_count.gte=20&page=1`
-            ),
-          ]);
-          const movieData = await movieRes.json();
-          const tvData = await tvRes.json();
-
-          for (const item of movieData.results || []) {
-            pushItem(item, "movie", "FOR YOU");
-          }
-          for (const item of tvData.results || []) {
-            pushItem(item, "tv", "FOR YOU");
-          }
-        }
-
-        // 3) Pad with trending if still under 10
-        if (candidates.length < 10) {
-          const [trendMovie, trendTv] = await Promise.all([
-            fetch(`${TMDB_BASE_URL}trending/movie/week?api_key=${apiKey}&page=1`),
-            fetch(`${TMDB_BASE_URL}trending/tv/week?api_key=${apiKey}&page=1`),
-          ]);
-          const tm = await trendMovie.json();
-          const tt = await trendTv.json();
-          for (const item of tm.results || []) {
-            pushItem(item, "movie", "TRENDING");
-          }
-          for (const item of tt.results || []) {
-            pushItem(item, "tv", "TRENDING");
-          }
-        }
-
-        if (!active) return;
-
-        const forYou = candidates.filter((c) => c.genre === "FOR YOU");
-        const inTheater = candidates.filter((c) => c.genre === "🎬 IN THEATER");
-        const rest = candidates.filter(
-          (c) => c.genre !== "FOR YOU" && c.genre !== "🎬 IN THEATER"
-        );
-        const ordered = [...forYou, ...inTheater, ...rest].slice(0, 10);
-
-        setHeroItems(ordered);
-        setCurrentHeroIndex(0);
-      } catch (err) {
-        console.error("Failed to load smart hero banner queue:", err);
-      }
-    }
-
-    void fetchSmartHeroBanner();
-    return () => {
-      active = false;
-    };
-  }, [activeTab, historyItems]);
-
-  useEffect(() => {
-    if (heroItems.length <= 1) return;
-
-    const interval = setInterval(() => {
-      setCurrentHeroIndex((prevIndex) => (prevIndex + 1) % heroItems.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [heroItems.length]);
 
   useEffect(() => {
     let active = true;
@@ -686,6 +547,34 @@ function Home() {
       return isAllowedForAge((item as any).certification, item.genre, userAge);
     });
   }, [items, activeTab, savedCatalogItems, userAge]);
+
+  // HERO BANNER: Uses all items from the current page, removing disliked or already watched items
+  const heroItems = useMemo(() => {
+    const watchedIds = new Set(
+      historyItems.map((h) => String(h.mediaId ?? h.id).replace(/^(movie|tv)-/i, ""))
+    );
+
+    return filteredItems.filter((item) => {
+      const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
+      if (watchedIds.has(cleanId)) return false;
+      if (isTitleDisliked(item.id) || isTitleDisliked(cleanId)) return false;
+      return true;
+    });
+  }, [filteredItems, historyItems]);
+
+  useEffect(() => {
+    setCurrentHeroIndex(0);
+  }, [heroItems]);
+
+  useEffect(() => {
+    if (heroItems.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prevIndex) => (prevIndex + 1) % heroItems.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [heroItems.length]);
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
@@ -1039,24 +928,6 @@ function Home() {
               </span>
             </div>
           </div>
-        )}
-
-        {activeTab === "My List" && suggestedItems.length > 0 && (
-          <section className="mb-8 px-1 pt-4 border-t border-white/10 w-full max-w-7xl">
-            <div className="mb-3 flex items-center justify-between px-2">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <span>✨ Suggested For You</span>
-              </h3>
-              <span className={`text-xs font-medium ${themeStyles.accentText}`}>
-                Curated based on your favorites & history genres
-              </span>
-            </div>
-            <div className={gridColsClass}>
-              {suggestedItems.map((item) => (
-                <MemoizedMediaCard item={item} key={`suggested-${item.id}`} />
-              ))}
-            </div>
-          </section>
         )}
 
         {activeTab !== "My List" && totalPages > 1 && (
