@@ -155,9 +155,10 @@ jobs:
           mkdir -p www
           cp dist/client/index.html www/index.html
 
-      - name: Initialize or Sync Capacitor Android Platform First
+      - name: Initialize or Sync Capacitor Android Platform
         run: |
-          if [ ! -d android ]; then
+          if [ ! -f android/app/build.gradle ]; then
+            rm -rf android
             npx @capacitor/cli add android
           else
             npx @capacitor/cli sync android
@@ -213,12 +214,6 @@ jobs:
             echo "Error: android directory was not created!"
             exit 1
           fi
-
-      - name: Ensure Gradle Wrapper Exists
-        run: |
-          cd android
-          gradle wrapper --gradle-version 8.2.1
-          chmod +x gradlew
 
       - name: Build Signed Release APK with Custom Keystore
         run: |
