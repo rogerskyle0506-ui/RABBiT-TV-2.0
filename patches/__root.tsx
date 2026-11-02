@@ -62,7 +62,7 @@ const AGE_LOCK_KEY = "rabtv_age_passcode";
 const globalFeedOptions = ["All (Default)", "Russian", "British", "Hungarian", "German"] as const;
 export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 const HOSTED_ICON_URL =
-  "https://github.com/rogerskyle0506-ui/RABBIT-TV/blob/main/assets/icon.png?raw=true";
+  "https://avatars.githubusercontent.com/u/330663733?s=400&u=911c6843a369d9d42e99a852c6bf65a49c779b9d&v=4";
 
 const themeStatusBarMap: Record<AppTheme, string> = {
   violet: "#0f0728",
