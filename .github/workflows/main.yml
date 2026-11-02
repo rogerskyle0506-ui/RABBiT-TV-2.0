@@ -161,7 +161,8 @@ jobs:
       - name: Initialize or Sync Capacitor Android Platform
         run: |
           if [ ! -f android/settings.gradle ]; then
-            echo "Android configuration missing, adding android platform..."
+            echo "Android configuration missing or incomplete, refreshing android platform..."
+            rm -rf android
             npx @capacitor/cli add android
           else
             echo "Android platform already exists, syncing..."
