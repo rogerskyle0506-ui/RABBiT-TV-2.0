@@ -492,6 +492,7 @@ function Home() {
             year: (item.release_date || "").split("-")[0],
             rating: item.vote_average ? item.vote_average.toFixed(1) : undefined,
             mediaType: "movie",
+            releaseDate: item.release_date || item.first_air_date,
           });
         }
 
@@ -538,9 +539,21 @@ function Home() {
     }
 
     const map = new Map<string, MediaItem>();
+    const now = Date.now();
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+
     for (const item of rawList) {
       if (isTitleDisliked(item.id) || isTitleBroken(item.id)) continue;
       if (!isAllowedForAge((item as any).certification, item.genre, userAge)) continue;
+
+      // Pre-release check: remove if release date is more than 1 week in the future
+      const releaseDateStr = (item as any).releaseDate || (item as any).release_date || (item as any).first_air_date;
+      if (releaseDateStr) {
+        const releaseTime = new Date(releaseDateStr).getTime();
+        if (!isNaN(releaseTime) && releaseTime > now + oneWeekMs) {
+          continue;
+        }
+      }
 
       const normalizedTitle = (item.title ?? "").trim().toLowerCase();
       const uniqueKey = normalizedTitle || String(item.id);
@@ -554,10 +567,23 @@ function Home() {
 
   const filteredItems = useMemo(() => {
     const baseList = activeTab === "My List" ? savedCatalogItems : items;
+    const now = Date.now();
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
     return baseList.filter((item) => {
       if (isTitleDisliked(item.id) || isTitleBroken(item.id)) return false;
-      return isAllowedForAge((item as any).certification, item.genre, userAge);
+      if (!isAllowedForAge((item as any).certification, item.genre, userAge)) return false;
+
+      // Pre-release check: remove if release date is more than 1 week in the future
+      const releaseDateStr = (item as any).releaseDate || (item as any).release_date || (item as any).first_air_date;
+      if (releaseDateStr) {
+        const releaseTime = new Date(releaseDateStr).getTime();
+        if (!isNaN(releaseTime) && releaseTime > now + oneWeekMs) {
+          return false;
+        }
+      }
+
+      return true;
     });
   }, [items, activeTab, savedCatalogItems, userAge]);
 
@@ -572,11 +598,22 @@ function Home() {
     const watchedIds = new Set(
       historyItems.map((h) => String(h.mediaId ?? h.id).replace(/^(movie|tv)-/i, ""))
     );
+    const now = Date.now();
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
     return heroSourceList.filter((item) => {
       const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
       if (watchedIds.has(cleanId)) return false;
       if (isTitleDisliked(item.id) || isTitleDisliked(cleanId)) return false;
+
+      const releaseDateStr = (item as any).releaseDate || (item as any).release_date || (item as any).first_air_date;
+      if (releaseDateStr) {
+        const releaseTime = new Date(releaseDateStr).getTime();
+        if (!isNaN(releaseTime) && releaseTime > now + oneWeekMs) {
+          return false;
+        }
+      }
+
       return true;
     });
   }, [heroSourceList, historyItems]);
@@ -964,6 +1001,20 @@ function Home() {
               </button>
             </div>
           )}
+
+          <div className="mt-8 mb-4 text-center">
+            <p className="text-[10px] text-slate-500">
+              Data provided by{" "}
+              <a
+                href="https://www.themoviedb.org"
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-slate-400"
+              >
+                TMDB
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </main>
