@@ -158,8 +158,15 @@ jobs:
       - name: Generate App Icons and Splash Screens from Standard Assets
         run: npx @capacitor/assets generate --android
 
-      - name: Sync Capacitor
-        run: npx @capacitor/cli sync android
+      - name: Initialize or Sync Capacitor Android Platform
+        run: |
+          if [ ! -f android/settings.gradle ]; then
+            echo "Android configuration missing, adding android platform..."
+            npx @capacitor/cli add android
+          else
+            echo "Android platform already exists, syncing..."
+            npx @capacitor/cli sync android
+          fi
 
       - name: Prepare TV Banner from HeaderFamily.jpg & Inject Custom Files
         run: |
@@ -208,12 +215,6 @@ jobs:
             echo "Error: android directory was not created!"
             exit 1
           fi
-
-      - name: Generate Gradle Wrapper
-        run: |
-          cd android
-          gradle wrapper --gradle-version 8.2.1
-          chmod +x gradlew
 
       - name: Build Signed Release APK with Custom Keystore
         run: |
