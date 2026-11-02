@@ -146,9 +146,7 @@ export function DetailsPage() {
     async function fetchSeasonEpisodes() {
       if (mediaType !== "tv" || !mediaId) return;
       try {
-        const apiKey =
-          (import.meta.env.VITE_TMDB_API_KEY as string) ||
-          "61b51c2af00119474c16fb4c36c4bb58";
+        const apiKey = import.meta.env.VITE_TMDB_API_KEY as string;
         const res = await fetch(
           `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
         );
@@ -162,7 +160,6 @@ export function DetailsPage() {
     fetchSeasonEpisodes();
   }, [season, mediaId, mediaType]);
 
-  // More transparent backgrounds so wallpaper shows through
   const getPageBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
@@ -241,7 +238,6 @@ export function DetailsPage() {
   const activeTheme = getThemeClasses(appTheme);
   const prefixedId = `${mediaType}-${mediaId}`;
 
-  // Check watch status, dislikes, and broken status for the cover art indicator badge
   const mediaStatusBadge = useMemo(() => {
     if (!mediaId) return null;
     const cleanId = String(mediaId);
@@ -325,9 +321,7 @@ export function DetailsPage() {
         return;
       }
 
-      const apiKey =
-        (import.meta.env.VITE_TMDB_API_KEY as string) ||
-        "9619884fc9c0e58b374a661ab2a692cd";
+      const apiKey = import.meta.env.VITE_TMDB_API_KEY as string;
 
       let activeFetchType: "movie" | "tv" = urlType;
 
