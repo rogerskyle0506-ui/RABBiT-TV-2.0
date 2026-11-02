@@ -120,7 +120,7 @@ function RootComponent() {
   const [passcodeInput, setPasscodeInput] = useState("");
   const [passcodeError, setPasscodeError] = useState(false);
   const [passcodeErrorMsg, setPasscodeErrorMsg] = useState(
-    "⚠️ Invalid Passcode. Please try again."
+    "⚠️ Invalid Passcode. Please try again. WhatsApp: RabbitProductions | Private #: (705) 809-3865"
   );
   const [ageErrorNotice, setAgeErrorNotice] = useState(false);
   const [ageLockError, setAgeLockError] = useState(false);
@@ -401,7 +401,7 @@ function RootComponent() {
       if (trialAlreadyUsed) {
         setPasscodeError(true);
         setPasscodeErrorMsg(
-          "⚠️ Trial code has already been used on this device and cannot be redeemed again."
+          "⚠️ Trial code has already been used on this device and cannot be redeemed again. WhatsApp: RabbitProductions | Private #: (705) 809-3865"
         );
         setAgeErrorNotice(false);
         setAgeLockError(false);
@@ -443,7 +443,7 @@ function RootComponent() {
 
     setPasscodeError(true);
     setPasscodeErrorMsg(
-      "⚠️ Invalid Passcode for this name and age. Please try again."
+      "⚠️ Invalid Passcode for this name and age. WhatsApp: RabbitProductions | Private #: (705) 809-3865"
     );
     setAgeErrorNotice(false);
     setAgeLockError(false);
@@ -1655,6 +1655,15 @@ function RootComponent() {
                         {passcodeErrorMsg}
                       </p>
                     )}
+
+                    {/* Contact Me / Help Info just below the passcode and above the button */}
+                    <div className="rounded-xl border border-white/10 bg-black/40 p-3 text-center text-xs text-slate-300 space-y-1">
+                      <p className="font-semibold text-white">Need an activation code or support?</p>
+                      <p className="text-[11px] text-slate-400">
+                        Message me on WhatsApp (<span className="text-emerald-400 font-bold">RabbitProductions</span>[span_2](start_span)[span_2](end_span)) or text my private number at <span className="text-amber-300 font-bold">(705) 809-3865</span>.
+                      </p>
+                    </div>
+
                     <button
                       type="submit"
                       className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none focus:ring-4`}
