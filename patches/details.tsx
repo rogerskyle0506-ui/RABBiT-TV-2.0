@@ -4,7 +4,7 @@ import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/setti
 import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
 import { MediaCard } from "@/routes/index";
 import type { MediaItem } from "@/lib/tmdb-scraper";
-import { saveWatchProgress } from "@/lib/watch-history";
+import { saveWatchProgress, getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
 import { AppWallpaper } from "@/components/AppWallpaper";
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
@@ -240,6 +240,60 @@ export function DetailsPage() {
 
   const activeTheme = getThemeClasses(appTheme);
   const prefixedId = `${mediaType}-${mediaId}`;
+
+  // Check watch status, dislikes, and broken status for the cover art indicator badge
+  const mediaStatusBadge = useMemo(() => {
+    if (!mediaId) return null;
+    const cleanId = String(mediaId);
+    const prefId = `${mediaType}-${cleanId}`;
+
+    if (isTitleBroken(cleanId) || isTitleBroken(prefId)) {
+      return (
+        <span className="absolute top-3 left-3 z-20 rounded-lg bg-red-600/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white border border-red-400/40 shadow-lg">
+          ⚠️ Reported Broken
+        </span>
+      );
+    }
+
+    if (isTitleDisliked(cleanId) || isTitleDisliked(prefId)) {
+      return (
+        <span className="absolute top-3 left-3 z-20 rounded-lg bg-zinc-800/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 border border-zinc-600/40 shadow-lg">
+          👎 Disliked
+        </span>
+      );
+    }
+
+    try {
+      const history = getRawWatchHistory();
+      const match = history.find(
+        (h) =>
+          String(h.id) === prefId ||
+          String(h.id) === cleanId ||
+          String(h.mediaId) === cleanId
+      );
+
+      if (match) {
+        if (match.confirmedCompleted || (match.progressPercent ?? 0) >= 100) {
+          return (
+            <span className="absolute top-3 left-3 z-20 rounded-lg bg-emerald-600/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white border border-emerald-400/40 shadow-lg">
+              ✓ Completed
+            </span>
+          );
+        }
+        if ((match.progressPercent ?? 0) > 0) {
+          return (
+            <span className="absolute top-3 left-3 z-20 rounded-lg bg-cyan-600/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white border border-cyan-400/40 shadow-lg">
+              ⏳ In Progress ({match.progressPercent}%)
+            </span>
+          );
+        }
+      }
+    } catch (e) {
+      console.error("Failed to read watch history badge status", e);
+    }
+
+    return null;
+  }, [mediaId, mediaType]);
 
   useEffect(() => {
     if (!mediaId || !mediaDetails) return;
@@ -759,11 +813,14 @@ export function DetailsPage() {
         ) : (
           <div className="mx-auto flex max-w-5xl flex-col gap-8">
             <div className="flex flex-col gap-8 md:flex-row md:items-start">
-              <img
-                src={poster}
-                alt={title}
-                className="h-[450px] w-[300px] rounded-2xl object-cover shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start"
-              />
+              <div className="relative h-[450px] w-[300px] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start shrink-0">
+                <img
+                  src={poster}
+                  alt={title}
+                  className="h-full w-full object-cover"
+                />
+                {mediaStatusBadge}
+              </div>
 
               <div className="flex flex-col justify-center gap-4 flex-1">
                 <span
