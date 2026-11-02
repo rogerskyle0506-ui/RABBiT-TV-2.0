@@ -11,6 +11,7 @@ import {
 } from "@/lib/settings";
 import { MediaCard } from "@/routes/index";
 import { ScrollPillBar } from "@/components/scroll-pill-bar";
+import { AppWallpaper } from "@/components/AppWallpaper";
 import React from "react";
 
 const TMDB_API_KEY =
@@ -103,7 +104,6 @@ function SearchPage() {
     };
   }, [results, loading]);
 
-  // Handle 30s user inactivity & reset on user interaction
   useEffect(() => {
     let inactivityTimer: NodeJS.Timeout;
 
@@ -114,7 +114,7 @@ function SearchPage() {
       if (canScrollDown) {
         inactivityTimer = setTimeout(() => {
           setShowScrollReminder(true);
-        }, 30000); // 30 seconds wait time
+        }, 30000);
       }
     };
 
@@ -289,8 +289,9 @@ function SearchPage() {
   }, []);
 
   return (
-    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 px-4 py-6 pb-12 flex flex-col items-center`}>
-      <div className="mx-auto max-w-7xl w-full space-y-6">
+    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 px-4 py-6 pb-12 flex flex-col items-center relative`}>
+      <AppWallpaper />
+      <div className="mx-auto max-w-7xl w-full space-y-6 relative z-10">
         
         <div className={`rounded-2xl border ${themeStyles.border} bg-black/40 backdrop-blur-md p-4 sm:p-6 shadow-xl`}>
           <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3 items-center">
@@ -413,7 +414,6 @@ function SearchPage() {
           </div>
         )}
 
-        {/* Scroll Reminder with 30s Inactivity & 8s Flash Twice Animation */}
         {canScrollDown && showScrollReminder && (
           <div 
             className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
