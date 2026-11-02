@@ -155,10 +155,9 @@ jobs:
           mkdir -p www
           cp dist/client/index.html www/index.html
 
-      - name: Initialize or Sync Capacitor Android Platform
+      - name: Initialize or Sync Capacitor Android Platform First
         run: |
-          if [ ! -f android/app/build.gradle ]; then
-            rm -rf android
+          if [ ! -d android ]; then
             npx @capacitor/cli add android
           else
             npx @capacitor/cli sync android
@@ -167,15 +166,20 @@ jobs:
       - name: Generate App Icons and Splash Screens from Standard Assets
         run: npx @capacitor/assets generate --android
 
-      - name: Prepare TV Banner from HeaderFamily.jpg & Inject Custom Files
+      - name: Properly Convert HeaderFamily.jpg to Real PNG TV Banner & Inject Custom Files
         run: |
-          if [ -f assets/HeaderFamily.jpg ]; then
-            cp assets/HeaderFamily.jpg assets/tv_banner.png
-            echo "Successfully copied HeaderFamily.jpg to tv_banner.png"
-          else
-            echo "Error: assets/HeaderFamily.jpg not found!"
-            exit 1
-          fi
+          python3 -c "
+          import os
+          from PIL import Image
+          
+          if os.path.exists('assets/HeaderFamily.jpg'):
+              img = Image.open('assets/HeaderFamily.jpg').convert('RGBA')
+              img.save('assets/tv_banner.png', 'PNG')
+              print('Successfully converted HeaderFamily.jpg to true PNG tv_banner.png')
+          else:
+              print('Error: assets/HeaderFamily.jpg not found!')
+              exit(1)
+          "
 
           mkdir -p android/app/src/main/java/com/rabbittv/app
           cp patches/MainActivity.java android/app/src/main/java/com/rabbittv/app/MainActivity.java
