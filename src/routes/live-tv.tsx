@@ -1,6 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { fetchLiveCategories, fetchChannelsByCategory, liveFeedServices, LiveChannel } from '../lib/live-feed-service';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  fetchLiveCategories,
+  fetchChannelsByCategory,
+  fetchAllChannels,
+  getCatalogHealthStats,
+  refreshLiveHealth,
+  type LiveChannel,
+  type CatalogHealthStats,
+} from '../lib/live-feed-service';
 import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { ScrollPillBar } from '@/components/scroll-pill-bar';
 import { getChannelDescription } from '@/lib/channel-descriptions';
@@ -12,33 +20,61 @@ export const Route = createFileRoute('/live-tv')({
 
 // Canadian display mapping for Australian / NZ regional feeds (display-only overlay)
 const categoryMapping: Record<string, string> = {
-  'Nz': 'Atlantic Canada',
-  'Sydney': 'Toronto',
-  'Melbourne': 'Vancouver',
-  'Brisbane': 'Montreal',
-  'Perth': 'Calgary',
-  'Adelaide': 'Ottawa',
-  'Canberra': 'National',
-  'Darwin': 'Northern',
-  'Hobart': 'Pacific',
-  'Au': 'Canada Feeds',
-  'World': 'International',
+  Nz: 'Atlantic Canada',
+  Sydney: 'Toronto',
+  Melbourne: 'Vancouver',
+  Brisbane: 'Montreal',
+  Perth: 'Calgary',
+  Adelaide: 'Ottawa',
+  Canberra: 'National',
+  Darwin: 'Northern',
+  Hobart: 'Pacific',
+  Au: 'Canada Feeds',
+  World: 'International',
 };
 
 const reverseCategoryMapping: Record<string, string> = Object.fromEntries(
   Object.entries(categoryMapping).map(([orig, disp]) => [disp, orig])
 );
 
+function HealthDot({ health }: { health?: LiveChannel['health'] }) {
+  const color =
+    health === 'online'
+      ? 'bg-emerald-400 shadow-emerald-400/50'
+      : health === 'offline'
+        ? 'bg-red-500 shadow-red-500/40'
+        : health === 'checking'
+          ? 'bg-slate-400 animate-pulse'
+          : 'bg-amber-400 shadow-amber-400/40'; // unknown
+
+  const title =
+    health === 'online'
+      ? 'Online'
+      : health === 'offline'
+        ? 'Offline'
+        : health === 'checking'
+          ? 'Checking…'
+          : 'Status unknown';
+
+  return (
+    <span
+      title={title}
+      className={`absolute top-2 right-2 z-10 h-2.5 w-2.5 rounded-full shadow ${color}`}
+    />
+  );
+}
+
 function LiveTvComponent() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  
-  // Genre / Topic Filtering State
+
   const genreOptions = ['All Genres', ...Object.keys(channelCategories)];
   const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
 
   const [channels, setChannels] = useState<LiveChannel[]>([]);
+  const [stats, setStats] = useState<CatalogHealthStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [probing, setProbing] = useState<boolean>(false);
   const [appTheme, setAppTheme] = useState<AppTheme>('violet');
 
   useEffect(() => {
@@ -50,55 +86,77 @@ function LiveTvComponent() {
 
   useEffect(() => {
     fetchLiveCategories().then((cats) => {
-      // Map categories to Canadian display names while preserving original backend references
       const displayCats = cats.map((cat) => categoryMapping[cat] || cat);
       setCategories(['All', ...displayCats]);
       setSelectedCategory('All');
-      setLoading(false);
     });
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-
-    async function loadFilteredChannels() {
+  const loadFilteredChannels = useCallback(
+    async (opts?: { forceProbe?: boolean }) => {
+      setLoading(true);
+      setProbing(true);
       try {
         let baseChannels: LiveChannel[] = [];
 
         if (selectedCategory === 'All') {
-          baseChannels = liveFeedServices.map((s) => ({
-            ...s,
-            streamUrl: s.url,
-            title: s.name,
-          }));
+          // Probe entire catalog (cached 15 min unless forceProbe)
+          baseChannels = await fetchAllChannels({
+            probe: true,
+            hideOffline: true,
+            forceProbe: opts?.forceProbe,
+          });
         } else {
-          const originalCategory = reverseCategoryMapping[selectedCategory] || selectedCategory;
-          baseChannels = await fetchChannelsByCategory(originalCategory);
+          const originalCategory =
+            reverseCategoryMapping[selectedCategory] || selectedCategory;
+          baseChannels = await fetchChannelsByCategory(originalCategory, {
+            probe: true,
+            hideOffline: true,
+            forceProbe: opts?.forceProbe,
+          });
         }
 
-        // Apply genre filter if selected
+        // Genre filter (display names)
         if (selectedGenre !== 'All Genres') {
           const allowedChannelNames = channelCategories[selectedGenre] || [];
-          baseChannels = baseChannels.filter((c) => allowedChannelNames.includes(c.title));
+          baseChannels = baseChannels.filter((c) =>
+            allowedChannelNames.includes(c.title)
+          );
         }
 
-        if (isMounted) {
-          setChannels(baseChannels);
-          setLoading(false);
-        }
+        setChannels(baseChannels);
+        setStats(getCatalogHealthStats(baseChannels));
       } catch (err) {
         console.error('Failed to load channels:', err);
-        if (isMounted) setLoading(false);
+      } finally {
+        setLoading(false);
+        setProbing(false);
       }
-    }
+    },
+    [selectedCategory, selectedGenre]
+  );
 
-    void loadFilteredChannels();
-
+  useEffect(() => {
+    let isMounted = true;
+    void (async () => {
+      await loadFilteredChannels();
+      if (!isMounted) return;
+    })();
     return () => {
       isMounted = false;
     };
-  }, [selectedCategory, selectedGenre]);
+  }, [loadFilteredChannels]);
+
+  const handleRefreshHealth = async () => {
+    setProbing(true);
+    try {
+      // Full re-probe, keep offline visible briefly then re-filter via load
+      await refreshLiveHealth();
+      await loadFilteredChannels({ forceProbe: true });
+    } finally {
+      setProbing(false);
+    }
+  };
 
   const themeStyles = useMemo(() => {
     switch (appTheme) {
@@ -150,18 +208,26 @@ function LiveTvComponent() {
 
   const getPrimaryBgColor = (theme: AppTheme) => {
     switch (theme) {
-      case 'red': return 'bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30';
-      case 'midnight': return 'bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30';
-      case 'emerald': return 'bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30';
-      case 'amber': return 'bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30';
-      case 'cyan': return 'bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30';
+      case 'red':
+        return 'bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30';
+      case 'midnight':
+        return 'bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30';
+      case 'emerald':
+        return 'bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30';
+      case 'amber':
+        return 'bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30';
+      case 'cyan':
+        return 'bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30';
       case 'violet':
-      default: return 'bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30';
+      default:
+        return 'bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30';
     }
   };
 
   return (
-    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-4 sm:px-6 w-full max-w-full overflow-x-hidden box-border`}>
+    <main
+      className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-4 sm:px-6 w-full max-w-full overflow-x-hidden box-border`}
+    >
       <header className="py-6 max-w-7xl mx-auto space-y-3 box-border">
         <div>
           <Link
@@ -172,14 +238,31 @@ function LiveTvComponent() {
           </Link>
         </div>
 
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white">Live TV & Sports</h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Stream live broadcast feeds, sports channels, and events.</p>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white">
+              Live TV & Sports
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+              Stream live broadcast feeds, sports channels, and events.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void handleRefreshHealth()}
+            disabled={probing}
+            className={`self-start sm:self-auto rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10 disabled:opacity-50`}
+          >
+            {probing ? 'Checking streams…' : '↻ Refresh health'}
+          </button>
         </div>
 
         {/* Upper Category Navigation Bar (Regions / Feeds) */}
         <div className="w-full pt-2">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Regions & Feeds</p>
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            Regions & Feeds
+          </p>
           <ScrollPillBar
             options={categories.map((cat) => ({ id: cat, label: cat }))}
             activeId={selectedCategory}
@@ -191,7 +274,9 @@ function LiveTvComponent() {
 
         {/* Lower Genre Navigation Bar */}
         <div className="w-full pt-2">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Categories & Genres</p>
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            Categories & Genres
+          </p>
           <ScrollPillBar
             options={genreOptions.map((genre) => ({ id: genre, label: genre }))}
             activeId={selectedGenre}
@@ -203,16 +288,51 @@ function LiveTvComponent() {
       </header>
 
       <div className="max-w-7xl mx-auto box-border">
-        <div className="mb-3 flex items-center justify-between px-1">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
           <h3 className="text-lg font-bold text-white">
-            {selectedGenre !== 'All Genres' ? selectedGenre : selectedCategory} Feeds
+            {selectedGenre !== 'All Genres' ? selectedGenre : selectedCategory}{' '}
+            Feeds
           </h3>
-          <span className={`text-xs font-medium ${themeStyles.accentText}`}>{channels.length} channels available</span>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+            {stats ? (
+              <>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 border border-white/10 px-2.5 py-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="text-emerald-300">{stats.online} online</span>
+                </span>
+                {stats.offline > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 border border-white/10 px-2.5 py-1">
+                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    <span className="text-red-300">{stats.offline} offline</span>
+                  </span>
+                )}
+                {stats.unknown > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 border border-white/10 px-2.5 py-1">
+                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                    <span className="text-amber-200">{stats.unknown} unchecked</span>
+                  </span>
+                )}
+                <span className={`${themeStyles.accentText}`}>
+                  {channels.length} shown
+                </span>
+              </>
+            ) : (
+              <span className={`${themeStyles.accentText}`}>
+                {channels.length} channels available
+              </span>
+            )}
+          </div>
         </div>
 
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className={`animate-spin rounded-full h-10 w-10 border-t-2 ${themeStyles.accentText}`}></div>
+          <div className="flex flex-col justify-center items-center h-64 gap-3">
+            <div
+              className={`animate-spin rounded-full h-10 w-10 border-t-2 ${themeStyles.accentText}`}
+            />
+            <p className="text-xs text-slate-400">
+              {probing ? 'Probing stream health…' : 'Loading channels…'}
+            </p>
           </div>
         ) : channels.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -220,9 +340,15 @@ function LiveTvComponent() {
               <Link
                 key={channel.channelId || channel.url}
                 to="/live-player"
-                search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || '' }}
+                search={{
+                  url: channel.streamUrl,
+                  title: channel.title,
+                  logo: channel.logo || '',
+                }}
                 className={`group flex flex-col items-center p-3.5 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden box-border`}
               >
+                <HealthDot health={channel.health} />
+
                 <div className="w-full h-28 bg-black/50 rounded-xl mb-3 overflow-hidden flex items-center justify-center border border-white/10 relative p-2 box-border">
                   {channel.logo ? (
                     <img
@@ -248,8 +374,16 @@ function LiveTvComponent() {
             ))}
           </div>
         ) : (
-          <div className={`rounded-[20px] bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-8 text-center`}>
-            <p className="text-sm text-slate-300">No channels found matching this filter combination.</p>
+          <div
+            className={`rounded-[20px] bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-8 text-center`}
+          >
+            <p className="text-sm text-slate-300">
+              No channels found matching this filter combination.
+            </p>
+            <p className="text-xs text-slate-500 mt-2">
+              Offline streams are hidden automatically. Try Refresh health or
+              another region.
+            </p>
           </div>
         )}
       </div>
