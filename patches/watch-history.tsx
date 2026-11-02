@@ -239,17 +239,17 @@ function WatchHistoryComponent() {
           </span>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 shadow-md backdrop-blur-md flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm">💡</span>
-            <span><strong className="text-white">👁️</strong> = Confirm Progress</span>
-            <span className="text-slate-600">•</span>
-            <span><strong className="text-white">👎</strong> = Scrub & Hide from Catalogs</span>
-            <span className="text-slate-600">•</span>
-            <span><strong className="text-white">✕</strong> = Reset to Un-tracked</span>
+        <div className="rounded-xl border border-white/10 bg-black/50 px-3.5 py-3 shadow-md backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-300">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-bold text-violet-300">💡 Guide:</span>
+            <span className="flex items-center gap-1"><strong className="text-white">👁️</strong> Confirms you have watched it</span>
+            <span className="text-slate-600 hidden sm:inline">•</span>
+            <span className="flex items-center gap-1"><strong className="text-white">👎</strong> Dislikes and removes from catalogs</span>
+            <span className="text-slate-600 hidden sm:inline">•</span>
+            <span className="flex items-center gap-1"><strong className="text-white">✕</strong> Removes from watch history</span>
           </div>
           <div className="text-violet-400 font-medium">
-            ✨ More saved items are also on your{" "}
+            ✨ Also check your{" "}
             <Link
               to="/"
               search={{ tab: "My List" }}
@@ -570,7 +570,7 @@ const MovieCard = React.memo(function MovieCard({
             </div>
           )}
 
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-1.5 z-10" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute top-1.5 right-1.5 flex flex-wrap justify-end gap-1 max-w-[130px] sm:max-w-none z-10" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={() => onEyeballClick(movie.showId, singleEp.episodeId, movie.title, isCompleted)}
@@ -668,7 +668,7 @@ const TvShowCard = React.memo(function TvShowCard({
             </div>
           )}
 
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-1.5 z-10" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute top-1.5 right-1.5 flex flex-wrap justify-end gap-1 max-w-[100px] sm:max-w-none z-10" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={() => dislikeTitle({ id: show.showId, title: show.title, mediaType: "tv", posterPath: show.posterPath })}
