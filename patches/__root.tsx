@@ -1694,7 +1694,7 @@ function RootComponent() {
                     <div className="rounded-xl border border-white/10 bg-black/40 p-3 text-center text-xs text-slate-300 space-y-1">
                       <p className="font-semibold text-white">Need an activation code or support?</p>
                       <p className="text-[11px] text-slate-400">
-                        Message me on WhatsApp (<span className="text-emerald-400 font-bold">RabbitProductions</span>[span_0](start_span)[span_0](end_span)) or text my private number at <span className="text-amber-300 font-bold">(705) 809-3865</span>.
+                        Message me on WhatsApp (<span className="text-emerald-400 font-bold">RabbitProductions</span>) or text my private number at <span className="text-amber-300 font-bold">(705) 809-3865</span>.
                       </p>
                     </div>
 
