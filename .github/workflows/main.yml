@@ -155,19 +155,16 @@ jobs:
           mkdir -p www
           cp dist/client/index.html www/index.html
 
-      - name: Generate App Icons and Splash Screens from Standard Assets
-        run: npx @capacitor/assets generate --android
-
-      - name: Initialize or Sync Capacitor Android Platform
+      - name: Initialize or Sync Capacitor Android Platform First
         run: |
-          if [ ! -f android/settings.gradle ]; then
-            echo "Android configuration missing or incomplete, refreshing android platform..."
-            rm -rf android
+          if [ ! -d android ]; then
             npx @capacitor/cli add android
           else
-            echo "Android platform already exists, syncing..."
             npx @capacitor/cli sync android
           fi
+
+      - name: Generate App Icons and Splash Screens from Standard Assets
+        run: npx @capacitor/assets generate --android
 
       - name: Prepare TV Banner from HeaderFamily.jpg & Inject Custom Files
         run: |
