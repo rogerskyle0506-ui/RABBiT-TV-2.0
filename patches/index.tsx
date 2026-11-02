@@ -1,263 +1,74 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, memo } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/settings";
+import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
+import { MediaCard } from "@/routes/index";
 import type { MediaItem } from "@/lib/tmdb-scraper";
-import { scrapeCategoryContent } from "@/lib/tmdb-scraper";
-import {
-  CardSize,
-  AppTheme,
-  getSavedCardSize,
-  getSavedTheme,
-  getSavedUserAge,
-  isAllowedForAge,
-  getPosterDimensions,
-} from "@/lib/settings";
-import { getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
-import { isTitleBroken } from "@/lib/broken-links";
-import { ScrollPillBar } from "@/components/scroll-pill-bar";
+import { saveWatchProgress } from "@/lib/watch-history";
 import { AppWallpaper } from "@/components/AppWallpaper";
-import React from "react";
-
-const navTabs = ["Home", "TV Shows", "Movies", "In Theaters", "Live TV & Sports", "My List"] as const;
-type NavTab = (typeof navTabs)[number];
-
-const genreCategories = [
-  "Trending",
-  "Action",
-  "Drama",
-  "Comedy",
-  "Sci-Fi",
-  "Horror",
-];
-
-const providerCategories = [
-  "All (Default)",
-  "Netflix",
-  "Prime",
-  "Disney+",
-];
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
-const TMDB_API_KEY = (import.meta.env.VITE_TMDB_API_KEY as string) || "9619884fc9c0e58b374a661ab2a692cd";
-const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 
-function getDetailsSearch(item: MediaItem): { id: string; type: "movie" | "tv" } {
-  const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
-  const type: "movie" | "tv" =
-    item.mediaType === "tv" || String(item.id).toLowerCase().startsWith("tv-")
-      ? "tv"
-      : "movie";
-  return { id: cleanId, type };
-}
-
-export function MediaCard({ item }: { item: MediaItem }) {
-  const [cardSize, setCardSize] = useState<CardSize>("large");
-  const [appTheme, setAppTheme] = useState<AppTheme>("violet");
-
-  useEffect(() => {
-    setCardSize(getSavedCardSize());
-    setAppTheme(getSavedTheme());
-
-    const handleSettingsUpdate = () => {
-      setCardSize(getSavedCardSize());
-      setAppTheme(getSavedTheme());
-    };
-
-    window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);
-    return () =>
-      window.removeEventListener("rabtv_settings_updated", handleSettingsUpdate);
-  }, []);
-
-  const cardThemeStyles = useMemo(() => {
-    switch (appTheme) {
-      case "red":
-        return {
-          bg: "bg-gradient-to-b from-red-950/70 via-zinc-900 to-black",
-          border: "border-red-500/30",
-          ring: "focus-within:ring-red-400 focus:ring-red-400",
-        };
-      case "midnight":
-        return {
-          bg: "bg-gradient-to-b from-blue-950/70 via-slate-900 to-slate-950",
-          border: "border-blue-500/30",
-          ring: "focus-within:ring-blue-400 focus:ring-blue-400",
-        };
-      case "emerald":
-        return {
-          bg: "bg-gradient-to-b from-emerald-950/70 via-slate-900 to-slate-950",
-          border: "border-emerald-500/30",
-          ring: "focus-within:ring-emerald-400 focus:ring-emerald-400",
-        };
-      case "amber":
-        return {
-          bg: "bg-gradient-to-b from-yellow-950/70 via-stone-900 to-stone-950",
-          border: "border-amber-500/30",
-          ring: "focus-within:ring-amber-400 focus:ring-amber-400",
-        };
-      case "cyan":
-        return {
-          bg: "bg-gradient-to-b from-cyan-950/70 via-slate-900 to-slate-950",
-          border: "border-cyan-500/30",
-          ring: "focus-within:ring-cyan-400 focus:ring-cyan-400",
-        };
-      case "violet":
-      default:
-        return {
-          bg: "bg-gradient-to-b from-purple-950/70 via-slate-900 to-slate-950",
-          border: "border-violet-500/30",
-          ring: "focus-within:ring-violet-400 focus:ring-violet-400",
-        };
-    }
-  }, [appTheme]);
-
-  const dimensions = getPosterDimensions(cardSize);
-  const detailsSearch = getDetailsSearch(item);
-
-  if (cardSize === "small") {
-    return (
-      <Link
-        to="/details"
-        search={detailsSearch}
-        className={`group flex ${dimensions.card} ${cardThemeStyles.bg} border ${cardThemeStyles.border} focus:outline-none focus:ring-4 ${cardThemeStyles.ring} hover:scale-105 overflow-hidden relative rounded-xl transition w-full shadow-lg bg-black`}
-      >
-        <img
-          src={item.image}
-          alt={item.title}
-          className="absolute inset-0 h-full w-full object-cover object-center"
-          loading="lazy"
-        />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-1.5 text-center z-10">
-          <p className="text-[10px] font-bold text-white truncate px-1 rounded bg-black/60 backdrop-blur-sm border border-white/10">
-            {item.title}
-          </p>
-        </div>
-      </Link>
-    );
-  }
-
-  return (
-    <div
-      className={`group relative flex w-full flex-col overflow-hidden rounded-2xl ${cardThemeStyles.bg} border ${cardThemeStyles.border} shadow-xl transition hover:-translate-y-1 ${cardThemeStyles.ring} ${dimensions.card}`}
-    >
-      <Link
-        to="/details"
-        search={detailsSearch}
-        className="block relative overflow-hidden flex-1 focus:outline-none w-full h-full bg-black flex items-center justify-center"
-      >
-        <img
-          src={item.image}
-          alt={item.title}
-          className="absolute inset-0 h-full w-full object-cover object-center transition group-hover:scale-105"
-          loading="lazy"
-        />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2.5 z-10">
-          <div className="flex items-center justify-between mb-1">
-            <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-slate-200 truncate max-w-[70%] backdrop-blur-sm border border-white/10">
-              {item.genre ?? "TV"}
-            </span>
-            {item.year ? (
-              <span className="text-[10px] text-slate-300 font-medium">{item.year}</span>
-            ) : null}
-          </div>
-          <h4 className={`font-bold text-white drop-shadow truncate ${dimensions.text}`}>
-            {item.title}
-          </h4>
-          {item.rating && (
-            <p className="mt-0.5 text-xs text-yellow-300 font-semibold drop-shadow">⭐ {item.rating}</p>
-          )}
-        </div>
-      </Link>
-
-      <div className="p-2 bg-black/90 border-t border-white/10 flex items-center justify-between z-20">
-        <Link
-          to="/details"
-          search={detailsSearch}
-          className={`w-full text-center rounded-full bg-gradient-to-r from-black/80 via-black to-black/80 border border-white/10 py-1 text-[10px] font-bold text-white shadow-inner hover:bg-white/20 transition focus:outline-none focus:ring-2 ${cardThemeStyles.ring}`}
-        >
-          WATCH →
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-const MemoizedMediaCard = memo(
-  function MemoizedMediaCard({ item }: { item: MediaItem }) {
-    return <MediaCard item={item} />;
-  },
-  (prevProps, nextProps) => prevProps.item.id === nextProps.item.id
-);
-
-MemoizedMediaCard.displayName = "MemoizedMediaCard";
-
-export const Route = createFileRoute("/")({
-  component: Home,
-  validateSearch: (search: Record<string, unknown>): { tab?: string } => {
-    return {
-      tab: (search.tab as string) || undefined,
-    };
-  },
+export const Route = createFileRoute("/details")({
+  component: DetailsPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    id: search.id != null ? String(search.id) : "",
+    type: search.type != null ? String(search.type).toLowerCase() : "movie",
+  }),
 });
 
-function Home() {
-  const navigate = useNavigate();
+export function DetailsPage() {
   const search = Route.useSearch();
-  const [activeTab, setActiveTab] = useState<NavTab>(() => {
-    if (search.tab && navTabs.includes(search.tab as NavTab)) {
-      return search.tab as NavTab;
-    }
-    return "Home";
-  });
 
-  useEffect(() => {
-    if (search.tab && navTabs.includes(search.tab as NavTab)) {
-      setActiveTab(search.tab as NavTab);
-    }
-  }, [search.tab]);
+  const rawId = String(search.id || "").trim();
+  const inferredType: "tv" | "movie" | null = rawId.toLowerCase().startsWith("tv-")
+    ? "tv"
+    : rawId.toLowerCase().startsWith("movie-")
+    ? "movie"
+    : null;
 
-  const [selectedGenre, setSelectedGenre] = useState<string>("Trending");
-  const [globalFeedOverride, setGlobalFeedOverride] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("rabtv_global_feed") || "All (Default)";
-    }
-    return "All (Default)";
-  });
+  const mediaId = rawId.replace(/^(movie|tv)-/i, "").trim();
+  const urlType: "movie" | "tv" =
+    inferredType || (search.type === "tv" ? "tv" : "movie");
 
-  const handleTabSelect = (tab: NavTab) => {
-    if (tab === "Live TV & Sports") {
-      navigate({ to: "/live-tv" });
-      return;
-    }
-    setActiveTab(tab);
-  };
-
-  const handleProviderSelect = (provider: string) => {
-    setGlobalFeedOverride(provider);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("rabtv_global_feed", provider);
-      window.dispatchEvent(new CustomEvent("rabtv_global_feed_updated", { detail: provider }));
-    }
-  };
-
-  const [items, setItems] = useState<MediaItem[]>([]);
+  const [mediaType, setMediaType] = useState<"movie" | "tv">(urlType);
+  const [mediaDetails, setMediaDetails] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const [appTheme, setAppTheme] = useState<AppTheme>("violet");
-  const [userAge, setUserAge] = useState<number>(18);
-  const [myListSubTab, setMyListSubTab] = useState<"all" | "in_progress" | "mylist" | "favorites">("all");
-  const [savedMyList, setSavedMyList] = useState<MediaItem[]>([]);
-  const [savedFavorites, setSavedFavorites] = useState<MediaItem[]>([]);
-  const [historyItems, setHistoryItems] = useState<MediaItem[]>([]);
-  const [suggestedItems, setSuggestedItems] = useState<MediaItem[]>([]);
-
-  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
-
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [cardSize, setCardSize] = useState<CardSize>("large");
+
+  const [inMyList, setInMyList] = useState(false);
+  const [inFavorites, setInFavorites] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  const [season, setSeason] = useState(1);
+  const [episode, setEpisode] = useState(1);
+  const [seasonEpisodes, setSeasonEpisodes] = useState<any[]>([]);
+  const [autoPlayNext, setAutoPlayNext] = useState(true);
+
+  const [isSeasonOpen, setIsSeasonOpen] = useState(false);
+  const [isEpisodeOpen, setIsEpisodeOpen] = useState(false);
+
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [showScrollReminder, setShowScrollReminder] = useState(false);
+
+  const seasonRef = useRef<HTMLDivElement>(null);
+  const episodeRef = useRef<HTMLDivElement>(null);
+  const feedbackTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setMediaType(urlType);
+    setIsPlaying(false);
+    setSeason(1);
+    setEpisode(1);
+    setMediaDetails(null);
+    setRecommendations([]);
+    setLoading(true);
+  }, [mediaId, urlType]);
 
   useEffect(() => {
     const checkVerticalScroll = () => {
@@ -266,37 +77,29 @@ function Home() {
       const clientHeight = window.innerHeight;
       setCanScrollDown(scrollTop + clientHeight < scrollHeight - 100);
     };
-
     checkVerticalScroll();
     window.addEventListener("scroll", checkVerticalScroll, { passive: true });
     window.addEventListener("resize", checkVerticalScroll);
-
     return () => {
       window.removeEventListener("scroll", checkVerticalScroll);
       window.removeEventListener("resize", checkVerticalScroll);
     };
-  }, [items, loading]);
+  }, [recommendations, loading, isPlaying]);
 
   useEffect(() => {
     let inactivityTimer: NodeJS.Timeout;
-
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
       setShowScrollReminder(false);
       if (canScrollDown) {
-        inactivityTimer = setTimeout(() => {
-          setShowScrollReminder(true);
-        }, 30000);
+        inactivityTimer = setTimeout(() => setShowScrollReminder(true), 30000);
       }
     };
-
     resetInactivityTimer();
-
     window.addEventListener("scroll", resetInactivityTimer, { passive: true });
     window.addEventListener("click", resetInactivityTimer);
     window.addEventListener("keydown", resetInactivityTimer);
     window.addEventListener("touchstart", resetInactivityTimer, { passive: true });
-
     return () => {
       clearTimeout(inactivityTimer);
       window.removeEventListener("scroll", resetInactivityTimer);
@@ -306,296 +109,276 @@ function Home() {
     };
   }, [canScrollDown]);
 
-  const loadSavedListsAndTheme = () => {
-    try {
-      const listData = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
-      const favData = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
-
-      const rawHistory = getRawWatchHistory();
-      const mappedHistory: MediaItem[] = rawHistory.map((h) => {
-        const type = h.mediaType ?? h.media_type ?? (String(h.id).startsWith("tv-") ? "tv" : "movie");
-        const cleanId = String(h.mediaId ?? h.id).replace(/^(movie|tv)-/, "");
-        const imagePath = h.posterPath ?? h.poster_path ?? h.image;
-        const imageUrl = imagePath?.startsWith("http")
-          ? imagePath
-          : imagePath
-          ? `https://image.tmdb.org/t/p/w500${imagePath}`
-          : "/placeholder.png";
-
-        return {
-          id: String(h.id),
-          title: h.title ?? "Unknown Title",
-          image: imageUrl,
-          href: `/details?id=${cleanId}&type=${type}`,
-          genre: type.toUpperCase(),
-          mediaType: type as "movie" | "tv",
-          progressPercent: h.progressPercent ?? (h.confirmedCompleted ? 100 : 0),
-          confirmedCompleted: h.confirmedCompleted ?? false,
-          genreIds: (h as any).genreIds || [],
-        } as MediaItem & {
-          progressPercent?: number;
-          confirmedCompleted?: boolean;
-          mediaType?: "movie" | "tv";
-          genreIds?: number[];
-        };
-      });
-
-      setSavedMyList(listData);
-      setSavedFavorites(favData);
-      setHistoryItems(mappedHistory);
-      setAppTheme(getSavedTheme());
-      setCardSize(getSavedCardSize());
-      setUserAge(getSavedUserAge());
-    } catch (err) {
-      console.error("Error reading saved lists/theme/age", err);
-    }
-  };
-
   useEffect(() => {
-    loadSavedListsAndTheme();
-    const handleSettingsUpdate = () => {
-      loadSavedListsAndTheme();
-    };
-
-    const handleGlobalFeedUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail) {
-        setGlobalFeedOverride(customEvent.detail);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (seasonRef.current && !seasonRef.current.contains(event.target as Node)) {
+        setIsSeasonOpen(false);
+      }
+      if (episodeRef.current && !episodeRef.current.contains(event.target as Node)) {
+        setIsEpisodeOpen(false);
       }
     };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    window.addEventListener("rabtv_catalog_updated", loadSavedListsAndTheme);
-    window.addEventListener("rabtv_watch_history_updated", loadSavedListsAndTheme);
-    window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);
-    window.addEventListener("rabtv_global_feed_updated", handleGlobalFeedUpdate as EventListener);
-    window.addEventListener("rabtv_broken_links_updated", loadSavedListsAndTheme);
-
+  useEffect(() => {
+    const loadSettings = () => {
+      setAppTheme(getSavedTheme());
+      setCardSize(getSavedCardSize());
+    };
+    loadSettings();
+    window.addEventListener("storage", loadSettings);
+    window.addEventListener("rabtv_settings_updated" as any, loadSettings);
     return () => {
-      window.removeEventListener("rabtv_catalog_updated", loadSavedListsAndTheme);
-      window.removeEventListener("rabtv_watch_history_updated", loadSavedListsAndTheme);
-      window.removeEventListener("rabtv_settings_updated", handleSettingsUpdate);
-      window.removeEventListener("rabtv_global_feed_updated", handleGlobalFeedUpdate as EventListener);
-      window.removeEventListener("rabtv_broken_links_updated", loadSavedListsAndTheme);
+      window.removeEventListener("storage", loadSettings);
+      window.removeEventListener("rabtv_settings_updated" as any, loadSettings);
     };
   }, []);
 
   useEffect(() => {
-    setPage(1);
-  }, [activeTab, selectedGenre, globalFeedOverride]);
+    return () => {
+      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
-    let active = true;
+    async function fetchSeasonEpisodes() {
+      if (mediaType !== "tv" || !mediaId) return;
+      try {
+        const apiKey =
+          (import.meta.env.VITE_TMDB_API_KEY as string) ||
+          "9619884fc9c0e58b374a661ab2a692cd";
+        const res = await fetch(
+          `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
+        );
+        const data = await res.json();
+        setSeasonEpisodes(data.episodes || []);
+      } catch (err) {
+        console.error("Failed to load season episodes", err);
+        setSeasonEpisodes([]);
+      }
+    }
+    fetchSeasonEpisodes();
+  }, [season, mediaId, mediaType]);
 
-    async function load() {
-      setLoading(true);
-      setError(null);
+  // More transparent backgrounds so wallpaper shows through
+  const getPageBackground = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80";
+      case "midnight":
+        return "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80";
+      case "emerald":
+        return "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80";
+      case "amber":
+        return "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80";
+      case "cyan":
+        return "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80";
+      case "violet":
+      default:
+        return "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80";
+    }
+  };
 
-      if (activeTab === "My List") {
-        if (active) {
-          setTotalPages(1);
-          setLoading(false);
-        }
+  const getCardBackground = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "bg-[#160404]/90 border-red-500/20";
+      case "midnight":
+        return "bg-[#03091e]/90 border-blue-500/20";
+      case "violet":
+      default:
+        return "bg-[#090e1f]/90 border-violet-500/20";
+    }
+  };
+
+  const getThemeClasses = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return {
+          text: "text-red-400",
+          bg: "bg-red-600",
+          hoverBg: "hover:bg-red-500",
+          border: "border-red-500",
+          ring: "focus:ring-red-400",
+          shadow: "shadow-red-600/30",
+        };
+      case "midnight":
+        return {
+          text: "text-blue-400",
+          bg: "bg-blue-600",
+          hoverBg: "hover:bg-blue-500",
+          border: "border-blue-500",
+          ring: "focus:ring-blue-400",
+          shadow: "shadow-blue-600/30",
+        };
+      case "violet":
+      default:
+        return {
+          text: "text-violet-400",
+          bg: "bg-violet-600",
+          hoverBg: "hover:bg-violet-500",
+          border: "border-violet-500",
+          ring: "focus:ring-violet-400",
+          shadow: "shadow-violet-600/30",
+        };
+    }
+  };
+
+  const getThemeArrowColor = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
+      case "midnight":
+        return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
+      case "violet":
+      default:
+        return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
+    }
+  };
+
+  const activeTheme = getThemeClasses(appTheme);
+  const prefixedId = `${mediaType}-${mediaId}`;
+
+  useEffect(() => {
+    if (!mediaId || !mediaDetails) return;
+    try {
+      const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
+      setInMyList(
+        myList.some(
+          (item: any) => item.id === prefixedId || String(item.mediaId) === mediaId
+        )
+      );
+      const favs = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
+      setInFavorites(
+        favs.some(
+          (item: any) => item.id === prefixedId || String(item.mediaId) === mediaId
+        )
+      );
+    } catch (err) {
+      console.error("Error reading saved catalog lists", err);
+    }
+  }, [mediaId, mediaDetails, mediaType, prefixedId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchDetailsWithCache() {
+      if (!mediaId) {
+        setLoading(false);
+        setMediaDetails(null);
         return;
       }
 
-      const scraperCategory = activeTab === "TV Shows" ? "Series" : activeTab;
-      const activeSubFeed =
-        globalFeedOverride && globalFeedOverride !== "All (Default)" ? globalFeedOverride : undefined;
+      const apiKey =
+        (import.meta.env.VITE_TMDB_API_KEY as string) ||
+        "9619884fc9c0e58b374a661ab2a692cd";
+
+      let activeFetchType: "movie" | "tv" = urlType;
 
       try {
-        const result = await scrapeCategoryContent(scraperCategory, page, selectedGenre, activeSubFeed);
-        if (!active) return;
-
-        if (result?.items?.length) {
-          setItems(result.items);
-          setTotalPages(result.totalPages || 1);
-        } else {
-          setItems([]);
-          if (result?.message) setError(result.message);
-        }
-      } catch (caught) {
-        if (!active) return;
-        setError(caught instanceof Error ? caught.message : "Failed to load media");
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [activeTab, page, selectedGenre, globalFeedOverride]);
-
-  // SMART SUGGESTIONS: Percentage-weighted genre curation based on watch history & favorites
-  useEffect(() => {
-    let active = true;
-    async function fetchSmartSuggestions() {
-      if (activeTab !== "My List") return;
-      try {
-        const apiKey = TMDB_API_KEY;
-        const seedItems = [
-          ...savedFavorites,
-          ...savedMyList,
-          ...historyItems.filter((h: any) => h.confirmedCompleted || (h.progressPercent ?? 0) > 20),
-        ];
-
-        const genreCounts: Record<number, number> = {};
-        let totalGenresLogged = 0;
-
-        for (const item of seedItems) {
-          const ids = (item as any).genreIds || [];
-          for (const gid of ids) {
-            if (typeof gid === "number") {
-              genreCounts[gid] = (genreCounts[gid] || 0) + 1;
-              totalGenresLogged++;
+        const cacheKey = `rabtv_cache_${activeFetchType}_${mediaId}`;
+        const cachedItem = localStorage.getItem(cacheKey);
+        if (cachedItem) {
+          const { data, timestamp } = JSON.parse(cachedItem);
+          if (
+            Date.now() - timestamp < 21600000 &&
+            data &&
+            data.success !== false
+          ) {
+            if (!cancelled) {
+              const isTv = !!(data?.seasons || data?.number_of_seasons);
+              setMediaType(isTv ? "tv" : activeFetchType);
+              setMediaDetails(data);
+              setLoading(false);
             }
           }
         }
 
-        let targetGenreIds: number[] = [28, 12];
-        if (totalGenresLogged > 0) {
-          const sortedGenres = Object.entries(genreCounts)
-            .sort((a, b) => b[1] - a[1])
-            .map(([id]) => Number(id));
-          targetGenreIds = sortedGenres.slice(0, 3);
-        }
-
-        const genreQueryParam = targetGenreIds.join(",");
-        const res = await fetch(
-          `${TMDB_BASE_URL}discover/movie?api_key=${apiKey}&with_genres=${genreQueryParam}&sort_by=popularity.desc&vote_average.gte=6.0&page=1`
+        let res = await fetch(
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
         );
-        const data = await res.json();
-        const pool: MediaItem[] = [];
+        let data = await res.json();
 
-        for (const item of data.results || []) {
-          const tmdbId = String(item.id);
-          const title = item.title || item.name;
-          if (!title || !item.poster_path) continue;
-
-          if (
-            isTitleDisliked(tmdbId) ||
-            isTitleDisliked(`movie-${tmdbId}`) ||
-            isTitleBroken(tmdbId) ||
-            isTitleBroken(`movie-${tmdbId}`)
-          )
-            continue;
-
-          pool.push({
-            id: `movie-${tmdbId}`,
-            title,
-            description: item.overview || "",
-            image: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
-            href: `/details?id=${tmdbId}&type=movie`,
-            genre: "SUGGESTED FOR YOU",
-            year: (item.release_date || "").split("-")[0],
-            rating: item.vote_average ? item.vote_average.toFixed(1) : undefined,
-            mediaType: "movie",
-          });
+        if (!data || data.success === false || data.status_code) {
+          const otherType: "movie" | "tv" =
+            activeFetchType === "movie" ? "tv" : "movie";
+          res = await fetch(
+            `https://api.themoviedb.org/3/${otherType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
+          );
+          data = await res.json();
+          if (data && data.success !== false && !data.status_code) {
+            activeFetchType = otherType;
+          }
         }
 
-        if (!active) return;
+        if (cancelled) return;
 
-        const watchedIds = new Set([
-          ...historyItems.map((h) => String(h.id).replace(/^(movie|tv)-/, "")),
-          ...savedFavorites.map((f) => String(f.id).replace(/^(movie|tv)-/, "")),
-          ...savedMyList.map((m) => String(m.id).replace(/^(movie|tv)-/, "")),
-        ]);
-
-        const uniqueSuggestions = new Map<string, MediaItem>();
-        for (const candidate of pool) {
-          const cleanId = String(candidate.id).replace(/^(movie|tv)-/, "");
-          if (watchedIds.has(cleanId)) continue;
-          if (!isAllowedForAge((candidate as any).certification, candidate.genre, userAge)) continue;
-          uniqueSuggestions.set(cleanId, candidate);
+        if (data && data.success !== false && !data.status_code) {
+          const isTv =
+            !!(data?.seasons || data?.number_of_seasons) ||
+            activeFetchType === "tv";
+          setMediaType(isTv ? "tv" : "movie");
+          localStorage.setItem(
+            `rabtv_cache_${activeFetchType}_${mediaId}`,
+            JSON.stringify({ data, timestamp: Date.now() })
+          );
+          setMediaDetails(data);
+        } else {
+          setMediaDetails(null);
         }
 
-        setSuggestedItems(Array.from(uniqueSuggestions.values()).slice(0, 15));
-      } catch (e) {
-        console.error("Failed to load smart genre suggestions", e);
+        const recRes = await fetch(
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
+        );
+        const recData = await recRes.json();
+        if (!cancelled && recData?.results) {
+          setRecommendations(
+            recData.results.filter(
+              (item: any) =>
+                !isTitleBroken(String(item.id)) &&
+                !isTitleBroken(`${activeFetchType}-${item.id}`)
+            )
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load details and recommendations", err);
+        if (!cancelled) setMediaDetails(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
-    void fetchSmartSuggestions();
+    fetchDetailsWithCache();
     return () => {
-      active = false;
+      cancelled = true;
     };
-  }, [activeTab, savedFavorites, savedMyList, historyItems, userAge]);
+  }, [mediaId, urlType]);
 
-  const inProgressHistory = useMemo(
-    () => historyItems.filter((i: any) => !i.confirmedCompleted && (i.progressPercent ?? 0) < 100),
-    [historyItems]
-  );
+  const inferredMediaType: "tv" | "movie" =
+    mediaDetails?.seasons ||
+    mediaDetails?.number_of_seasons ||
+    mediaType === "tv"
+      ? "tv"
+      : "movie";
 
-  const savedCatalogItems = useMemo(() => {
-    let rawList: MediaItem[] = [];
-    if (myListSubTab === "mylist") rawList = savedMyList;
-    else if (myListSubTab === "favorites") rawList = savedFavorites;
-    else if (myListSubTab === "in_progress") rawList = inProgressHistory;
-    else {
-      rawList = [...savedFavorites, ...savedMyList, ...inProgressHistory];
+  const originalLanguageName = useMemo(() => {
+    if (!mediaDetails) return "";
+    const spoken = mediaDetails?.spoken_languages?.[0]?.english_name;
+    if (spoken) return spoken;
+    const code = mediaDetails?.original_language;
+    if (!code) return "";
+    try {
+      const displayNames = new Intl.DisplayNames(["en"], { type: "language" });
+      const name = displayNames.of(code);
+      return name
+        ? name.charAt(0).toUpperCase() + name.slice(1)
+        : code.toUpperCase();
+    } catch {
+      return code.toUpperCase();
     }
-
-    const map = new Map<string, MediaItem>();
-    for (const item of rawList) {
-      if (isTitleDisliked(item.id) || isTitleBroken(item.id)) continue;
-      if (!isAllowedForAge((item as any).certification, item.genre, userAge)) continue;
-
-      const normalizedTitle = (item.title ?? "").trim().toLowerCase();
-      const uniqueKey = normalizedTitle || String(item.id);
-
-      if (!map.has(uniqueKey)) {
-        map.set(uniqueKey, item);
-      }
-    }
-    return Array.from(map.values());
-  }, [myListSubTab, savedMyList, savedFavorites, inProgressHistory, userAge]);
-
-  const filteredItems = useMemo(() => {
-    const baseList = activeTab === "My List" ? savedCatalogItems : items;
-
-    return baseList.filter((item) => {
-      if (isTitleDisliked(item.id) || isTitleBroken(item.id)) return false;
-      return isAllowedForAge((item as any).certification, item.genre, userAge);
-    });
-  }, [items, activeTab, savedCatalogItems, userAge]);
-
-  // HERO BANNER SOURCE: On "My List", reads from suggestedItems (falling back to savedCatalogItems if empty); otherwise uses catalog items.
-  const heroSourceList = useMemo(() => {
-    if (activeTab === "My List") {
-      return suggestedItems.length > 0 ? suggestedItems : savedCatalogItems;
-    }
-    return items;
-  }, [activeTab, suggestedItems, savedCatalogItems, items]);
-
-  const heroItems = useMemo(() => {
-    const watchedIds = new Set(
-      historyItems.map((h) => String(h.mediaId ?? h.id).replace(/^(movie|tv)-/i, ""))
-    );
-
-    return heroSourceList.filter((item) => {
-      const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
-      if (watchedIds.has(cleanId)) return false;
-      if (isTitleDisliked(item.id) || isTitleDisliked(cleanId)) return false;
-      return true;
-    });
-  }, [heroSourceList, historyItems]);
-
-  useEffect(() => {
-    setCurrentHeroIndex(0);
-  }, [heroItems]);
-
-  useEffect(() => {
-    if (heroItems.length <= 1) return;
-
-    const interval = setInterval(() => {
-      setCurrentHeroIndex((prevIndex) => (prevIndex + 1) % heroItems.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [heroItems.length]);
+  }, [mediaDetails]);
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
@@ -607,290 +390,580 @@ function Home() {
     return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
   }, [cardSize]);
 
-  const themeStyles =
-    {
-      violet: {
-        bg: "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/90",
-        cardGradient: "from-purple-950/80 via-slate-900 to-indigo-950/80",
-        btnActive:
-          "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
-        accentText: "text-violet-300",
-        borderGlow: "border-violet-500/30",
-      },
-      red: {
-        bg: "bg-gradient-to-br from-zinc-950/85 via-red-950/45 to-black/90",
-        cardGradient: "from-red-950/80 via-zinc-900 to-neutral-950",
-        btnActive:
-          "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
-        accentText: "text-red-400",
-        borderGlow: "border-red-500/30",
-      },
-      midnight: {
-        bg: "bg-gradient-to-br from-slate-950/85 via-blue-950/45 to-slate-950/90",
-        cardGradient: "from-blue-950/80 via-slate-900 to-sky-950/80",
-        btnActive:
-          "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
-        accentText: "text-sky-300",
-        borderGlow: "border-sky-500/30",
-      },
-      emerald: {
-        bg: "bg-gradient-to-br from-slate-950/85 via-emerald-950/45 to-slate-950/90",
-        cardGradient: "from-emerald-950/80 via-slate-900 to-teal-950/80",
-        btnActive:
-          "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
-        accentText: "text-emerald-300",
-        borderGlow: "border-emerald-500/30",
-      },
-      amber: {
-        bg: "bg-gradient-to-br from-stone-950/85 via-yellow-950/45 to-neutral-950/90",
-        cardGradient: "from-yellow-950/80 via-stone-900 to-amber-950/80",
-        btnActive:
-          "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
-        accentText: "text-amber-300",
-        borderGlow: "border-amber-500/30",
-      },
-      cyan: {
-        bg: "bg-gradient-to-br from-slate-950/85 via-cyan-950/45 to-slate-950/90",
-        cardGradient: "from-cyan-950/80 via-slate-900 to-blue-950/80",
-        btnActive:
-          "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
-        accentText: "text-cyan-300",
-        borderGlow: "border-cyan-500/30",
-      },
-    }[appTheme] ?? {
-      bg: "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/90",
-      cardGradient: "from-purple-950/80 via-slate-900 to-indigo-950/80",
-      btnActive:
-        "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
-      accentText: "text-violet-300",
-      borderGlow: "border-violet-500/30",
-    };
+  const mappedRecommendations: MediaItem[] = useMemo(() => {
+    return recommendations.map((rec: any) => {
+      const recId = String(rec.id);
+      const recTitle = rec.title || rec.name || "Untitled";
+      const recPoster = rec.poster_path
+        ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
+        : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
+      const recType: "movie" | "tv" =
+        rec.media_type === "tv" || rec.name || !rec.title ? "tv" : "movie";
+      const releaseDate = rec.release_date || rec.first_air_date || "";
+      const year = releaseDate.split("-")[0];
+      const rating = rec.vote_average
+        ? rec.vote_average.toFixed(1)
+        : undefined;
 
-  const getPrimaryBgColor = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30";
-      case "midnight":
-        return "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30";
-      case "emerald":
-        return "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30";
-      case "amber":
-        return "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30";
-      case "cyan":
-        return "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30";
-      case "violet":
-      default:
-        return "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30";
+      return {
+        id: `${recType}-${recId}`,
+        title: recTitle,
+        description: rec.overview || "",
+        image: recPoster,
+        href: `/details?id=${recId}&type=${recType}`,
+        genre: recType === "tv" ? "TV SHOW" : "MOVIE",
+        year: year || undefined,
+        rating,
+        mediaType: recType,
+      };
+    });
+  }, [recommendations]);
+
+  const buildCatalogItem = () => ({
+    id: `${inferredMediaType}-${mediaId}`,
+    mediaId: String(mediaId),
+    title: mediaDetails?.title || mediaDetails?.name || "Untitled",
+    description: mediaDetails?.overview || "",
+    image: mediaDetails?.poster_path
+      ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
+      : "",
+    href: `/details?id=${mediaId}&type=${inferredMediaType}`,
+    year: (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split(
+      "-"
+    )[0],
+    rating: mediaDetails?.vote_average
+      ? mediaDetails.vote_average.toFixed(1)
+      : undefined,
+    mediaType: inferredMediaType,
+    genreIds: mediaDetails?.genres?.map((g: any) => g.id) || [],
+  });
+
+  const handlePlay = () => {
+    if (!mediaDetails || !mediaId) return;
+    setIsPlaying(true);
+
+    try {
+      saveWatchProgress({
+        id: `${inferredMediaType}-${mediaId}`,
+        mediaId: String(mediaId),
+        title: mediaDetails.title || mediaDetails.name || "Untitled",
+        mediaType: inferredMediaType,
+        posterPath: mediaDetails.poster_path || null,
+        backdropPath: mediaDetails.backdrop_path || null,
+        progressPercent: 0,
+        seasonNumber: inferredMediaType === "tv" ? season : undefined,
+        episodeNumber: inferredMediaType === "tv" ? episode : undefined,
+        genreIds: mediaDetails?.genres?.map((g: any) => g.id) || [],
+      });
+    } catch (err) {
+      console.error("Could not save to watch history", err);
     }
   };
 
-  const getThemeArrowColor = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
-      case "midnight":
-        return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
-      case "emerald":
-        return "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]";
-      case "amber":
-        return "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.8)]";
-      case "cyan":
-        return "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.8)]";
-      case "violet":
-      default:
-        return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
+  const toggleMyList = () => {
+    if (!mediaDetails) return;
+    const item = buildCatalogItem();
+    try {
+      const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
+      let updatedList;
+      if (inMyList) {
+        updatedList = myList.filter(
+          (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+        );
+        setInMyList(false);
+        triggerFeedback("Removed from My List");
+      } else {
+        updatedList = [
+          item,
+          ...myList.filter(
+            (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+          ),
+        ];
+        setInMyList(true);
+        triggerFeedback("Saved to My List!");
+      }
+      localStorage.setItem(MY_LIST_STORAGE_KEY, JSON.stringify(updatedList));
+      window.dispatchEvent(new Event("rabtv_catalog_updated"));
+    } catch (err) {
+      console.error("Failed to update My List", err);
     }
   };
 
-  const activeHeroItem = heroItems.length > 0 ? heroItems[currentHeroIndex] : null;
-  const heroDetailsSearch = activeHeroItem ? getDetailsSearch(activeHeroItem) : null;
+  const toggleFavorites = () => {
+    if (!mediaDetails) return;
+    const item = buildCatalogItem();
+    try {
+      const favs = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
+      let updatedFavs;
+      if (inFavorites) {
+        updatedFavs = favs.filter(
+          (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+        );
+        setInFavorites(false);
+        triggerFeedback("Removed from Favorites");
+      } else {
+        updatedFavs = [
+          item,
+          ...favs.filter(
+            (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+          ),
+        ];
+        setInFavorites(true);
+        triggerFeedback("Added to Favorites!");
+      }
+      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(updatedFavs));
+      window.dispatchEvent(new Event("rabtv_catalog_updated"));
+    } catch (err) {
+      console.error("Failed to update Favorites", err);
+    }
+  };
+
+  const handleReportBroken = () => {
+    if (!mediaId) return;
+    const result = reportBrokenLink(String(mediaId));
+    triggerFeedback(result.message);
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 1500);
+  };
+
+  const triggerFeedback = (msg: string) => {
+    setActionFeedback(msg);
+    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    feedbackTimeoutRef.current = window.setTimeout(() => {
+      setActionFeedback(null);
+      feedbackTimeoutRef.current = null;
+    }, 2500);
+  };
+
+  if (loading) {
+    return (
+      <div
+        className={`flex min-h-screen items-center justify-center ${getPageBackground(appTheme)} text-white relative`}
+      >
+        <AppWallpaper />
+        <p className={`text-xl font-medium animate-pulse ${activeTheme.text} relative z-10`}>
+          Loading title details...
+        </p>
+      </div>
+    );
+  }
+
+  const title = mediaDetails?.title || mediaDetails?.name || "Sample Content";
+  const overview =
+    mediaDetails?.overview || "No description available for this title.";
+  const poster = mediaDetails?.poster_path
+    ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
+    : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
+  const releaseYear = (
+    mediaDetails?.release_date ||
+    mediaDetails?.first_air_date ||
+    ""
+  ).split("-")[0];
+  const rating = mediaDetails?.vote_average
+    ? mediaDetails.vote_average.toFixed(1)
+    : "N/A";
+  const genres =
+    mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
+
+  const embedUrl =
+    inferredMediaType === "tv"
+      ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
+      : `https://vidsrc.to/embed/movie/${mediaId}`;
+
+  const currentSeasonObj = mediaDetails?.seasons?.find(
+    (s: any) => s.season_number === season
+  );
+  const currentEpisodeObj = seasonEpisodes?.find(
+    (e: any) => e.episode_number === episode
+  );
 
   return (
-    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 relative`}>
+    <div
+      className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative`}
+    >
       <AppWallpaper />
-      <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 bg-black/70 backdrop-blur-xl border-b border-white/10 shadow-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-center text-center">
-          <div className="w-full flex justify-center">
-            <ScrollPillBar
-              options={navTabs.map((tab) => ({ id: tab, label: tab }))}
-              activeId={activeTab}
-              onSelect={(id) => handleTabSelect(id as NavTab)}
-              appTheme={appTheme}
-              getPrimaryBgColor={getPrimaryBgColor}
-            />
-          </div>
-        </div>
-      </div>
+      <div className="relative z-10">
+        <Link
+          className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
+          to="/"
+        >
+          ← Back to Home
+        </Link>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 overflow-x-hidden flex flex-col items-center">
-        {/* HERO BANNER: Full container acts as Watch Now link, stripped of dots, spotlight counts, and button */}
-        {activeHeroItem && heroDetailsSearch ? (
-          <Link
-            to="/details"
-            search={heroDetailsSearch}
-            className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[320px] sm:h-[360px] flex flex-col group focus:outline-none focus:ring-4 ${themeStyles.borderGlow}`}
-          >
-            <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
-              <img
-                src={activeHeroItem.image}
-                alt={activeHeroItem.title}
-                className="absolute inset-0 h-full w-full object-fill object-center opacity-95 transition duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050b16]/90 via-black/30 to-transparent"></div>
+        {isPlaying ? (
+          <div className="mx-auto flex max-w-5xl flex-col gap-6">
+            {inferredMediaType === "tv" && (
+              <div
+                className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}
+              >
+                <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
+                  <div className="relative" ref={seasonRef}>
+                    <span className="block text-xs text-slate-400 mb-1">Season</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsSeasonOpen(!isSeasonOpen)}
+                      className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                    >
+                      <span>
+                        {currentSeasonObj
+                          ? currentSeasonObj.name
+                          : `Season ${season}`}
+                      </span>
+                      <span>▾</span>
+                    </button>
+                    {isSeasonOpen && (
+                      <div
+                        className={`absolute left-0 mt-2 z-50 max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                      >
+                        {mediaDetails?.seasons
+                          ?.filter((s: any) => s.season_number > 0)
+                          .map((s: any) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                setSeason(s.season_number);
+                                setEpisode(1);
+                                setIsSeasonOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                season === s.season_number
+                                  ? `${activeTheme.bg} text-white font-bold`
+                                  : "text-slate-200 hover:bg-white/10"
+                              }`}
+                            >
+                              {s.name} ({s.episode_count} Eps)
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative" ref={episodeRef}>
+                    <span className="block text-xs text-slate-400 mb-1">
+                      Episode
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
+                      className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                    >
+                      <span>
+                        {currentEpisodeObj
+                          ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
+                          : `Episode ${episode}`}
+                      </span>
+                      <span>▾</span>
+                    </button>
+                    {isEpisodeOpen && (
+                      <div
+                        className={`absolute left-0 mt-2 z-50 max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                      >
+                        {seasonEpisodes.length > 0 ? (
+                          seasonEpisodes.map((ep: any) => (
+                            <button
+                              key={ep.id}
+                              type="button"
+                              onClick={() => {
+                                setEpisode(ep.episode_number);
+                                setIsEpisodeOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                episode === ep.episode_number
+                                  ? `${activeTheme.bg} text-white font-bold`
+                                  : "text-slate-200 hover:bg-white/10"
+                              }`}
+                            >
+                              Ep {ep.episode_number}: {ep.name}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-slate-400">
+                            Loading episodes...
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEpisode((prev) => Math.max(1, prev - 1))}
+                    disabled={episode <= 1}
+                    className={`rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:opacity-40 focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  >
+                    ◀ Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEpisode((prev) => prev + 1)}
+                    className={`rounded-xl ${activeTheme.bg} px-4 py-2 text-xs font-semibold text-white shadow transition ${activeTheme.hoverBg} focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  >
+                    Next Episode ▶
+                  </button>
+                  <label className="ml-2 flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={autoPlayNext}
+                      onChange={(e) => setAutoPlayNext(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-violet-600 focus:ring-violet-500 focus:outline-none"
+                    />
+                    Autoplay Next
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
+              <iframe
+                key={`stable-player-${mediaId}-${season}-${episode}`}
+                srcDoc={`
+                  <!DOCTYPE html>
+                  <html>
+                    <head>
+                      <style>
+                        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+                        iframe { width: 100%; height: 100%; border: none; }
+                      </style>
+                      <script>
+                        window.open = function() { console.log("Blocked timed popup injection"); return null; };
+                        window.alert = function() {};
+                        window.confirm = function() { return true; };
+                      </script>
+                    </head>
+                    <body>
+                      <iframe 
+                        src="${embedUrl}" 
+                        allowfullscreen 
+                        allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
+                      ></iframe>
+                    </body>
+                  </html>
+                `}
+                className="h-full w-full border-0"
+                allowFullScreen
+                allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
+              ></iframe>
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 flex flex-col justify-end z-10">
-              <div className="bg-black/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-white/10 flex flex-col space-y-1 shadow-2xl text-left">
-                <div
-                  className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] ${themeStyles.accentText}`}
+            <div
+              className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}
+            >
+              <h1 className="text-2xl font-bold text-white">{title}</h1>
+              <p className="text-sm leading-relaxed text-slate-300">{overview}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mx-auto flex max-w-5xl flex-col gap-8">
+            <div className="flex flex-col gap-8 md:flex-row md:items-start">
+              <img
+                src={poster}
+                alt={title}
+                className="h-[450px] w-[300px] rounded-2xl object-cover shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start"
+              />
+
+              <div className="flex flex-col justify-center gap-4 flex-1">
+                <span
+                  className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
                 >
-                  <span className="truncate max-w-[200px]">
-                    {activeHeroItem.genre ?? "Entertainment"}
+                  {genres}
+                </span>
+
+                <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+                  {title}
+                </h1>
+
+                <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
+                  {rating !== "N/A" && (
+                    <span className="flex items-center gap-1 font-bold text-yellow-300">
+                      ⭐ {rating}
+                    </span>
+                  )}
+                  {releaseYear && <span>{releaseYear}</span>}
+                  {originalLanguageName && (
+                    <span className="font-medium text-slate-200">
+                      {originalLanguageName}
+                    </span>
+                  )}
+                  <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
+                    {inferredMediaType}
                   </span>
                 </div>
 
-                <div className="flex items-center flex-wrap gap-2 min-w-0">
-                  <h2 className="text-base sm:text-lg font-black text-white leading-snug truncate max-w-full">
-                    {activeHeroItem.title}
-                  </h2>
-                  {activeHeroItem.rating && (
-                    <span className="rounded-full border border-yellow-400/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 px-2 py-0.5 uppercase tracking-[0.2em] text-yellow-200 text-[10px] font-semibold shrink-0">
-                      ⭐ {activeHeroItem.rating}
-                    </span>
-                  )}
-                  {activeHeroItem.year && (
-                    <span className="text-[11px] text-slate-300 font-medium shrink-0">
-                      {activeHeroItem.year}
-                    </span>
-                  )}
+                <p className="max-w-2xl text-base leading-relaxed text-slate-300">
+                  {overview}
+                </p>
+
+                {inferredMediaType === "tv" && mediaDetails?.seasons && (
+                  <div
+                    className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
+                  >
+                    <div className="relative" ref={seasonRef}>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                        Select Season
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsSeasonOpen(!isSeasonOpen)}
+                        className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      >
+                        <span>
+                          {currentSeasonObj
+                            ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
+                            : `Season ${season}`}
+                        </span>
+                        <span>▾</span>
+                      </button>
+                      {isSeasonOpen && (
+                        <div
+                          className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        >
+                          {mediaDetails.seasons
+                            .filter((s: any) => s.season_number > 0)
+                            .map((s: any) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                  setSeason(s.season_number);
+                                  setEpisode(1);
+                                  setIsSeasonOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                  season === s.season_number
+                                    ? `${activeTheme.bg} text-white font-bold`
+                                    : "text-slate-200 hover:bg-white/10"
+                                }`}
+                              >
+                                {s.name} ({s.episode_count} Episodes)
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="relative" ref={episodeRef}>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                        Select Episode
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
+                        className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      >
+                        <span>
+                          {currentEpisodeObj
+                            ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
+                            : `Episode ${episode}`}
+                        </span>
+                        <span>▾</span>
+                      </button>
+                      {isEpisodeOpen && (
+                        <div
+                          className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        >
+                          {seasonEpisodes.length > 0 ? (
+                            seasonEpisodes.map((ep: any) => (
+                              <button
+                                key={ep.id}
+                                type="button"
+                                onClick={() => {
+                                  setEpisode(ep.episode_number);
+                                  setIsEpisodeOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                  episode === ep.episode_number
+                                    ? `${activeTheme.bg} text-white font-bold`
+                                    : "text-slate-200 hover:bg-white/10"
+                                }`}
+                              >
+                                Ep {ep.episode_number}: {ep.name}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-slate-400">
+                              Loading episodes...
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handlePlay}
+                    className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
+                  >
+                    ▶ Play{" "}
+                    {inferredMediaType === "tv"
+                      ? `S${season}:E${episode}`
+                      : "Movie"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleMyList}
+                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} ${
+                      inMyList
+                        ? `${activeTheme.border} bg-white/10 ${activeTheme.text}`
+                        : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                    }`}
+                  >
+                    {inMyList ? "✓ In My List" : "🔖 + Save to My List"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleFavorites}
+                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 ${
+                      inFavorites
+                        ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
+                        : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                    }`}
+                  >
+                    {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleReportBroken}
+                    className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500"
+                    title="Report link as broken and hide globally"
+                  >
+                    ⚠️ Report Broken
+                  </button>
                 </div>
 
-                <p className="text-xs leading-relaxed text-slate-300 line-clamp-1">
-                  {activeHeroItem.description}
-                </p>
-              </div>
-            </div>
-          </Link>
-        ) : (
-          <section
-            className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[320px] sm:h-[360px] flex flex-col items-center justify-center`}
-          >
-            <div className="text-slate-300 text-center px-4">
-              {loading ? `Loading ${activeTab}...` : error ?? "No media found in this section."}
-            </div>
-          </section>
-        )}
-
-        {activeTab !== "My List" && (
-          <section className="mb-4 space-y-2.5 flex flex-col items-center justify-center text-center w-full">
-            <div className="flex justify-center w-full">
-              <div className="w-full max-w-3xl flex justify-center">
-                <ScrollPillBar
-                  options={genreCategories.map((genre) => ({ id: genre, label: genre }))}
-                  activeId={selectedGenre}
-                  onSelect={(id) => setSelectedGenre(id)}
-                  appTheme={appTheme}
-                  getPrimaryBgColor={getPrimaryBgColor}
-                />
+                {actionFeedback && (
+                  <p
+                    className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}
+                  >
+                    {actionFeedback}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="flex justify-center w-full">
-              <div className="w-full max-w-3xl flex justify-center">
-                <ScrollPillBar
-                  options={providerCategories.map((prov) => ({ id: prov, label: prov }))}
-                  activeId={globalFeedOverride}
-                  onSelect={(id) => handleProviderSelect(id)}
-                  appTheme={appTheme}
-                  getPrimaryBgColor={getPrimaryBgColor}
-                />
+            {mappedRecommendations.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>✨ Similar Recommendations</span>
+                </h2>
+                <div className={gridColsClass}>
+                  {mappedRecommendations.slice(0, 12).map((item) => (
+                    <MediaCard item={item} key={item.id} />
+                  ))}
+                </div>
               </div>
-            </div>
-          </section>
-        )}
-
-        {activeTab === "My List" && (
-          <section className="mb-4 flex flex-wrap items-center justify-center gap-2 border-b border-white/10 pb-3 px-2 text-center w-full max-w-4xl mx-auto">
-            <button
-              type="button"
-              onClick={() => setMyListSubTab("all")}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition border ${
-                myListSubTab === "all"
-                  ? themeStyles.btnActive
-                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200 ${themeStyles.borderGlow} hover:brightness-125`
-              }`}
-            >
-              All Saved ({savedMyList.length + savedFavorites.length + inProgressHistory.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMyListSubTab("in_progress")}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition border ${
-                myListSubTab === "in_progress"
-                  ? "bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white shadow-lg shadow-cyan-600/30 border-cyan-400/30"
-                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200 ${themeStyles.borderGlow} hover:brightness-125`
-              }`}
-            >
-              ⏳ In Progress ({inProgressHistory.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMyListSubTab("mylist")}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition border ${
-                myListSubTab === "mylist"
-                  ? themeStyles.btnActive
-                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200 ${themeStyles.borderGlow} hover:brightness-125`
-              }`}
-            >
-              🔖 Watch Later ({savedMyList.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMyListSubTab("favorites")}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition border ${
-                myListSubTab === "favorites"
-                  ? "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30 border-amber-400/30"
-                  : `bg-gradient-to-r ${themeStyles.cardGradient} text-slate-200 ${themeStyles.borderGlow} hover:brightness-125`
-              }`}
-            >
-              ⭐ Favorites ({savedFavorites.length})
-            </button>
-          </section>
-        )}
-
-        <section className="mb-6 px-1 w-full max-w-7xl">
-          <div className="mb-3 flex items-center justify-between px-2">
-            <h3 className="text-lg font-bold text-white">
-              {activeTab === "My List" ? "Saved Catalog" : `${activeTab} Catalog`}
-            </h3>
-            <span className={`text-xs font-medium ${themeStyles.accentText}`}>
-              {filteredItems.length} titles available
-            </span>
+            )}
           </div>
-
-          {filteredItems.length > 0 ? (
-            <div className={gridColsClass}>
-              {filteredItems.map((item) => (
-                <MemoizedMediaCard item={item} key={item.id} />
-              ))}
-            </div>
-          ) : (
-            <div
-              className={`rounded-[20px] bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-6 text-center mx-2`}
-            >
-              <p className="text-sm text-slate-300">
-                {activeTab === "My List"
-                  ? "No saved titles in this section yet. Open any movie or show to save it!"
-                  : loading
-                  ? `Loading ${activeTab} content...`
-                  : error ?? "No titles available in this view."}
-              </p>
-            </div>
-          )}
-        </section>
+        )}
 
         {canScrollDown && showScrollReminder && (
           <div
@@ -911,61 +984,17 @@ function Home() {
             `}</style>
             <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
-                More Content Below
+                More Content Details
               </span>
-              <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
+              <span
+                className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}
+              >
                 ⌄
               </span>
             </div>
           </div>
         )}
-
-        {activeTab === "My List" && suggestedItems.length > 0 && (
-          <section className="mb-8 px-1 pt-4 border-t border-white/10 w-full max-w-7xl">
-            <div className="mb-3 flex items-center justify-between px-2">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <span>✨ Suggested For You</span>
-              </h3>
-              <span className={`text-xs font-medium ${themeStyles.accentText}`}>
-                Curated based on your favorites & history genres
-              </span>
-            </div>
-            <div className={gridColsClass}>
-              {suggestedItems.map((item) => (
-                <MemoizedMediaCard item={item} key={`suggested-${item.id}`} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {activeTab !== "My List" && totalPages > 1 && (
-          <div
-            className={`mb-6 flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-3 mx-2 w-full max-w-md`}
-          >
-            <button
-              type="button"
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              disabled={page <= 1 || loading}
-              className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:opacity-40 focus:outline-none focus:ring-4"
-            >
-              ◀ Previous
-            </button>
-
-            <span className={`text-xs font-bold ${themeStyles.accentText}`}>
-              Page {page} of {totalPages}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={page >= totalPages || loading}
-              className={`rounded-xl ${themeStyles.btnActive} px-3 py-2 text-xs font-semibold shadow transition disabled:opacity-40 focus:outline-none focus:ring-4`}
-            >
-              Next ▶
-            </button>
-          </div>
-        )}
       </div>
-    </main>
+    </div>
   );
 }
