@@ -163,7 +163,6 @@ jobs:
 
       - name: Prepare TV Banner from HeaderFamily.jpg & Inject Custom Files
         run: |
-          # Ensure tv_banner.png exists using HeaderFamily.jpg
           if [ -f assets/HeaderFamily.jpg ]; then
             cp assets/HeaderFamily.jpg assets/tv_banner.png
             echo "Successfully copied HeaderFamily.jpg to tv_banner.png"
@@ -209,6 +208,12 @@ jobs:
             echo "Error: android directory was not created!"
             exit 1
           fi
+
+      - name: Generate Gradle Wrapper
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.2.1
+          chmod +x gradlew
 
       - name: Build Signed Release APK with Custom Keystore
         run: |
