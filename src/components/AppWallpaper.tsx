@@ -1,17 +1,35 @@
-import React from "react";
-
-const APP_WALLPAPER_URL = "https://i.postimg.cc/y6r1Fv8k/grok-image-1793587579614.jpg";
+import { useEffect, useState } from "react";
+import { getSavedWallpaperUrl, saveWallpaperUrl } from "@/lib/settings";
 
 export function AppWallpaper() {
+  const [wallpaperUrl, setWallpaperUrl] = useState<string>(getSavedWallpaperUrl());
+
+  useEffect(() => {
+    const syncWallpaper = () => {
+      setWallpaperUrl(getSavedWallpaperUrl());
+    };
+
+    syncWallpaper();
+    window.addEventListener("rabtv_settings_updated", syncWallpaper);
+    return () => window.removeEventListener("rabtv_settings_updated", syncWallpaper);
+  }, []);
+
+  const resolvedUrl = wallpaperUrl || getSavedWallpaperUrl();
+
   return (
-    <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 z-[-1] overflow-hidden">
       <img
-        src={APP_WALLPAPER_URL}
+        src={resolvedUrl}
         alt="App Wallpaper"
-        className="w-full h-full object-cover opacity-45"
+        className="h-full w-full object-cover opacity-50"
+        loading="eager"
+        decoding="async"
+        onError={(event) => {
+          event.currentTarget.src = "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80";
+          saveWallpaperUrl("https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80");
+        }}
       />
-      {/* subtle dark veil so text stays readable while the wallpaper still shows */}
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-black/45" />
     </div>
   );
 }
