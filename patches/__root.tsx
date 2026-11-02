@@ -650,18 +650,18 @@ function RootComponent() {
   const getBodyBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-gradient-to-br from-zinc-950 via-red-950/40 to-black";
+        return "bg-gradient-to-br from-zinc-950/85 via-red-950/45 to-black/90";
       case "midnight":
-        return "bg-gradient-to-br from-slate-950 via-blue-950/40 to-slate-950";
+        return "bg-gradient-to-br from-slate-950/85 via-blue-950/45 to-slate-950/90";
       case "emerald":
-        return "bg-gradient-to-br from-slate-950 via-emerald-950/40 to-slate-950";
+        return "bg-gradient-to-br from-slate-950/85 via-emerald-950/45 to-slate-950/90";
       case "amber":
-        return "bg-gradient-to-br from-stone-950 via-yellow-950/40 to-neutral-950";
+        return "bg-gradient-to-br from-stone-950/85 via-yellow-950/45 to-neutral-950/90";
       case "cyan":
-        return "bg-gradient-to-br from-slate-950 via-cyan-950/40 to-slate-950";
+        return "bg-gradient-to-br from-slate-950/85 via-cyan-950/45 to-slate-950/90";
       case "violet":
       default:
-        return "bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-950";
+        return "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/90";
     }
   };
 
