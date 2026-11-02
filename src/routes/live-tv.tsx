@@ -13,12 +13,12 @@ import { AppTheme, getSavedTheme } from '@/lib/settings';
 import { ScrollPillBar } from '@/components/scroll-pill-bar';
 import { getChannelDescription } from '@/lib/channel-descriptions';
 import { channelCategories } from '@/lib/channel-categories';
+import { AppWallpaper } from '@/components/AppWallpaper';
 
 export const Route = createFileRoute('/live-tv')({
   component: LiveTvComponent,
 });
 
-// Canadian display mapping for Australian / NZ regional feeds (display-only overlay)
 const categoryMapping: Record<string, string> = {
   Nz: 'Atlantic Canada',
   Sydney: 'Toronto',
@@ -45,7 +45,7 @@ function HealthDot({ health }: { health?: LiveChannel['health'] }) {
         ? 'bg-red-500 shadow-red-500/40'
         : health === 'checking'
           ? 'bg-slate-400 animate-pulse'
-          : 'bg-amber-400 shadow-amber-400/40'; // unknown
+          : 'bg-amber-400 shadow-amber-400/40';
 
   const title =
     health === 'online'
@@ -100,7 +100,6 @@ function LiveTvComponent() {
         let baseChannels: LiveChannel[] = [];
 
         if (selectedCategory === 'All') {
-          // Probe entire catalog (cached 15 min unless forceProbe)
           baseChannels = await fetchAllChannels({
             probe: true,
             hideOffline: true,
@@ -116,7 +115,6 @@ function LiveTvComponent() {
           });
         }
 
-        // Genre filter (display names)
         if (selectedGenre !== 'All Genres') {
           const allowedChannelNames = channelCategories[selectedGenre] || [];
           baseChannels = baseChannels.filter((c) =>
@@ -150,7 +148,6 @@ function LiveTvComponent() {
   const handleRefreshHealth = async () => {
     setProbing(true);
     try {
-      // Full re-probe, keep offline visible briefly then re-filter via load
       await refreshLiveHealth();
       await loadFilteredChannels({ forceProbe: true });
     } finally {
@@ -226,9 +223,10 @@ function LiveTvComponent() {
 
   return (
     <main
-      className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-4 sm:px-6 w-full max-w-full overflow-x-hidden box-border`}
+      className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-4 sm:px-6 w-full max-w-full overflow-x-hidden box-border relative`}
     >
-      <header className="py-6 max-w-7xl mx-auto space-y-3 box-border">
+      <AppWallpaper />
+      <header className="py-6 max-w-7xl mx-auto space-y-3 box-border relative z-10">
         <div>
           <Link
             to="/"
@@ -258,7 +256,7 @@ function LiveTvComponent() {
           </button>
         </div>
 
-        {/* Upper Category Navigation Bar (Regions / Feeds) */}
+        {/* Upper Category Navigation Bar */}
         <div className="w-full pt-2">
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
             Regions & Feeds
@@ -287,7 +285,7 @@ function LiveTvComponent() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto box-border">
+      <div className="max-w-7xl mx-auto box-border relative z-10">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
           <h3 className="text-lg font-bold text-white">
             {selectedGenre !== 'All Genres' ? selectedGenre : selectedCategory}{' '}
