@@ -1,3 +1,4 @@
+// patches/__root.tsx
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -663,54 +664,54 @@ function RootComponent() {
   const getBodyBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-gradient-to-br from-zinc-950/85 via-red-950/45 to-black/90";
+        return "bg-gradient-to-br from-zinc-950/90 via-red-950/40 to-zinc-950/95";
       case "midnight":
-        return "bg-gradient-to-br from-slate-950/85 via-blue-950/45 to-slate-950/90";
+        return "bg-gradient-to-br from-slate-950/90 via-blue-950/40 to-slate-950/95";
       case "emerald":
-        return "bg-gradient-to-br from-slate-950/85 via-emerald-950/45 to-slate-950/90";
+        return "bg-gradient-to-br from-slate-950/90 via-emerald-950/40 to-slate-950/95";
       case "amber":
-        return "bg-gradient-to-br from-stone-950/85 via-yellow-950/45 to-neutral-950/90";
+        return "bg-gradient-to-br from-stone-950/90 via-yellow-950/40 to-stone-950/95";
       case "cyan":
-        return "bg-gradient-to-br from-slate-950/85 via-cyan-950/45 to-slate-950/90";
+        return "bg-gradient-to-br from-slate-950/90 via-cyan-950/40 to-slate-950/95";
       case "violet":
       default:
-        return "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/90";
+        return "bg-gradient-to-br from-slate-950/90 via-purple-950/40 to-slate-950/95";
     }
   };
 
   const getHeaderThemeBg = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-red-950/50 backdrop-blur-md";
+        return "bg-red-950/60 backdrop-blur-xl";
       case "midnight":
-        return "bg-blue-950/50 backdrop-blur-md";
+        return "bg-blue-950/60 backdrop-blur-xl";
       case "emerald":
-        return "bg-emerald-950/50 backdrop-blur-md";
+        return "bg-emerald-950/60 backdrop-blur-xl";
       case "amber":
-        return "bg-yellow-950/50 backdrop-blur-md";
+        return "bg-yellow-950/60 backdrop-blur-xl";
       case "cyan":
-        return "bg-cyan-950/50 backdrop-blur-md";
+        return "bg-cyan-950/60 backdrop-blur-xl";
       case "violet":
       default:
-        return "bg-purple-950/50 backdrop-blur-md";
+        return "bg-purple-950/60 backdrop-blur-xl";
     }
   };
 
   const getCardBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-zinc-900/95 border-red-500/30";
+        return "bg-zinc-900/90 border-red-500/25 shadow-2xl backdrop-blur-xl";
       case "midnight":
-        return "bg-slate-900/95 border-blue-500/30";
+        return "bg-slate-900/90 border-blue-500/25 shadow-2xl backdrop-blur-xl";
       case "emerald":
-        return "bg-slate-900/95 border-emerald-500/30";
+        return "bg-slate-900/90 border-emerald-500/25 shadow-2xl backdrop-blur-xl";
       case "amber":
-        return "bg-stone-900/95 border-amber-500/30";
+        return "bg-stone-900/90 border-amber-500/25 shadow-2xl backdrop-blur-xl";
       case "cyan":
-        return "bg-slate-900/95 border-cyan-500/30";
+        return "bg-slate-900/90 border-cyan-500/25 shadow-2xl backdrop-blur-xl";
       case "violet":
       default:
-        return "bg-slate-900/95 border-violet-500/30";
+        return "bg-slate-900/90 border-violet-500/25 shadow-2xl backdrop-blur-xl";
     }
   };
 
@@ -719,33 +720,33 @@ function RootComponent() {
       case "red":
         return {
           btnBg:
-            "bg-red-950/70 border-red-500/30 text-red-200 hover:bg-red-900/80",
+            "bg-red-950/60 border-red-500/25 text-red-100 hover:bg-red-900/80 shadow-sm",
         };
       case "midnight":
         return {
           btnBg:
-            "bg-blue-950/70 border-blue-500/30 text-blue-200 hover:bg-blue-900/80",
+            "bg-blue-950/60 border-blue-500/25 text-blue-100 hover:bg-blue-900/80 shadow-sm",
         };
       case "emerald":
         return {
           btnBg:
-            "bg-emerald-950/70 border-emerald-500/30 text-emerald-200 hover:bg-emerald-900/80",
+            "bg-emerald-950/60 border-emerald-500/25 text-emerald-100 hover:bg-emerald-900/80 shadow-sm",
         };
       case "amber":
         return {
           btnBg:
-            "bg-yellow-950/70 border-amber-500/30 text-amber-200 hover:bg-yellow-900/80",
+            "bg-yellow-950/60 border-amber-500/25 text-amber-100 hover:bg-yellow-900/80 shadow-sm",
         };
       case "cyan":
         return {
           btnBg:
-            "bg-cyan-950/70 border-cyan-500/30 text-cyan-200 hover:bg-cyan-900/80",
+            "bg-cyan-950/60 border-cyan-500/25 text-cyan-100 hover:bg-cyan-900/80 shadow-sm",
         };
       case "violet":
       default:
         return {
           btnBg:
-            "bg-purple-950/70 border-violet-500/30 text-purple-200 hover:bg-purple-900/80",
+            "bg-purple-950/60 border-violet-500/25 text-purple-100 hover:bg-purple-900/80 shadow-sm",
         };
     }
   };
@@ -791,36 +792,36 @@ function RootComponent() {
   const getThemeGlowClass = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "border-red-500/60 shadow-[0_0_20px_rgba(239,68,68,0.6)]";
+        return "border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4)]";
       case "midnight":
-        return "border-blue-500/60 shadow-[0_0_20px_rgba(59,130,246,0.6)]";
+        return "border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.4)]";
       case "emerald":
-        return "border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.6)]";
+        return "border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.4)]";
       case "amber":
-        return "border-amber-500/60 shadow-[0_0_20px_rgba(245,158,11,0.6)]";
+        return "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.4)]";
       case "cyan":
-        return "border-cyan-500/60 shadow-[0_0_20px_rgba(6,182,212,0.6)]";
+        return "border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.4)]";
       case "violet":
       default:
-        return "border-violet-500/60 shadow-[0_0_20px_rgba(139,92,246,0.6)]";
+        return "border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.4)]";
     }
   };
 
   const getSubtlePillBg = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-red-950/50 border-red-500/30 text-red-200 hover:bg-red-900/60";
+        return "bg-red-950/40 border-red-500/25 text-red-200 hover:bg-red-900/60";
       case "midnight":
-        return "bg-blue-950/50 border-blue-500/30 text-blue-200 hover:bg-blue-900/60";
+        return "bg-blue-950/40 border-blue-500/25 text-blue-200 hover:bg-blue-900/60";
       case "emerald":
-        return "bg-emerald-950/50 border-emerald-500/30 text-emerald-200 hover:bg-emerald-900/60";
+        return "bg-emerald-950/40 border-emerald-500/25 text-emerald-200 hover:bg-emerald-900/60";
       case "amber":
-        return "bg-yellow-950/50 border-amber-500/30 text-amber-200 hover:bg-yellow-900/60";
+        return "bg-yellow-950/40 border-amber-500/25 text-amber-200 hover:bg-yellow-900/60";
       case "cyan":
-        return "bg-cyan-950/50 border-cyan-500/30 text-cyan-200 hover:bg-cyan-900/60";
+        return "bg-cyan-950/40 border-cyan-500/25 text-cyan-200 hover:bg-cyan-900/60";
       case "violet":
       default:
-        return "bg-purple-950/50 border-violet-500/30 text-purple-200 hover:bg-purple-900/60";
+        return "bg-purple-950/40 border-violet-500/25 text-purple-200 hover:bg-purple-900/60";
     }
   };
 
@@ -852,8 +853,8 @@ function RootComponent() {
         <HolidayOverlay />
         <AppWallpaper />
         <AuthProvider>
-          <header className={`sticky top-0 z-40 border-b border-white/15 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)}`}>
-            <div className="absolute inset-0 pointer-events-none opacity-25">
+          <header className={`sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)}`}>
+            <div className="absolute inset-0 pointer-events-none opacity-20">
               <img
                 src={HEADER_ICON_URL}
                 alt="Header Background"
@@ -861,11 +862,11 @@ function RootComponent() {
               />
             </div>
 
-            <div className="relative z-10 mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2 sm:px-6 gap-2">
-              <div className="flex items-center justify-between sm:justify-start gap-2">
+            <div className="relative z-10 mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2.5 sm:px-6 gap-2.5">
+              <div className="flex items-center justify-between sm:justify-start gap-2.5">
                 <Link
                   to="/"
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/40 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                 >
                   <span className="whitespace-nowrap">RABBiT TV</span>
                 </Link>
@@ -875,7 +876,7 @@ function RootComponent() {
                     <button
                       type="button"
                       onClick={handleToggleProfileMenu}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-bold text-white shadow transition cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold text-white shadow-sm transition cursor-pointer"
                     >
                       <span>
                         👋 Hi,{" "}
@@ -889,7 +890,7 @@ function RootComponent() {
                       <span className="text-[10px] ml-1 text-slate-300">▼</span>
                     </button>
                     {isTrialActive && (
-                      <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold animate-pulse">
+                      <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold animate-pulse">
                         <span>⏳ {trialDaysRemaining}d left</span>
                       </div>
                     )}
@@ -898,21 +899,21 @@ function RootComponent() {
               </div>
 
               {!showFirstStartModal && (
-                <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                <div className="flex items-center justify-between sm:justify-end gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                   <form
                     onSubmit={handleHeaderSearchSubmit}
-                    className="flex items-center gap-1 shrink-0 flex-1 sm:flex-initial"
+                    className="flex items-center gap-1.5 shrink-0 flex-1 sm:flex-initial"
                   >
                     <input
                       type="text"
                       value={headerSearchInput}
                       onChange={(e) => setHeaderSearchInput(e.target.value)}
                       placeholder="Search..."
-                      className="h-9 sm:h-10 w-full sm:w-32 lg:w-44 rounded-xl border border-white/10 bg-slate-900/80 px-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2"
+                      className="h-9 sm:h-10 w-full sm:w-32 lg:w-44 rounded-xl border border-white/10 bg-slate-900/70 px-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
                     />
                     <button
                       type="submit"
-                      className={`flex h-9 sm:h-10 px-2.5 sm:px-3 items-center justify-center rounded-xl border text-xs font-bold shadow-md transition shrink-0 ${activeHeader.btnBg}`}
+                      className={`flex h-9 sm:h-10 px-3 items-center justify-center rounded-xl border text-xs font-bold shadow-sm transition shrink-0 ${activeHeader.btnBg}`}
                       aria-label="Search"
                     >
                       🔍
@@ -921,7 +922,7 @@ function RootComponent() {
 
                   <div className="relative shrink-0">
                     <div
-                      className={`flex h-9 sm:h-10 items-center justify-center rounded-xl border px-2 sm:px-3 text-[11px] sm:text-xs font-bold shadow-md transition focus-within:ring-2 ${activeHeader.btnBg} gap-1 relative pointer-events-auto`}
+                      className={`flex h-9 sm:h-10 items-center justify-center rounded-xl border px-3 text-[11px] sm:text-xs font-bold shadow-sm transition focus-within:ring-2 ${activeHeader.btnBg} gap-1 relative pointer-events-auto`}
                     >
                       <span className="whitespace-nowrap pointer-events-none truncate max-w-[90px] sm:max-w-none">
                         🌐{" "}
@@ -950,7 +951,7 @@ function RootComponent() {
 
                   <Link
                     to="/watch-history"
-                    className={`flex h-9 sm:h-10 items-center justify-center rounded-xl border px-2.5 sm:px-3 text-[11px] sm:text-xs font-bold shadow-md transition focus:outline-none focus:ring-2 shrink-0 ${activeHeader.btnBg}`}
+                    className={`flex h-9 sm:h-10 items-center justify-center rounded-xl border px-3 text-[11px] sm:text-xs font-bold shadow-sm transition focus:outline-none focus:ring-2 shrink-0 ${activeHeader.btnBg}`}
                   >
                     🕒 History
                   </Link>
@@ -958,7 +959,7 @@ function RootComponent() {
                   <button
                     type="button"
                     onClick={handleToggleSettings}
-                    className={`flex h-9 sm:h-10 w-9 sm:w-10 items-center justify-center rounded-xl border text-base sm:text-lg shadow-md transition focus:outline-none focus:ring-2 shrink-0 ${activeHeader.btnBg}`}
+                    className={`flex h-9 sm:h-10 w-9 sm:w-10 items-center justify-center rounded-xl border text-base sm:text-lg shadow-sm transition focus:outline-none focus:ring-2 shrink-0 ${activeHeader.btnBg}`}
                     aria-label="Settings"
                   >
                     ⚙️
@@ -971,7 +972,7 @@ function RootComponent() {
           {/* PROFILE MENU */}
           {showProfileMenu && !showFirstStartModal && (
             <div
-              className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-xl shadow-2xl max-h-[85vh] overflow-y-auto box-border`}
+              className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-2xl shadow-2xl max-h-[85vh] overflow-y-auto box-border`}
             >
               <div className="mx-auto flex flex-col gap-4 box-border">
                 <div className="flex items-center justify-between border-b border-white/10 pb-2">
@@ -990,11 +991,11 @@ function RootComponent() {
                 </div>
 
                 {isAdmin && (
-                  <div className="space-y-3 bg-red-950/40 p-3.5 rounded-xl border border-red-500/40 box-border">
+                  <div className="space-y-3 bg-red-950/40 p-3.5 rounded-xl border border-red-500/30 box-border backdrop-blur-md">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-red-300">
                       🔑 Admin Key Generator
                     </h4>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                    <p className="text-[10px] text-slate-300 leading-relaxed">
                       Enter a user’s display name and age. The generated code
                       unlocks full access for that exact name + age pair.
                     </p>
@@ -1004,7 +1005,7 @@ function RootComponent() {
                         placeholder="User name"
                         value={keygenName}
                         onChange={(e) => setKeygenName(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
                       />
                       <input
                         type="number"
@@ -1013,7 +1014,7 @@ function RootComponent() {
                         placeholder="User age"
                         value={keygenAge}
                         onChange={(e) => setKeygenAge(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
                       />
                       <button
                         type="submit"
@@ -1023,7 +1024,7 @@ function RootComponent() {
                       </button>
                     </form>
                     {keygenResult && (
-                      <div className="rounded-lg bg-black/50 border border-red-400/30 p-3 text-center">
+                      <div className="rounded-lg bg-black/60 border border-red-400/30 p-3 text-center backdrop-blur-md">
                         <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
                           Unlock code
                         </p>
@@ -1036,17 +1037,17 @@ function RootComponent() {
                 )}
 
                 {/* Catalog Language & Region Preference */}
-                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
                     🌐 Catalog Language & Region
                   </h4>
-                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                  <p className="text-[10px] text-slate-300 leading-relaxed">
                     Set your preferred regional feed or language to directly customize your stream catalog.
                   </p>
                   <select
                     value={selectedGlobalFeed}
                     onChange={(e) => handleGlobalFeedChange(e.target.value as GlobalFeedOption)}
-                    className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none"
+                    className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none"
                   >
                     {globalFeedOptions.map((opt) => (
                       <option key={opt} value={opt} className="bg-slate-900 text-white">
@@ -1056,8 +1057,8 @@ function RootComponent() {
                   </select>
                 </div>
 
-                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
                     License Status
                   </h4>
                   {isAdmin ? (
@@ -1078,7 +1079,7 @@ function RootComponent() {
                         onSubmit={handleUpgradeFromProfile}
                         className="space-y-2"
                       >
-                        <label className="block text-[10px] uppercase font-semibold text-slate-400">
+                        <label className="block text-[10px] uppercase font-semibold text-slate-300">
                           Enter Full Unlock Code:
                         </label>
                         <input
@@ -1086,7 +1087,7 @@ function RootComponent() {
                           placeholder="Unlock code for your name + age"
                           value={unlockCodeInput}
                           onChange={(e) => setUnlockCodeInput(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
                         />
                         <button
                           type="submit"
@@ -1115,18 +1116,18 @@ function RootComponent() {
                 </div>
 
                 {/* Age lock – change age only with 4-digit PIN */}
-                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
                     Age Lock
                   </h4>
-                  <p className="text-[10px] text-slate-400">
+                  <p className="text-[10px] text-slate-300">
                     Age is locked with the 4-digit code set at first login.
                     Enter that code to update age.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
-                      <span className="block text-[11px] text-slate-400 mb-1">
+                      <span className="block text-[11px] text-slate-300 mb-1">
                         Name:
                       </span>
                       <input
@@ -1143,11 +1144,11 @@ function RootComponent() {
                           setSavedProfileName(val.trim());
                         }}
                         placeholder="Your Name"
-                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
                       />
                     </div>
                     <div>
-                      <span className="block text-[11px] text-slate-400 mb-1">
+                      <span className="block text-[11px] text-slate-300 mb-1">
                         Age:
                       </span>
                       <input
@@ -1156,7 +1157,7 @@ function RootComponent() {
                         max={120}
                         value={userAgeInput}
                         onChange={(e) => setUserAgeInput(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
                       />
                     </div>
                   </div>
@@ -1166,7 +1167,7 @@ function RootComponent() {
                     className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 pt-1 w-full box-border"
                   >
                     <div className="flex-1">
-                      <span className="block text-[11px] text-slate-400 mb-1">
+                      <span className="block text-[11px] text-slate-300 mb-1">
                         Age-lock code (4 digits):
                       </span>
                       <input
@@ -1180,7 +1181,7 @@ function RootComponent() {
                             e.target.value.replace(/\D/g, "").slice(0, 4)
                           )
                         }
-                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
                       />
                     </div>
                     <button
@@ -1204,8 +1205,8 @@ function RootComponent() {
                 </div>
 
                 {/* Change age-lock PIN */}
-                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
                     Change Age-Lock Code
                   </h4>
                   <form
@@ -1213,7 +1214,7 @@ function RootComponent() {
                     className="space-y-2.5 box-border"
                   >
                     <div>
-                      <span className="block text-[11px] text-slate-400 mb-1">
+                      <span className="block text-[11px] text-slate-300 mb-1">
                         Current 4-digit code:
                       </span>
                       <input
@@ -1227,12 +1228,12 @@ function RootComponent() {
                             e.target.value.replace(/\D/g, "").slice(0, 4)
                           )
                         }
-                        className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
+                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
                       />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
-                        <span className="block text-[11px] text-slate-400 mb-1">
+                        <span className="block text-[11px] text-slate-300 mb-1">
                           New code:
                         </span>
                         <input
@@ -1246,11 +1247,11 @@ function RootComponent() {
                               e.target.value.replace(/\D/g, "").slice(0, 4)
                             )
                           }
-                          className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
+                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
                         />
                       </div>
                       <div>
-                        <span className="block text-[11px] text-slate-400 mb-1">
+                        <span className="block text-[11px] text-slate-300 mb-1">
                           Confirm:
                         </span>
                         <input
@@ -1264,7 +1265,7 @@ function RootComponent() {
                               e.target.value.replace(/\D/g, "").slice(0, 4)
                             )
                           }
-                          className="w-full rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
+                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
                         />
                       </div>
                     </div>
@@ -1289,8 +1290,8 @@ function RootComponent() {
                 </div>
 
                 {/* Accessibility */}
-                <div className="space-y-3 bg-black/30 p-3.5 rounded-xl border border-white/10 box-border">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider block">
                     Accessibility
                   </span>
                   <div className="flex items-center justify-between gap-3">
@@ -1298,7 +1299,7 @@ function RootComponent() {
                       <p className="text-xs font-bold text-white">
                         XL Mouse Pointer (3x)
                       </p>
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[10px] text-slate-300">
                         Enlarges cursor for TVs/projectors.
                       </p>
                     </div>
@@ -1324,7 +1325,7 @@ function RootComponent() {
                         <p className="text-xs font-bold text-white">
                           History Page Overscale
                         </p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] text-slate-300">
                           Card size on history page.
                         </p>
                       </div>
@@ -1360,7 +1361,7 @@ function RootComponent() {
                       <p className="text-xs font-bold text-white">
                         Enlarged Action Buttons
                       </p>
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[10px] text-slate-300">
                         Bigger eye / thumb / X buttons.
                       </p>
                     </div>
@@ -1388,7 +1389,7 @@ function RootComponent() {
           {/* SETTINGS */}
           {showSettings && !showFirstStartModal && (
             <div
-              className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-xl shadow-2xl max-h-[80vh] overflow-y-auto`}
+              className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-2xl shadow-2xl max-h-[80vh] overflow-y-auto`}
             >
               <div className="mx-auto flex flex-col items-center gap-3">
                 <div className="flex items-center justify-between w-full border-b border-white/10 pb-2">
@@ -1505,16 +1506,16 @@ function RootComponent() {
             <Outlet />
           </main>
 
-          {/* FIRST-START MODAL */}
+          {/* FIRST-START MODAL (Fixed Centering with auto margins & max height padding) */}
           {showFirstStartModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-md overflow-y-auto">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-6 backdrop-blur-xl overflow-y-auto">
               <form
                 onSubmit={handleFirstTimeAuthorize}
-                className={`relative w-full max-w-xl my-8 rounded-2xl border text-white shadow-2xl ${getCardBackground(appTheme)}`}
+                className={`relative w-full max-w-xl my-auto rounded-3xl border text-white shadow-2xl ${getCardBackground(appTheme)} backdrop-blur-2xl max-h-[92vh] overflow-y-auto`}
               >
-                <div className="p-6 md:p-8 space-y-5">
+                <div className="p-5 sm:p-8 space-y-4 sm:space-y-5">
                   <div className="text-center space-y-2">
-                    <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl overflow-hidden border border-red-500/30 shadow-lg bg-black">
+                    <div className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden border border-white/20 shadow-lg bg-black">
                       <img
                         src={HEADER_ICON_URL}
                         alt="RABBiT TV Logo"
@@ -1522,25 +1523,25 @@ function RootComponent() {
                       />
                     </div>
                     <h2
-                      className={`text-2xl font-bold ${getPrimaryAccentColor(appTheme)}`}
+                      className={`text-xl sm:text-2xl font-bold ${getPrimaryAccentColor(appTheme)}`}
                     >
                       Welcome to RABBiT TV
                     </h2>
                   </div>
 
-                  <div className="space-y-3 text-sm leading-relaxed text-slate-300 text-center">
+                  <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed text-slate-300 text-center">
                     <p>
                       Get all your favorite movies and TV shows right here,
                       streaming smoothly in one place!
                     </p>
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
                       <strong>⏳ Trial:</strong> Enter <strong>`9654`</strong>{" "}
                       for a free 7-day trial (one-time per device). Full unlock
                       uses a personal code matched to your name and age.
                     </div>
                   </div>
 
-                  <div className="space-y-2 border-t border-white/10 pt-4">
+                  <div className="space-y-1.5 border-t border-white/10 pt-3">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                       What&apos;s your name?{" "}
                       <span className="text-slate-400 font-normal lowercase">
@@ -1561,11 +1562,11 @@ function RootComponent() {
                         setSavedProfileName(val.trim());
                       }}
                       placeholder="Enter Name"
-                      className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-center text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
+                      className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2.5 text-center text-sm sm:text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     />
                   </div>
 
-                  <div className="space-y-2 border-t border-white/10 pt-3">
+                  <div className="space-y-1.5 border-t border-white/10 pt-3">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                       How old are you?
                     </label>
@@ -1576,7 +1577,7 @@ function RootComponent() {
                       value={userAgeInput}
                       onChange={(e) => setUserAgeInput(e.target.value)}
                       placeholder="Enter Age"
-                      className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-center text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
+                      className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2.5 text-center text-sm sm:text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     />
                     {ageErrorNotice && (
                       <p className="text-xs font-semibold text-red-400 text-center">
@@ -1586,12 +1587,12 @@ function RootComponent() {
                   </div>
 
                   {/* Mandatory 4-digit age lock */}
-                  <div className="space-y-2 border-t border-white/10 pt-3">
+                  <div className="space-y-1.5 border-t border-white/10 pt-3">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                       Create Age-Lock Code{" "}
                       <span className="text-red-400">*</span>
                     </label>
-                    <p className="text-[11px] text-slate-400 text-center">
+                    <p className="text-[11px] text-slate-300 text-center">
                       Choose a 4-digit PIN parents can use later to change the
                       age setting. Required.
                     </p>
@@ -1606,7 +1607,7 @@ function RootComponent() {
                         )
                       }
                       placeholder="••••"
-                      className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-center text-lg font-bold tracking-[0.4em] text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
+                      className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2 text-center text-lg font-bold tracking-[0.4em] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     />
                     {ageLockError && (
                       <p className="text-xs font-semibold text-red-400 text-center">
@@ -1616,19 +1617,19 @@ function RootComponent() {
                   </div>
 
                   <div className="space-y-2 border-t border-white/10 pt-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                       Select Startup Theme:
                     </label>
-                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       {allThemesList.map((t) => (
                         <button
                           key={t.id}
                           type="button"
                           onClick={() => handleThemeChange(t.id)}
-                          className={`rounded-xl border py-2.5 text-xs font-bold transition focus:outline-none focus:ring-4 ${
+                          className={`rounded-xl border py-2 px-1 text-[11px] sm:text-xs font-bold transition focus:outline-none ${
                             appTheme === t.id
                               ? `border-white/30 ${getPrimaryBgColor(t.id)} text-white shadow-lg`
-                              : "border-white/10 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                              : "border-white/10 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
                           }`}
                         >
                           {t.label}
@@ -1638,20 +1639,20 @@ function RootComponent() {
                   </div>
 
                   <div className="space-y-2 border-t border-white/10 pt-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                       Select Display Size:
                     </label>
-                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       {(["small", "medium", "large"] as CardSize[]).map(
                         (size) => (
                           <button
                             key={size}
                             type="button"
                             onClick={() => handleSizeChange(size)}
-                            className={`rounded-xl border py-2.5 text-xs font-bold transition focus:outline-none focus:ring-4 ${
+                            className={`rounded-xl border py-2 px-1 text-[11px] sm:text-xs font-bold transition focus:outline-none ${
                               cardSize === size
                                 ? `border-white/30 ${getPrimaryBgColor(appTheme)} text-white shadow-lg`
-                                : "border-white/10 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                                : "border-white/10 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
                             }`}
                           >
                             {size === "small"
@@ -1667,10 +1668,10 @@ function RootComponent() {
 
                   <div className="flex items-center justify-between border-t border-white/10 pt-3">
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                         XL Mouse Pointer
                       </label>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-slate-300">
                         Enlarges cursor 3x for projector/TV use.
                       </p>
                     </div>
@@ -1689,8 +1690,8 @@ function RootComponent() {
                     </button>
                   </div>
 
-                  <div className="space-y-3 border-t border-white/10 pt-4">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <div className="space-y-2.5 border-t border-white/10 pt-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                       Unlock Code or Trial (`9654`):
                     </label>
                     <input
@@ -1699,7 +1700,7 @@ function RootComponent() {
                       value={passcodeInput}
                       onChange={(e) => setPasscodeInput(e.target.value)}
                       placeholder="Unlock code or 9654"
-                      className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-3 text-center text-lg font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500"
+                      className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-3 text-center text-base sm:text-lg font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     />
                     {passcodeError && (
                       <p className="text-xs font-semibold text-red-400 text-center">
@@ -1707,17 +1708,17 @@ function RootComponent() {
                       </p>
                     )}
 
-                    {/* Contact Me info just below passcode and right above enter button */}
-                    <div className="rounded-xl border border-white/10 bg-black/40 p-3 text-center text-xs text-slate-300 space-y-1">
+                    {/* Contact Me info */}
+                    <div className="rounded-xl border border-white/10 bg-black/40 p-2.5 text-center text-xs text-slate-300 space-y-0.5 backdrop-blur-md">
                       <p className="font-semibold text-white">Need an activation code or support?</p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-slate-300">
                         Message me on WhatsApp (<span className="text-emerald-400 font-bold">RabbitProductions</span>) or text my private number at <span className="text-amber-300 font-bold">(705) 809-3865</span>.
                       </p>
                     </div>
 
                     <button
                       type="submit"
-                      className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none focus:ring-4`}
+                      className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-sm sm:text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none`}
                     >
                       Enter RABBiT TV
                     </button>
