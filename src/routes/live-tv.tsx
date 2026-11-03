@@ -14,6 +14,7 @@ import { ScrollPillBar } from '@/components/scroll-pill-bar';
 import { getChannelDescription } from '@/lib/channel-descriptions';
 import { channelCategories } from '@/lib/channel-categories';
 import { AppWallpaper } from '@/components/AppWallpaper';
+import { recordWatchHistory } from '@/lib/watch-history'; // Added import for watch history tracking
 
 export const Route = createFileRoute('/live-tv')({
   component: LiveTvComponent,
@@ -345,6 +346,14 @@ function LiveTvComponent() {
                   url: channel.streamUrl,
                   title: channel.title,
                   logo: channel.logo || '',
+                }}
+                onClick={() => {
+                  recordWatchHistory({
+                    id: channel.channelId || channel.streamUrl,
+                    title: channel.title,
+                    posterPath: channel.logo || '',
+                    type: 'livetv',
+                  });
                 }}
                 className={`group flex flex-col items-center p-3.5 rounded-2xl bg-gradient-to-b ${themeStyles.cardGradient} border ${themeStyles.borderGlow} shadow-xl hover:-translate-y-1 transition text-center relative overflow-hidden box-border`}
               >
