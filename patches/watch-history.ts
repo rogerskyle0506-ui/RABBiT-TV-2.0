@@ -245,6 +245,40 @@ export function saveWatchProgress(
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
 }
 
+/**
+ * Compatibility bridge function to satisfy direct `recordWatchHistory` imports across routes.
+ */
+export function recordWatchHistory(item: {
+  id: string | number;
+  title: string;
+  posterPath?: string | null;
+  type?: "movie" | "tv" | "livetv";
+  mediaType?: "movie" | "tv" | "livetv";
+  seasonNumber?: number;
+  episodeNumber?: number;
+  episodeTitle?: string;
+}): void {
+  const type = item.type || item.mediaType || "movie";
+  if (type === "livetv") {
+    logLiveChannelWatch({
+      channelId: String(item.id),
+      title: item.title,
+      logo: item.posterPath || "",
+      streamUrl: String(item.id),
+    });
+  } else {
+    saveWatchProgress({
+      id: item.id,
+      mediaId: item.id,
+      title: item.title,
+      mediaType: type as "movie" | "tv",
+      posterPath: item.posterPath,
+      seasonNumber: item.seasonNumber,
+      episodeNumber: item.episodeNumber,
+    });
+  }
+}
+
 export function markAsConfirmedCompleted(
   id: string,
   completed: boolean
