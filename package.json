@@ -52,6 +52,7 @@
     "@tanstack/react-start": "^1.168.60",
     "@tanstack/react-table": "^8.21.0",
     "@tanstack/router-plugin": "^1.168.0",
+    "@vercel/kv": "^1.0.1",
     "@vitejs/plugin-react": "^5.2.0",
     "axios": "^1.7.9",
     "better-auth": "~1.6.30",
