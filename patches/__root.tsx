@@ -509,16 +509,43 @@ function RootComponent() {
     }
   };
 
-  const handleKeygen = (e: React.FormEvent) => {
+  // Automated keygen that pushes straight to Vercel
+  const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
     const age = parseInt(keygenAge.trim(), 10);
     if (!keygenName.trim() || isNaN(age) || age < 1 || age > 120) {
       setKeygenResult("Enter a valid name and age (1–120).");
       return;
     }
-    // Since verification uses the Vercel backend secret environment variable, 
-    // you can generate keys or issue them using your master key.
-    setKeygenResult("Use your PROFILE_MASTER_KEY configured on Vercel.");
+
+    const rawKeyString = `${keygenName.trim().toLowerCase()}-${age}-${Date.now()}`;
+    const generatedKey = Math.abs(
+      rawKeyString.split("").reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0)
+    ).toString();
+
+    setKeygenResult(`Generating & pushing key...`);
+
+    try {
+      const response = await fetch("https://rabbittv-backend.vercel.app/api/add-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminSecret: "DameonAuroraBuddy",
+          newKey: generatedKey,
+          profileName: keygenName.trim()
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setKeygenResult(`✅ Key Active! Code: ${generatedKey}`);
+      } else {
+        setKeygenResult(`❌ Failed to push: ${data.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error pushing key to Vercel:", error);
+      setKeygenResult("❌ Network error connecting to Vercel backend.");
+    }
   };
 
   const handleSizeChange = (newSize: CardSize) => {
@@ -1007,10 +1034,10 @@ function RootComponent() {
                 {isAdmin && (
                   <div className="space-y-3 bg-red-950/40 p-3.5 rounded-xl border border-red-500/30 box-border backdrop-blur-md">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-red-300">
-                      🔑 Admin Key Generator Info
+                      🔑 Admin Key Generator & Auto-Pusher
                     </h4>
                     <p className="text-[10px] text-slate-300 leading-relaxed">
-                      Your keys are now securely managed on your Vercel backend using your <code className="text-amber-300">PROFILE_MASTER_KEY</code> environment variable.
+                      Generate a user key below. It will automatically push and activate directly on your Vercel backend.
                     </p>
                     <form onSubmit={handleKeygen} className="space-y-2">
                       <input
@@ -1033,7 +1060,7 @@ function RootComponent() {
                         type="submit"
                         className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
                       >
-                        Check Key Setup
+                        Generate & Push Key to Vercel
                       </button>
                     </form>
                     {keygenResult && (
