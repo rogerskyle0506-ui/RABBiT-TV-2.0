@@ -33,7 +33,7 @@ import {
 // ——— Direct GitHub API Key Verification & Management ———
 const GITHUB_OWNER = "rogerskyle0506-ui";
 const GITHUB_REPO = "RABBiT-TV-2.0";
-const GITHUB_TOKEN = "ghp_gm9JeS47YBx1y9dJA76OqFjIIkAsZI44IN8o";
+const GITHUB_TOKEN = "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";
 const KEYS_FILE_PATH = "keys.json";
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${KEYS_FILE_PATH}`;
 
