@@ -460,7 +460,7 @@ function RootComponent() {
       return;
     }
 
-    // Verify key against remote Vercel backend
+    // Verify key against remote Vercel backend in the splash modal
     const isValidBackendCode = await verifyUnlockCodeWithBackend(finalName, parsedAge, enteredCode);
     if (isValidBackendCode) {
       completePermanentLogin(finalName, parsedAge, ageLock);
@@ -509,7 +509,7 @@ function RootComponent() {
     }
   };
 
-  // Automated keygen that generates key locally, shows it on screen, and pushes to Vercel
+  // Automated keygen with on-screen local rendering and CORS-enabled server push
   const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
     const age = parseInt(keygenAge.trim(), 10);
@@ -523,13 +523,17 @@ function RootComponent() {
       rawKeyString.split("").reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0)
     ).toString();
 
-    // Show the key immediately on screen so you can see it
+    // Show the key immediately on screen
     setKeygenResult(`Generated Key: ${generatedKey} — Pushing to server...`);
 
     try {
       const response = await fetch("https://rabbittv-backend.vercel.app/api/add-key", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        mode: "cors",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({
           adminSecret: "DameonAuroraBuddy",
           newKey: generatedKey
