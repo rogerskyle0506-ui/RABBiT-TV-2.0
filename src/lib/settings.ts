@@ -1,6 +1,7 @@
 export type CardSize = "small" | "medium" | "large";
 export type StreamQuality = "1080p" | "720p" | "480p" | "auto";
 export type AppTheme = "violet" | "red" | "midnight" | "emerald" | "amber" | "cyan";
+export type HistoryScale = "off" | "20%" | "50%" | "80%";
 
 export const DISCLAIMER_ACCEPTED_KEY = "rabtv_disclaimer_accepted";
 export const CARD_SIZE_KEY = "rabtv_card_size";
@@ -99,9 +100,16 @@ export function getSavedTheme(): AppTheme {
   return THEME_OPTIONS.includes(saved as AppTheme) ? (saved as AppTheme) : "violet";
 }
 
+export function applyThemeToDocument(theme: AppTheme): void {
+  if (typeof window !== "undefined") {
+    document.documentElement.setAttribute("data-theme", theme);
+  }
+}
+
 export function saveTheme(theme: AppTheme) {
   if (typeof window !== "undefined") {
     localStorage.setItem(THEME_KEY, theme);
+    applyThemeToDocument(theme);
     window.dispatchEvent(new Event("rabtv_settings_updated"));
   }
 }
@@ -120,6 +128,42 @@ export function setHelpfulMouse(enabled: boolean) {
     localStorage.setItem(HELPFUL_MOUSE_KEY, String(enabled));
     window.dispatchEvent(new Event("rabtv_settings_updated"));
   }
+}
+
+export function getSavedUserAge(): number {
+  if (typeof window === "undefined") return 0;
+  const raw = localStorage.getItem("rabtv_user_age");
+  return raw ? parseInt(raw, 10) || 0 : 0;
+}
+
+export function saveUserAge(age: number): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("rabtv_user_age", String(age));
+  }
+}
+
+export function isAllowedForAge(contentAgeRating?: string | number, userAge?: number): boolean {
+  const currentAge = userAge ?? getSavedUserAge();
+  if (!currentAge || currentAge >= 18) return true;
+
+  if (typeof contentAgeRating === "number") {
+    return currentAge >= contentAgeRating;
+  }
+
+  if (typeof contentAgeRating === "string") {
+    const cleanRating = contentAgeRating.toUpperCase().trim();
+    if (cleanRating.includes("18+") || cleanRating.includes("NC-17") || cleanRating.includes("R")) {
+      return currentAge >= 18;
+    }
+    if (cleanRating.includes("16+") || cleanRating.includes("TV-MA")) {
+      return currentAge >= 16;
+    }
+    if (cleanRating.includes("13+") || cleanRating.includes("PG-13") || cleanRating.includes("TV-14")) {
+      return currentAge >= 13;
+    }
+  }
+
+  return true;
 }
 
 // Helper to get Tailwind CSS width/height classes + responsive container constraints
@@ -146,5 +190,27 @@ export function getPosterDimensions(size: CardSize) {
         text: "text-sm",
         isSmall: false,
       };
+  }
+}
+
+export function getHistoryOverscale(): HistoryScale {
+  if (typeof window === "undefined") return "off";
+  return (localStorage.getItem("rabtv_history_overscale") as HistoryScale) || "off";
+}
+
+export function setHistoryOverscale(scale: HistoryScale): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("rabtv_history_overscale", scale);
+  }
+}
+
+export function getLargeButtons(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("rabtv_large_buttons") === "true";
+}
+
+export function setLargeButtons(enabled: boolean): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("rabtv_large_buttons", enabled ? "true" : "false");
   }
 }
