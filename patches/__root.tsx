@@ -30,18 +30,18 @@ import {
   setLargeButtons,
 } from "@/lib/settings";
 
-// ——— Direct GitHub API Key Verification ———
-async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey: string): Promise<boolean> {
-  try {
-    const owner = "rogerskyle0506-ui";
-    const repo = "rabbittv-backend";
-    const token = "ghp_gm9JeS47YBx1y9dJA76OqFjIIkAsZI44IN8o";
-    const filePath = "keys.json";
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+// ——— Direct GitHub API Key Verification & Management ———
+const GITHUB_OWNER = "rogerskyle0506-ui";
+const GITHUB_REPO = "RABBiT-TV-2.0";
+const GITHUB_TOKEN = "ghp_gm9JeS47YBx1y9dJA76OqFjIIkAsZI44IN8o";
+const KEYS_FILE_PATH = "keys.json";
+const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${KEYS_FILE_PATH}`;
 
-    const res = await fetch(apiUrl, {
+async function verifyUnlockCodeWithGitHub(_name: string, _age: number, securityKey: string): Promise<boolean> {
+  try {
+    const res = await fetch(GITHUB_API_URL, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
         Accept: "application/vnd.github+json",
         "User-Agent": "RabbitTV-App"
       }
@@ -513,7 +513,7 @@ function RootComponent() {
     }
   };
 
-  // Automated keygen committing directly to GitHub, bypassing Vercel completely
+  // Automated keygen committing directly to GitHub repository
   const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
     const age = parseInt(keygenAge.trim(), 10);
@@ -529,17 +529,11 @@ function RootComponent() {
 
     setKeygenResult(`Generated Key: ${generatedKey} — Pushing directly to GitHub...`);
 
-    const owner = "rogerskyle0506-ui";
-    const repo = "rabbittv-backend";
-    const token = "ghp_gm9JeS47YBx1y9dJA76OqFjIIkAsZI44IN8o";
-    const filePath = "keys.json";
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
-
     try {
       // 1. Fetch current keys.json from GitHub to get its SHA
-      const getRes = await fetch(apiUrl, {
+      const getRes = await fetch(GITHUB_API_URL, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
           "User-Agent": "RabbitTV-App"
         }
@@ -567,7 +561,7 @@ function RootComponent() {
 
       const updatedContentBase64 = btoa(JSON.stringify(keysList, null, 2));
 
-      // 2. PUT the updated keys.json back to GitHub
+      // 2. PUT updated keys.json back to GitHub repo
       const payload: any = {
         message: `Auto-activate key: ${stringKey}`,
         content: updatedContentBase64,
@@ -577,10 +571,10 @@ function RootComponent() {
         payload.sha = fileSha;
       }
 
-      const putRes = await fetch(apiUrl, {
+      const putRes = await fetch(GITHUB_API_URL, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
           "Content-Type": "application/json",
           "User-Agent": "RabbitTV-App"
@@ -1090,7 +1084,7 @@ function RootComponent() {
                       🔑 Admin Key Generator & Auto-Pusher
                     </h4>
                     <p className="text-[10px] text-slate-300 leading-relaxed">
-                      Generate a user key below. It will automatically push and commit directly to your GitHub repository.
+                      Generate a user key below. It will automatically commit and activate directly in your GitHub repo.
                     </p>
                     <form onSubmit={handleKeygen} className="space-y-2">
                       <input
