@@ -137,6 +137,7 @@ jobs:
           CAPACITOR_BUILD: "true"
           VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
           TMDB_ACCESS_TOKEN: ${{ secrets.TMDB_ACCESS_TOKEN }}
+          VITE_GH_PAT: ${{ secrets.GH_PAT }}
         run: npx vite build
 
       - name: Map TanStack Shell to Capacitor index.html
