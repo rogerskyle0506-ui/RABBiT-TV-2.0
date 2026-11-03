@@ -30,20 +30,30 @@ import {
   setLargeButtons,
 } from "@/lib/settings";
 
-// ——— Unlock algorithm (name + age → 8-digit code) ———
-function generateUnlockCode(name: string, age: number): string {
-  const clean = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-  if (!clean || !age || age < 1 || age > 120) return "";
+// ——— Remote Vercel Backend Verification ———
+const BACKEND_URL = "https://rabbittv-backend.vercel.app/api/profiles";
 
-  let sum = age * 17;
-  for (let i = 0; i < clean.length; i++) {
-    sum += clean.charCodeAt(i) * (i + 7);
+async function verifyUnlockCodeWithBackend(name: string, age: number, securityKey: string): Promise<boolean> {
+  try {
+    const response = await fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'verify',
+        profileName: name,
+        age: age,
+        securityKey: securityKey
+      })
+    });
+
+    const data = await response.json();
+    return !!data.success;
+  } catch (error) {
+    console.error('Failed to reach Vercel backend server:', error);
+    return false;
   }
-  const mixed = (sum * 7919 + age * 997) % 90000000;
-  return String(mixed + 10000000);
 }
 
 const ADMIN_NAME = "Rabbit";
@@ -171,6 +181,7 @@ function RootComponent() {
   const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Local state for UI feedback
   const [keygenName, setKeygenName] = useState("");
   const [keygenAge, setKeygenAge] = useState("");
   const [keygenResult, setKeygenResult] = useState<string | null>(null);
@@ -377,7 +388,7 @@ function RootComponent() {
     window.dispatchEvent(new Event("rabtv_settings_updated"));
   };
 
-  const handleFirstTimeAuthorize = (e: React.FormEvent) => {
+  const handleFirstTimeAuthorize = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedAge = userAgeInput.trim();
@@ -449,8 +460,9 @@ function RootComponent() {
       return;
     }
 
-    const expectedCode = generateUnlockCode(finalName, parsedAge);
-    if (expectedCode && enteredCode === expectedCode) {
+    // Verify key against remote Vercel backend
+    const isValidBackendCode = await verifyUnlockCodeWithBackend(finalName, parsedAge, enteredCode);
+    if (isValidBackendCode) {
       completePermanentLogin(finalName, parsedAge, ageLock);
       return;
     }
@@ -464,16 +476,17 @@ function RootComponent() {
     setPasscodeInput("");
   };
 
-  const handleUpgradeFromProfile = (e: React.FormEvent) => {
+  const handleUpgradeFromProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const name =
       savedProfileName ||
       localStorage.getItem("rabtv_profile_name") ||
       "Friend";
     const age = getSavedUserAge() || parseInt(userAgeInput, 10) || 0;
-    const expected = generateUnlockCode(name, age);
+    
+    const isValidBackendCode = await verifyUnlockCodeWithBackend(name, age, unlockCodeInput.trim());
 
-    if (unlockCodeInput.trim() === expected && expected) {
+    if (isValidBackendCode) {
       localStorage.setItem("rabtv_access_status", "permanent");
       localStorage.removeItem("rabtv_trial_start_timestamp");
       setIsTrialActive(false);
@@ -499,12 +512,13 @@ function RootComponent() {
   const handleKeygen = (e: React.FormEvent) => {
     e.preventDefault();
     const age = parseInt(keygenAge.trim(), 10);
-    const code = generateUnlockCode(keygenName, age);
-    if (!code) {
+    if (!keygenName.trim() || isNaN(age) || age < 1 || age > 120) {
       setKeygenResult("Enter a valid name and age (1–120).");
       return;
     }
-    setKeygenResult(code);
+    // Since verification uses the Vercel backend secret environment variable, 
+    // you can generate keys or issue them using your master key.
+    setKeygenResult("Use your PROFILE_MASTER_KEY configured on Vercel.");
   };
 
   const handleSizeChange = (newSize: CardSize) => {
@@ -993,11 +1007,10 @@ function RootComponent() {
                 {isAdmin && (
                   <div className="space-y-3 bg-red-950/40 p-3.5 rounded-xl border border-red-500/30 box-border backdrop-blur-md">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-red-300">
-                      🔑 Admin Key Generator
+                      🔑 Admin Key Generator Info
                     </h4>
                     <p className="text-[10px] text-slate-300 leading-relaxed">
-                      Enter a user’s display name and age. The generated code
-                      unlocks full access for that exact name + age pair.
+                      Your keys are now securely managed on your Vercel backend using your <code className="text-amber-300">PROFILE_MASTER_KEY</code> environment variable.
                     </p>
                     <form onSubmit={handleKeygen} className="space-y-2">
                       <input
@@ -1020,15 +1033,12 @@ function RootComponent() {
                         type="submit"
                         className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
                       >
-                        Generate Unlock Code
+                        Check Key Setup
                       </button>
                     </form>
                     {keygenResult && (
                       <div className="rounded-lg bg-black/60 border border-red-400/30 p-3 text-center backdrop-blur-md">
-                        <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
-                          Unlock code
-                        </p>
-                        <p className="text-lg font-black tracking-widest text-red-300 select-all">
+                        <p className="text-xs font-bold text-amber-300">
                           {keygenResult}
                         </p>
                       </div>
@@ -1084,7 +1094,7 @@ function RootComponent() {
                         </label>
                         <input
                           type="password"
-                          placeholder="Unlock code for your name + age"
+                          placeholder="Unlock code"
                           value={unlockCodeInput}
                           onChange={(e) => setUnlockCodeInput(e.target.value)}
                           className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
@@ -1506,7 +1516,7 @@ function RootComponent() {
             <Outlet />
           </main>
 
-          {/* FIRST-START MODAL (Fixed Centering with auto margins & max height padding) */}
+          {/* FIRST-START MODAL */}
           {showFirstStartModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-6 backdrop-blur-xl overflow-y-auto">
               <form
@@ -1537,7 +1547,7 @@ function RootComponent() {
                     <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
                       <strong>⏳ Trial:</strong> Enter <strong>`9654`</strong>{" "}
                       for a free 7-day trial (one-time per device). Full unlock
-                      uses a personal code matched to your name and age.
+                      uses a personal activation code verified securely online.
                     </div>
                   </div>
 
@@ -1545,7 +1555,7 @@ function RootComponent() {
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                       What&apos;s your name?{" "}
                       <span className="text-slate-400 font-normal lowercase">
-                        (Used for your unlock code)
+                        (Used for your unlock verification)
                       </span>
                     </label>
                     <input
@@ -1696,7 +1706,7 @@ function RootComponent() {
                     </label>
                     <input
                       type="text"
-                      maxLength={12}
+                      maxLength={16}
                       value={passcodeInput}
                       onChange={(e) => setPasscodeInput(e.target.value)}
                       placeholder="Unlock code or 9654"
