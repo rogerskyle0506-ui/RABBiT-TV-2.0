@@ -30,28 +30,32 @@ import {
   setLargeButtons,
 } from "@/lib/settings";
 
-// ——— Remote Vercel Backend Verification ———
-const BACKEND_URL = "https://rabbittv-backend.vercel.app/api/profiles";
-
-async function verifyUnlockCodeWithBackend(name: string, age: number, securityKey: string): Promise<boolean> {
+// ——— Direct GitHub API Key Verification ———
+async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey: string): Promise<boolean> {
   try {
-    const response = await fetch(BACKEND_URL, {
-      method: 'POST',
+    const owner = "rogerskyle0506-ui";
+    const repo = "rabbittv-backend";
+    const token = "ghp_gm9JeS47YBx1y9dJA76OqFjIIkAsZI44IN8o";
+    const filePath = "keys.json";
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+
+    const res = await fetch(apiUrl, {
       headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'verify',
-        profileName: name,
-        age: age,
-        securityKey: securityKey
-      })
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "RabbitTV-App"
+      }
     });
 
-    const data = await response.json();
-    return !!data.success;
+    if (!res.ok) return false;
+    const fileData = await res.json();
+    const decodedContent = atob(fileData.content);
+    const keysList = JSON.parse(decodedContent);
+
+    if (!Array.isArray(keysList)) return false;
+    return keysList.includes(String(securityKey));
   } catch (error) {
-    console.error('Failed to reach Vercel backend server:', error);
+    console.error('Failed to verify key with GitHub:', error);
     return false;
   }
 }
@@ -460,9 +464,9 @@ function RootComponent() {
       return;
     }
 
-    // Verify key against remote Vercel backend in the splash modal
-    const isValidBackendCode = await verifyUnlockCodeWithBackend(finalName, parsedAge, enteredCode);
-    if (isValidBackendCode) {
+    // Verify key directly against GitHub keys.json
+    const isValidGitHubCode = await verifyUnlockCodeWithGitHub(finalName, parsedAge, enteredCode);
+    if (isValidGitHubCode) {
       completePermanentLogin(finalName, parsedAge, ageLock);
       return;
     }
@@ -484,9 +488,9 @@ function RootComponent() {
       "Friend";
     const age = getSavedUserAge() || parseInt(userAgeInput, 10) || 0;
     
-    const isValidBackendCode = await verifyUnlockCodeWithBackend(name, age, unlockCodeInput.trim());
+    const isValidGitHubCode = await verifyUnlockCodeWithGitHub(name, age, unlockCodeInput.trim());
 
-    if (isValidBackendCode) {
+    if (isValidGitHubCode) {
       localStorage.setItem("rabtv_access_status", "permanent");
       localStorage.removeItem("rabtv_trial_start_timestamp");
       setIsTrialActive(false);
@@ -509,7 +513,7 @@ function RootComponent() {
     }
   };
 
-  // Automated keygen with on-screen local rendering and CORS-enabled server push
+  // Automated keygen committing directly to GitHub, bypassing Vercel completely
   const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
     const age = parseInt(keygenAge.trim(), 10);
@@ -523,32 +527,77 @@ function RootComponent() {
       rawKeyString.split("").reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0)
     ).toString();
 
-    // Show the key immediately on screen
-    setKeygenResult(`Generated Key: ${generatedKey} — Pushing to server...`);
+    setKeygenResult(`Generated Key: ${generatedKey} — Pushing directly to GitHub...`);
+
+    const owner = "rogerskyle0506-ui";
+    const repo = "rabbittv-backend";
+    const token = "ghp_gm9JeS47YBx1y9dJA76OqFjIIkAsZI44IN8o";
+    const filePath = "keys.json";
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
 
     try {
-      const response = await fetch("https://rabbittv-backend.vercel.app/api/add-key", {
-        method: "POST",
-        mode: "cors",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          adminSecret: "DameonAuroraBuddy",
-          newKey: generatedKey
-        })
+      // 1. Fetch current keys.json from GitHub to get its SHA
+      const getRes = await fetch(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "RabbitTV-App"
+        }
       });
 
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setKeygenResult(`✅ Key [${generatedKey}] Created & Activated on Server!`);
-      } else {
-        setKeygenResult(`⚠️ Key [${generatedKey}] Generated locally, but server push failed: ${data.error || "Unknown error"}`);
+      let keysList: string[] = [];
+      let fileSha: string | undefined = undefined;
+
+      if (getRes.ok) {
+        const fileData = await getRes.json();
+        fileSha = fileData.sha;
+        try {
+          const decodedContent = atob(fileData.content);
+          keysList = JSON.parse(decodedContent);
+          if (!Array.isArray(keysList)) keysList = [];
+        } catch {
+          keysList = [];
+        }
       }
-    } catch (error) {
-      console.error("Error pushing key to Vercel:", error);
-      setKeygenResult(`⚠️ Key [${generatedKey}] Generated locally, but network error connecting to Vercel.`);
+
+      const stringKey = String(generatedKey);
+      if (!keysList.includes(stringKey)) {
+        keysList.push(stringKey);
+      }
+
+      const updatedContentBase64 = btoa(JSON.stringify(keysList, null, 2));
+
+      // 2. PUT the updated keys.json back to GitHub
+      const payload: any = {
+        message: `Auto-activate key: ${stringKey}`,
+        content: updatedContentBase64,
+        branch: "main"
+      };
+      if (fileSha) {
+        payload.sha = fileSha;
+      }
+
+      const putRes = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+          "User-Agent": "RabbitTV-App"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const putData = await putRes.json();
+
+      if (putRes.ok) {
+        setKeygenResult(`✅ Key [${stringKey}] Committed & Activated on GitHub!`);
+      } else {
+        setKeygenResult(`⚠️ GitHub Commit Failed: ${putData.message || JSON.stringify(putData)}`);
+      }
+    } catch (error: any) {
+      console.error("Error pushing directly to GitHub:", error);
+      setKeygenResult(`⚠️ Network Error: ${error.message || error}`);
     }
   };
 
@@ -1041,7 +1090,7 @@ function RootComponent() {
                       🔑 Admin Key Generator & Auto-Pusher
                     </h4>
                     <p className="text-[10px] text-slate-300 leading-relaxed">
-                      Generate a user key below. It will automatically push and activate directly on your Vercel backend.
+                      Generate a user key below. It will automatically push and commit directly to your GitHub repository.
                     </p>
                     <form onSubmit={handleKeygen} className="space-y-2">
                       <input
@@ -1064,7 +1113,7 @@ function RootComponent() {
                         type="submit"
                         className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
                       >
-                        Generate & Push Key to Vercel
+                        Generate & Push Key to GitHub
                       </button>
                     </form>
                     {keygenResult && (
