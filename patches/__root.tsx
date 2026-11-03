@@ -509,7 +509,7 @@ function RootComponent() {
     }
   };
 
-  // Automated keygen that pushes straight to Vercel
+  // Automated keygen that generates key locally, shows it on screen, and pushes to Vercel
   const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
     const age = parseInt(keygenAge.trim(), 10);
@@ -523,7 +523,8 @@ function RootComponent() {
       rawKeyString.split("").reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0)
     ).toString();
 
-    setKeygenResult(`Generating & pushing key...`);
+    // Show the key immediately on screen so you can see it
+    setKeygenResult(`Generated Key: ${generatedKey} — Pushing to server...`);
 
     try {
       const response = await fetch("https://rabbittv-backend.vercel.app/api/add-key", {
@@ -531,20 +532,19 @@ function RootComponent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           adminSecret: "DameonAuroraBuddy",
-          newKey: generatedKey,
-          profileName: keygenName.trim()
+          newKey: generatedKey
         })
       });
 
       const data = await response.json();
-      if (data.success) {
-        setKeygenResult(`✅ Key Active! Code: ${generatedKey}`);
+      if (response.ok && data.success) {
+        setKeygenResult(`✅ Key [${generatedKey}] Created & Activated on Server!`);
       } else {
-        setKeygenResult(`❌ Failed to push: ${data.error || "Unknown error"}`);
+        setKeygenResult(`⚠️ Key [${generatedKey}] Generated locally, but server push failed: ${data.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error pushing key to Vercel:", error);
-      setKeygenResult("❌ Network error connecting to Vercel backend.");
+      setKeygenResult(`⚠️ Key [${generatedKey}] Generated locally, but network error connecting to Vercel.`);
     }
   };
 
