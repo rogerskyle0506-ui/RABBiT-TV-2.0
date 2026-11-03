@@ -106,6 +106,14 @@ img {
   overflow: hidden;
 }
 
+/* Glassmorphism & Panel Polish Utilities */
+.app-panel-card {
+  background-color: var(--app-panel);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 html.fire-os iframe,
 html.fire-os .video-player-container,
 html.fire-os video {
