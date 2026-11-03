@@ -37,7 +37,8 @@ const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT || "";
 const KEYS_FILE_PATH = "keys.json";
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${KEYS_FILE_PATH}`;
 
-async function verifyUnlockCodeWithGitHub(_name: string, _age: number, securityKey: string): Promise<boolean> {
+// ——— Enhanced Single-Use Key Verification & Consumption ———
+async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey: string): Promise<boolean> {
   try {
     const res = await fetch(GITHUB_API_URL, {
       headers: {
@@ -50,12 +51,49 @@ async function verifyUnlockCodeWithGitHub(_name: string, _age: number, securityK
     if (!res.ok) return false;
     const fileData = await res.json();
     const decodedContent = atob(fileData.content);
-    const keysList = JSON.parse(decodedContent);
+    let keysList = JSON.parse(decodedContent);
 
     if (!Array.isArray(keysList)) return false;
-    return keysList.includes(String(securityKey));
+
+    let matchedIndex = -1;
+    let isObjectFormat = typeof keysList[0] === "object" && keysList[0] !== null;
+
+    if (isObjectFormat) {
+      matchedIndex = keysList.findIndex((item: any) => item.key === String(securityKey) && item.active === true);
+    } else {
+      matchedIndex = keysList.findIndex((item: any) => String(item) === String(securityKey));
+    }
+
+    if (matchedIndex === -1) return false;
+
+    // Single-use enforcement: Mark key as inactive upon use
+    if (isObjectFormat) {
+      keysList[matchedIndex].active = false;
+      keysList[matchedIndex].usedBy = `${name} (Age: ${age})`;
+    } else {
+      keysList.splice(matchedIndex, 1);
+    }
+
+    const updatedContentBase64 = btoa(JSON.stringify(keysList, null, 2));
+    await fetch(GITHUB_API_URL, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "User-Agent": "RabbitTV-App"
+      },
+      body: JSON.stringify({
+        message: `Consume single-use key: ${securityKey}`,
+        content: updatedContentBase64,
+        sha: fileData.sha,
+        branch: "main"
+      })
+    });
+
+    return true;
   } catch (error) {
-    console.error('Failed to verify key with GitHub:', error);
+    console.error('Failed to verify and consume key with GitHub:', error);
     return false;
   }
 }
@@ -185,10 +223,12 @@ function RootComponent() {
   const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Local state for UI feedback
+  // Local state for UI feedback & Admin Key Management
   const [keygenName, setKeygenName] = useState("");
   const [keygenAge, setKeygenAge] = useState("");
   const [keygenResult, setKeygenResult] = useState<string | null>(null);
+  const [remoteKeys, setRemoteKeys] = useState<any[]>([]);
+  const [loadingKeys, setLoadingKeys] = useState(false);
 
   const [currentPasscodeInput, setCurrentPasscodeInput] = useState("");
   const [newPasscode, setNewPasscode] = useState("");
@@ -464,7 +504,6 @@ function RootComponent() {
       return;
     }
 
-    // Verify key directly against GitHub keys.json
     const isValidGitHubCode = await verifyUnlockCodeWithGitHub(finalName, parsedAge, enteredCode);
     if (isValidGitHubCode) {
       completePermanentLogin(finalName, parsedAge, ageLock);
@@ -513,7 +552,7 @@ function RootComponent() {
     }
   };
 
-  // Automated keygen committing directly to GitHub repository
+  // Automated keygen committing structured objects to GitHub repository
   const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
     const age = parseInt(keygenAge.trim(), 10);
@@ -530,7 +569,6 @@ function RootComponent() {
     setKeygenResult(`Generated Key: ${generatedKey} — Pushing directly to GitHub...`);
 
     try {
-      // 1. Fetch current keys.json from GitHub to get its SHA
       const getRes = await fetch(GITHUB_API_URL, {
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -539,7 +577,7 @@ function RootComponent() {
         }
       });
 
-      let keysList: string[] = [];
+      let keysList: any[] = [];
       let fileSha: string | undefined = undefined;
 
       if (getRes.ok) {
@@ -555,13 +593,13 @@ function RootComponent() {
       }
 
       const stringKey = String(generatedKey);
-      if (!keysList.includes(stringKey)) {
-        keysList.push(stringKey);
-      }
+      
+      // Ensure we push in object format to support active/inactive toggling
+      const newKeyObj = { key: stringKey, active: true, owner: `${keygenName.trim()} (${age})` };
+      keysList.push(newKeyObj);
 
       const updatedContentBase64 = btoa(JSON.stringify(keysList, null, 2));
 
-      // 2. PUT updated keys.json back to GitHub repo
       const payload: any = {
         message: `Auto-activate key: ${stringKey}`,
         content: updatedContentBase64,
@@ -586,12 +624,93 @@ function RootComponent() {
 
       if (putRes.ok) {
         setKeygenResult(`✅ Key [${stringKey}] Committed & Activated on GitHub!`);
+        fetchRemoteKeys();
       } else {
         setKeygenResult(`⚠️ GitHub Commit Failed: ${putData.message || JSON.stringify(putData)}`);
       }
     } catch (error: any) {
       console.error("Error pushing directly to GitHub:", error);
       setKeygenResult(`⚠️ Network Error: ${error.message || error}`);
+    }
+  };
+
+  // Fetch keys list for Admin management
+  const fetchRemoteKeys = async () => {
+    setLoadingKeys(true);
+    try {
+      const res = await fetch(GITHUB_API_URL, {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "RabbitTV-App"
+        }
+      });
+      if (res.ok) {
+        const fileData = await res.json();
+        const decodedContent = atob(fileData.content);
+        const parsed = JSON.parse(decodedContent);
+        const normalized = parsed.map((item: any) => 
+          typeof item === "object" && item !== null ? item : { key: item, active: true, owner: "Legacy" }
+        );
+        setRemoteKeys(normalized);
+      }
+    } catch (err) {
+      console.error("Failed to fetch keys", err);
+    } finally {
+      setLoadingKeys(false);
+    }
+  };
+
+  // Toggle key status (Active <-> Unused/Recycled) or Delete
+  const handleModifyKeyStatus = async (targetKey: string, action: "toggle" | "delete") => {
+    try {
+      const res = await fetch(GITHUB_API_URL, {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "RabbitTV-App"
+        }
+      });
+      if (!res.ok) return;
+      const fileData = await res.json();
+      let keysList = JSON.parse(atob(fileData.content));
+
+      keysList = keysList.map((item: any) => {
+        const kVal = typeof item === "object" ? item.key : item;
+        if (kVal === targetKey) {
+          if (action === "delete") return null;
+          const currentActive = typeof item === "object" ? item.active : true;
+          return { 
+            key: kVal, 
+            active: !currentActive, 
+            owner: item.owner || "Admin Recycled" 
+          };
+        }
+        return item;
+      }).filter(Boolean);
+
+      const updatedContentBase64 = btoa(JSON.stringify(keysList, null, 2));
+      const putRes = await fetch(GITHUB_API_URL, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+          "User-Agent": "RabbitTV-App"
+        },
+        body: JSON.stringify({
+          message: `Admin action ${action} on key ${targetKey}`,
+          content: updatedContentBase64,
+          sha: fileData.sha,
+          branch: "main"
+        })
+      });
+
+      if (putRes.ok) {
+        fetchRemoteKeys();
+      }
+    } catch (err) {
+      console.error("Error updating key status", err);
     }
   };
 
@@ -1081,11 +1200,8 @@ function RootComponent() {
                 {isAdmin && (
                   <div className="space-y-3 bg-red-950/40 p-3.5 rounded-xl border border-red-500/30 box-border backdrop-blur-md">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-red-300">
-                      🔑 Admin Key Generator & Auto-Pusher
+                      🔑 Admin Key Generator & Manager
                     </h4>
-                    <p className="text-[10px] text-slate-300 leading-relaxed">
-                      Generate a user key below. It will automatically commit and activate directly in your GitHub repo.
-                    </p>
                     <form onSubmit={handleKeygen} className="space-y-2">
                       <input
                         type="text"
@@ -1111,12 +1227,57 @@ function RootComponent() {
                       </button>
                     </form>
                     {keygenResult && (
-                      <div className="rounded-lg bg-black/60 border border-red-400/30 p-3 text-center backdrop-blur-md">
-                        <p className="text-xs font-bold text-amber-300">
-                          {keygenResult}
-                        </p>
+                      <div className="rounded-lg bg-black/60 border border-red-400/30 p-2 text-center">
+                        <p className="text-xs font-bold text-amber-300">{keygenResult}</p>
                       </div>
                     )}
+
+                    {/* Key List & Management Section */}
+                    <div className="pt-3 border-t border-red-500/20 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-200">Active & Used Keys</span>
+                        <button
+                          type="button"
+                          onClick={fetchRemoteKeys}
+                          className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition"
+                        >
+                          {loadingKeys ? "Loading..." : "🔄 Refresh List"}
+                        </button>
+                      </div>
+                      
+                      <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                        {remoteKeys.length === 0 ? (
+                          <p className="text-[10px] text-slate-400 text-center py-2">Click refresh to load keys from GitHub.</p>
+                        ) : (
+                          remoteKeys.map((kObj, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-black/50 p-2 rounded-lg border border-white/10 text-[11px]">
+                              <div className="truncate pr-2">
+                                <span className="font-mono font-bold text-amber-300">{kObj.key}</span>
+                                <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${kObj.active ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"}`}>
+                                  {kObj.active ? "Active" : "Used/Inactive"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleModifyKeyStatus(kObj.key, "toggle")}
+                                  className={`px-2 py-0.5 rounded text-[9px] font-bold transition ${kObj.active ? "bg-amber-600/40 text-amber-200" : "bg-emerald-600/40 text-emerald-200"}`}
+                                >
+                                  {kObj.active ? "Mark Unused" : "Reactivate"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleModifyKeyStatus(kObj.key, "delete")}
+                                  className="px-1.5 py-0.5 rounded bg-red-600/40 text-red-200 text-[9px] font-bold"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 
