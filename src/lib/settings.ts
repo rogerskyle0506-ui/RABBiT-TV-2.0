@@ -166,7 +166,6 @@ export function isAllowedForAge(contentAgeRating?: string | number, userAge?: nu
   return true;
 }
 
-// Helper to get Tailwind CSS width/height classes + responsive container constraints
 export function getPosterDimensions(size: CardSize) {
   switch (size) {
     case "small":
