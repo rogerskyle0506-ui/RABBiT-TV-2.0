@@ -1,89 +1,107 @@
 // src/lib/updater.ts
 import { App } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
 
-// Public repository raw content endpoint pointing to your root /updates folder
-const GITHUB_OWNER = "rogerskyle0506-ui";
-const GITHUB_Here is the updated **`src/lib/updater.ts`** configured to fetch updates directly from the public `/updates` folder in your GitHub repository, running silently once per app launch based on the user's selected update channel.
-
-### `src/lib/updater.ts`
-
-```typescript
-import { App } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
-
-// ——— Public Repository Update Configuration ———
-const GITHUB_OWNER = "rogerskyle0506-ui";
-const GITHUB_REPO = "RABBiT-TV-2.0";
-const RAW_REPO_BASE_URL = `[https://raw.githubusercontent.com/$](https://raw.githubusercontent.com/$){GITHUB_OWNER}/${GITHUB_REPO}/main/updates`;
+const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/updates";
 
 export interface UpdateManifest {
   versionCode: number;
   versionName: string;
   apkUrl: string;
-  releaseNotes: string;
+  releaseNotes?: string;
 }
 
 /**
- * Parses semantic version strings (e.g., "2.0.1") into numeric components for comparison.
+ * Converts a 4-part or 3-part version string (e.g. "2.2.5.1") into a numeric version code.
  */
-function isVersionGreater(remoteVersion: string, currentVersion: string): boolean {
-  const parseVersion = (v: string) => v.replace(/^v/i, '').split('.').map(Number);
-  const remote = parseVersion(remoteVersion);
-  const current = parseVersion(currentVersion);
-
-  for (let i = 0; i < Math.max(remote.length, current.length); i++) {
-    const r = remote[i] || 0;
-    const c = current[i] || 0;
-    if (r > c) return true;
-    if (r < c) return false;
+export function parseVersionCode(versionStr: string): number {
+  if (!versionStr) return 0;
+  const parts = versionStr.split('.').map((p) => parseInt(p, 10) || 0);
+  while (parts.length < 4) {
+    parts.push(0);
   }
-  return false;
+  return parts[0] * 1000000 + parts[1] * 10004 + parts[2] * 100 + parts[3];
 }
 
 /**
- * Checks for app updates silently against the public repo's /updates directory.
- * Executes strictly ONCE per app launch session.
+ * Returns the currently running app version.
+ */
+export async function getCurrentAppVersion(): Promise<{ versionName: string; versionCode: number }> {
+  try {
+    const info = await App.getInfo();
+    const versionName = info.version || "2.2.5.0";
+    const versionCode = parseInt(info.build, 10) || parseVersionCode(versionName);
+    return { versionName, versionCode };
+  } catch {
+    return { versionName: "2.2.5.0", versionCode: parseVersionCode("2.2.5.0") };
+  }
+}
+
+/**
+ * Checks for updates based on the user's selected update channel ("stable" | "nightly").
  */
 export async function checkForAppUpdates(): Promise<void> {
-  // 1. Ensure this check runs only ONCE per app launch session
-  if (typeof window !== 'undefined' && sessionStorage.getItem('rabtv_update_checked') === 'true') {
-    return;
-  }
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem('rabtv_update_checked', 'true');
-  }
+  if (typeof window === "undefined") return;
+
+  const channel = (localStorage.getItem("rabtv_update_channel") as "stable" | "nightly") || "stable";
+  const manifestFile = channel === "nightly" ? "nightly_manifest.json" : "manifest.json";
+  const manifestUrl = `${GITHUB_RAW_BASE}/${manifestFile}?t=${Date.now()}`;
 
   try {
-    // 2. Resolve current app version
-    const appInfo = await App.getInfo().catch(() => null);
-    const currentVersion = appInfo?.version || (import.meta as any).env?.VITE_APP_VERSION || '2.0.0';
+    const response = await fetch(manifestUrl, { cache: "no-store" });
+    if (!response.ok) return;
 
-    // 3. Determine user update channel ("stable" vs "nightly")
-    const updateChannel = (typeof window !== 'undefined' ? localStorage.getItem('rabtv_update_channel') : null) || 'stable';
-    const manifestFileName = updateChannel === 'nightly' ? 'nightly_manifest.json' : 'stable_manifest.json';
-    const manifestUrl = `${RAW_REPO_BASE_URL}/${manifestFileName}`;
+    const remoteManifest: UpdateManifest = await response.json();
+    const current = await getCurrentAppVersion();
 
-    // 4. Fetch the raw manifest from public GitHub repo without caching
-    const res = await fetch(manifestUrl, { cache: 'no-store' });
-    if (!res.ok) return;
-
-    const manifest: UpdateManifest = await res.json();
-
-    // 5. Compare manifest version with running app version
-    if (manifest?.versionName && isVersionGreater(manifest.versionName, currentVersion)) {
-      const channelLabel = updateChannel === 'nightly' ? 'Nightly Build' : 'Stable Release';
-      const confirmUpdate = window.confirm(
-        `🚀 New ${channelLabel} (${manifest.versionName}) Available!\n\n` +
-        `${manifest.releaseNotes}\n\n` +
-        `Would you like to download and install this update now?`
-      );
-
-      if (confirmUpdate && manifest.apkUrl) {
-        await Browser.open({ url: manifest.apkUrl });
-      }
+    if (remoteManifest.versionCode > current.versionCode) {
+      console.log(`[Updater] New ${channel} build found: v${remoteManifest.versionName}`);
+      promptUserToUpdate(remoteManifest);
     }
   } catch (error) {
-    console.error('Failed to check for updates from repo /updates folder:', error);
+    console.error("[Updater] Silent update check failed:", error);
   }
+}
+
+/**
+ * Displays an update notification overlay when a newer build is available.
+ */
+function promptUserToUpdate(manifest: UpdateManifest) {
+  const existing = document.getElementById("rabtv-update-modal");
+  if (existing) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "rabtv-update-modal";
+  overlay.className =
+    "fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl animate-fade-in";
+
+  overlay.innerHTML = `
+    <div class="max-w-md w-full bg-slate-900 border border-violet-500/40 rounded-3xl p-6 text-white shadow-2xl space-y-4 text-center">
+      <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600/20 text-2xl border border-violet-500/30">
+        🚀
+      </div>
+      <h3 class="text-xl font-bold text-violet-300">New Update Available!</h3>
+      <p class="text-xs text-slate-300">
+        Version <strong>v${manifest.versionName}</strong> is ready for installation.
+      </p>
+      ${
+        manifest.releaseNotes
+          ? `<div class="bg-black/40 border border-white/10 p-3 rounded-xl text-left text-[11px] text-slate-300 max-h-28 overflow-y-auto">${manifest.releaseNotes}</div>`
+          : ""
+      }
+      <div class="flex gap-2 pt-2">
+        <button id="rabtv-update-skip" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition">
+          Later
+        </button>
+        <a id="rabtv-update-dl" href="${manifest.apkUrl}" download class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg transition flex items-center justify-center gap-1">
+          📥 Download APK
+        </a>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("rabtv-update-skip")?.addEventListener("click", () => {
+    overlay.remove();
+  });
 }
