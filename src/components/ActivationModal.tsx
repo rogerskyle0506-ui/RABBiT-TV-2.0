@@ -65,7 +65,9 @@ export function ActivationModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-6 backdrop-blur-xl overflow-y-auto">
       <form
         onSubmit={handleFirstTimeAuthorize}
-        className={`relative w-full max-w-xl my-auto rounded-3xl border text-white shadow-2xl ${getCardBackground(appTheme)} backdrop-blur-2xl max-h-[92vh] overflow-y-auto`}
+        className={`relative w-full max-w-xl my-auto rounded-3xl border text-white shadow-2xl ${getCardBackground(
+          appTheme
+        )} backdrop-blur-2xl max-h-[92vh] overflow-y-auto`}
       >
         <div className="p-5 sm:p-8 space-y-4 sm:space-y-5">
           <div className="text-center space-y-2">
@@ -76,22 +78,33 @@ export function ActivationModal({
                 className="h-full w-full object-fill"
               />
             </div>
-            <h2 className={`text-xl sm:text-2xl font-bold ${getPrimaryAccentColor(appTheme)}`}>
+            <h2
+              className={`text-xl sm:text-2xl font-bold ${getPrimaryAccentColor(
+                appTheme
+              )}`}
+            >
               Welcome to RABBiT TV
             </h2>
           </div>
 
           <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed text-slate-300 text-center">
-            <p>Get all your favorite movies and TV shows right here, streaming smoothly in one place!</p>
+            <p>
+              Get all your favorite movies and TV shows right here, streaming
+              smoothly in one place!
+            </p>
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
-              <strong>⏳ Trial:</strong> Enter <strong>`9654`</strong> for a free 7-day trial (one-time per device). Full unlock uses a personal activation code verified securely online.
+              <strong>⏳ Trial:</strong> Enter <strong>`9654`</strong> for a
+              free 7-day trial (one-time per device). Full unlock uses a
+              personal activation code verified securely online.
             </div>
           </div>
 
           <div className="space-y-1.5 border-t border-white/10 pt-3">
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
               What&apos;s your name?{" "}
-              <span className="text-slate-400 font-normal lowercase">(Used for your unlock verification)</span>
+              <span className="text-slate-400 font-normal lowercase">
+                (Used for your unlock verification)
+              </span>
             </label>
             <input
               type="text"
@@ -117,23 +130,31 @@ export function ActivationModal({
               className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2.5 text-center text-sm sm:text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
             />
             {ageErrorNotice && (
-              <p className="text-xs font-semibold text-red-400 text-center">⚠️ Please enter your age.</p>
+              <p className="text-xs font-semibold text-red-400 text-center">
+                ⚠️ Please enter your age.
+              </p>
             )}
           </div>
 
+          {/* Mandatory 4-digit age lock */}
           <div className="space-y-1.5 border-t border-white/10 pt-3">
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
               Create Age-Lock Code <span className="text-red-400">*</span>
             </label>
             <p className="text-[11px] text-slate-300 text-center">
-              Choose a 4-digit PIN parents can use later to change the age setting. Required.
+              Choose a 4-digit PIN parents can use later to change the age
+              setting. Required.
             </p>
             <input
               type="password"
               inputMode="numeric"
               maxLength={4}
               value={ageLockInput}
-              onChange={(e) => setAgeLockInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              onChange={(e) =>
+                setAgeLockInput(
+                  e.target.value.replace(/\D/g, "").slice(0, 4)
+                )
+              }
               placeholder="••••"
               className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2 text-center text-lg font-bold tracking-[0.4em] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
             />
@@ -156,7 +177,9 @@ export function ActivationModal({
                   onClick={() => handleThemeChange(t.id)}
                   className={`rounded-xl border py-2 px-1 text-[11px] sm:text-xs font-bold transition focus:outline-none ${
                     appTheme === t.id
-                      ? `border-white/30 ${getPrimaryBgColor(t.id)} text-white shadow-lg`
+                      ? `border-white/30 ${getPrimaryBgColor(
+                          t.id
+                        )} text-white shadow-lg`
                       : "border-white/10 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
                   }`}
                 >
@@ -178,11 +201,17 @@ export function ActivationModal({
                   onClick={() => handleSizeChange(size)}
                   className={`rounded-xl border py-2 px-1 text-[11px] sm:text-xs font-bold transition focus:outline-none ${
                     cardSize === size
-                      ? `border-white/30 ${getPrimaryBgColor(appTheme)} text-white shadow-lg`
+                      ? `border-white/30 ${getPrimaryBgColor(
+                          appTheme
+                        )} text-white shadow-lg`
                       : "border-white/10 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
                   }`}
                 >
-                  {size === "small" ? "Small (25%)" : size === "medium" ? "Medium (60%)" : "Large (100%)"}
+                  {size === "small"
+                    ? "Small (25%)"
+                    : size === "medium"
+                    ? "Medium (60%)"
+                    : "Large (100%)"}
                 </button>
               ))}
             </div>
@@ -193,7 +222,9 @@ export function ActivationModal({
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
                 XL Mouse Pointer
               </label>
-              <p className="text-[11px] text-slate-300">Enlarges cursor 3x for projector/TV use.</p>
+              <p className="text-[11px] text-slate-300">
+                Enlarges cursor 3x for projector/TV use.
+              </p>
             </div>
             <button
               type="button"
@@ -224,14 +255,16 @@ export function ActivationModal({
             />
             {passcodeError && (
               <div className="space-y-1 text-center">
-                <p className="text-xs font-semibold text-red-400">{passcodeErrorMsg}</p>
+                <p className="text-xs font-semibold text-red-400">
+                  {passcodeErrorMsg}
+                </p>
                 <p className="text-[11px] text-slate-300">
                   Need help? Message{" "}
                   <button
                     type="button"
                     onClick={(e) =>
                       handleOpenExternal(
-                        "https://wa.me/?text=Hi%20Rabbit,%20I%20need%20help%20with%20my%20passcode%20on%20RABBiT%20TV",
+                        "https://wa.me/?text=Hi%20Rabbit,%20I%20need%20help%20with%20my%20passcode%20on%20RABBiT%20TV.%20Please520and%20Thank%20You.",
                         e
                       )
                     }
@@ -252,8 +285,11 @@ export function ActivationModal({
               </div>
             )}
 
+            {/* Contact Me info */}
             <div className="rounded-xl border border-white/10 bg-black/40 p-2.5 text-center text-xs text-slate-300 space-y-1 backdrop-blur-md">
-              <p className="font-semibold text-white">Need an activation code or support?</p>
+              <p className="font-semibold text-white">
+                Need an activation code or support?
+              </p>
               <p className="text-[11px] text-slate-300">
                 Message me on WhatsApp (
                 <button
@@ -282,9 +318,11 @@ export function ActivationModal({
 
             <button
               type="submit"
-              className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-sm sm:text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none`}
+              className={`w-full rounded-xl ${getPrimaryBgColor(
+                appTheme
+              )} py-3.5 text-sm sm:text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none`}
             >
-              Activate & Enter RABBiT TV
+              Enter RABBiT TV
             </button>
           </div>
         </div>
