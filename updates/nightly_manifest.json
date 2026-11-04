@@ -1,6 +1,6 @@
 {
-  "versionCode": 2020602,
-  "versionName": "2.2.6.2",
-  "apkUrl": "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/updates/rabbittv2.2.6.2.apk",
-  "releaseNotes": "Automated nightly build v2.2.6.2 compiled and verified via GitHub Actions."
+  "versionCode": 2020603,
+  "versionName": "2.2.6.3",
+  "apkUrl": "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/updates/rabbittv2.2.6.3.apk",
+  "releaseNotes": "Automated nightly build v2.2.6.3 compiled and verified via GitHub Actions."
 }
