@@ -1,9 +1,10 @@
-// patches/__root.tsx
+// src/routes/__root.tsx
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { HolidayOverlay } from "@/components/HolidayOverlay";
 import { AppWallpaper } from "@/components/AppWallpaper";
+import { ActivationModal } from "@/components/ActivationModal";
 import "@/styles.css";
 import { useState, useEffect, useRef } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
@@ -31,88 +32,6 @@ import {
   setLargeButtons,
 } from "@/lib/settings";
 
-// ——— Private GitHub Gist Key Verification & Management ———
-const GIST_ID = (import.meta as any).env?.VITE_GIST_ID as string || "";
-const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT as string || "";
-const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
-
-// ——— Enhanced Single-Use Key Verification & Consumption via Gist ———
-async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey: string): Promise<boolean> {
-  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return false;
-  try {
-    const res = await fetch(GIST_API_URL, {
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": "RabbitTV-App"
-      }
-    });
-
-    if (!res.ok) return false;
-    const gistData = await res.json();
-    const rawContent = gistData.files?.["keys.json"]?.content;
-    if (!rawContent) return false;
-
-    let keysList = JSON.parse(rawContent);
-
-    if (!Array.isArray(keysList)) return false;
-
-    let matchedIndex = -1;
-    let isObjectFormat = typeof keysList[0] === "object" && keysList[0] !== null;
-
-    if (isObjectFormat) {
-      matchedIndex = keysList.findIndex((item: any) => item.key === String(securityKey) && item.active === true);
-    } else {
-      matchedIndex = keysList.findIndex((item: any) => String(item) === String(securityKey));
-    }
-
-    if (matchedIndex === -1) return false;
-
-    // Single-use enforcement: Mark key as inactive upon use
-    if (isObjectFormat) {
-      keysList[matchedIndex].active = false;
-      keysList[matchedIndex].usedBy = `${name} (Age: ${age})`;
-    } else {
-      keysList.splice(matchedIndex, 1);
-    }
-
-    const updatedContent = JSON.stringify(keysList, null, 2);
-    await fetch(GIST_API_URL, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "Content-Type": "application/json",
-        "User-Agent": "RabbitTV-App"
-      },
-      body: JSON.stringify({
-        files: {
-          "keys.json": {
-            content: updatedContent
-          }
-        }
-      })
-    });
-
-    return true;
-  } catch (error) {
-    console.error('Failed to verify and consume key with Gist:', error);
-    return false;
-  }
-}
-
-const ADMIN_NAME = "Rabbit";
-const ADMIN_BIRTH_YEAR = 1988;
-
-function getExpectedAdminAge(): number {
-  return new Date().getFullYear() - ADMIN_BIRTH_YEAR;
-}
-
-function isAdminCredentials(name: string, age: number): boolean {
-  return name.trim() === ADMIN_NAME && age === getExpectedAdminAge();
-}
-
-const TRIAL_CODE = "9654";
 const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 const AGE_LOCK_KEY = "rabtv_age_passcode";
 
@@ -183,15 +102,6 @@ export const Route = createRootRoute({
 function RootComponent() {
   const navigate = useNavigate();
   const [showFirstStartModal, setShowFirstStartModal] = useState(false);
-  const [passcodeInput, setPasscodeInput] = useState("");
-  const [passcodeError, setPasscodeError] = useState(false);
-  const [passcodeErrorMsg, setPasscodeErrorMsg] = useState(
-    "⚠️ Invalid Passcode. Please try again."
-  );
-  const [ageErrorNotice, setAgeErrorNotice] = useState(false);
-  const [ageLockError, setAgeLockError] = useState(false);
-
-  const [ageLockInput, setAgeLockInput] = useState("");
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const lastScrollYRef = useRef(0);
@@ -229,7 +139,7 @@ function RootComponent() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Update Channel State ("stable" vs "nightly")
-  const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">(()) => {
+  const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("rabtv_update_channel") as "stable" | "nightly") || "stable";
     }
@@ -400,145 +310,7 @@ function RootComponent() {
       window.removeEventListener("rabtv_settings_updated", handleSettingsUpdate);
   }, []);
 
-  const saveAgeLockCode = (code: string) => {
-    localStorage.setItem(AGE_LOCK_KEY, code);
-  };
-
   const getAgeLockCode = () => localStorage.getItem(AGE_LOCK_KEY) || "";
-
-  const completePermanentLogin = (
-    finalName: string,
-    parsedAge: number,
-    ageLockCode: string,
-    options?: { admin?: boolean; forceTheme?: AppTheme; forceSize?: CardSize }
-  ) => {
-    localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
-    localStorage.setItem("rabtv_access_status", "permanent");
-    localStorage.removeItem("rabtv_trial_start_timestamp");
-    setIsTrialActive(false);
-
-    saveAgeLockCode(ageLockCode);
-
-    if (options?.admin) {
-      localStorage.setItem("rabtv_is_admin", "true");
-      setIsAdmin(true);
-    } else {
-      localStorage.removeItem("rabtv_is_admin");
-      setIsAdmin(false);
-    }
-
-    const themeToUse = options?.forceTheme ?? appTheme;
-    const sizeToUse = options?.forceSize ?? cardSize;
-
-    saveCardSize(sizeToUse);
-    setCardSize(sizeToUse);
-    saveStreamQuality(streamQuality);
-    saveTheme(themeToUse);
-    setAppTheme(themeToUse);
-    void updateNativeStatusBar(themeToUse);
-    setHelpfulMouse(helpfulMouse);
-
-    saveUserAge(parsedAge);
-    localStorage.setItem("rabtv_profile_name", finalName);
-    setSavedProfileName(finalName);
-
-    if (!options?.admin) {
-      sendPermanentActivationAlert(finalName);
-    }
-
-    setShowFirstStartModal(false);
-    setPasscodeError(false);
-    setAgeErrorNotice(false);
-    setAgeLockError(false);
-    window.dispatchEvent(new Event("rabtv_settings_updated"));
-  };
-
-  const handleFirstTimeAuthorize = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const trimmedAge = userAgeInput.trim();
-    if (!trimmedAge || isNaN(parseInt(trimmedAge, 10))) {
-      setAgeErrorNotice(true);
-      setPasscodeError(false);
-      setAgeLockError(false);
-      return;
-    }
-
-    const ageLock = ageLockInput.trim();
-    if (!/^\d{4}$/.test(ageLock)) {
-      setAgeLockError(true);
-      setAgeErrorNotice(false);
-      setPasscodeError(false);
-      return;
-    }
-
-    const parsedAge = parseInt(trimmedAge, 10);
-    const finalName = profileNameInput.trim() || "Friend";
-    const enteredCode = passcodeInput.trim();
-
-    if (isAdminCredentials(finalName, parsedAge)) {
-      completePermanentLogin(finalName, parsedAge, ageLock, {
-        admin: true,
-        forceTheme: "red",
-        forceSize: "small",
-      });
-      return;
-    }
-
-    if (enteredCode === TRIAL_CODE) {
-      const trialAlreadyUsed =
-        localStorage.getItem("rabtv_trial_used_flag") === "true";
-      if (trialAlreadyUsed) {
-        setPasscodeError(true);
-        setPasscodeErrorMsg(
-          "⚠️ Trial code has already been used on this device and cannot be redeemed again."
-        );
-        setAgeErrorNotice(false);
-        setAgeLockError(false);
-        setPasscodeInput("");
-        return;
-      }
-
-      localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
-      localStorage.setItem("rabtv_access_status", "trial");
-      localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));
-      localStorage.setItem("rabtv_trial_used_flag", "true");
-      localStorage.removeItem("rabtv_is_admin");
-      setIsAdmin(false);
-      setIsTrialActive(true);
-      setTrialDaysRemaining(7);
-
-      saveAgeLockCode(ageLock);
-      saveCardSize(cardSize);
-      saveStreamQuality(streamQuality);
-      saveTheme(appTheme);
-      setHelpfulMouse(helpfulMouse);
-      saveUserAge(parsedAge);
-      localStorage.setItem("rabtv_profile_name", finalName);
-      setSavedProfileName(finalName);
-
-      setShowFirstStartModal(false);
-      setPasscodeError(false);
-      setAgeErrorNotice(false);
-      setAgeLockError(false);
-      window.dispatchEvent(new Event("rabtv_settings_updated"));
-      return;
-    }
-
-    const isValidGitHubCode = await verifyUnlockCodeWithGitHub(finalName, parsedAge, enteredCode);
-    if (isValidGitHubCode) {
-      completePermanentLogin(finalName, parsedAge, ageLock);
-      return;
-    }
-
-    setPasscodeError(true);
-    setPasscodeErrorMsg(
-      "⚠️ Invalid Passcode for this name and age."
-    );
-    setAgeErrorNotice(false);
-    setAgeLockError(false);
-    setPasscodeInput("");
-  };
 
   const handleUpgradeFromProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -548,7 +320,57 @@ function RootComponent() {
       "Friend";
     const age = getSavedUserAge() || parseInt(userAgeInput, 10) || 0;
     
-    const isValidGitHubCode = await verifyUnlockCodeWithGitHub(name, age, unlockCodeInput.trim());
+    const GIST_ID = (import.meta as any).env?.VITE_GIST_ID as string || "";
+    const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT as string || "";
+    const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
+
+    let isValidGitHubCode = false;
+    if (GIST_ID && GITHUB_TOKEN && GIST_API_URL) {
+      try {
+        const res = await fetch(GIST_API_URL, {
+          headers: {
+            Authorization: `Bearer ${GITHUB_TOKEN}`,
+            Accept: "application/vnd.github+json",
+            "User-Agent": "RabbitTV-App"
+          }
+        });
+        if (res.ok) {
+          const gistData = await res.json();
+          const rawContent = gistData.files?.["keys.json"]?.content;
+          if (rawContent) {
+            let keysList = JSON.parse(rawContent);
+            if (Array.isArray(keysList)) {
+              let matchedIndex = keysList.findIndex((item: any) => 
+                (typeof item === "object" && item !== null ? item.key === String(unlockCodeInput.trim()) && item.active === true : String(item) === String(unlockCodeInput.trim()))
+              );
+              if (matchedIndex !== -1) {
+                isValidGitHubCode = true;
+                if (typeof keysList[matchedIndex] === "object") {
+                  keysList[matchedIndex].active = false;
+                  keysList[matchedIndex].usedBy = `${name} (Age: ${age})`;
+                } else {
+                  keysList.splice(matchedIndex, 1);
+                }
+                await fetch(GIST_API_URL, {
+                  method: "PATCH",
+                  headers: {
+                    Authorization: `Bearer ${GITHUB_TOKEN}`,
+                    Accept: "application/vnd.github+json",
+                    "Content-Type": "application/json",
+                    "User-Agent": "RabbitTV-App"
+                  },
+                  body: JSON.stringify({
+                    files: { "keys.json": { content: JSON.stringify(keysList, null, 2) } }
+                  })
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Upgrade error", err);
+      }
+    }
 
     if (isValidGitHubCode) {
       localStorage.setItem("rabtv_access_status", "permanent");
@@ -573,9 +395,12 @@ function RootComponent() {
     }
   };
 
-  // Automated keygen committing structured objects to secret Gist
   const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
+    const GIST_ID = (import.meta as any).env?.VITE_GIST_ID as string || "";
+    const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT as string || "";
+    const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
+
     if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
       setKeygenResult("⚠️ GIST_ID or VITE_GH_PAT is missing from environment secrets.");
       return;
@@ -616,7 +441,6 @@ function RootComponent() {
       }
 
       const stringKey = String(generatedKey);
-      
       const newKeyObj = { key: stringKey, active: true, owner: `${keygenName.trim()} (${age})` };
       keysList.push(newKeyObj);
 
@@ -653,8 +477,11 @@ function RootComponent() {
     }
   };
 
-  // Fetch keys list for Admin management from Gist
   const fetchRemoteKeys = async () => {
+    const GIST_ID = (import.meta as any).env?.VITE_GIST_ID as string || "";
+    const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT as string || "";
+    const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
+
     if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return;
     setLoadingKeys(true);
     try {
@@ -681,8 +508,11 @@ function RootComponent() {
     }
   };
 
-  // Toggle key status or Delete via Gist PATCH
   const handleModifyKeyStatus = async (targetKey: string, action: "toggle" | "delete") => {
+    const GIST_ID = (import.meta as any).env?.VITE_GIST_ID as string || "";
+    const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT as string || "";
+    const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
+
     if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return;
     try {
       const res = await fetch(GIST_API_URL, {
@@ -764,7 +594,6 @@ function RootComponent() {
     setLargeButtonsState(enabled);
   };
 
-  // Unified handler for Name, Age, and optional Passcode change
   const handleUnifiedProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     const locked = getAgeLockCode();
@@ -781,7 +610,6 @@ function RootComponent() {
       return;
     }
 
-    // If new passcode fields are filled, validate and update passcode
     const trimmedNew = newPasscode.trim();
     const trimmedConfirm = confirmNewPasscode.trim();
 
@@ -794,7 +622,7 @@ function RootComponent() {
         setUnifiedUpdateStatus({ text: "⚠️ New codes do not match.", isError: true });
         return;
       }
-      saveAgeLockCode(trimmedNew);
+      localStorage.setItem(AGE_LOCK_KEY, trimmedNew);
     }
 
     saveUserAge(parsedAge);
@@ -1419,11 +1247,10 @@ function RootComponent() {
                     </button>
                   </div>
 
-                  {/* Manual Check Button Added Here */}
                   <button
                     type="button"
                     onClick={() => {
-                      void checkForAppUpdates(false); // false forces visual alerts (up-to-date or update found)
+                      void checkForAppUpdates(false);
                     }}
                     className={`w-full mt-2 py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
                   >
@@ -1698,262 +1525,24 @@ function RootComponent() {
             <Outlet />
           </main>
 
-          {/* FIRST-START MODAL */}
-          {showFirstStartModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-6 backdrop-blur-xl overflow-y-auto">
-              <form
-                onSubmit={handleFirstTimeAuthorize}
-                className={`relative w-full max-w-xl my-auto rounded-3xl border text-white shadow-2xl ${getCardBackground(appTheme)} backdrop-blur-2xl max-h-[92vh] overflow-y-auto`}
-              >
-                <div className="p-5 sm:p-8 space-y-4 sm:space-y-5">
-                  <div className="text-center space-y-2">
-                    <div className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden border border-white/20 shadow-lg bg-black">
-                      <img
-                        src={HEADER_ICON_URL}
-                        alt="RABBiT TV Logo"
-                        className="h-full w-full object-fill"
-                      />
-                    </div>
-                    <h2
-                      className={`text-xl sm:text-2xl font-bold ${getPrimaryAccentColor(appTheme)}`}
-                    >
-                      Welcome to RABBiT TV
-                    </h2>
-                  </div>
-
-                  <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed text-slate-300 text-center">
-                    <p>
-                      Get all your favorite movies and TV shows right here,
-                      streaming smoothly in one place!
-                    </p>
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
-                      <strong>⏳ Trial:</strong> Enter <strong>`9654`</strong>{" "}
-                      for a free 7-day trial (one-time per device). Full unlock
-                      uses a personal activation code verified securely online.
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 border-t border-white/10 pt-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                      What&apos;s your name?{" "}
-                      <span className="text-slate-400 font-normal lowercase">
-                        (Used for your unlock verification)
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={25}
-                      value={profileNameInput}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setProfileNameInput(val);
-                        localStorage.setItem(
-                          "rabtv_profile_name",
-                          val.trim()
-                        );
-                        setSavedProfileName(val.trim());
-                      }}
-                      placeholder="Enter Name"
-                      className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2.5 text-center text-sm sm:text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 border-t border-white/10 pt-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                      How old are you?
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={120}
-                      value={userAgeInput}
-                      onChange={(e) => setUserAgeInput(e.target.value)}
-                      placeholder="Enter Age"
-                      className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2.5 text-center text-sm sm:text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
-                    />
-                    {ageErrorNotice && (
-                      <p className="text-xs font-semibold text-red-400 text-center">
-                        ⚠️ Please enter your age.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Mandatory 4-digit age lock */}
-                  <div className="space-y-1.5 border-t border-white/10 pt-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                      Create Age-Lock Code{" "}
-                      <span className="text-red-400">*</span>
-                    </label>
-                    <p className="text-[11px] text-slate-300 text-center">
-                      Choose a 4-digit PIN parents can use later to change the
-                      age setting. Required.
-                    </p>
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={4}
-                      value={ageLockInput}
-                      onChange={(e) =>
-                        setAgeLockInput(
-                          e.target.value.replace(/\D/g, "").slice(0, 4)
-                        )
-                      }
-                      placeholder="••••"
-                      className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2 text-center text-lg font-bold tracking-[0.4em] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
-                    />
-                    {ageLockError && (
-                      <p className="text-xs font-semibold text-red-400 text-center">
-                        ⚠️ Enter a 4-digit age-lock code (numbers only).
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 border-t border-white/10 pt-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                      Select Startup Theme:
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {allThemesList.map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => handleThemeChange(t.id)}
-                          className={`rounded-xl border py-2 px-1 text-[11px] sm:text-xs font-bold transition focus:outline-none ${
-                            appTheme === t.id
-                              ? `border-white/30 ${getPrimaryBgColor(t.id)} text-white shadow-lg`
-                              : "border-white/10 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
-                          }`}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 border-t border-white/10 pt-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                      Select Display Size:
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["small", "medium", "large"] as CardSize[]).map(
-                        (size) => (
-                          <button
-                            key={size}
-                            type="button"
-                            onClick={() => handleSizeChange(size)}
-                            className={`rounded-xl border py-2 px-1 text-[11px] sm:text-xs font-bold transition focus:outline-none ${
-                              cardSize === size
-                                ? `border-white/30 ${getPrimaryBgColor(appTheme)} text-white shadow-lg`
-                                : "border-white/10 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
-                            }`}
-                          >
-                            {size === "small"
-                              ? "Small (25%)"
-                              : size === "medium"
-                              ? "Medium (60%)"
-                              : "Large (100%)"}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-white/10 pt-3">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                        XL Mouse Pointer
-                      </label>
-                      <p className="text-[11px] text-slate-300">
-                        Enlarges cursor 3x for projector/TV use.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleMouseToggle(!helpfulMouse)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        helpfulMouse ? "bg-violet-600" : "bg-slate-700"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          helpfulMouse ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  <div className="space-y-2.5 border-t border-white/10 pt-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                      Unlock Code or Trial (`9654`):
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={16}
-                      value={passcodeInput}
-                      onChange={(e) => setPasscodeInput(e.target.value)}
-                      placeholder="Unlock code or 9654"
-                      className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-3 text-center text-base sm:text-lg font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
-                    />
-                    {passcodeError && (
-                      <div className="space-y-1 text-center">
-                        <p className="text-xs font-semibold text-red-400">
-                          {passcodeErrorMsg}
-                        </p>
-                        <p className="text-[11px] text-slate-300">
-                          Need help? Message{" "}
-                          <button
-                            type="button"
-                            onClick={(e) => handleOpenExternal("https://wa.me/?text=Hi%20Rabbit,%20I%20need%20help%20with%20my%20passcode%20on%20RABBiT%20TV", e)}
-                            className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
-                          >
-                            WhatsApp contact (@RabbitProductions)
-                          </button>{" "}
-                          or text{" "}
-                          <button
-                            type="button"
-                            onClick={(e) => handleOpenExternal("sms:7058093865", e)}
-                            className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
-                          >
-                            (705) 809-3865
-                          </button>.
-                        </p>
-                      </div>
-                    )}
-
-                   {/* Contact Me info */}
-                    <div className="rounded-xl border border-white/10 bg-black/40 p-2.5 text-center text-xs text-slate-300 space-y-1 backdrop-blur-md">
-                      <p className="font-semibold text-white">Need an activation code or support?</p>
-                      <p className="text-[11px] text-slate-300">
-                        Message me on WhatsApp (
-                        <button
-                          type="button"
-                          onClick={(e) => handleOpenExternal("https://wa.me/?text=Hi%20Rabbit,%20I%20need%20an%20activation%20code%20for%20RABBiT%20TV", e)}
-                          className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
-                        >
-                          @RabbitProductions
-                        </button>
-                        ) or text for a code at{" "}
-                        <button
-                          type="button"
-                          onClick={(e) => handleOpenExternal("sms:7058093865", e)}
-                          className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
-                        >
-                          (705) 809-3865
-                        </button>.
-                      </p>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-sm sm:text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none`}
-                    >
-                      Enter RABBiT TV
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          )}
+          {/* FIRST-START ACTIVATION MODAL CALL */}
+          <ActivationModal
+            isOpen={showFirstStartModal}
+            onAuthorized={() => setShowFirstStartModal(false)}
+            appTheme={appTheme}
+            cardSize={cardSize}
+            streamQuality={streamQuality}
+            helpfulMouse={helpfulMouse}
+            allThemesList={allThemesList}
+            headerIconUrl={HEADER_ICON_URL}
+            onThemeChange={handleThemeChange}
+            onSizeChange={handleSizeChange}
+            onMouseToggle={handleMouseToggle}
+            handleOpenExternal={handleOpenExternal}
+            getCardBackground={getCardBackground}
+            getPrimaryAccentColor={getPrimaryAccentColor}
+            getPrimaryBgColor={getPrimaryBgColor}
+          />
         </AuthProvider>
         <Scripts />
       </body>
