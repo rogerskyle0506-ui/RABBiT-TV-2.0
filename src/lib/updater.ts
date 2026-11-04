@@ -52,9 +52,9 @@ async function downloadAndInstallApk(url: string, fileName: string) {
 
     if (isCapacitor) {
       try {
-        // Dynamic imports prevent Rollup/Rolldown static module resolution errors during web build
-        const fsModule = await import("@capacitor/filesystem" as string);
-        const browserModule = await import("@capacitor/browser" as string);
+        // @vite-ignore prevents Rolldown/Vite from attempting static module resolution during web build
+        const fsModule = await import(/* @vite-ignore */ "@capacitor/filesystem");
+        const browserModule = await import(/* @vite-ignore */ "@capacitor/browser");
         const Filesystem = fsModule.Filesystem;
         const Directory = fsModule.Directory;
         const Browser = browserModule.Browser;
