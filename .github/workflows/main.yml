@@ -125,12 +125,16 @@ jobs:
           </html>
           EOF
 
-      - name: Generate Dynamic Version File from Package.json
+      - name: Generate Dynamic Version File with Nightly Build Identifier
         run: |
           VERSION=$(node -p "require('./package.json').version")
           mkdir -p src/lib
-          echo "export const APP_VERSION = \"$VERSION\";" > src/lib/version.ts
-          echo "Generated version.ts with version ${VERSION}"
+          cat << EOF > src/lib/version.ts
+          export const APP_VERSION = "${VERSION}";
+          export const BUILD_TYPE = "nightly";
+          export const IS_STABLE = false;
+          EOF
+          echo "Generated version.ts with version ${VERSION} (nightly)"
 
       - name: Build Web Assets for Capacitor (Executes Version Bump)
         env:
@@ -147,10 +151,10 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "artifact_name=rabbittv-v${VERSION}" >> $GITHUB_OUTPUT
-          echo "apk_filename=rabbittv${VERSION}.apk" >> $GITHUB_OUTPUT
+          echo "artifact_name=rabbittv-v${VERSION}-nightly" >> $GITHUB_OUTPUT
+          echo "apk_filename=rabbittv-v${VERSION}-nightly.apk" >> $GITHUB_OUTPUT
 
-          echo "Building RABBiT TV version ${VERSION}"
+          echo "Building RABBiT TV Nightly version ${VERSION}"
 
       - name: Map TanStack Shell to Capacitor index.html
         run: |
@@ -281,28 +285,19 @@ jobs:
             -Pandroid.injected.signing.key.alias=RABBITV34688643 \
             -Pandroid.injected.signing.key.password=RABBITV34688643
 
-      - name: Copy APK to Public updates/ Folder and Prune Old Versions
+      - name: Save APK Artifact Locally for Workflow Run
         run: |
           mkdir -p updates
           cp android/app/build/outputs/apk/release/app-release.apk updates/${{ steps.version-extractor.outputs.apk_filename }}
-          echo "Successfully copied APK to updates/${{ steps.version-extractor.outputs.apk_filename }}"
+          echo "Successfully saved APK as updates/${{ steps.version-extractor.outputs.apk_filename }}"
 
-          cd updates
-          echo "Cleaning up old versions while preserving manifests & XML files..."
-          find . -maxdepth 1 ! -name "*.xml" ! -name "nightly_manifest.json" -printf '%T@ %p\n' | sort -n | head -n -2 | while read -r timestamp file; do
-            if [ -n "$file" ]; then
-              echo "Removing outdated version: $file"
-              rm -f "$file"
-            fi
-          done
-          cd ..
-
-      - name: Commit and Push Version Bump, Manifest & APK to Repository
+      - name: Commit Version Bump & Manifest (Excluding APK Binary)
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.io"
-          git add package.json capacitor.config.json updates/ android/app/build.gradle
-          git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} and publish nightly build [skip ci]" || echo "No changes to commit"
+          # Only commit config changes and package version bumps—never commit the raw APK binary to prevent token revocation
+          git add package.json capacitor.config.json android/app/build.gradle src/lib/version.ts
+          git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} [skip ci]" || echo "No changes to commit"
           git push
 
       - name: Upload APK Artifact
