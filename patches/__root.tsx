@@ -32,12 +32,13 @@ import {
 } from "@/lib/settings";
 
 // ——— Private GitHub Gist Key Verification & Management ———
-const GIST_ID = (import.meta as any).env?.VITE_GIST_ID || "a9d05227252c7b4d085047ef73797327";
-const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT || "";
-const GIST_API_URL = `https://api.github.com/gists/${GIST_ID}`;
+const GIST_ID = (import.meta as any).env?.VITE_GIST_ID as string || "";
+const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT as string || "";
+const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
 
 // ——— Enhanced Single-Use Key Verification & Consumption via Gist ———
 async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey: string): Promise<boolean> {
+  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return false;
   try {
     const res = await fetch(GIST_API_URL, {
       headers: {
@@ -564,6 +565,10 @@ function RootComponent() {
   // Automated keygen committing structured objects to secret Gist
   const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
+      setKeygenResult("⚠️ GIST_ID or VITE_GH_PAT is missing from environment secrets.");
+      return;
+    }
     const age = parseInt(keygenAge.trim(), 10);
     if (!keygenName.trim() || isNaN(age) || age < 1 || age > 120) {
       setKeygenResult("Enter a valid name and age (1–120).");
@@ -639,6 +644,7 @@ function RootComponent() {
 
   // Fetch keys list for Admin management from Gist
   const fetchRemoteKeys = async () => {
+    if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return;
     setLoadingKeys(true);
     try {
       const res = await fetch(GIST_API_URL, {
@@ -666,6 +672,7 @@ function RootComponent() {
 
   // Toggle key status or Delete via Gist PATCH
   const handleModifyKeyStatus = async (targetKey: string, action: "toggle" | "delete") => {
+    if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return;
     try {
       const res = await fetch(GIST_API_URL, {
         headers: {
