@@ -1,7 +1,4 @@
 // lib/updater.ts
-import { Filesystem, Directory } from "@capacitor/filesystem";
-import { Browser } from "@capacitor/browser";
-
 const GITHUB_REPO = (import.meta as any).env?.VITE_GH_REPO || "RabbitProductions/RabbitTV-Releases";
 const GITHUB_RELEASES_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT || "";
@@ -54,22 +51,34 @@ async function downloadAndInstallApk(url: string, fileName: string) {
     const isCapacitor = !!(window as any).Capacitor;
 
     if (isCapacitor) {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const base64Data = await blobToBase64(blob);
+      try {
+        // Dynamic imports prevent Rollup/Rolldown static module resolution errors during web build
+        const fsModule = await import("@capacitor/filesystem" as string);
+        const browserModule = await import("@capacitor/browser" as string);
+        const Filesystem = fsModule.Filesystem;
+        const Directory = fsModule.Directory;
+        const Browser = browserModule.Browser;
 
-      const savedFile = await Filesystem.writeFile({
-        path: fileName,
-        data: base64Data,
-        directory: Directory.Cache,
-      });
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const base64Data = await blobToBase64(blob);
 
-      await Browser.open({ url: savedFile.uri });
-    } else {
-      window.open(url, "_blank");
+        const savedFile = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Cache,
+        });
+
+        await Browser.open({ url: savedFile.uri });
+        return;
+      } catch (nativeErr) {
+        console.warn("Capacitor plugins unavailable, falling back to browser open", nativeErr);
+      }
     }
+
+    window.open(url, "_blank");
   } catch (err) {
-    console.error("Failed to download APK internally:", err);
+    console.error("Failed to download APK:", err);
     window.open(url, "_blank");
   }
 }
