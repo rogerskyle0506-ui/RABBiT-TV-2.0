@@ -294,7 +294,7 @@ function RootComponent() {
   // Trigger silent OTA update check 3 seconds after app launch
   useEffect(() => {
     const updateTimer = setTimeout(() => {
-      void checkForAppUpdates();
+      void checkForAppUpdates(true);
     }, 3000);
     return () => clearTimeout(updateTimer);
   }, []);
@@ -1372,10 +1372,10 @@ function RootComponent() {
                   </div>
                 )}
 
-                {/* Update Channel Preference */}
+                {/* Update Channel Preference & Manual Check Button */}
                 <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    🚀 Update Channel
+                    🚀 Update Channel & Actions
                   </h4>
                   <p className="text-[10px] text-slate-300 leading-relaxed">
                     Choose whether you want stable releases or bleeding-edge nightly builds.
@@ -1404,6 +1404,17 @@ function RootComponent() {
                       ⚡ Nightly
                     </button>
                   </div>
+
+                  {/* Manual Check Button Added Here */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void checkForAppUpdates(false); // false forces visual alerts (up-to-date or update found)
+                    }}
+                    className={`w-full mt-2 py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                  >
+                    🔍 Check for Updates Now
+                  </button>
                 </div>
 
                 <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
