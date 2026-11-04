@@ -195,7 +195,6 @@ function RootComponent() {
 
   const [ageLockInput, setAgeLockInput] = useState("");
 
-  const [showSettings, setShowSettings] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const lastScrollYRef = useRef(0);
   const [activeSettingsTab, setActiveSettingsTab] = useState<
@@ -212,9 +211,15 @@ function RootComponent() {
   const [userAgeInput, setUserAgeInput] = useState<string>("");
   const [profileNameInput, setProfileNameInput] = useState<string>("");
   const [savedProfileName, setSavedProfileName] = useState<string>("");
-  const [settingsAgeCodeInput, setSettingsAgeCodeInput] = useState<string>("");
-  const [settingsAgeError, setSettingsAgeError] = useState(false);
-  const [settingsAgeSuccess, setSettingsAgeSuccess] = useState(false);
+  
+  // Unified age and passcode management states
+  const [unifiedAgeCodeInput, setUnifiedAgeCodeInput] = useState<string>("");
+  const [newPasscode, setNewPasscode] = useState<string>("");
+  const [confirmNewPasscode, setConfirmNewPasscode] = useState<string>("");
+  const [unifiedUpdateStatus, setUnifiedUpdateStatus] = useState<{
+    text: string;
+    isError: boolean;
+  } | null>(null);
 
   const [unlockCodeInput, setUnlockCodeInput] = useState("");
   const [unlockStatusMsg, setUnlockStatusMsg] = useState<{
@@ -244,14 +249,6 @@ function RootComponent() {
   const [keygenResult, setKeygenResult] = useState<string | null>(null);
   const [remoteKeys, setRemoteKeys] = useState<any[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(false);
-
-  const [currentPasscodeInput, setCurrentPasscodeInput] = useState("");
-  const [newPasscode, setNewPasscode] = useState("");
-  const [confirmNewPasscode, setConfirmNewPasscode] = useState("");
-  const [passcodeStatusMsg, setPasscodeStatusMsg] = useState<{
-    text: string;
-    isError: boolean;
-  } | null>(null);
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
   const [headerSearchInput, setHeaderSearchInput] = useState("");
@@ -283,19 +280,8 @@ function RootComponent() {
   };
 
   const handleCloseAll = () => {
-    setShowSettings(false);
     setShowProfileMenu(false);
     setActiveSettingsTab(null);
-  };
-
-  const handleToggleSettings = () => {
-    if (showSettings) handleCloseAll();
-    else {
-      handleCloseAll();
-      lastScrollYRef.current = window.scrollY;
-      setShowSettings(true);
-      setActiveSettingsTab(null);
-    }
   };
 
   const handleToggleProfileMenu = () => {
@@ -317,7 +303,7 @@ function RootComponent() {
 
   useEffect(() => {
     const handleWindowScroll = () => {
-      if (showSettings || showProfileMenu) {
+      if (showProfileMenu) {
         if (Math.abs(window.scrollY - lastScrollYRef.current) > 60) {
           handleCloseAll();
         }
@@ -325,7 +311,7 @@ function RootComponent() {
     };
     window.addEventListener("scroll", handleWindowScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleWindowScroll);
-  }, [showSettings, showProfileMenu]);
+  }, [showProfileMenu]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -760,60 +746,50 @@ function RootComponent() {
     setLargeButtonsState(enabled);
   };
 
-  const handleUpdateAgeInSettings = (e: React.FormEvent) => {
+  // Unified handler for Name, Age, and optional Passcode change
+  const handleUnifiedProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     const locked = getAgeLockCode();
-    if (!locked || settingsAgeCodeInput.trim() !== locked) {
-      setSettingsAgeError(true);
-      setSettingsAgeCodeInput("");
+
+    if (!locked || unifiedAgeCodeInput.trim() !== locked) {
+      setUnifiedUpdateStatus({ text: "⚠️ Current age-lock code is incorrect.", isError: true });
+      setUnifiedAgeCodeInput("");
       return;
     }
+
     const parsedAge = parseInt(userAgeInput, 10);
     if (isNaN(parsedAge) || parsedAge < 1 || parsedAge > 120) {
-      setSettingsAgeError(true);
+      setUnifiedUpdateStatus({ text: "⚠️ Please enter a valid age (1–120).", isError: true });
       return;
     }
-    saveUserAge(parsedAge);
-    setSettingsAgeError(false);
-    setSettingsAgeSuccess(true);
-    setSettingsAgeCodeInput("");
-    setTimeout(() => setSettingsAgeSuccess(false), 3000);
-    window.dispatchEvent(new Event("rabtv_settings_updated"));
-  };
 
-  const handleChangePasscodeInSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    const locked = getAgeLockCode();
-    if (currentPasscodeInput.trim() !== locked) {
-      setPasscodeStatusMsg({
-        text: "Current age-lock code is incorrect.",
-        isError: true,
-      });
-      return;
+    // If new passcode fields are filled, validate and update passcode
+    const trimmedNew = newPasscode.trim();
+    const trimmedConfirm = confirmNewPasscode.trim();
+
+    if (trimmedNew || trimmedConfirm) {
+      if (!/^\d{4}$/.test(trimmedNew)) {
+        setUnifiedUpdateStatus({ text: "⚠️ New age-lock code must be exactly 4 digits.", isError: true });
+        return;
+      }
+      if (trimmedNew !== trimmedConfirm) {
+        setUnifiedUpdateStatus({ text: "⚠️ New codes do not match.", isError: true });
+        return;
+      }
+      saveAgeLockCode(trimmedNew);
     }
-    if (!/^\d{4}$/.test(newPasscode.trim())) {
-      setPasscodeStatusMsg({
-        text: "New age-lock code must be exactly 4 digits.",
-        isError: true,
-      });
-      return;
-    }
-    if (newPasscode !== confirmNewPasscode) {
-      setPasscodeStatusMsg({
-        text: "New codes do not match.",
-        isError: true,
-      });
-      return;
-    }
-    saveAgeLockCode(newPasscode.trim());
-    setPasscodeStatusMsg({
-      text: "Age-lock code updated successfully!",
-      isError: false,
-    });
-    setCurrentPasscodeInput("");
+
+    saveUserAge(parsedAge);
+    const finalName = profileNameInput.trim() || "Friend";
+    localStorage.setItem("rabtv_profile_name", finalName);
+    setSavedProfileName(finalName);
+
+    setUnifiedUpdateStatus({ text: "✓ Profile and age-lock updated successfully!", isError: false });
+    setUnifiedAgeCodeInput("");
     setNewPasscode("");
     setConfirmNewPasscode("");
-    setTimeout(() => setPasscodeStatusMsg(null), 3000);
+    setTimeout(() => setUnifiedUpdateStatus(null), 3500);
+    window.dispatchEvent(new Event("rabtv_settings_updated"));
   };
 
   const handleSaveBackup = () => {
@@ -1180,21 +1156,12 @@ function RootComponent() {
                   >
                     🕒 History
                   </Link>
-
-                  <button
-                    type="button"
-                    onClick={handleToggleSettings}
-                    className={`flex h-9 sm:h-10 w-9 sm:w-10 items-center justify-center rounded-xl border text-base sm:text-lg shadow-sm transition focus:outline-none focus:ring-2 shrink-0 ${activeHeader.btnBg}`}
-                    aria-label="Settings"
-                  >
-                    ⚙️
-                  </button>
                 </div>
               )}
             </div>
           </header>
 
-          {/* PROFILE MENU */}
+          {/* PROFILE & SETTINGS MENU */}
           {showProfileMenu && !showFirstStartModal && (
             <div
               className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-2xl shadow-2xl max-h-[85vh] overflow-y-auto box-border`}
@@ -1204,7 +1171,7 @@ function RootComponent() {
                   <h3
                     className={`text-sm font-black uppercase tracking-wider ${getPrimaryAccentColor(appTheme)}`}
                   >
-                    👤 Personal Profile & License
+                    👤 Profile & Settings
                   </h3>
                   <button
                     type="button"
@@ -1213,6 +1180,108 @@ function RootComponent() {
                   >
                     ✕ Close
                   </button>
+                </div>
+
+                {/* APP SETTINGS TABS & CONTROLS */}
+                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    ⚙️ App Customization
+                  </h4>
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+                    {(["theme", "scale", "backup"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() =>
+                          setActiveSettingsTab(
+                            activeSettingsTab === tab ? null : tab
+                          )
+                        }
+                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition shrink-0 capitalize ${
+                          activeSettingsTab === tab
+                            ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                            : `${getSubtlePillBg(appTheme)}`
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+
+                  {activeSettingsTab === "theme" && (
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                      {allThemesList.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => handleThemeChange(t.id)}
+                          className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
+                            appTheme === t.id
+                              ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
+                              : `${getSubtlePillBg(appTheme)}`
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeSettingsTab === "scale" && (
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                      {(["small", "medium", "large"] as CardSize[]).map(
+                        (size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => handleSizeChange(size)}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize transition ${
+                              cardSize === size
+                                ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                : `${getSubtlePillBg(appTheme)}`
+                            }`}
+                          >
+                            {size}{" "}
+                            {size === "small"
+                              ? "(25%)"
+                              : size === "medium"
+                              ? "(60%)"
+                              : "(100%)"}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  {activeSettingsTab === "backup" && (
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 w-full pt-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveBackup}
+                        className={`w-full sm:w-auto rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
+                      >
+                        💾 Export Backup
+                      </button>
+                      <label
+                        className={`w-full sm:w-auto text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
+                      >
+                        🔄 Restore Backup
+                        <input
+                          type="file"
+                          accept=".json"
+                          onChange={handleRestoreBackup}
+                          className="hidden"
+                        />
+                      </label>
+                      {backupStatus && (
+                        <span
+                          className={`text-xs ${getPrimaryAccentColor(appTheme)} font-semibold text-center w-full`}
+                        >
+                          {backupStatus}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {isAdmin && (
@@ -1333,27 +1402,6 @@ function RootComponent() {
                   </div>
                 </div>
 
-                {/* Catalog Language & Region Preference */}
-                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    🌐 Catalog Language & Region
-                  </h4>
-                  <p className="text-[10px] text-slate-300 leading-relaxed">
-                    Set your preferred regional feed or language to directly customize your stream catalog.
-                  </p>
-                  <select
-                    value={selectedGlobalFeed}
-                    onChange={(e) => handleGlobalFeedChange(e.target.value as GlobalFeedOption)}
-                    className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none"
-                  >
-                    {globalFeedOptions.map((opt) => (
-                      <option key={opt} value={opt} className="bg-slate-900 text-white">
-                        🌐 {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
                     License Status
@@ -1412,127 +1460,61 @@ function RootComponent() {
                   )}
                 </div>
 
-                {/* Age lock – change age only with 4-digit PIN */}
+                {/* UNIFIED PROFILE, AGE & PASSCODE CHANGE SECTION */}
                 <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    Age Lock
+                    👤 Profile Name, Age & Age-Lock PIN
                   </h4>
                   <p className="text-[10px] text-slate-300">
-                    Age is locked with the 4-digit code set at first login.
-                    Enter that code to update age.
+                    Update your profile details and/or change your 4-digit age-lock passcode.
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div>
-                      <span className="block text-[11px] text-slate-300 mb-1">
-                        Name:
-                      </span>
-                      <input
-                        type="text"
-                        maxLength={20}
-                        value={profileNameInput}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setProfileNameInput(val);
-                          localStorage.setItem(
-                            "rabtv_profile_name",
-                            val.trim()
-                          );
-                          setSavedProfileName(val.trim());
-                        }}
-                        placeholder="Your Name"
-                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
-                      />
-                    </div>
-                    <div>
-                      <span className="block text-[11px] text-slate-300 mb-1">
-                        Age:
-                      </span>
-                      <input
-                        type="number"
-                        min={1}
-                        max={120}
-                        value={userAgeInput}
-                        onChange={(e) => setUserAgeInput(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
-                      />
-                    </div>
-                  </div>
-
-                  <form
-                    onSubmit={handleUpdateAgeInSettings}
-                    className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 pt-1 w-full box-border"
-                  >
-                    <div className="flex-1">
-                      <span className="block text-[11px] text-slate-300 mb-1">
-                        Age-lock code (4 digits):
-                      </span>
-                      <input
-                        type="password"
-                        inputMode="numeric"
-                        maxLength={4}
-                        placeholder="••••"
-                        value={settingsAgeCodeInput}
-                        onChange={(e) =>
-                          setSettingsAgeCodeInput(
-                            e.target.value.replace(/\D/g, "").slice(0, 4)
-                          )
-                        }
-                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className={`w-full sm:w-auto px-4 py-2 rounded-xl ${getPrimaryBgColor(appTheme)} text-xs font-bold whitespace-nowrap shadow transition shrink-0 box-border`}
-                    >
-                      Update Age
-                    </button>
-                  </form>
-
-                  {settingsAgeError && (
-                    <span className="text-[11px] font-semibold text-red-400 text-center block">
-                      ⚠️ Wrong age-lock code or invalid age
-                    </span>
-                  )}
-                  {settingsAgeSuccess && (
-                    <span className="text-[11px] font-semibold text-emerald-400 text-center block">
-                      ✓ Age updated!
-                    </span>
-                  )}
-                </div>
-
-                {/* Change age-lock PIN */}
-                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    Change Age-Lock Code
-                  </h4>
-                  <form
-                    onSubmit={handleChangePasscodeInSettings}
-                    className="space-y-2.5 box-border"
-                  >
-                    <div>
-                      <span className="block text-[11px] text-slate-300 mb-1">
-                        Current 4-digit code:
-                      </span>
-                      <input
-                        type="password"
-                        inputMode="numeric"
-                        maxLength={4}
-                        placeholder="••••"
-                        value={currentPasscodeInput}
-                        onChange={(e) =>
-                          setCurrentPasscodeInput(
-                            e.target.value.replace(/\D/g, "").slice(0, 4)
-                          )
-                        }
-                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
-                      />
-                    </div>
+                  <form onSubmit={handleUnifiedProfileUpdate} className="space-y-2.5 box-border">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
-                        <span className="block text-[11px] text-slate-300 mb-1">
-                          New code:
-                        </span>
+                        <span className="block text-[11px] text-slate-300 mb-1">Name:</span>
+                        <input
+                          type="text"
+                          maxLength={25}
+                          value={profileNameInput}
+                          onChange={(e) => setProfileNameInput(e.target.value)}
+                          placeholder="Your Name"
+                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-[11px] text-slate-300 mb-1">Age:</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={120}
+                          value={userAgeInput}
+                          onChange={(e) => setUserAgeInput(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="block text-[11px] text-slate-300 mb-1">Current 4-digit PIN (Required to save):</span>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder="••••"
+                        value={unifiedAgeCodeInput}
+                        onChange={(e) =>
+                          setUnifiedAgeCodeInput(
+                            e.target.value.replace(/\D/g, "").slice(0, 4)
+                          )
+                        }
+                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-white/10">
+                      <div>
+                        <span className="block text-[11px] text-slate-300 mb-1">New PIN (Optional):</span>
                         <input
                           type="password"
                           inputMode="numeric"
@@ -1548,9 +1530,7 @@ function RootComponent() {
                         />
                       </div>
                       <div>
-                        <span className="block text-[11px] text-slate-300 mb-1">
-                          Confirm:
-                        </span>
+                        <span className="block text-[11px] text-slate-300 mb-1">Confirm New PIN:</span>
                         <input
                           type="password"
                           inputMode="numeric"
@@ -1566,21 +1546,23 @@ function RootComponent() {
                         />
                       </div>
                     </div>
+
                     <button
                       type="submit"
-                      className="w-full mt-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition box-border"
+                      className={`w-full mt-2 py-2 rounded-xl ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition box-border`}
                     >
-                      Update Age-Lock Code
+                      Save Profile & PIN Updates
                     </button>
-                    {passcodeStatusMsg && (
+
+                    {unifiedUpdateStatus && (
                       <p
                         className={`text-[11px] font-bold mt-1 text-center ${
-                          passcodeStatusMsg.isError
+                          unifiedUpdateStatus.isError
                             ? "text-red-400"
                             : "text-emerald-400"
                         }`}
                       >
-                        {passcodeStatusMsg.text}
+                        {unifiedUpdateStatus.text}
                       </p>
                     )}
                   </form>
@@ -1679,122 +1661,6 @@ function RootComponent() {
                     </button>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* SETTINGS */}
-          {showSettings && !showFirstStartModal && (
-            <div
-              className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-2xl shadow-2xl max-h-[80vh] overflow-y-auto`}
-            >
-              <div className="mx-auto flex flex-col items-center gap-3">
-                <div className="flex items-center justify-between w-full border-b border-white/10 pb-2">
-                  <h3
-                    className={`text-sm font-black uppercase tracking-wider ${getPrimaryAccentColor(appTheme)}`}
-                  >
-                    ⚙️ App Settings
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={handleCloseAll}
-                    className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5"
-                  >
-                    ✕ Close
-                  </button>
-                </div>
-                <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-white/10 w-full justify-start sm:justify-center scrollbar-none">
-                  {(["theme", "scale", "backup"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() =>
-                        setActiveSettingsTab(
-                          activeSettingsTab === tab ? null : tab
-                        )
-                      }
-                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition shrink-0 capitalize ${
-                        activeSettingsTab === tab
-                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                          : `${getSubtlePillBg(appTheme)}`
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-                {activeSettingsTab === "theme" && (
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    {allThemesList.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => handleThemeChange(t.id)}
-                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
-                          appTheme === t.id
-                            ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
-                            : `${getSubtlePillBg(appTheme)}`
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {activeSettingsTab === "scale" && (
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    {(["small", "medium", "large"] as CardSize[]).map(
-                      (size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => handleSizeChange(size)}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize transition ${
-                            cardSize === size
-                              ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                              : `${getSubtlePillBg(appTheme)}`
-                          }`}
-                        >
-                          {size}{" "}
-                          {size === "small"
-                            ? "(25%)"
-                            : size === "medium"
-                            ? "(60%)"
-                            : "(100%)"}
-                        </button>
-                      )
-                    )}
-                  </div>
-                )}
-                {activeSettingsTab === "backup" && (
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 w-full">
-                    <button
-                      type="button"
-                      onClick={handleSaveBackup}
-                      className={`w-full sm:w-auto rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
-                    >
-                      💾 Export Backup
-                    </button>
-                    <label
-                      className={`w-full sm:w-auto text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
-                    >
-                      🔄 Restore Backup
-                      <input
-                        type="file"
-                        accept=".json"
-                        onChange={handleRestoreBackup}
-                        className="hidden"
-                      />
-                    </label>
-                    {backupStatus && (
-                      <span
-                        className={`text-xs ${getPrimaryAccentColor(appTheme)} font-semibold text-center w-full`}
-                      >
-                        {backupStatus}
-                      </span>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           )}
