@@ -229,7 +229,7 @@ function RootComponent() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Update Channel State ("stable" vs "nightly")
-  const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">(() => {
+  const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">(()) => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("rabtv_update_channel") as "stable" | "nightly") || "stable";
     }
@@ -287,7 +287,7 @@ function RootComponent() {
     try {
       if (typeof window !== "undefined" && (window as any).Capacitor) {
         const browserModule = await import(/* @vite-ignore */ "@capacitor/browser");
-        await browserModule.Browser.open({ url });
+        await browserModule.Browser.open({ url, presentationStyle: 'popover' });
         return;
       }
     } catch (err) {
