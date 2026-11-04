@@ -125,6 +125,13 @@ jobs:
           </html>
           EOF
 
+      - name: Generate Dynamic Version File from Package.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p src/lib
+          echo "export const APP_VERSION = \"$VERSION\";" > src/lib/version.ts
+          echo "Generated version.ts with version ${VERSION}"
+
       - name: Build Web Assets for Capacitor (Executes Version Bump)
         env:
           CAPACITOR_BUILD: "true"
@@ -282,7 +289,7 @@ jobs:
 
           cd updates
           echo "Cleaning up old versions while preserving XML files..."
-          find . -maxdepth 1 -type f ! -name "*.xml" -printf '%T@ %p\n' | sort -n | head -n -2 | while read -r timestamp file; do
+          find . -maxdepth 1 ! -name "*.xml" -printf '%T@ %p\n' | sort -n | head -n -2 | while read -r timestamp file; do
             if [ -n "$file" ]; then
               echo "Removing outdated version: $file"
               rm -f "$file"
