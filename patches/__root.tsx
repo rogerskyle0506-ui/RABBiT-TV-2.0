@@ -1887,45 +1887,45 @@ function RootComponent() {
                         </p>
                         <p className="text-[11px] text-slate-300">
                           Need help? Message{" "}
-                          <a 
-                            href="https://wa.me/?text=Hi%20Rabbit,%20I%20need%20help%20with%20my%20passcode%20on%20RABBiT%20TV" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-emerald-400 font-bold underline hover:text-emerald-300"
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenExternal("https://wa.me/?text=Hi%20Rabbit,%20I%20need%20help%20with%20my%20passcode%20on%20RABBiT%20TV", e)}
+                            className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
                           >
-                            WhatsApp (RabbitProductions)
-                          </a>{" "}
+                            WhatsApp contact (@RabbitProductions)
+                          </button>{" "}
                           or text{" "}
-                          <a 
-                            href="sms:7058093865"
-                            className="text-amber-300 font-bold underline hover:text-amber-200"
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenExternal("sms:7058093865", e)}
+                            className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
                           >
                             (705) 809-3865
-                          </a>.
+                          </button>.
                         </p>
                       </div>
                     )}
 
-                    {/* Contact Me info */}
+                   {/* Contact Me info */}
                     <div className="rounded-xl border border-white/10 bg-black/40 p-2.5 text-center text-xs text-slate-300 space-y-1 backdrop-blur-md">
                       <p className="font-semibold text-white">Need an activation code or support?</p>
                       <p className="text-[11px] text-slate-300">
                         Message me on WhatsApp (
-                        <a 
-                          href="https://wa.me/?text=Hi%20Rabbit,%20I%20need%20an%20activation%20code%20for%20RABBiT%20TV" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-emerald-400 font-bold underline hover:text-emerald-300"
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenExternal("https://wa.me/?text=Hi%20Rabbit,%20I%20need%20an%20activation%20code%20for%20RABBiT%20TV", e)}
+                          className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
                         >
-                          RabbitProductions
-                        </a>
-                        ) or text my private number at{" "}
-                        <a 
-                          href="sms:7058093865"
-                          className="text-amber-300 font-bold underline hover:text-amber-200"
+                          @RabbitProductions
+                        </button>
+                        ) or text for a code at{" "}
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenExternal("sms:7058093865", e)}
+                          className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
                         >
                           (705) 809-3865
-                        </a>.
+                        </button>.
                       </p>
                     </div>
 
