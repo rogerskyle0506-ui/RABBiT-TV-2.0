@@ -8,6 +8,7 @@ import "@/styles.css";
 import { useState, useEffect, useRef } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { sendPermanentActivationAlert } from "@/lib/report";
+import { checkForAppUpdates } from "@/lib/updater";
 import {
   CardSize,
   StreamQuality,
@@ -224,6 +225,19 @@ function RootComponent() {
   const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Update Channel State ("stable" vs "nightly")
+  const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("rabtv_update_channel") as "stable" | "nightly") || "stable";
+    }
+    return "stable";
+  });
+
+  const handleUpdateChannelChange = (channel: "stable" | "nightly") => {
+    setUpdateChannel(channel);
+    localStorage.setItem("rabtv_update_channel", channel);
+  };
+
   // Local state for UI feedback & Admin Key Management
   const [keygenName, setKeygenName] = useState("");
   const [keygenAge, setKeygenAge] = useState("");
@@ -292,6 +306,14 @@ function RootComponent() {
       setShowProfileMenu(true);
     }
   };
+
+  // Trigger silent OTA update check 3 seconds after app launch
+  useEffect(() => {
+    const updateTimer = setTimeout(() => {
+      void checkForAppUpdates();
+    }, 3000);
+    return () => clearTimeout(updateTimer);
+  }, []);
 
   useEffect(() => {
     const handleWindowScroll = () => {
@@ -1276,6 +1298,40 @@ function RootComponent() {
                     </div>
                   </div>
                 )}
+
+                {/* Update Channel Preference */}
+                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    🚀 Update Channel
+                  </h4>
+                  <p className="text-[10px] text-slate-300 leading-relaxed">
+                    Choose whether you want stable releases or bleeding-edge nightly builds.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateChannelChange("stable")}
+                      className={`py-2 rounded-xl text-xs font-bold transition ${
+                        updateChannel === "stable"
+                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                          : "bg-slate-800/80 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      🛡️ Stable
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateChannelChange("nightly")}
+                      className={`py-2 rounded-xl text-xs font-bold transition ${
+                        updateChannel === "nightly"
+                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                          : "bg-slate-800/80 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      ⚡ Nightly
+                    </button>
+                  </div>
+                </div>
 
                 {/* Catalog Language & Region Preference */}
                 <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
