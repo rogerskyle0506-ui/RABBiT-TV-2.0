@@ -1,107 +1,88 @@
-// src/lib/updater.ts
-import { App } from '@capacitor/app';
+// lib/updater.ts
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Browser } from "@capacitor/browser";
 
-const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/updates";
+const GITHUB_REPO = (import.meta as any).env?.VITE_GH_REPO || "RabbitProductions/RabbitTV-Releases";
+const GITHUB_RELEASES_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT || "";
 
-export interface UpdateManifest {
-  versionCode: number;
-  versionName: string;
-  apkUrl: string;
-  releaseNotes?: string;
-}
-
-/**
- * Converts a 4-part or 3-part version string (e.g. "2.2.5.1") into a numeric version code.
- */
-export function parseVersionCode(versionStr: string): number {
-  if (!versionStr) return 0;
-  const parts = versionStr.split('.').map((p) => parseInt(p, 10) || 0);
-  while (parts.length < 4) {
-    parts.push(0);
-  }
-  return parts[0] * 1000000 + parts[1] * 10004 + parts[2] * 100 + parts[3];
-}
-
-/**
- * Returns the currently running app version.
- */
-export async function getCurrentAppVersion(): Promise<{ versionName: string; versionCode: number }> {
+export async function checkForAppUpdates(silent = true) {
   try {
-    const info = await App.getInfo();
-    const versionName = info.version || "2.2.5.0";
-    const versionCode = parseInt(info.build, 10) || parseVersionCode(versionName);
-    return { versionName, versionCode };
-  } catch {
-    return { versionName: "2.2.5.0", versionCode: parseVersionCode("2.2.5.0") };
-  }
-}
-
-/**
- * Checks for updates based on the user's selected update channel ("stable" | "nightly").
- */
-export async function checkForAppUpdates(): Promise<void> {
-  if (typeof window === "undefined") return;
-
-  const channel = (localStorage.getItem("rabtv_update_channel") as "stable" | "nightly") || "stable";
-  const manifestFile = channel === "nightly" ? "nightly_manifest.json" : "manifest.json";
-  const manifestUrl = `${GITHUB_RAW_BASE}/${manifestFile}?t=${Date.now()}`;
-
-  try {
-    const response = await fetch(manifestUrl, { cache: "no-store" });
-    if (!response.ok) return;
-
-    const remoteManifest: UpdateManifest = await response.json();
-    const current = await getCurrentAppVersion();
-
-    if (remoteManifest.versionCode > current.versionCode) {
-      console.log(`[Updater] New ${channel} build found: v${remoteManifest.versionName}`);
-      promptUserToUpdate(remoteManifest);
+    const channel = localStorage.getItem("rabtv_update_channel") || "stable";
+    
+    const headers: Record<string, string> = {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "RabbitTV-App"
+    };
+    
+    if (GITHUB_TOKEN) {
+      headers["Authorization"] = `Bearer ${GITHUB_TOKEN}`;
     }
-  } catch (error) {
-    console.error("[Updater] Silent update check failed:", error);
+
+    const res = await fetch(GITHUB_RELEASES_API, { headers });
+
+    if (!res.ok) {
+      if (!silent) console.error("Failed to check for updates");
+      return;
+    }
+
+    const release = await res.json();
+    const latestVersion = release.tag_name?.replace(/^v/, "") || "1.0.0";
+    const currentVersion = "1.0.0"; // Active app version
+
+    const apkAsset = release.assets?.find((asset: any) => asset.name.endsWith(".apk"));
+    if (!apkAsset) return;
+
+    if (latestVersion !== currentVersion || channel === "nightly") {
+      const downloadUrl = apkAsset.browser_download_url;
+      if (confirm(`A new ${channel} update (${latestVersion}) is available! Download and install now?`)) {
+        await downloadAndInstallApk(downloadUrl, apkAsset.name);
+      }
+    } else if (!silent) {
+      alert("You are running the latest version of RABBiT TV!");
+    }
+  } catch (err) {
+    console.error("Error checking for updates:", err);
+    if (!silent) alert("Failed to check for updates. Check your internet connection.");
   }
 }
 
-/**
- * Displays an update notification overlay when a newer build is available.
- */
-function promptUserToUpdate(manifest: UpdateManifest) {
-  const existing = document.getElementById("rabtv-update-modal");
-  if (existing) return;
+async function downloadAndInstallApk(url: string, fileName: string) {
+  try {
+    if (typeof window === "undefined") return;
 
-  const overlay = document.createElement("div");
-  overlay.id = "rabtv-update-modal";
-  overlay.className =
-    "fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl animate-fade-in";
+    const isCapacitor = !!(window as any).Capacitor;
 
-  overlay.innerHTML = `
-    <div class="max-w-md w-full bg-slate-900 border border-violet-500/40 rounded-3xl p-6 text-white shadow-2xl space-y-4 text-center">
-      <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600/20 text-2xl border border-violet-500/30">
-        🚀
-      </div>
-      <h3 class="text-xl font-bold text-violet-300">New Update Available!</h3>
-      <p class="text-xs text-slate-300">
-        Version <strong>v${manifest.versionName}</strong> is ready for installation.
-      </p>
-      ${
-        manifest.releaseNotes
-          ? `<div class="bg-black/40 border border-white/10 p-3 rounded-xl text-left text-[11px] text-slate-300 max-h-28 overflow-y-auto">${manifest.releaseNotes}</div>`
-          : ""
-      }
-      <div class="flex gap-2 pt-2">
-        <button id="rabtv-update-skip" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition">
-          Later
-        </button>
-        <a id="rabtv-update-dl" href="${manifest.apkUrl}" download class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg transition flex items-center justify-center gap-1">
-          📥 Download APK
-        </a>
-      </div>
-    </div>
-  `;
+    if (isCapacitor) {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const base64Data = await blobToBase64(blob);
 
-  document.body.appendChild(overlay);
+      const savedFile = await Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
 
-  document.getElementById("rabtv-update-skip")?.addEventListener("click", () => {
-    overlay.remove();
+      await Browser.open({ url: savedFile.uri });
+    } else {
+      window.open(url, "_blank");
+    }
+  } catch (err) {
+    console.error("Failed to download APK internally:", err);
+    window.open(url, "_blank");
+  }
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      const base64Data = base64String.split(",")[1];
+      resolve(base64Data);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 }
