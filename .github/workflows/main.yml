@@ -250,11 +250,21 @@ jobs:
             -Pandroid.injected.signing.key.alias=RABBITV34688643 \
             -Pandroid.injected.signing.key.password=RABBITV34688643
 
-      - name: Copy APK to Public updates/ Folder
+      - name: Copy APK to Public updates/ Folder and Prune Old Versions
         run: |
           mkdir -p updates
           cp android/app/build/outputs/apk/release/app-release.apk updates/${{ steps.version-extractor.outputs.apk_filename }}
           echo "Successfully copied APK to updates/${{ steps.version-extractor.outputs.apk_filename }}"
+
+          cd updates
+          echo "Cleaning up old versions while preserving XML files..."
+          find . -maxdepth 1 -type f ! -name "*.xml" -printf '%T@ %p\n' | sort -n | head -n -2 | while read -r timestamp file; do
+            if [ -n "$file" ]; then
+              echo "Removing outdated version: $file"
+              rm -f "$file"
+            fi
+          done
+          cd ..
 
       - name: Commit and Push Version Bump, Manifest & APK to Repository
         run: |
