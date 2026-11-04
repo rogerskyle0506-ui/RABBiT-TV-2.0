@@ -152,16 +152,23 @@ async function downloadAndInstallApk(url: string, fileName: string) {
 
     if (isCapacitor) {
       try {
-        // @vite-ignore prevents Vite from breaking static analysis
-        const browserModule = await import(/* @vite-ignore */ "@capacitor/browser");
-        await browserModule.Browser.open({ url });
+        // Direct assignment to window.location forces the Android WebView context 
+        // to hand the direct file stream over to the native Android download manager.
+        window.location.href = url;
         return;
       } catch (nativeErr: any) {
-        console.warn("Capacitor Browser plugin unavailable, falling back:", nativeErr);
+        console.warn("Direct location assignment failed, trying fallback:", nativeErr);
       }
     }
 
-    window.open(url, "_blank");
+    // Standard web fallback using anchor download trigger
+    const a = document.createElement("a");
+    a.href = url;
+    a.setAttribute("download", fileName);
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   } catch (err: any) {
     console.error("Failed to download APK:", err);
     alert(`Failed to download APK: ${err?.message || err}`);
