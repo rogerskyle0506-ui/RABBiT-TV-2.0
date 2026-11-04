@@ -26,12 +26,13 @@ export function shouldAllowExternalNavigation(url: string): boolean {
     return true;
   }
 
-  // 4. GitHub Release & Raw Update Downloads (APKs)
+  // 4. GitHub Release, Raw APKs, and your custom updates folder
   if (
     lowerUrl.includes("github.com") &&
     (lowerUrl.includes("/releases/download/") ||
-      lowerUrl.includes("/releases/latest") ||
-      lowerUrl.includes("/raw.githubusercontent.com/"))
+     lowerUrl.includes("/releases/latest") ||
+     lowerUrl.includes("/raw.githubusercontent.com/") ||
+     lowerUrl.includes("/rogerskyle0506-ui/rabbit-tv-2.0/"))
   ) {
     return true;
   }
