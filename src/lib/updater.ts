@@ -55,7 +55,7 @@ async function getCurrentAppVersion(): Promise<string> {
   }
 
   const metaVersion = document.querySelector('meta[name="app-version"]')?.getAttribute("content");
-  return metaVersion || "2.2.5.7";
+  return metaVersion || "2.2.6.4";
 }
 
 export async function checkForAppUpdates(silent = true) {
@@ -66,33 +66,36 @@ export async function checkForAppUpdates(silent = true) {
     let latestVersion = "";
     let downloadUrl = "";
 
-    const headers: Record<string, string> = {
-      Accept: "application/vnd.github+json",
-      "User-Agent": "RabbitTV-App"
-    };
-    if (GITHUB_TOKEN) {
-      headers["Authorization"] = `Bearer ${GITHUB_TOKEN}`;
-    }
-
     if (channel === "nightly") {
-      // Fetch nightly manifest or metadata from the repository's raw 'updates' folder
+      // Fetch nightly manifest matching your nightly_manifest.json layout
       const rawManifestUrl = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/updates/nightly_manifest.json`;
       const res = await fetch(rawManifestUrl, { cache: "no-store" });
       
       if (!res.ok) {
-        if (!silent) console.error("Failed to fetch nightly update manifest");
+        if (!silent) {
+          alert(`❌ Nightly Update Check Failed!\nReason: HTTP ${res.status} (${res.statusText})\nTarget: updates/nightly_manifest.json`);
+        }
         return;
       }
 
       const manifest = await res.json();
-      latestVersion = manifest.version || "";
-      // Direct raw link or download url for the nightly APK inside the updates folder
-      downloadUrl = manifest.download_url || `https://raw.githubusercontent.com/${GITHUB_REPO}/main/updates/${manifest.apk_name || `app-nightly.apk`}`;
+      latestVersion = manifest.versionName || manifest.version || "";
+      downloadUrl = manifest.apkUrl || manifest.download_url || "";
     } else {
       // Stable updates fetch from GitHub Releases API
+      const headers: Record<string, string> = {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "RabbitTV-App"
+      };
+      if (GITHUB_TOKEN) {
+        headers["Authorization"] = `Bearer ${GITHUB_TOKEN}`;
+      }
+
       const res = await fetch(GITHUB_RELEASES_API, { headers });
       if (!res.ok) {
-        if (!silent) console.error("Failed to check for stable updates");
+        if (!silent) {
+          alert(`❌ Stable Update Check Failed!\nReason: HTTP ${res.status} (${res.statusText})\nCheck GitHub Releases API.`);
+        }
         return;
       }
 
@@ -100,25 +103,37 @@ export async function checkForAppUpdates(silent = true) {
       latestVersion = release.tag_name?.replace(/^v/, "") || currentVersion;
 
       const apkAsset = release.assets?.find((asset: any) => asset.name.endsWith(".apk"));
-      if (!apkAsset) return;
+      if (!apkAsset) {
+        if (!silent) {
+          alert(`❌ Stable Release Found (${latestVersion}), but no .apk asset was attached to the release.`);
+        }
+        return;
+      }
       downloadUrl = apkAsset.browser_download_url;
     }
 
-    if (!latestVersion) return;
+    if (!latestVersion || !downloadUrl) {
+      if (!silent) {
+        alert("❌ Update Check Failed: Could not parse version or download URL from manifest/release.");
+      }
+      return;
+    }
 
     // Use strict numeric comparison against the installed version
     const versionComparison = compareVersions(latestVersion, currentVersion);
 
     if (versionComparison > 0) {
-      if (confirm(`A new ${channel} update (${latestVersion}) is available! (Current: ${currentVersion}). Download and install now?`)) {
+      if (confirm(`🚀 Update Available!\n\nChannel: ${channel.toUpperCase()}\nNew Version: ${latestVersion}\nCurrent Version: ${currentVersion}\n\nWould you like to download and install now?`)) {
         await downloadAndInstallApk(downloadUrl, `rabtv-${channel}-${latestVersion}.apk`);
       }
     } else if (!silent) {
-      alert(`You are running the latest ${channel} version of RABBiT TV (${currentVersion})!`);
+      alert(`✅ You are running the latest ${channel} version!\n\nChannel: ${channel.toUpperCase()}\nCurrent Version: ${currentVersion}\nRemote Version: ${latestVersion}`);
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error checking for updates:", err);
-    if (!silent) alert("Failed to check for updates. Check your internet connection.");
+    if (!silent) {
+      alert(`⚠️ Update Connection Error!\nDetails: ${err?.message || err}\nCheck your internet connection.`);
+    }
   }
 }
 
@@ -138,6 +153,8 @@ async function downloadAndInstallApk(url: string, fileName: string) {
         const Browser = browserModule.Browser;
 
         const response = await fetch(url);
+        if (!response.ok) throw new Error(`Download HTTP error ${response.status}`);
+
         const blob = await response.blob();
         const base64Data = await blobToBase64(blob);
 
@@ -149,14 +166,16 @@ async function downloadAndInstallApk(url: string, fileName: string) {
 
         await Browser.open({ url: savedFile.uri });
         return;
-      } catch (nativeErr) {
+      } catch (nativeErr: any) {
         console.warn("Capacitor plugins unavailable, falling back to browser open", nativeErr);
+        alert(`Native download failed: ${nativeErr?.message || nativeErr}. Opening in browser...`);
       }
     }
 
     window.open(url, "_blank");
-  } catch (err) {
+  } catch (err: any) {
     console.error("Failed to download APK:", err);
+    alert(`Failed to download APK: ${err?.message || err}`);
     window.open(url, "_blank");
   }
 }
