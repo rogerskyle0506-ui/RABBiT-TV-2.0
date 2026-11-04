@@ -5,6 +5,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { HolidayOverlay } from "@/components/HolidayOverlay";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { ActivationModal } from "@/components/ActivationModal";
+import { AdminBugInbox } from "@/components/AdminBugInbox";
 import "@/styles.css";
 import { useState, useEffect, useRef } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
@@ -1131,84 +1132,91 @@ function RootComponent() {
                 </div>
 
                 {isAdmin && (
-                  <div className="space-y-3 bg-red-950/40 p-3.5 rounded-xl border border-red-500/30 box-border backdrop-blur-md">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-red-300">
-                      🔑 Admin Key Generator & Manager
-                    </h4>
-                    <form onSubmit={handleKeygen} className="space-y-2">
-                      <input
-                        type="text"
-                        placeholder="User name"
-                        value={keygenName}
-                        onChange={(e) => setKeygenName(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
-                      />
-                      <input
-                        type="number"
-                        min={1}
-                        max={120}
-                        placeholder="User age"
-                        value={keygenAge}
-                        onChange={(e) => setKeygenAge(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
-                      />
-                      <button
-                        type="submit"
-                        className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
-                      >
-                        Generate & Push Key to Gist
-                      </button>
-                    </form>
-                    {keygenResult && (
-                      <div className="rounded-lg bg-black/60 border border-red-400/30 p-2 text-center">
-                        <p className="text-xs font-bold text-amber-300">{keygenResult}</p>
-                      </div>
-                    )}
+                  <div className="space-y-4">
+                    {/* ADMIN BUG REPORT INBOX INTEGRATION */}
+                    <div className="bg-red-950/40 p-3.5 rounded-xl border border-red-500/30 box-border backdrop-blur-md">
+                      <AdminBugInbox />
+                    </div>
 
-                    {/* Key List & Management Section */}
-                    <div className="pt-3 border-t border-red-500/20 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-200">Active & Used Keys</span>
+                    <div className="space-y-3 bg-red-950/40 p-3.5 rounded-xl border border-red-500/30 box-border backdrop-blur-md">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-red-300">
+                        🔑 Admin Key Generator & Manager
+                      </h4>
+                      <form onSubmit={handleKeygen} className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder="User name"
+                          value={keygenName}
+                          onChange={(e) => setKeygenName(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+                        />
+                        <input
+                          type="number"
+                          min={1}
+                          max={120}
+                          placeholder="User age"
+                          value={keygenAge}
+                          onChange={(e) => setKeygenAge(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+                        />
                         <button
-                          type="button"
-                          onClick={fetchRemoteKeys}
-                          className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition"
+                          type="submit"
+                          className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
                         >
-                          {loadingKeys ? "Loading..." : "🔄 Refresh List"}
+                          Generate & Push Key to Gist
                         </button>
-                      </div>
-                      
-                      <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-                        {remoteKeys.length === 0 ? (
-                          <p className="text-[10px] text-slate-400 text-center py-2">Click refresh to load keys from Gist.</p>
-                        ) : (
-                          remoteKeys.map((kObj, idx) => (
-                            <div key={idx} className="flex items-center justify-between bg-black/50 p-2 rounded-lg border border-white/10 text-[11px]">
-                              <div className="truncate pr-2">
-                                <span className="font-mono font-bold text-amber-300">{kObj.key}</span>
-                                <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${kObj.active ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"}`}>
-                                  {kObj.active ? "Active" : "Used/Inactive"}
-                                </span>
+                      </form>
+                      {keygenResult && (
+                        <div className="rounded-lg bg-black/60 border border-red-400/30 p-2 text-center">
+                          <p className="text-xs font-bold text-amber-300">{keygenResult}</p>
+                        </div>
+                      )}
+
+                      {/* Key List & Management Section */}
+                      <div className="pt-3 border-t border-red-500/20 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-200">Active & Used Keys</span>
+                          <button
+                            type="button"
+                            onClick={fetchRemoteKeys}
+                            className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition"
+                          >
+                            {loadingKeys ? "Loading..." : "🔄 Refresh List"}
+                          </button>
+                        </div>
+                        
+                        <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                          {remoteKeys.length === 0 ? (
+                            <p className="text-[10px] text-slate-400 text-center py-2">Click refresh to load keys from Gist.</p>
+                          ) : (
+                            remoteKeys.map((kObj, idx) => (
+                              <div key={idx} className="flex items-center justify-between bg-black/50 p-2 rounded-lg border border-white/10 text-[11px]">
+                                <div className="truncate pr-2">
+                                  <span className="font-mono font-bold text-amber-300">{kObj.key}</span>
+                                  <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${kObj.active ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"}`}>
+                                    {kObj.active ? "Active" : "Used/Inactive"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleModifyKeyStatus(kObj.key, "toggle")}
+                                    className={`px-2 py-0.5 rounded text-[9px] font-bold transition ${kObj.active ? "bg-amber-600/40 text-amber-200" : "bg-emerald-600/40 text-emerald-200"}`}
+                                  >
+                                    {kObj.active ? "Mark Unused" : "Reactivate"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleModifyKeyStatus(kObj.key, "delete")}
+                                    className="px-1.5 py-0.5 rounded bg-red-600/40 text-red-200 text-[9px] font-bold"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleModifyKeyStatus(kObj.key, "toggle")}
-                                  className={`px-2 py-0.5 rounded text-[9px] font-bold transition ${kObj.active ? "bg-amber-600/40 text-amber-200" : "bg-emerald-600/40 text-emerald-200"}`}
-                                >
-                                  {kObj.active ? "Mark Unused" : "Reactivate"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleModifyKeyStatus(kObj.key, "delete")}
-                                  className="px-1.5 py-0.5 rounded bg-red-600/40 text-red-200 text-[9px] font-bold"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        )}
+                            ))
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
