@@ -148,38 +148,8 @@ async function downloadAndInstallApk(url: string, fileName: string) {
   try {
     if (typeof window === "undefined") return;
 
-    const isCapacitor = !!(window as any).Capacitor;
-
-    if (isCapacitor) {
-      try {
-        // @vite-ignore prevents Rolldown/Vite from attempting static module resolution during web build
-        const fsModule = await import(/* @vite-ignore */ "@capacitor/filesystem");
-        const browserModule = await import(/* @vite-ignore */ "@capacitor/browser");
-        const Filesystem = fsModule.Filesystem;
-        const Directory = fsModule.Directory;
-        const Browser = browserModule.Browser;
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Download HTTP error ${response.status}`);
-
-        const blob = await response.blob();
-        const base64Data = await blobToBase64(blob);
-
-        const savedFile = await Filesystem.writeFile({
-          path: fileName,
-          data: base64Data,
-          directory: Directory.Cache,
-        });
-
-        await Browser.open({ url: savedFile.uri });
-        return;
-      } catch (nativeErr: any) {
-        console.warn("Capacitor plugins unavailable, falling back to browser open", nativeErr);
-        alert(`Native download failed: ${nativeErr?.message || nativeErr}. Opening in browser...`);
-      }
-    }
-
-    window.open(url, "_blank");
+    // Directly open in the system browser / download manager to bypass webview file restrictions
+    window.open(url, "_system");
   } catch (err: any) {
     console.error("Failed to download APK:", err);
     alert(`Failed to download APK: ${err?.message || err}`);
