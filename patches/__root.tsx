@@ -119,9 +119,6 @@ const AGE_LOCK_KEY = "rabtv_age_passcode";
 const globalFeedOptions = [
   "All (Default)",
   "Canada (All)",
-  "Ontario / Toronto",
-  "Atlantic Canada",
-  "Western Canada",
   "English",
   "German",
   "Ukrainian",
