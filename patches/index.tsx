@@ -1,3 +1,4 @@
+// patches/index.tsx
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, memo } from "react";
 import type { MediaItem } from "@/lib/tmdb-scraper";
@@ -216,6 +217,15 @@ function Home() {
   }, [search.tab]);
 
   const [selectedGenre, setSelectedGenre] = useState<string>("Trending");
+  
+  // Independent provider filter state (using separate storage key to prevent global feed conflicts)
+  const [providerFilter, setProviderFilter] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("rabtv_provider_filter") || "All (Default)";
+    }
+    return "All (Default)";
+  });
+
   const [globalFeedOverride, setGlobalFeedOverride] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("rabtv_global_feed") || "All (Default)";
@@ -232,10 +242,9 @@ function Home() {
   };
 
   const handleProviderSelect = (provider: string) => {
-    setGlobalFeedOverride(provider);
+    setProviderFilter(provider);
     if (typeof window !== "undefined") {
-      localStorage.setItem("rabtv_global_feed", provider);
-      window.dispatchEvent(new CustomEvent("rabtv_global_feed_updated", { detail: provider }));
+      localStorage.setItem("rabtv_provider_filter", provider);
     }
   };
 
@@ -381,7 +390,7 @@ function Home() {
 
   useEffect(() => {
     setPage(1);
-  }, [activeTab, selectedGenre, globalFeedOverride]);
+  }, [activeTab, selectedGenre, globalFeedOverride, providerFilter]);
 
   useEffect(() => {
     let active = true;
@@ -399,11 +408,15 @@ function Home() {
       }
 
       const scraperCategory = activeTab === "TV Shows" ? "Series" : activeTab;
-      const activeSubFeed =
+      const activeGlobalFeed =
         globalFeedOverride && globalFeedOverride !== "All (Default)" ? globalFeedOverride : undefined;
+      
+      // If provider filter is active, use it as subFeed; otherwise use global region/language feed
+      const effectiveSubFeed =
+        providerFilter && providerFilter !== "All (Default)" ? providerFilter : activeGlobalFeed;
 
       try {
-        const result = await scrapeCategoryContent(scraperCategory, page, selectedGenre, activeSubFeed);
+        const result = await scrapeCategoryContent(scraperCategory, page, selectedGenre, effectiveSubFeed);
         if (!active) return;
 
         if (result?.items?.length) {
@@ -427,7 +440,7 @@ function Home() {
     return () => {
       active = false;
     };
-  }, [activeTab, page, selectedGenre, globalFeedOverride]);
+  }, [activeTab, page, selectedGenre, globalFeedOverride, providerFilter]);
 
   useEffect(() => {
     let active = true;
@@ -832,7 +845,7 @@ function Home() {
                 <div className="w-full max-w-3xl flex justify-center">
                   <ScrollPillBar
                     options={providerCategories.map((prov) => ({ id: prov, label: prov }))}
-                    activeId={globalFeedOverride}
+                    activeId={providerFilter}
                     onSelect={(id) => handleProviderSelect(id)}
                     appTheme={appTheme}
                     getPrimaryBgColor={getPrimaryBgColor}
