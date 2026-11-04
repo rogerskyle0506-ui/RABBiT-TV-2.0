@@ -125,6 +125,13 @@ jobs:
           </html>
           EOF
 
+      - name: Generate Dynamic Version File from Package.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p src/lib
+          echo "export const APP_VERSION = \"$VERSION\";" > src/lib/version.ts
+          echo "Generated version.ts with version ${VERSION}"
+
       - name: Build Web Assets for Capacitor (Executes Version Bump)
         env:
           CAPACITOR_BUILD: "true"
