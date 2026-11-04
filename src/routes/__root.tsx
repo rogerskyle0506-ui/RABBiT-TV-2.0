@@ -1,4 +1,4 @@
-// patches/__root.tsx
+// __root.tsx
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -32,12 +32,13 @@ import {
 } from "@/lib/settings";
 
 // ——— Private GitHub Gist Key Verification & Management ———
-const GIST_ID = (import.meta as any).env?.VITE_GIST_ID || "a9d05227252c7b4d085047ef73797327";
-const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT || "";
-const GIST_API_URL = `https://api.github.com/gists/${GIST_ID}`;
+const GIST_ID = (import.meta as any).env?.VITE_GIST_ID as string || "";
+const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT as string || "";
+const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
 
 // ——— Enhanced Single-Use Key Verification & Consumption via Gist ———
 async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey: string): Promise<boolean> {
+  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return false;
   try {
     const res = await fetch(GIST_API_URL, {
       headers: {
@@ -118,9 +119,6 @@ const AGE_LOCK_KEY = "rabtv_age_passcode";
 const globalFeedOptions = [
   "All (Default)",
   "Canada (All)",
-  "Ontario / Toronto",
-  "Atlantic Canada",
-  "Western Canada",
   "English",
   "German",
   "Ukrainian",
@@ -188,7 +186,7 @@ function RootComponent() {
   const [passcodeInput, setPasscodeInput] = useState("");
   const [passcodeError, setPasscodeError] = useState(false);
   const [passcodeErrorMsg, setPasscodeErrorMsg] = useState(
-    "⚠️ Invalid Passcode. Please try again. WhatsApp: RabbitProductions | Private #: (705) 809-3865"
+    "⚠️ Invalid Passcode. Please try again."
   );
   const [ageErrorNotice, setAgeErrorNotice] = useState(false);
   const [ageLockError, setAgeLockError] = useState(false);
@@ -284,6 +282,20 @@ function RootComponent() {
     setActiveSettingsTab(null);
   };
 
+  const handleOpenExternal = async (url: string, e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    try {
+      if (typeof window !== "undefined" && (window as any).Capacitor) {
+        const browserModule = await import(/* @vite-ignore */ "@capacitor/browser");
+        await browserModule.Browser.open({ url });
+        return;
+      }
+    } catch (err) {
+      console.warn("Could not open via Capacitor Browser, using fallback", err);
+    }
+    window.open(url, "_blank");
+  };
+  
   const handleToggleProfileMenu = () => {
     if (showProfileMenu) handleCloseAll();
     else {
@@ -296,7 +308,7 @@ function RootComponent() {
   // Trigger silent OTA update check 3 seconds after app launch
   useEffect(() => {
     const updateTimer = setTimeout(() => {
-      void checkForAppUpdates();
+      void checkForAppUpdates(true);
     }, 3000);
     return () => clearTimeout(updateTimer);
   }, []);
@@ -479,7 +491,7 @@ function RootComponent() {
       if (trialAlreadyUsed) {
         setPasscodeError(true);
         setPasscodeErrorMsg(
-          "⚠️ Trial code has already been used on this device and cannot be redeemed again. WhatsApp: RabbitProductions | Private #: (705) 809-3865"
+          "⚠️ Trial code has already been used on this device and cannot be redeemed again."
         );
         setAgeErrorNotice(false);
         setAgeLockError(false);
@@ -521,7 +533,7 @@ function RootComponent() {
 
     setPasscodeError(true);
     setPasscodeErrorMsg(
-      "⚠️ Invalid Passcode for this name and age. WhatsApp: RabbitProductions | Private #: (705) 809-3865"
+      "⚠️ Invalid Passcode for this name and age."
     );
     setAgeErrorNotice(false);
     setAgeLockError(false);
@@ -564,6 +576,10 @@ function RootComponent() {
   // Automated keygen committing structured objects to secret Gist
   const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
+      setKeygenResult("⚠️ GIST_ID or VITE_GH_PAT is missing from environment secrets.");
+      return;
+    }
     const age = parseInt(keygenAge.trim(), 10);
     if (!keygenName.trim() || isNaN(age) || age < 1 || age > 120) {
       setKeygenResult("Enter a valid name and age (1–120).");
@@ -639,6 +655,7 @@ function RootComponent() {
 
   // Fetch keys list for Admin management from Gist
   const fetchRemoteKeys = async () => {
+    if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return;
     setLoadingKeys(true);
     try {
       const res = await fetch(GIST_API_URL, {
@@ -666,6 +683,7 @@ function RootComponent() {
 
   // Toggle key status or Delete via Gist PATCH
   const handleModifyKeyStatus = async (targetKey: string, action: "toggle" | "delete") => {
+    if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return;
     try {
       const res = await fetch(GIST_API_URL, {
         headers: {
@@ -1368,10 +1386,10 @@ function RootComponent() {
                   </div>
                 )}
 
-                {/* Update Channel Preference */}
+                {/* Update Channel Preference & Manual Check Button */}
                 <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    🚀 Update Channel
+                    🚀 Update Channel & Actions
                   </h4>
                   <p className="text-[10px] text-slate-300 leading-relaxed">
                     Choose whether you want stable releases or bleeding-edge nightly builds.
@@ -1400,6 +1418,17 @@ function RootComponent() {
                       ⚡ Nightly
                     </button>
                   </div>
+
+                  {/* Manual Check Button Added Here */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void checkForAppUpdates(false); // false forces visual alerts (up-to-date or update found)
+                    }}
+                    className={`w-full mt-2 py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                  >
+                    🔍 Check for Updates Now
+                  </button>
                 </div>
 
                 <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
@@ -1866,16 +1895,51 @@ function RootComponent() {
                       className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-3 text-center text-base sm:text-lg font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     />
                     {passcodeError && (
-                      <p className="text-xs font-semibold text-red-400 text-center">
-                        {passcodeErrorMsg}
-                      </p>
+                      <div className="space-y-1 text-center">
+                        <p className="text-xs font-semibold text-red-400">
+                          {passcodeErrorMsg}
+                        </p>
+                        <p className="text-[11px] text-slate-300">
+                          Need help? Message{" "}
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenExternal("https://wa.me/?text=Hi%20Rabbit,%20I%20need%20help%20with%20my%20passcode%20on%20RABBiT%20TV", e)}
+                            className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
+                          >
+                            WhatsApp contact (@RabbitProductions)
+                          </button>{" "}
+                          or text{" "}
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenExternal("sms:7058093865", e)}
+                            className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
+                          >
+                            (705) 809-3865
+                          </button>.
+                        </p>
+                      </div>
                     )}
 
-                    {/* Contact Me info */}
-                    <div className="rounded-xl border border-white/10 bg-black/40 p-2.5 text-center text-xs text-slate-300 space-y-0.5 backdrop-blur-md">
+                   {/* Contact Me info */}
+                    <div className="rounded-xl border border-white/10 bg-black/40 p-2.5 text-center text-xs text-slate-300 space-y-1 backdrop-blur-md">
                       <p className="font-semibold text-white">Need an activation code or support?</p>
                       <p className="text-[11px] text-slate-300">
-                        Message me on WhatsApp (<span className="text-emerald-400 font-bold">RabbitProductions</span>) or text my private number at <span className="text-amber-300 font-bold">(705) 809-3865</span>.
+                        Message me on WhatsApp (
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenExternal("https://wa.me/?text=Hi%20Rabbit,%20I%20need%20an%20activation%20code%20for%20RABBiT%20TV", e)}
+                          className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
+                        >
+                          @RabbitProductions
+                        </button>
+                        ) or text for a code at{" "}
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenExternal("sms:7058093865", e)}
+                          className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
+                        >
+                          (705) 809-3865
+                        </button>.
                       </p>
                     </div>
 
