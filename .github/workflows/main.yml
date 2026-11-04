@@ -125,13 +125,6 @@ jobs:
           </html>
           EOF
 
-      - name: Generate Dynamic Version File from Package.json
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          mkdir -p src/lib
-          echo "export const APP_VERSION = \"$VERSION\";" > src/lib/version.ts
-          echo "Generated version.ts with version ${VERSION}"
-
       - name: Build Web Assets for Capacitor (Executes Version Bump)
         env:
           CAPACITOR_BUILD: "true"
@@ -176,7 +169,7 @@ jobs:
             echo "Backed up existing keystore."
           fi
 
-          if [ ! -d android ] || [ ! -f android/app/build.gradle ]; then
+          if [ ! -d android ] || [ ! -f android/app/build.gradle ] || [ ! -f android/gradlew ]; then
             echo "Android platform missing or incomplete, re-creating..."
             rm -rf android
             npx @capacitor/cli add android
@@ -189,6 +182,10 @@ jobs:
             mkdir -p android/app
             cp /tmp/keystore_backup/rabbittv.keystore android/app/rabbittv.keystore
             echo "Restored keystore to android/app/"
+          fi
+
+          if [ -f android/gradlew ]; then
+            chmod +x android/gradlew
           fi
 
       - name: Sync Package.json Version to Android Build.gradle
