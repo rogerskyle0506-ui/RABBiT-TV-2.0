@@ -2,7 +2,9 @@
 
 /**
  * Validates if an outgoing navigation request is allowed to leave the app.
- * Keeps video streams untouched while permitting trusted actions (WhatsApp, phone, updates).
+ * - Allows trusted actions globally (WhatsApp, phone, SMS, GitHub APK releases).
+ * - Restricts rogue browser breakouts ONLY when the user is actively on the details player page (stopping vid.src ad pop-ups).
+ * - Permits standard browser navigation everywhere else in the app (enabling update checks and general links).
  */
 export function shouldAllowExternalNavigation(url: string): boolean {
   if (!url) return false;
@@ -24,16 +26,28 @@ export function shouldAllowExternalNavigation(url: string): boolean {
     return true;
   }
 
-  // 4. GitHub Release Update Downloads (APKs)
+  // 4. GitHub Release & Raw Update Downloads (APKs)
   if (
     lowerUrl.includes("github.com") &&
-    (lowerUrl.includes("/releases/download/") || lowerUrl.includes("/releases/latest"))
+    (lowerUrl.includes("/releases/download/") ||
+      lowerUrl.includes("/releases/latest") ||
+      lowerUrl.includes("/raw.githubusercontent.com/"))
   ) {
     return true;
   }
 
-  // Block all other unapproved external breakouts
-  return false;
+  // 5. Check if the user is currently on the details player page
+  const isDetailsPlayerPage = 
+    typeof window !== "undefined" && 
+    window.location.pathname.includes("/details");
+
+  if (isDetailsPlayerPage) {
+    // Block rogue web browser redirects/pop-ups triggered by the vid.src iframe player
+    return false;
+  }
+
+  // Allow standard browser navigation everywhere else in the app (e.g. settings, manual updates, etc.)
+  return true;
 }
 
 /**
