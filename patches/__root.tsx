@@ -282,6 +282,20 @@ function RootComponent() {
     setActiveSettingsTab(null);
   };
 
+  const handleOpenExternal = async (url: string, e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    try {
+      if (typeof window !== "undefined" && (window as any).Capacitor) {
+        const browserModule = await import(/* @vite-ignore */ "@capacitor/browser");
+        await browserModule.Browser.open({ url });
+        return;
+      }
+    } catch (err) {
+      console.warn("Could not open via Capacitor Browser, using fallback", err);
+    }
+    window.open(url, "_blank");
+  };
+  
   const handleToggleProfileMenu = () => {
     if (showProfileMenu) handleCloseAll();
     else {
