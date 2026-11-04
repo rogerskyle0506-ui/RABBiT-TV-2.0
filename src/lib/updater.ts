@@ -1,4 +1,6 @@
 // lib/updater.ts
+import { APP_VERSION } from "./version";
+
 const GITHUB_REPO = (import.meta as any).env?.VITE_GH_REPO || "rogerskyle0506-ui/RABBiT-TV-2.0";
 const GITHUB_RELEASES_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT || "";
@@ -38,6 +40,11 @@ function compareVersions(v1: string, v2: string): number {
  * Dynamically fetches the currently installed application version.
  */
 async function getCurrentAppVersion(): Promise<string> {
+  // Primary source of truth generated straight from package.json at build time
+  if (APP_VERSION) {
+    return APP_VERSION;
+  }
+
   try {
     if (typeof window !== "undefined") {
       const isCapacitor = !!(window as any).Capacitor;
@@ -55,7 +62,7 @@ async function getCurrentAppVersion(): Promise<string> {
   }
 
   const metaVersion = document.querySelector('meta[name="app-version"]')?.getAttribute("content");
-  return metaVersion || "2.2.6.4";
+  return metaVersion || "2.2.6.7";
 }
 
 export async function checkForAppUpdates(silent = true) {
