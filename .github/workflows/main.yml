@@ -1,10 +1,13 @@
-name: Build Global Android APK
+name: Build Global Android APK & Publish Nightly
 
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -25,16 +28,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-
-      - name: Extract App Name & Version
-        id: version-extractor
-        run: |
-          VERSION=$(node -p "require('./package.json').version || '2.2.5'")
-          
-          echo "artifact_name=rabbittv-v${VERSION}" >> $GITHUB_OUTPUT
-          echo "apk_filename=rabbittv${VERSION}.apk" >> $GITHUB_OUTPUT
-          
-          echo "Building RABBiT TV version ${VERSION}"
 
       - name: Install dependencies
         run: npm install
@@ -132,14 +125,25 @@ jobs:
           </html>
           EOF
 
-      - name: Build Web Assets for Capacitor
+      - name: Build Web Assets for Capacitor (Executes Version Bump)
         env:
           CAPACITOR_BUILD: "true"
           VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
           TMDB_ACCESS_TOKEN: ${{ secrets.TMDB_ACCESS_TOKEN }}
           VITE_GH_PAT: ${{ secrets.GH_PAT }}
           VITE_GIST_ID: ${{ secrets.VITE_GIST_ID }}
-        run: npx vite build
+        run: npm run build
+
+      - name: Extract App Name & Bumped Version for Artifacts
+        id: version-extractor
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "artifact_name=rabbittv-v${VERSION}" >> $GITHUB_OUTPUT
+          echo "apk_filename=rabbittv${VERSION}.apk" >> $GITHUB_OUTPUT
+          
+          echo "Building RABBiT TV version ${VERSION}"
 
       - name: Map TanStack Shell to Capacitor index.html
         run: |
@@ -246,13 +250,22 @@ jobs:
             -Pandroid.injected.signing.key.alias=RABBITV34688643 \
             -Pandroid.injected.signing.key.password=RABBITV34688643
 
-      - name: Rename and Prepare APK Artifact
+      - name: Copy APK to Public updates/ Folder
         run: |
-          mkdir -p rabbittv
-          cp android/app/build/outputs/apk/release/app-release.apk rabbittv/${{ steps.version-extractor.outputs.apk_filename }}
+          mkdir -p updates
+          cp android/app/build/outputs/apk/release/app-release.apk updates/${{ steps.version-extractor.outputs.apk_filename }}
+          echo "Successfully copied APK to updates/${{ steps.version-extractor.outputs.apk_filename }}"
+
+      - name: Commit and Push Version Bump, Manifest & APK to Repository
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.io"
+          git add package.json capacitor.config.json updates/
+          git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} and publish nightly build [skip ci]" || echo "No changes to commit"
+          git push
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.version-extractor.outputs.artifact_name }}
-          path: rabbittv/${{ steps.version-extractor.outputs.apk_filename }}
+          path: updates/${{ steps.version-extractor.outputs.apk_filename }}
