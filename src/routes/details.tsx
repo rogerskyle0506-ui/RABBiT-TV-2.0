@@ -1,0 +1,1031 @@
+// patches/details_2.tsx
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/settings";
+import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
+import { MediaCard } from "@/routes/index";
+import type { MediaItem } from "@/lib/tmdb-scraper";
+import { saveWatchProgress, getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
+import { AppWallpaper } from "@/components/AppWallpaper";
+
+const MY_LIST_STORAGE_KEY = "rabtv_my_list";
+const FAVORITES_STORAGE_KEY = "rabtv_favorites";
+
+export const Route = createFileRoute("/details")({
+  component: DetailsPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    id: search.id != null ? String(search.id) : "",
+    type: search.type != null ? String(search.type).toLowerCase() : "movie",
+  }),
+});
+
+export function DetailsPage() {
+  const search = Route.useSearch();
+
+  const rawId = String(search.id || "").trim();
+  const inferredType: "tv" | "movie" | null = rawId.toLowerCase().startsWith("tv-")
+    ? "tv"
+    : rawId.toLowerCase().startsWith("movie-")
+    ? "movie"
+    : null;
+
+  const mediaId = rawId.replace(/^(movie|tv)-/i, "").trim();
+  const urlType: "movie" | "tv" =
+    inferredType || (search.type === "tv" ? "tv" : "movie");
+
+  const [mediaType, setMediaType] = useState<"movie" | "tv">(urlType);
+  const [mediaDetails, setMediaDetails] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [appTheme, setAppTheme] = useState<AppTheme>("violet");
+  const [cardSize, setCardSize] = useState<CardSize>("large");
+
+  const [inMyList, setInMyList] = useState(false);
+  const [inFavorites, setInFavorites] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  const [season, setSeason] = useState(1);
+  const [episode, setEpisode] = useState(1);
+  const [seasonEpisodes, setSeasonEpisodes] = useState<any[]>([]);
+  const [autoPlayNext, setAutoPlayNext] = useState(true);
+
+  const [isSeasonOpen, setIsSeasonOpen] = useState(false);
+  const [isEpisodeOpen, setIsEpisodeOpen] = useState(false);
+
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const [showScrollReminder, setShowScrollReminder] = useState(false);
+
+  const seasonRef = useRef<HTMLDivElement>(null);
+  const episodeRef = useRef<HTMLDivElement>(null);
+  const feedbackTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setMediaType(urlType);
+    setIsPlaying(false);
+    setSeason(1);
+    setEpisode(1);
+    setMediaDetails(null);
+    setRecommendations([]);
+    setLoading(true);
+  }, [mediaId, urlType]);
+
+  useEffect(() => {
+    const checkVerticalScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+      setCanScrollDown(scrollTop + clientHeight < scrollHeight - 100);
+    };
+    checkVerticalScroll();
+    window.addEventListener("scroll", checkVerticalScroll, { passive: true });
+    window.addEventListener("resize", checkVerticalScroll);
+    return () => {
+      window.removeEventListener("scroll", checkVerticalScroll);
+      window.removeEventListener("resize", checkVerticalScroll);
+    };
+  }, [recommendations, loading, isPlaying]);
+
+  useEffect(() => {
+    let inactivityTimer: NodeJS.Timeout;
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      setShowScrollReminder(false);
+      if (canScrollDown) {
+        inactivityTimer = setTimeout(() => setShowScrollReminder(true), 30000);
+      }
+    };
+    resetInactivityTimer();
+    window.addEventListener("scroll", resetInactivityTimer, { passive: true });
+    window.addEventListener("click", resetInactivityTimer);
+    window.addEventListener("keydown", resetInactivityTimer);
+    window.addEventListener("touchstart", resetInactivityTimer, { passive: true });
+    return () => {
+      clearTimeout(inactivityTimer);
+      window.removeEventListener("scroll", resetInactivityTimer);
+      window.removeEventListener("click", resetInactivityTimer);
+      window.removeEventListener("keydown", resetInactivityTimer);
+      window.removeEventListener("touchstart", resetInactivityTimer);
+    };
+  }, [canScrollDown]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (seasonRef.current && !seasonRef.current.contains(event.target as Node)) {
+        setIsSeasonOpen(false);
+      }
+      if (episodeRef.current && !episodeRef.current.contains(event.target as Node)) {
+        setIsEpisodeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const loadSettings = () => {
+      setAppTheme(getSavedTheme());
+      setCardSize(getSavedCardSize());
+    };
+    loadSettings();
+    window.addEventListener("storage", loadSettings);
+    window.addEventListener("rabtv_settings_updated" as any, loadSettings);
+    return () => {
+      window.removeEventListener("storage", loadSettings);
+      window.removeEventListener("rabtv_settings_updated" as any, loadSettings);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    async function fetchSeasonEpisodes() {
+      if (mediaType !== "tv" || !mediaId) return;
+      try {
+        const apiKey = import.meta.env.VITE_TMDB_API_KEY as string;
+        const res = await fetch(
+          `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
+        );
+        const data = await res.json();
+        setSeasonEpisodes(data.episodes || []);
+      } catch (err) {
+        console.error("Failed to load season episodes", err);
+        setSeasonEpisodes([]);
+      }
+    }
+    fetchSeasonEpisodes();
+  }, [season, mediaId, mediaType]);
+
+  const getPageBackground = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80";
+      case "midnight":
+        return "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80";
+      case "emerald":
+        return "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80";
+      case "amber":
+        return "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80";
+      case "cyan":
+        return "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80";
+      case "violet":
+      default:
+        return "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80";
+    }
+  };
+
+  const getCardBackground = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "bg-[#160404]/90 border-red-500/20";
+      case "midnight":
+        return "bg-[#03091e]/90 border-blue-500/20";
+      case "violet":
+      default:
+        return "bg-[#090e1f]/90 border-violet-500/20";
+    }
+  };
+
+  const getThemeClasses = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return {
+          text: "text-red-400",
+          bg: "bg-red-600",
+          hoverBg: "hover:bg-red-500",
+          border: "border-red-500",
+          ring: "focus:ring-red-400",
+          shadow: "shadow-red-600/30",
+        };
+      case "midnight":
+        return {
+          text: "text-blue-400",
+          bg: "bg-blue-600",
+          hoverBg: "hover:bg-blue-500",
+          border: "border-blue-500",
+          ring: "focus:ring-blue-400",
+          shadow: "shadow-blue-600/30",
+        };
+      case "violet":
+      default:
+        return {
+          text: "text-violet-400",
+          bg: "bg-violet-600",
+          hoverBg: "hover:bg-violet-500",
+          border: "border-violet-500",
+          ring: "focus:ring-violet-400",
+          shadow: "shadow-violet-600/30",
+        };
+    }
+  };
+
+  const getThemeArrowColor = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
+      case "midnight":
+        return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
+      case "violet":
+      default:
+        return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
+    }
+  };
+
+  const activeTheme = getThemeClasses(appTheme);
+  const prefixedId = `${mediaType}-${mediaId}`;
+
+  const mediaStatusBadge = useMemo(() => {
+    if (!mediaId) return null;
+    const cleanId = String(mediaId);
+    const prefId = `${mediaType}-${cleanId}`;
+
+    if (isTitleBroken(cleanId) || isTitleBroken(prefId)) {
+      return (
+        <span className="absolute top-3 left-3 z-20 rounded-lg bg-red-600/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white border border-red-400/40 shadow-lg">
+          ⚠️ Reported Broken
+        </span>
+      );
+    }
+
+    if (isTitleDisliked(cleanId) || isTitleDisliked(prefId)) {
+      return (
+        <span className="absolute top-3 left-3 z-20 rounded-lg bg-zinc-800/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 border border-zinc-600/40 shadow-lg">
+          👎 Disliked
+        </span>
+      );
+    }
+
+    try {
+      const history = getRawWatchHistory();
+      const match = history.find(
+        (h) =>
+          String(h.id) === prefId ||
+          String(h.id) === cleanId ||
+          String(h.mediaId) === cleanId
+      );
+
+      if (match) {
+        if (match.confirmedCompleted || (match.progressPercent ?? 0) >= 100) {
+          return (
+            <span className="absolute top-3 left-3 z-20 rounded-lg bg-emerald-600/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white border border-emerald-400/40 shadow-lg">
+              ✓ Completed
+            </span>
+          );
+        }
+        if ((match.progressPercent ?? 0) > 0) {
+          return (
+            <span className="absolute top-3 left-3 z-20 rounded-lg bg-cyan-600/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white border border-cyan-400/40 shadow-lg">
+              ⏳ In Progress ({match.progressPercent}%)
+            </span>
+          );
+        }
+      }
+    } catch (e) {
+      console.error("Failed to read watch history badge status", e);
+    }
+
+    return null;
+  }, [mediaId, mediaType]);
+
+  useEffect(() => {
+    if (!mediaId || !mediaDetails) return;
+    try {
+      const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
+      setInMyList(
+        myList.some(
+          (item: any) => item.id === prefixedId || String(item.mediaId) === mediaId
+        )
+      );
+      const favs = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
+      setInFavorites(
+        favs.some(
+          (item: any) => item.id === prefixedId || String(item.mediaId) === mediaId
+        )
+      );
+    } catch (err) {
+      console.error("Error reading saved catalog lists", err);
+    }
+  }, [mediaId, mediaDetails, mediaType, prefixedId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchDetailsWithCache() {
+      if (!mediaId) {
+        setLoading(false);
+        setMediaDetails(null);
+        return;
+      }
+
+      const apiKey = import.meta.env.VITE_TMDB_API_KEY as string;
+
+      let activeFetchType: "movie" | "tv" = urlType;
+
+      try {
+        const cacheKey = `rabtv_cache_${activeFetchType}_${mediaId}`;
+        const cachedItem = localStorage.getItem(cacheKey);
+        if (cachedItem) {
+          const { data, timestamp } = JSON.parse(cachedItem);
+          if (
+            Date.now() - timestamp < 21600000 &&
+            data &&
+            data.success !== false
+          ) {
+            if (!cancelled) {
+              const isTv = !!(data?.seasons || data?.number_of_seasons);
+              setMediaType(isTv ? "tv" : activeFetchType);
+              setMediaDetails(data);
+              setLoading(false);
+            }
+          }
+        }
+
+        let res = await fetch(
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
+        );
+        let data = await res.json();
+
+        if (!data || data.success === false || data.status_code) {
+          const otherType: "movie" | "tv" =
+            activeFetchType === "movie" ? "tv" : "movie";
+          res = await fetch(
+            `https://api.themoviedb.org/3/${otherType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
+          );
+          data = await res.json();
+          if (data && data.success !== false && !data.status_code) {
+            activeFetchType = otherType;
+          }
+        }
+
+        if (cancelled) return;
+
+        if (data && data.success !== false && !data.status_code) {
+          const isTv =
+            !!(data?.seasons || data?.number_of_seasons) ||
+            activeFetchType === "tv";
+          setMediaType(isTv ? "tv" : "movie");
+          localStorage.setItem(
+            `rabtv_cache_${activeFetchType}_${mediaId}`,
+            JSON.stringify({ data, timestamp: Date.now() })
+          );
+          setMediaDetails(data);
+        } else {
+          setMediaDetails(null);
+        }
+
+        const recRes = await fetch(
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
+        );
+        const recData = await recRes.json();
+        if (!cancelled && recData?.results) {
+          setRecommendations(
+            recData.results.filter(
+              (item: any) =>
+                !isTitleBroken(String(item.id)) &&
+                !isTitleBroken(`${activeFetchType}-${item.id}`)
+            )
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load details and recommendations", err);
+        if (!cancelled) setMediaDetails(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchDetailsWithCache();
+    return () => {
+      cancelled = true;
+    };
+  }, [mediaId, urlType]);
+
+  const inferredMediaType: "tv" | "movie" =
+    mediaDetails?.seasons ||
+    mediaDetails?.number_of_seasons ||
+    mediaType === "tv"
+      ? "tv"
+      : "movie";
+
+  const originalLanguageName = useMemo(() => {
+    if (!mediaDetails) return "";
+    const spoken = mediaDetails?.spoken_languages?.[0]?.english_name;
+    if (spoken) return spoken;
+    const code = mediaDetails?.original_language;
+    if (!code) return "";
+    try {
+      const displayNames = new Intl.DisplayNames(["en"], { type: "language" });
+      const name = displayNames.of(code);
+      return name
+        ? name.charAt(0).toUpperCase() + name.slice(1)
+        : code.toUpperCase();
+    } catch {
+      return code.toUpperCase();
+    }
+  }, [mediaDetails]);
+
+  const gridColsClass = useMemo(() => {
+    if (cardSize === "small") {
+      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 justify-items-center";
+    }
+    if (cardSize === "medium") {
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center";
+    }
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
+  }, [cardSize]);
+
+  const mappedRecommendations: MediaItem[] = useMemo(() => {
+    return recommendations.map((rec: any) => {
+      const recId = String(rec.id);
+      const recTitle = rec.title || rec.name || "Untitled";
+      const recPoster = rec.poster_path
+        ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
+        : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
+      const recType: "movie" | "tv" =
+        rec.media_type === "tv" || rec.name || !rec.title ? "tv" : "movie";
+      const releaseDate = rec.release_date || rec.first_air_date || "";
+      const year = releaseDate.split("-")[0];
+      const rating = rec.vote_average
+        ? rec.vote_average.toFixed(1)
+        : undefined;
+
+      return {
+        id: `${recType}-${recId}`,
+        title: recTitle,
+        description: rec.overview || "",
+        image: recPoster,
+        href: `/details?id=${recId}&type=${recType}`,
+        genre: recType === "tv" ? "TV SHOW" : "MOVIE",
+        year: year || undefined,
+        rating,
+        mediaType: recType,
+      };
+    });
+  }, [recommendations]);
+
+  const buildCatalogItem = () => ({
+    id: `${inferredMediaType}-${mediaId}`,
+    mediaId: String(mediaId),
+    title: mediaDetails?.title || mediaDetails?.name || "Untitled",
+    description: mediaDetails?.overview || "",
+    image: mediaDetails?.poster_path
+      ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
+      : "",
+    href: `/details?id=${mediaId}&type=${inferredMediaType}`,
+    year: (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split(
+      "-"
+    )[0],
+    rating: mediaDetails?.vote_average
+      ? mediaDetails.vote_average.toFixed(1)
+      : undefined,
+    mediaType: inferredMediaType,
+    genreIds: mediaDetails?.genres?.map((g: any) => g.id) || [],
+  });
+
+  const handlePlay = () => {
+    if (!mediaDetails || !mediaId) return;
+    setIsPlaying(true);
+
+    try {
+      saveWatchProgress({
+        id: `${inferredMediaType}-${mediaId}`,
+        mediaId: String(mediaId),
+        title: mediaDetails.title || mediaDetails.name || "Untitled",
+        mediaType: inferredMediaType,
+        posterPath: mediaDetails.poster_path || null,
+        backdropPath: mediaDetails.backdrop_path || null,
+        progressPercent: 0,
+        seasonNumber: inferredMediaType === "tv" ? season : undefined,
+        episodeNumber: inferredMediaType === "tv" ? episode : undefined,
+        genreIds: mediaDetails?.genres?.map((g: any) => g.id) || [],
+      });
+    } catch (err) {
+      console.error("Could not save to watch history", err);
+    }
+  };
+
+  const toggleMyList = () => {
+    if (!mediaDetails) return;
+    const item = buildCatalogItem();
+    try {
+      const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
+      let updatedList;
+      if (inMyList) {
+        updatedList = myList.filter(
+          (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+        );
+        setInMyList(false);
+        triggerFeedback("Removed from My List");
+      } else {
+        updatedList = [
+          item,
+          ...myList.filter(
+            (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+          ),
+        ];
+        setInMyList(true);
+        triggerFeedback("Saved to My List!");
+      }
+      localStorage.setItem(MY_LIST_STORAGE_KEY, JSON.stringify(updatedList));
+      window.dispatchEvent(new Event("rabtv_catalog_updated"));
+    } catch (err) {
+      console.error("Failed to update My List", err);
+    }
+  };
+
+  const toggleFavorites = () => {
+    if (!mediaDetails) return;
+    const item = buildCatalogItem();
+    try {
+      const favs = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
+      let updatedFavs;
+      if (inFavorites) {
+        updatedFavs = favs.filter(
+          (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+        );
+        setInFavorites(false);
+        triggerFeedback("Removed from Favorites");
+      } else {
+        updatedFavs = [
+          item,
+          ...favs.filter(
+            (i: any) => i.id !== item.id && String(i.mediaId) !== mediaId
+          ),
+        ];
+        setInFavorites(true);
+        triggerFeedback("Added to Favorites!");
+      }
+      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(updatedFavs));
+      window.dispatchEvent(new Event("rabtv_catalog_updated"));
+    } catch (err) {
+      console.error("Failed to update Favorites", err);
+    }
+  };
+
+  const handleReportBroken = () => {
+    if (!mediaId) return;
+    const result = reportBrokenLink(String(mediaId));
+    triggerFeedback(result.message);
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 1500);
+  };
+
+  const triggerFeedback = (msg: string) => {
+    setActionFeedback(msg);
+    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    feedbackTimeoutRef.current = window.setTimeout(() => {
+      setActionFeedback(null);
+      feedbackTimeoutRef.current = null;
+    }, 2500);
+  };
+
+  if (loading) {
+    return (
+      <div
+        className={`flex min-h-screen items-center justify-center ${getPageBackground(appTheme)} text-white relative`}
+      >
+        <AppWallpaper />
+        <p className={`text-xl font-medium animate-pulse ${activeTheme.text} relative z-10`}>
+          Loading title details...
+        </p>
+      </div>
+    );
+  }
+
+  const title = mediaDetails?.title || mediaDetails?.name || "Sample Content";
+  const overview =
+    mediaDetails?.overview || "No description available for this title.";
+  const poster = mediaDetails?.poster_path
+    ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
+    : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
+  const releaseYear = (
+    mediaDetails?.release_date ||
+    mediaDetails?.first_air_date ||
+    ""
+  ).split("-")[0];
+  const rating = mediaDetails?.vote_average
+    ? mediaDetails.vote_average.toFixed(1)
+    : "N/A";
+  const genres =
+    mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
+
+  const embedUrl =
+    inferredMediaType === "tv"
+      ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
+      : `https://vidsrc.to/embed/movie/${mediaId}`;
+
+  const currentSeasonObj = mediaDetails?.seasons?.find(
+    (s: any) => s.season_number === season
+  );
+  const currentEpisodeObj = seasonEpisodes?.find(
+    (e: any) => e.episode_number === episode
+  );
+
+  return (
+    <div
+      className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative`}
+    >
+      <AppWallpaper />
+      <div className="relative z-10">
+        <Link
+          className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
+          to="/"
+        >
+          ← Back to Home
+        </Link>
+
+        {isPlaying ? (
+          <div className="mx-auto flex max-w-5xl flex-col gap-6">
+            {inferredMediaType === "tv" && (
+              <div
+                className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}
+              >
+                <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
+                  <div className="relative" ref={seasonRef}>
+                    <span className="block text-xs text-slate-400 mb-1">Season</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsSeasonOpen(!isSeasonOpen)}
+                      className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                    >
+                      <span>
+                        {currentSeasonObj
+                          ? currentSeasonObj.name
+                          : `Season ${season}`}
+                      </span>
+                      <span>▾</span>
+                    </button>
+                    {isSeasonOpen && (
+                      <div
+                        className={`absolute left-0 mt-2 z-50 max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                      >
+                        {mediaDetails?.seasons
+                          ?.filter((s: any) => s.season_number > 0)
+                          .map((s: any) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                setSeason(s.season_number);
+                                setEpisode(1);
+                                setIsSeasonOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                season === s.season_number
+                                  ? `${activeTheme.bg} text-white font-bold`
+                                  : "text-slate-200 hover:bg-white/10"
+                              }`}
+                            >
+                              {s.name} ({s.episode_count} Eps)
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative" ref={episodeRef}>
+                    <span className="block text-xs text-slate-400 mb-1">
+                      Episode
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
+                      className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                    >
+                      <span>
+                        {currentEpisodeObj
+                          ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
+                          : `Episode ${episode}`}
+                      </span>
+                      <span>▾</span>
+                    </button>
+                    {isEpisodeOpen && (
+                      <div
+                        className={`absolute left-0 mt-2 z-50 max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                      >
+                        {seasonEpisodes.length > 0 ? (
+                          seasonEpisodes.map((ep: any) => (
+                            <button
+                              key={ep.id}
+                              type="button"
+                              onClick={() => {
+                                setEpisode(ep.episode_number);
+                                setIsEpisodeOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                episode === ep.episode_number
+                                  ? `${activeTheme.bg} text-white font-bold`
+                                  : "text-slate-200 hover:bg-white/10"
+                              }`}
+                            >
+                              Ep {ep.episode_number}: {ep.name}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-slate-400">
+                            Loading episodes...
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEpisode((prev) => Math.max(1, prev - 1))}
+                    disabled={episode <= 1}
+                    className={`rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:opacity-40 focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  >
+                    ◀ Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEpisode((prev) => prev + 1)}
+                    className={`rounded-xl ${activeTheme.bg} px-4 py-2 text-xs font-semibold text-white shadow transition ${activeTheme.hoverBg} focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  >
+                    Next Episode ▶
+                  </button>
+                  <label className="ml-2 flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={autoPlayNext}
+                      onChange={(e) => setAutoPlayNext(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-violet-600 focus:ring-violet-500 focus:outline-none"
+                    />
+                    Autoplay Next
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* UNTOUCHED DIRECT IFRAME STREAM */}
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
+              <iframe
+                key={`stable-player-${mediaId}-${season}-${episode}`}
+                src={embedUrl}
+                className="h-full w-full border-0"
+                allowFullScreen
+                allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
+              ></iframe>
+            </div>
+
+            <div
+              className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}
+            >
+              <h1 className="text-2xl font-bold text-white">{title}</h1>
+              <p className="text-sm leading-relaxed text-slate-300">{overview}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mx-auto flex max-w-5xl flex-col gap-8">
+            <div className="flex flex-col gap-8 md:flex-row md:items-start">
+              <div className="relative h-[450px] w-[300px] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start shrink-0">
+                <img
+                  src={poster}
+                  alt={title}
+                  className="h-full w-full object-cover"
+                />
+                {mediaStatusBadge}
+              </div>
+
+              <div className="flex flex-col justify-center gap-4 flex-1">
+                <span
+                  className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
+                >
+                  {genres}
+                </span>
+
+                <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+                  {title}
+                </h1>
+
+                <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
+                  {rating !== "N/A" && (
+                    <span className="flex items-center gap-1 font-bold text-yellow-300">
+                      ⭐ {rating}
+                    </span>
+                  )}
+                  {releaseYear && <span>{releaseYear}</span>}
+                  {originalLanguageName && (
+                    <span className="font-medium text-slate-200">
+                      {originalLanguageName}
+                    </span>
+                  )}
+                  <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
+                    {inferredMediaType}
+                  </span>
+                </div>
+
+                <p className="max-w-2xl text-base leading-relaxed text-slate-300">
+                  {overview}
+                </p>
+
+                {inferredMediaType === "tv" && mediaDetails?.seasons && (
+                  <div
+                    className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
+                  >
+                    <div className="relative" ref={seasonRef}>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                        Select Season
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsSeasonOpen(!isSeasonOpen)}
+                        className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      >
+                        <span>
+                          {currentSeasonObj
+                            ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
+                            : `Season ${season}`}
+                        </span>
+                        <span>▾</span>
+                      </button>
+                      {isSeasonOpen && (
+                        <div
+                          className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        >
+                          {mediaDetails.seasons
+                            .filter((s: any) => s.season_number > 0)
+                            .map((s: any) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                  setSeason(s.season_number);
+                                  setEpisode(1);
+                                  setIsSeasonOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                  season === s.season_number
+                                    ? `${activeTheme.bg} text-white font-bold`
+                                    : "text-slate-200 hover:bg-white/10"
+                                }`}
+                              >
+                                {s.name} ({s.episode_count} Episodes)
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="relative" ref={episodeRef}>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                        Select Episode
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
+                        className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      >
+                        <span>
+                          {currentEpisodeObj
+                            ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
+                            : `Episode ${episode}`}
+                        </span>
+                        <span>▾</span>
+                      </button>
+                      {isEpisodeOpen && (
+                        <div
+                          className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        >
+                          {seasonEpisodes.length > 0 ? (
+                            seasonEpisodes.map((ep: any) => (
+                              <button
+                                key={ep.id}
+                                type="button"
+                                onClick={() => {
+                                  setEpisode(ep.episode_number);
+                                  setIsEpisodeOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                                  episode === ep.episode_number
+                                    ? `${activeTheme.bg} text-white font-bold`
+                                    : "text-slate-200 hover:bg-white/10"
+                                }`}
+                              >
+                                Ep {ep.episode_number}: {ep.name}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-slate-400">
+                              Loading episodes...
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handlePlay}
+                    className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
+                  >
+                    ▶ Play{" "}
+                    {inferredMediaType === "tv"
+                      ? `S${season}:E${episode}`
+                      : "Movie"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleMyList}
+                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} ${
+                      inMyList
+                        ? `${activeTheme.border} bg-white/10 ${activeTheme.text}`
+                        : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                    }`}
+                  >
+                    {inMyList ? "✓ In My List" : "🔖 + Save to My List"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleFavorites}
+                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 ${
+                      inFavorites
+                        ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
+                        : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                    }`}
+                  >
+                    {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleReportBroken}
+                    className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500"
+                    title="Report link as broken and hide globally"
+                  >
+                    ⚠️ Report Broken
+                  </button>
+                </div>
+
+                {actionFeedback && (
+                  <p
+                    className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}
+                  >
+                    {actionFeedback}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {mappedRecommendations.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>✨ Similar Recommendations</span>
+                </h2>
+                <div className={gridColsClass}>
+                  {mappedRecommendations.slice(0, 12).map((item) => (
+                    <MediaCard item={item} key={item.id} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {canScrollDown && showScrollReminder && (
+          <div
+            className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
+            onAnimationEnd={() => setShowScrollReminder(false)}
+          >
+            <style>{`
+              @keyframes flashTwice {
+                0% { opacity: 0; }
+                25% { opacity: 1; }
+                50% { opacity: 0; }
+                75% { opacity: 1; }
+                100% { opacity: 0; }
+              }
+              .animate-flash-twice {
+                animation: flashTwice 8s ease-in-out forwards;
+              }
+            `}</style>
+            <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
+                More Content Details
+              </span>
+              <span
+                className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}
+              >
+                ⌄
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
