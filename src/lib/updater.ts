@@ -148,8 +148,20 @@ async function downloadAndInstallApk(url: string, fileName: string) {
   try {
     if (typeof window === "undefined") return;
 
-    // Directly open in the system browser / download manager to bypass webview file restrictions
-    window.open(url, "_system");
+    const isCapacitor = !!(window as any).Capacitor;
+
+    if (isCapacitor) {
+      try {
+        // @vite-ignore prevents Vite from breaking static analysis
+        const browserModule = await import(/* @vite-ignore */ "@capacitor/browser");
+        await browserModule.Browser.open({ url });
+        return;
+      } catch (nativeErr: any) {
+        console.warn("Capacitor Browser plugin unavailable, falling back:", nativeErr);
+      }
+    }
+
+    window.open(url, "_blank");
   } catch (err: any) {
     console.error("Failed to download APK:", err);
     alert(`Failed to download APK: ${err?.message || err}`);
