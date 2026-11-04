@@ -1,3 +1,4 @@
+// patches/details_2.tsx
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/settings";
@@ -765,32 +766,11 @@ export function DetailsPage() {
               </div>
             )}
 
+            {/* UNTOUCHED DIRECT IFRAME STREAM */}
             <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
               <iframe
                 key={`stable-player-${mediaId}-${season}-${episode}`}
-                srcDoc={`
-                  <!DOCTYPE html>
-                  <html>
-                    <head>
-                      <style>
-                        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
-                        iframe { width: 100%; height: 100%; border: none; }
-                      </style>
-                      <script>
-                        window.open = function() { console.log("Blocked timed popup injection"); return null; };
-                        window.alert = function() {};
-                        window.confirm = function() { return true; };
-                      </script>
-                    </head>
-                    <body>
-                      <iframe 
-                        src="${embedUrl}" 
-                        allowfullscreen 
-                        allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
-                      ></iframe>
-                    </body>
-                  </html>
-                `}
+                src={embedUrl}
                 className="h-full w-full border-0"
                 allowFullScreen
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
