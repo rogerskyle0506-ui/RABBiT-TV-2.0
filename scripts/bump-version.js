@@ -51,7 +51,16 @@ if (fs.existsSync(capConfigPath)) {
   fs.writeFileSync(capConfigPath, JSON.stringify(capConfig, null, 2) + '\n');
 }
 
-// 3. Automatically generate updates/nightly_manifest.json for the updater
+// 3. Automatically generate src/lib/version.ts so the app compiles with the exact version
+const srcLibDir = path.resolve('src/lib');
+if (!fs.existsSync(srcLibDir)) {
+  fs.mkdirSync(srcLibDir, { recursive: true });
+}
+const versionTsContent = `// Auto-generated at build time - do not modify manually\nexport const APP_VERSION = "${newVersion}";\n`;
+fs.writeFileSync(path.join(srcLibDir, 'version.ts'), versionTsContent, 'utf8');
+console.log(`📝 Generated src/lib/version.ts with version ${newVersion}`);
+
+// 4. Automatically generate updates/nightly_manifest.json for the updater
 const updatesDir = path.resolve('updates');
 if (!fs.existsSync(updatesDir)) {
   fs.mkdirSync(updatesDir, { recursive: true });
