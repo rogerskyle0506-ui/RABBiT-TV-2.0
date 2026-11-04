@@ -49,7 +49,7 @@ jobs:
       - name: Apply Explicit Patches for Android TV App
         run: |
           mkdir -p src/lib src/routes
-          
+
           # 0. Copy settings store & theme types to src/lib/settings.ts
           if [ -f patches/settings.ts ]; then
             cp patches/settings.ts src/lib/settings.ts
@@ -138,11 +138,11 @@ jobs:
         id: version-extractor
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "artifact_name=rabbittv-v${VERSION}" >> $GITHUB_OUTPUT
           echo "apk_filename=rabbittv${VERSION}.apk" >> $GITHUB_OUTPUT
-          
+
           echo "Building RABBiT TV version ${VERSION}"
 
       - name: Map TanStack Shell to Capacitor index.html
@@ -184,6 +184,26 @@ jobs:
             echo "Restored keystore to android/app/"
           fi
 
+      - name: Sync Package.json Version to Android Build.gradle
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+          BUILD=$(echo $VERSION | cut -d. -f4)
+          [ -z "$BUILD" ] && BUILD=0
+          VERSION_CODE=$((MAJOR * 1000000 + MINOR * 10000 + PATCH * 100 + BUILD))
+
+          echo "Updating Android build.gradle with Version Name: $VERSION and Version Code: $VERSION_CODE"
+
+          if [ -f android/app/build.gradle ]; then
+            sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/g" android/app/build.gradle
+            sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/g" android/app/build.gradle
+          else
+            echo "Error: android/app/build.gradle not found!"
+            exit 1
+          fi
+
       - name: Generate App Icons and Splash Screens from Standard Assets
         run: npx @capacitor/assets generate --android
 
@@ -193,7 +213,7 @@ jobs:
           python3 -c "
           import os
           from PIL import Image
-          
+
           if os.path.exists('assets/HeaderFamily.jpg'):
               img = Image.open('assets/HeaderFamily.jpg').convert('RGBA')
               img.save('assets/tv_banner.png', 'PNG')
@@ -270,7 +290,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.io"
-          git add package.json capacitor.config.json updates/
+          git add package.json capacitor.config.json updates/ android/app/build.gradle
           git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} and publish nightly build [skip ci]" || echo "No changes to commit"
           git push
 
