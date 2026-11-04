@@ -30,17 +30,15 @@ import {
   setLargeButtons,
 } from "@/lib/settings";
 
-// ——— Direct GitHub API Key Verification & Management ———
-const GITHUB_OWNER = "rogerskyle0506-ui";
-const GITHUB_REPO = "RABBiT-TV-2.0";
+// ——— Private GitHub Gist Key Verification & Management ———
+const GIST_ID = (import.meta as any).env?.VITE_GIST_ID || "a9d05227252c7b4d085047ef73797327";
 const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT || "";
-const KEYS_FILE_PATH = "keys.json";
-const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${KEYS_FILE_PATH}`;
+const GIST_API_URL = `https://api.github.com/gists/${GIST_ID}`;
 
-// ——— Enhanced Single-Use Key Verification & Consumption ———
+// ——— Enhanced Single-Use Key Verification & Consumption via Gist ———
 async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey: string): Promise<boolean> {
   try {
-    const res = await fetch(GITHUB_API_URL, {
+    const res = await fetch(GIST_API_URL, {
       headers: {
         Authorization: `Bearer ${GITHUB_TOKEN}`,
         Accept: "application/vnd.github+json",
@@ -49,9 +47,11 @@ async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey
     });
 
     if (!res.ok) return false;
-    const fileData = await res.json();
-    const decodedContent = atob(fileData.content);
-    let keysList = JSON.parse(decodedContent);
+    const gistData = await res.json();
+    const rawContent = gistData.files?.["keys.json"]?.content;
+    if (!rawContent) return false;
+
+    let keysList = JSON.parse(rawContent);
 
     if (!Array.isArray(keysList)) return false;
 
@@ -74,9 +74,9 @@ async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey
       keysList.splice(matchedIndex, 1);
     }
 
-    const updatedContentBase64 = btoa(JSON.stringify(keysList, null, 2));
-    await fetch(GITHUB_API_URL, {
-      method: "PUT",
+    const updatedContent = JSON.stringify(keysList, null, 2);
+    await fetch(GIST_API_URL, {
+      method: "PATCH",
       headers: {
         Authorization: `Bearer ${GITHUB_TOKEN}`,
         Accept: "application/vnd.github+json",
@@ -84,16 +84,17 @@ async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey
         "User-Agent": "RabbitTV-App"
       },
       body: JSON.stringify({
-        message: `Consume single-use key: ${securityKey}`,
-        content: updatedContentBase64,
-        sha: fileData.sha,
-        branch: "main"
+        files: {
+          "keys.json": {
+            content: updatedContent
+          }
+        }
       })
     });
 
     return true;
   } catch (error) {
-    console.error('Failed to verify and consume key with GitHub:', error);
+    console.error('Failed to verify and consume key with Gist:', error);
     return false;
   }
 }
@@ -552,7 +553,7 @@ function RootComponent() {
     }
   };
 
-  // Automated keygen committing structured objects to GitHub repository
+  // Automated keygen committing structured objects to secret Gist
   const handleKeygen = async (e: React.FormEvent) => {
     e.preventDefault();
     const age = parseInt(keygenAge.trim(), 10);
@@ -566,10 +567,10 @@ function RootComponent() {
       rawKeyString.split("").reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0)
     ).toString();
 
-    setKeygenResult(`Generated Key: ${generatedKey} — Pushing directly to GitHub...`);
+    setKeygenResult(`Generated Key: ${generatedKey} — Pushing directly to Gist...`);
 
     try {
-      const getRes = await fetch(GITHUB_API_URL, {
+      const getRes = await fetch(GIST_API_URL, {
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
@@ -578,14 +579,12 @@ function RootComponent() {
       });
 
       let keysList: any[] = [];
-      let fileSha: string | undefined = undefined;
 
       if (getRes.ok) {
-        const fileData = await getRes.json();
-        fileSha = fileData.sha;
+        const gistData = await getRes.json();
+        const rawContent = gistData.files?.["keys.json"]?.content;
         try {
-          const decodedContent = atob(fileData.content);
-          keysList = JSON.parse(decodedContent);
+          keysList = JSON.parse(rawContent);
           if (!Array.isArray(keysList)) keysList = [];
         } catch {
           keysList = [];
@@ -594,51 +593,47 @@ function RootComponent() {
 
       const stringKey = String(generatedKey);
       
-      // Ensure we push in object format to support active/inactive toggling
       const newKeyObj = { key: stringKey, active: true, owner: `${keygenName.trim()} (${age})` };
       keysList.push(newKeyObj);
 
-      const updatedContentBase64 = btoa(JSON.stringify(keysList, null, 2));
+      const updatedContent = JSON.stringify(keysList, null, 2);
 
-      const payload: any = {
-        message: `Auto-activate key: ${stringKey}`,
-        content: updatedContentBase64,
-        branch: "main"
-      };
-      if (fileSha) {
-        payload.sha = fileSha;
-      }
-
-      const putRes = await fetch(GITHUB_API_URL, {
-        method: "PUT",
+      const patchRes = await fetch(GIST_API_URL, {
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
           "Content-Type": "application/json",
           "User-Agent": "RabbitTV-App"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          files: {
+            "keys.json": {
+              content: updatedContent
+            }
+          }
+        })
       });
 
-      const putData = await putRes.json();
+      const patchData = await patchRes.json();
 
-      if (putRes.ok) {
-        setKeygenResult(`✅ Key [${stringKey}] Committed & Activated on GitHub!`);
+      if (patchRes.ok) {
+        setKeygenResult(`✅ Key [${stringKey}] Committed & Activated on Gist!`);
         fetchRemoteKeys();
       } else {
-        setKeygenResult(`⚠️ GitHub Commit Failed: ${putData.message || JSON.stringify(putData)}`);
+        setKeygenResult(`⚠️ Gist Commit Failed: ${patchData.message || JSON.stringify(patchData)}`);
       }
     } catch (error: any) {
-      console.error("Error pushing directly to GitHub:", error);
+      console.error("Error pushing directly to Gist:", error);
       setKeygenResult(`⚠️ Network Error: ${error.message || error}`);
     }
   };
 
-  // Fetch keys list for Admin management
+  // Fetch keys list for Admin management from Gist
   const fetchRemoteKeys = async () => {
     setLoadingKeys(true);
     try {
-      const res = await fetch(GITHUB_API_URL, {
+      const res = await fetch(GIST_API_URL, {
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
@@ -646,9 +641,9 @@ function RootComponent() {
         }
       });
       if (res.ok) {
-        const fileData = await res.json();
-        const decodedContent = atob(fileData.content);
-        const parsed = JSON.parse(decodedContent);
+        const gistData = await res.json();
+        const rawContent = gistData.files?.["keys.json"]?.content;
+        const parsed = JSON.parse(rawContent);
         const normalized = parsed.map((item: any) => 
           typeof item === "object" && item !== null ? item : { key: item, active: true, owner: "Legacy" }
         );
@@ -661,10 +656,10 @@ function RootComponent() {
     }
   };
 
-  // Toggle key status (Active <-> Unused/Recycled) or Delete
+  // Toggle key status or Delete via Gist PATCH
   const handleModifyKeyStatus = async (targetKey: string, action: "toggle" | "delete") => {
     try {
-      const res = await fetch(GITHUB_API_URL, {
+      const res = await fetch(GIST_API_URL, {
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
@@ -672,8 +667,8 @@ function RootComponent() {
         }
       });
       if (!res.ok) return;
-      const fileData = await res.json();
-      let keysList = JSON.parse(atob(fileData.content));
+      const gistData = await res.json();
+      let keysList = JSON.parse(gistData.files?.["keys.json"]?.content);
 
       keysList = keysList.map((item: any) => {
         const kVal = typeof item === "object" ? item.key : item;
@@ -689,9 +684,9 @@ function RootComponent() {
         return item;
       }).filter(Boolean);
 
-      const updatedContentBase64 = btoa(JSON.stringify(keysList, null, 2));
-      const putRes = await fetch(GITHUB_API_URL, {
-        method: "PUT",
+      const updatedContent = JSON.stringify(keysList, null, 2);
+      const patchRes = await fetch(GIST_API_URL, {
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
@@ -699,14 +694,15 @@ function RootComponent() {
           "User-Agent": "RabbitTV-App"
         },
         body: JSON.stringify({
-          message: `Admin action ${action} on key ${targetKey}`,
-          content: updatedContentBase64,
-          sha: fileData.sha,
-          branch: "main"
+          files: {
+            "keys.json": {
+              content: updatedContent
+            }
+          }
         })
       });
 
-      if (putRes.ok) {
+      if (patchRes.ok) {
         fetchRemoteKeys();
       }
     } catch (err) {
@@ -1223,7 +1219,7 @@ function RootComponent() {
                         type="submit"
                         className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
                       >
-                        Generate & Push Key to GitHub
+                        Generate & Push Key to Gist
                       </button>
                     </form>
                     {keygenResult && (
@@ -1247,7 +1243,7 @@ function RootComponent() {
                       
                       <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
                         {remoteKeys.length === 0 ? (
-                          <p className="text-[10px] text-slate-400 text-center py-2">Click refresh to load keys from GitHub.</p>
+                          <p className="text-[10px] text-slate-400 text-center py-2">Click refresh to load keys from Gist.</p>
                         ) : (
                           remoteKeys.map((kObj, idx) => (
                             <div key={idx} className="flex items-center justify-between bg-black/50 p-2 rounded-lg border border-white/10 text-[11px]">
