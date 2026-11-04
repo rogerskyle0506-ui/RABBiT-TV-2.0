@@ -288,8 +288,8 @@ jobs:
           echo "Successfully copied APK to updates/${{ steps.version-extractor.outputs.apk_filename }}"
 
           cd updates
-          echo "Cleaning up old versions while preserving XML files..."
-          find . -maxdepth 1 ! -name "*.xml" -printf '%T@ %p\n' | sort -n | head -n -2 | while read -r timestamp file; do
+          echo "Cleaning up old versions while preserving manifests & XML files..."
+          find . -maxdepth 1 ! -name "*.xml" ! -name "nightly_manifest.json" -printf '%T@ %p\n' | sort -n | head -n -2 | while read -r timestamp file; do
             if [ -n "$file" ]; then
               echo "Removing outdated version: $file"
               rm -f "$file"
