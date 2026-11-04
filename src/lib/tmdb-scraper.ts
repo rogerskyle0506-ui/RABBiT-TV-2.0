@@ -1,3 +1,4 @@
+// src/lib/tmdb-scraper.ts
 export type MediaItem = {
   id: string;
   title: string;
@@ -27,7 +28,7 @@ const TMDB_API_KEY =
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
-const STORAGE_PREFIX = "rabtv_catalog_cache_v17_";
+const STORAGE_PREFIX = "rabtv_catalog_cache_v18_";
 const ITEMS_PER_PAGE = 20;
 
 let lastRequestTimestamp = 0;
@@ -119,7 +120,6 @@ function mapTmdbItemToMediaItem(
 
   const releaseDate = (item.release_date || item.first_air_date || "") as string;
 
-  // 🛑 UNIVERSAL RELEASE DATE SCRUBBER (Discard titles > 30 days into the future)
   if (releaseDate) {
     const releaseTime = new Date(releaseDate).getTime();
     const maxAllowedTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
@@ -171,7 +171,9 @@ async function fetchTmdb(
   url.searchParams.set("page", page.toString());
 
   for (const [key, value] of Object.entries(extraParams)) {
-    url.searchParams.set(key, value);
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, value);
+    }
   }
 
   const response = await fetch(url.toString());
@@ -193,7 +195,8 @@ export async function scrapeCategoryContent(
   subFeed?: string
 ): Promise<ScrapeResult> {
   try {
-    const cleanSubFeed = subFeed && subFeed !== "All (Default)" ? subFeed : undefined;
+    const cleanSubFeed =
+      subFeed && subFeed !== "All (Default)" ? subFeed : undefined;
     const feedKey = cleanSubFeed ? `_${cleanSubFeed}` : "";
     const storageKey = `${STORAGE_PREFIX}_${category}${feedKey}_${genreFilter}`;
     const requiredItemsCount = page * ITEMS_PER_PAGE;
@@ -221,14 +224,21 @@ export async function scrapeCategoryContent(
     const seenIds = new Set(catalogItems.map((i) => i.id));
 
     if (catalogItems.length < requiredItemsCount && !isFullyLoaded) {
-      while (catalogItems.length < requiredItemsCount && maxApiPageReached < totalAvailablePages) {
+      while (
+        catalogItems.length < requiredItemsCount &&
+        maxApiPageReached < totalAvailablePages
+      ) {
         const nextApiPage = maxApiPageReached + 1;
         const batch: MediaItem[] = [];
 
-        // Check if category is a provider (Netflix, Prime, Disney+) or set via subFeed
-        const providerId = providerIdMap[category] || (cleanSubFeed ? providerIdMap[cleanSubFeed] : undefined);
-        const genreId = genreFilter && genreFilter !== "Trending" ? genreNameToId[genreFilter.toLowerCase()] : null;
-        
+        const providerId =
+          providerIdMap[category] ||
+          (cleanSubFeed ? providerIdMap[cleanSubFeed] : undefined);
+        const genreId =
+          genreFilter && genreFilter !== "Trending"
+            ? genreNameToId[genreFilter.toLowerCase()]
+            : null;
+
         const isTvTab = category === "Series" || category === "TV Shows";
         const isMovieTab = category === "Movies";
         const isInTheaters = category === "In Theaters";
@@ -248,6 +258,17 @@ export async function scrapeCategoryContent(
           } else if (cleanSubFeed === "German") {
             discoverParams.with_original_language = "de";
             discoverParams.with_origin_country = "DE";
+          } else if (cleanSubFeed === "Arabic / Islamic") {
+            discoverParams.with_original_language = "ar";
+          } else if (cleanSubFeed === "Ukrainian") {
+            discoverParams.with_original_language = "uk";
+          } else if (
+            cleanSubFeed === "Canada (All)" ||
+            cleanSubFeed === "Ontario / Toronto" ||
+            cleanSubFeed === "Atlantic Canada" ||
+            cleanSubFeed === "Western Canada"
+          ) {
+            discoverParams.with_origin_country = "CA";
           }
         }
 
@@ -255,7 +276,6 @@ export async function scrapeCategoryContent(
           discoverParams.with_genres = genreId.toString();
         }
 
-        // Apply provider filtering with CA watch region if provider is selected (ignored for In Theaters)
         if (providerId && !isInTheaters) {
           discoverParams.with_watch_providers = providerId;
           discoverParams.watch_region = "CA";
@@ -268,7 +288,13 @@ export async function scrapeCategoryContent(
           endpoint = "movie/now_playing";
         }
 
-        if (providerId || cleanSubFeed || isInTheaters || isMovieTab || isTvTab) {
+        if (
+          providerId ||
+          cleanSubFeed ||
+          isInTheaters ||
+          isMovieTab ||
+          isTvTab
+        ) {
           let data = await fetchTmdb(endpoint, nextApiPage, discoverParams);
           let results = (data.results as Record<string, unknown>[]) || [];
 
@@ -280,29 +306,42 @@ export async function scrapeCategoryContent(
 
           totalAvailablePages = Math.min((data.total_pages as number) || 50, 50);
           results.forEach((item) => {
-            const mapped = mapTmdbItemToMediaItem(item, isTvTab ? "tv" : "movie");
+            const mapped = mapTmdbItemToMediaItem(
+              item,
+              isTvTab ? "tv" : "movie"
+            );
             if (mapped) batch.push(mapped);
           });
 
-          // If on Home tab with a provider active, fetch both Movies & TV Shows
           if (category === "Home" && !isTvTab && !isMovieTab && !isInTheaters) {
-            const tvData = await fetchTmdb("discover/tv", nextApiPage, discoverParams);
+            const tvData = await fetchTmdb(
+              "discover/tv",
+              nextApiPage,
+              discoverParams
+            );
             const tvResults = (tvData.results as Record<string, unknown>[]) || [];
             tvResults.forEach((item) => {
               const mapped = mapTmdbItemToMediaItem(item, "tv");
               if (mapped) batch.push(mapped);
             });
           }
-        } else if (category === "Home" && (!genreFilter || genreFilter === "Trending")) {
+        } else if (
+          category === "Home" &&
+          (!genreFilter || genreFilter === "Trending")
+        ) {
           const movieData = await fetchTmdb("trending/movie/week", nextApiPage);
           const tvData = await fetchTmdb("trending/tv/week", nextApiPage);
 
           totalAvailablePages = Math.min(
-            Math.max((movieData.total_pages as number) || 1, (tvData.total_pages as number) || 1),
+            Math.max(
+              (movieData.total_pages as number) || 1,
+              (tvData.total_pages as number) || 1
+            ),
             50
           );
 
-          const movieResults = (movieData.results as Record<string, unknown>[]) || [];
+          const movieResults =
+            (movieData.results as Record<string, unknown>[]) || [];
           movieResults.forEach((item) => {
             const mapped = mapTmdbItemToMediaItem(item, "movie");
             if (mapped) batch.push(mapped);
@@ -329,7 +368,10 @@ export async function scrapeCategoryContent(
 
           totalAvailablePages = Math.min((data.total_pages as number) || 50, 50);
           results.forEach((item) => {
-            const mapped = mapTmdbItemToMediaItem(item, isTvTab ? "tv" : "movie");
+            const mapped = mapTmdbItemToMediaItem(
+              item,
+              isTvTab ? "tv" : "movie"
+            );
             if (mapped) batch.push(mapped);
           });
         }
@@ -353,9 +395,13 @@ export async function scrapeCategoryContent(
           const isTvTab = category === "Series" || category === "TV Shows";
           const fallbackEndpoint = isTvTab ? "tv/popular" : "movie/popular";
           const fallbackData = await fetchTmdb(fallbackEndpoint, 1);
-          const fallbackResults = (fallbackData.results as Record<string, unknown>[]) || [];
+          const fallbackResults =
+            (fallbackData.results as Record<string, unknown>[]) || [];
           fallbackResults.forEach((item) => {
-            const mapped = mapTmdbItemToMediaItem(item, isTvTab ? "tv" : "movie");
+            const mapped = mapTmdbItemToMediaItem(
+              item,
+              isTvTab ? "tv" : "movie"
+            );
             if (mapped && !seenIds.has(mapped.id)) {
               seenIds.add(mapped.id);
               catalogItems.push(mapped);
@@ -387,13 +433,18 @@ export async function scrapeCategoryContent(
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const pageSlice = catalogItems.slice(startIndex, endIndex);
 
-    const totalPages = Math.max(1, Math.ceil(catalogItems.length / ITEMS_PER_PAGE));
+    const totalPages = Math.max(
+      1,
+      Math.ceil(catalogItems.length / ITEMS_PER_PAGE)
+    );
 
     return {
       source: "TMDB API",
       items: pageSlice,
       fetchedAt: new Date().toISOString(),
-      message: `Loaded ${pageSlice.length} titles for ${category}${cleanSubFeed ? ` (${cleanSubFeed})` : ""} / ${genreFilter} (Page ${page}).`,
+      message: `Loaded ${pageSlice.length} titles for ${category}${
+        cleanSubFeed ? ` (${cleanSubFeed})` : ""
+      } / ${genreFilter} (Page ${page}).`,
       page,
       totalPages: isFullyLoaded ? totalPages : Math.max(totalPages, page + 1),
     };
