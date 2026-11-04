@@ -152,12 +152,12 @@ async function downloadAndInstallApk(url: string, fileName: string) {
 
     if (isCapacitor) {
       try {
-        // Direct assignment to window.location forces the Android WebView context 
-        // to hand the direct file stream over to the native Android download manager.
-        window.location.href = url;
+        // @vite-ignore prevents Vite from breaking static analysis
+        const browserModule = await import(/* @vite-ignore */ "@capacitor/browser");
+        await browserModule.Browser.open({ url });
         return;
       } catch (nativeErr: any) {
-        console.warn("Direct location assignment failed, trying fallback:", nativeErr);
+        console.warn("Capacitor Browser plugin unavailable, falling back:", nativeErr);
       }
     }
 
