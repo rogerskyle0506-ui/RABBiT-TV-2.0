@@ -197,7 +197,7 @@ export function AdminPanel({
 
   return (
     <div className="space-y-4">
-      {/* ADMIN BUG REPORT INBOX INTEGRATION */}
+      {/* ADMIN BUG REPORT INBOX INTEGRATION (Placed right where your white arrow pointed) */}
       <div className="bg-red-950/40 p-3.5 rounded-xl border border-red-500/30 box-border backdrop-blur-md">
         <AdminBugInbox />
       </div>
