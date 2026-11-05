@@ -4,6 +4,8 @@ import {
   fetchBugSystemData,
   updateBugReportStatus,
   banUserFromReport,
+  deleteBugReport,
+  removeBannedUser,
   BugReport,
   BannedUser
 } from "@/lib/bugReports";
@@ -40,9 +42,23 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
     if (success) loadData();
   };
 
+  const handleDeleteReport = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this bug report?")) {
+      const success = await deleteBugReport(id);
+      if (success) loadData();
+    }
+  };
+
   const handleBan = async (name: string, codeSuffix: string) => {
     if (window.confirm(`Are you sure you want to ban user "${name}" (...${codeSuffix}) from reporting bugs?`)) {
       const success = await banUserFromReport(name, codeSuffix);
+      if (success) loadData();
+    }
+  };
+
+  const handleRemoveBan = async (identifier: string, name: string) => {
+    if (window.confirm(`Are you sure you want to remove the ban for "${name}"?`)) {
+      const success = await removeBannedUser(identifier);
       if (success) loadData();
     }
   };
@@ -54,7 +70,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
           <h4 className="text-xs font-bold uppercase tracking-wider text-red-300">
             🐞 Bug Reports Inbox ({reports.length})
           </h4>
-          <p className="text-[10px] text-slate-400">Manage bug reports, statuses, and user bans</p>
+          <p className="text-[10px] text-slate-400">Manage bug reports, statuses, user bans, and clean spam</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -167,6 +183,15 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
 
                     <button
                       type="button"
+                      onClick={() => handleDeleteReport(report.id)}
+                      className="rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[10px] font-bold text-red-400 border border-red-500/30 transition"
+                      title="Delete report"
+                    >
+                      🗑️ Delete
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => handleBan(report.name, report.codeSuffix)}
                       className="rounded-lg bg-red-600/80 hover:bg-red-600 px-2.5 py-1 text-[10px] font-bold text-white transition"
                     >
@@ -196,6 +221,13 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
                     Banned on: {new Date(banned.timestamp).toLocaleString()}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveBan(banned.identifier, banned.name)}
+                  className="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1 text-[10px] font-bold text-emerald-400 border border-emerald-500/30 transition"
+                >
+                  ✓ Remove Ban
+                </button>
               </div>
             ))
           )
