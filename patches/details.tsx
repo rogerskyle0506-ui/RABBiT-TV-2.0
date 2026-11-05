@@ -1,3 +1,8 @@
+I am deeply sorry. You are completely right, and I apologize for giving you a snippet there. You have been crystal clear that you always want the complete, full code file from top to bottom so nothing breaks. I have learned my lesson and will never give you snippets again.
+
+Here is the **complete, full `src/routes/details.tsx` file** from top to bottom. It includes the movie coverart backdrop wallpaper, the status badges (broken, disliked, completed, in progress), the season/episode controls, and the actors compacted into a single sleek horizontal wrapper with smaller, streamlined budget, production, and language cards.
+
+```tsx
 // patches/details_2.tsx
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -1000,19 +1005,19 @@ export function DetailsPage() {
               </div>
             </div>
 
-            {/* 2) Cast Section Displayed After Description */}
+            {/* 2) Cast Section in a Single Compact Wrapper */}
             {castList.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-white/10 space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <span>Cast</span>
+              <div className={`mt-6 pt-4 pb-4 px-4 rounded-2xl border ${getCardBackground(appTheme)} backdrop-blur shadow-xl space-y-3`}>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                  Cast
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {castList.slice(0, 12).map((actor: any) => (
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+                  {castList.slice(0, 15).map((actor: any) => (
                     <div
                       key={actor.id}
-                      className={`rounded-2xl border ${getCardBackground(appTheme)} p-3 flex flex-col items-center text-center shadow-lg backdrop-blur`}
+                      className="flex flex-col items-center text-center shrink-0 w-20"
                     >
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border border-white/10 bg-black shrink-0">
+                      <div className="w-14 h-14 rounded-full overflow-hidden mb-1.5 border border-white/10 bg-black">
                         <img
                           src={
                             actor.profile_path
@@ -1023,10 +1028,10 @@ export function DetailsPage() {
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <h3 className="text-xs font-bold text-white truncate w-full">
+                      <h3 className="text-[10px] font-bold text-white truncate w-full">
                         {actor.name}
                       </h3>
-                      <p className="text-[11px] text-slate-400 truncate w-full">
+                      <p className="text-[9px] text-slate-400 truncate w-full">
                         {actor.character}
                       </p>
                     </div>
@@ -1035,27 +1040,27 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* 3) Production Cost, Producer Companies, & Language Info Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-              <div className={`rounded-2xl border ${getCardBackground(appTheme)} p-5 backdrop-blur shadow-xl`}>
-                <span className="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+            {/* 3) Compact Budget, Production, & Language Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
+                <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
                   Budget
                 </span>
-                <span className="text-lg font-bold text-white">{budget}</span>
+                <span className="text-sm font-bold text-white">{budget}</span>
               </div>
-              <div className={`rounded-2xl border ${getCardBackground(appTheme)} p-5 backdrop-blur shadow-xl`}>
-                <span className="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+              <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
+                <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
                   Production
                 </span>
-                <span className="text-lg font-bold text-white truncate block" title={productionCompanies}>
+                <span className="text-sm font-bold text-white truncate block" title={productionCompanies}>
                   {productionCompanies}
                 </span>
               </div>
-              <div className={`rounded-2xl border ${getCardBackground(appTheme)} p-5 backdrop-blur shadow-xl`}>
-                <span className="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+              <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
+                <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
                   Language
                 </span>
-                <span className="text-lg font-bold text-white">
+                <span className="text-sm font-bold text-white">
                   {originalLanguageName || "English"}
                 </span>
               </div>
@@ -1109,3 +1114,5 @@ export function DetailsPage() {
     </div>
   );
 }
+
+```
