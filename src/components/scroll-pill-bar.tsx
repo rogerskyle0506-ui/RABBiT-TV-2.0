@@ -1,3 +1,4 @@
+// src/components/ScrollPillBar.tsx
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { AppTheme } from "@/lib/settings";
 
@@ -55,6 +56,12 @@ export function ScrollPillBar({
     };
   }, [options, checkScrollBounds]);
 
+  const scrollByAmount = (offset: number) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: offset, behavior: "smooth" });
+    }
+  };
+
   // Dynamic Theme Color Mapping for the micro-arrows & soft neon aura
   const getThemeArrowColor = (theme: AppTheme) => {
     switch (theme) {
@@ -76,21 +83,28 @@ export function ScrollPillBar({
 
   return (
     <div className="relative w-full max-w-fit mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md p-1.5 flex justify-center">
-      {/* Left Side Edge Fade + Theme-Matched Slow Glowing Left Arrow */}
+      {/* Left Side Edge Fade + Clickable Interactive Left Arrow Button */}
       <div
-        className={`pointer-events-none absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-black/90 via-black/40 to-transparent z-10 flex items-center justify-start pl-2.5 transition-opacity duration-300 ${
-          canScrollLeft ? "opacity-100" : "opacity-0"
+        className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-black/95 via-black/60 to-transparent z-20 flex items-center justify-start pl-2 transition-opacity duration-300 ${
+          canScrollLeft ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
       >
-        <span className={`text-sm font-black transition-colors duration-300 animate-slow-glow ${getThemeArrowColor(appTheme)}`}>
-          ‹
-        </span>
+        <button
+          type="button"
+          onClick={() => scrollByAmount(-200)}
+          aria-label="Scroll left"
+          className="p-1 rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
+        >
+          <span className={`text-base font-black transition-colors duration-300 animate-slow-glow ${getThemeArrowColor(appTheme)}`}>
+            ‹
+          </span>
+        </button>
       </div>
 
       {/* Centered Scrollable Track */}
       <div
         ref={scrollContainerRef}
-        className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto scrollbar-none px-2 py-1 min-w-full sm:min-w-0"
+        className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto scrollbar-none px-6 py-1 min-w-full sm:min-w-0"
       >
         {options.map((item) => (
           <button
@@ -108,15 +122,22 @@ export function ScrollPillBar({
         ))}
       </div>
 
-      {/* Right Side Edge Fade + Theme-Matched Slow Glowing Right Arrow */}
+      {/* Right Side Edge Fade + Clickable Interactive Right Arrow Button */}
       <div
-        className={`pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-black/90 via-black/40 to-transparent z-10 flex items-center justify-end pr-2.5 transition-opacity duration-300 ${
-          canScrollRight ? "opacity-100" : "opacity-0"
+        className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-black/95 via-black/60 to-transparent z-20 flex items-center justify-end pr-2 transition-opacity duration-300 ${
+          canScrollRight ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
       >
-        <span className={`text-sm font-black transition-colors duration-300 animate-slow-glow ${getThemeArrowColor(appTheme)}`}>
-          ›
-        </span>
+        <button
+          type="button"
+          onClick={() => scrollByAmount(200)}
+          aria-label="Scroll right"
+          className="p-1 rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
+        >
+          <span className={`text-base font-black transition-colors duration-300 animate-slow-glow ${getThemeArrowColor(appTheme)}`}>
+            ›
+          </span>
+        </button>
       </div>
     </div>
   );
