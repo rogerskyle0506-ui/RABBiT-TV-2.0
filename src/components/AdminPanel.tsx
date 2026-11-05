@@ -163,7 +163,7 @@ export function AdminPanel({
           return { 
             key: kVal, 
             active: !currentActive, 
-            owner: item.owner || "Admin Recycled" 
+            owner: item.owner || item.usedBy || "Admin Recycled" 
           };
         }
         return item;
@@ -254,12 +254,17 @@ export function AdminPanel({
               <p className="text-[10px] text-slate-400 text-center py-2">Click refresh to load keys from Gist.</p>
             ) : (
               remoteKeys.map((kObj, idx) => (
-                <div key={idx} className="flex items-center justify-between bg-black/50 p-2 rounded-lg border border-white/10 text-[11px]">
-                  <div className="truncate pr-2">
-                    <span className="font-mono font-bold text-amber-300">{kObj.key}</span>
-                    <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${kObj.active ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"}`}>
-                      {kObj.active ? "Active" : "Used/Inactive"}
-                    </span>
+                <div key={idx} className="flex items-center justify-between bg-black/50 p-2.5 rounded-lg border border-white/10 text-[11px]">
+                  <div className="truncate pr-2 space-y-0.5">
+                    <div>
+                      <span className="font-mono font-bold text-amber-300">{kObj.key}</span>
+                      <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${kObj.active ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"}`}>
+                        {kObj.active ? "Active" : "Used/Inactive"}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-300">
+                      👤 <strong>User:</strong> {kObj.owner || kObj.usedBy || "Unassigned"}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
