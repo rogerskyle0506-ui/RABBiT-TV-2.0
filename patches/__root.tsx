@@ -150,7 +150,9 @@ function RootComponent() {
 
   const handleUpdateChannelChange = (channel: "stable" | "nightly") => {
     setUpdateChannel(channel);
-    localStorage.setItem("rabtv_update_channel", channel);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rabtv_update_channel", channel);
+    }
   };
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
@@ -170,10 +172,12 @@ function RootComponent() {
 
   const handleGlobalFeedChange = (feed: GlobalFeedOption) => {
     setSelectedGlobalFeed(feed);
-    localStorage.setItem("rabtv_global_feed", feed);
-    window.dispatchEvent(
-      new CustomEvent("rabtv_global_feed_updated", { detail: feed })
-    );
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rabtv_global_feed", feed);
+      window.dispatchEvent(
+        new CustomEvent("rabtv_global_feed_updated", { detail: feed })
+      );
+    }
   };
 
   const handleHeaderSearchSubmit = (e: React.FormEvent) => {
@@ -198,14 +202,18 @@ function RootComponent() {
     } catch (err) {
       console.warn("Could not open via Capacitor Browser, using fallback", err);
     }
-    window.open(url, "_blank");
+    if (typeof window !== "undefined") {
+      window.open(url, "_blank");
+    }
   };
   
   const handleToggleProfileMenu = () => {
     if (showProfileMenu) handleCloseAll();
     else {
       handleCloseAll();
-      lastScrollYRef.current = window.scrollY;
+      if (typeof window !== "undefined") {
+        lastScrollYRef.current = window.scrollY;
+      }
       setShowProfileMenu(true);
     }
   };
@@ -220,14 +228,16 @@ function RootComponent() {
 
   useEffect(() => {
     const handleWindowScroll = () => {
-      if (showProfileMenu) {
+      if (showProfileMenu && typeof window !== "undefined") {
         if (Math.abs(window.scrollY - lastScrollYRef.current) > 60) {
           handleCloseAll();
         }
       }
     };
-    window.addEventListener("scroll", handleWindowScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleWindowScroll);
+    if (typeof window !== "undefined") {
+      window.addEventListener("scroll", handleWindowScroll, { passive: true });
+      return () => window.removeEventListener("scroll", handleWindowScroll);
+    }
   }, [showProfileMenu]);
 
   useEffect(() => {
@@ -305,13 +315,13 @@ function RootComponent() {
       window.removeEventListener("rabtv_settings_updated", handleSettingsUpdate);
   }, []);
 
-  const getAgeLockCode = () => localStorage.getItem(AGE_LOCK_KEY) || "";
+  const getAgeLockCode = () => typeof window !== "undefined" ? localStorage.getItem(AGE_LOCK_KEY) || "" : "";
 
   const handleUpgradeFromProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const name =
       savedProfileName ||
-      localStorage.getItem("rabtv_profile_name") ||
+      (typeof window !== "undefined" ? localStorage.getItem("rabtv_profile_name") : "") ||
       "Friend";
     const age = getSavedUserAge() || parseInt(userAgeInput, 10) || 0;
     
@@ -368,8 +378,10 @@ function RootComponent() {
     }
 
     if (isValidGitHubCode) {
-      localStorage.setItem("rabtv_access_status", "permanent");
-      localStorage.removeItem("rabtv_trial_start_timestamp");
+      if (typeof window !== "undefined") {
+        localStorage.setItem("rabtv_access_status", "permanent");
+        localStorage.removeItem("rabtv_trial_start_timestamp");
+      }
       setIsTrialActive(false);
       sendPermanentActivationAlert(name);
       setUnlockStatusMsg({
@@ -380,7 +392,9 @@ function RootComponent() {
       setTimeout(() => {
         setUnlockStatusMsg(null);
         handleCloseAll();
-        window.dispatchEvent(new Event("rabtv_settings_updated"));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("rabtv_settings_updated"));
+        }
       }, 2500);
     } else {
       setUnlockStatusMsg({
@@ -393,14 +407,18 @@ function RootComponent() {
   const handleSizeChange = (newSize: CardSize) => {
     saveCardSize(newSize);
     setCardSize(newSize);
-    window.dispatchEvent(new Event("rabtv_settings_updated"));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("rabtv_settings_updated"));
+    }
   };
 
   const handleThemeChange = (newTheme: AppTheme) => {
     saveTheme(newTheme);
     setAppTheme(newTheme);
     void updateNativeStatusBar(newTheme);
-    window.dispatchEvent(new Event("rabtv_settings_updated"));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("rabtv_settings_updated"));
+    }
   };
 
   const handleMouseToggle = (enabled: boolean) => {
@@ -446,12 +464,16 @@ function RootComponent() {
         setUnifiedUpdateStatus({ text: "⚠️ New codes do not match.", isError: true });
         return;
       }
-      localStorage.setItem(AGE_LOCK_KEY, trimmedNew);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(AGE_LOCK_KEY, trimmedNew);
+      }
     }
 
     saveUserAge(parsedAge);
     const finalName = profileNameInput.trim() || "Friend";
-    localStorage.setItem("rabtv_profile_name", finalName);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rabtv_profile_name", finalName);
+    }
     setSavedProfileName(finalName);
 
     setUnifiedUpdateStatus({ text: "✓ Profile and age-lock updated successfully!", isError: false });
@@ -459,7 +481,9 @@ function RootComponent() {
     setNewPasscode("");
     setConfirmNewPasscode("");
     setTimeout(() => setUnifiedUpdateStatus(null), 3500);
-    window.dispatchEvent(new Event("rabtv_settings_updated"));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("rabtv_settings_updated"));
+    }
   };
 
   const handleSaveBackup = () => {
@@ -472,8 +496,8 @@ function RootComponent() {
       largeButtons,
       userAge: getSavedUserAge(),
       profileName: savedProfileName,
-      myList: localStorage.getItem("rabtv_my_list"),
-      favorites: localStorage.getItem("rabtv_favorites"),
+      myList: typeof window !== "undefined" ? localStorage.getItem("rabtv_my_list") : null,
+      favorites: typeof window !== "undefined" ? localStorage.getItem("rabtv_favorites") : null,
       backedUpAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], {
@@ -509,17 +533,19 @@ function RootComponent() {
         if (typeof data.largeButtons === "boolean")
           setLargeButtons(data.largeButtons);
         if (data.userAge) saveUserAge(data.userAge);
-        if (data.profileName) {
+        if (data.profileName && typeof window !== "undefined") {
           localStorage.setItem("rabtv_profile_name", data.profileName);
           setSavedProfileName(data.profileName);
         }
-        if (data.myList) localStorage.setItem("rabtv_my_list", data.myList);
-        if (data.favorites)
+        if (data.myList && typeof window !== "undefined") localStorage.setItem("rabtv_my_list", data.myList);
+        if (data.favorites && typeof window !== "undefined")
           localStorage.setItem("rabtv_favorites", data.favorites);
 
-        localStorage.removeItem(DISCLAIMER_ACCEPTED_KEY);
-        localStorage.removeItem("rabtv_access_status");
-        localStorage.removeItem("rabtv_is_admin");
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(DISCLAIMER_ACCEPTED_KEY);
+          localStorage.removeItem("rabtv_access_status");
+          localStorage.removeItem("rabtv_is_admin");
+        }
         setShowFirstStartModal(true);
         handleCloseAll();
         setBackupStatus(
@@ -1292,7 +1318,7 @@ function RootComponent() {
             isOpen={showBugModal}
             onClose={() => setShowBugModal(false)}
             userName={savedProfileName || "Friend"}
-            userUnlockCode={localStorage.getItem("rabtv_age_passcode") || "0000"}
+            userUnlockCode={typeof window !== "undefined" ? localStorage.getItem("rabtv_age_passcode") || "0000" : "0000"}
           />
 
           {/* FIRST-START ACTIVATION MODAL CALL */}
