@@ -604,6 +604,9 @@ export function DetailsPage() {
   const poster = mediaDetails?.poster_path
     ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
     : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
+  const backdropUrl = mediaDetails?.backdrop_path
+    ? `https://image.tmdb.org/t/p/original${mediaDetails.backdrop_path}`
+    : null;
   const releaseYear = (
     mediaDetails?.release_date ||
     mediaDetails?.first_air_date ||
@@ -614,6 +617,10 @@ export function DetailsPage() {
     : "N/A";
   const genres =
     mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
+
+  const castList = mediaDetails?.credits?.cast || [];
+  const budget = mediaDetails?.budget && mediaDetails.budget > 0 ? `$${mediaDetails.budget.toLocaleString()}` : "N/A";
+  const productionCompanies = mediaDetails?.production_companies?.map((c: any) => c.name).join(", ") || "N/A";
 
   const embedUrl =
     inferredMediaType === "tv"
@@ -631,7 +638,19 @@ export function DetailsPage() {
     <div
       className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative`}
     >
+      {/* 1) Backdrop Wallpaper Background */}
+      {backdropUrl && (
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <img
+            src={backdropUrl}
+            alt="Backdrop Wallpaper"
+            className="w-full h-full object-cover opacity-25 filter blur-xs"
+          />
+          <div className="absolute inset-0 bg-slate-950/80" />
+        </div>
+      )}
       <AppWallpaper />
+
       <div className="relative z-10">
         <Link
           className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
@@ -978,6 +997,67 @@ export function DetailsPage() {
                     {actionFeedback}
                   </p>
                 )}
+              </div>
+            </div>
+
+            {/* 2) Cast Section Displayed After Description */}
+            {castList.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-white/10 space-y-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span>Cast</span>
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {castList.slice(0, 12).map((actor: any) => (
+                    <div
+                      key={actor.id}
+                      className={`rounded-2xl border ${getCardBackground(appTheme)} p-3 flex flex-col items-center text-center shadow-lg backdrop-blur`}
+                    >
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border border-white/10 bg-black shrink-0">
+                        <img
+                          src={
+                            actor.profile_path
+                              ? `https://image.tmdb.org/t/p/w200${actor.profile_path}`
+                              : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+                          }
+                          alt={actor.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <h3 className="text-xs font-bold text-white truncate w-full">
+                        {actor.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 truncate w-full">
+                        {actor.character}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3) Production Cost, Producer Companies, & Language Info Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+              <div className={`rounded-2xl border ${getCardBackground(appTheme)} p-5 backdrop-blur shadow-xl`}>
+                <span className="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+                  Budget
+                </span>
+                <span className="text-lg font-bold text-white">{budget}</span>
+              </div>
+              <div className={`rounded-2xl border ${getCardBackground(appTheme)} p-5 backdrop-blur shadow-xl`}>
+                <span className="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+                  Production
+                </span>
+                <span className="text-lg font-bold text-white truncate block" title={productionCompanies}>
+                  {productionCompanies}
+                </span>
+              </div>
+              <div className={`rounded-2xl border ${getCardBackground(appTheme)} p-5 backdrop-blur shadow-xl`}>
+                <span className="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+                  Language
+                </span>
+                <span className="text-lg font-bold text-white">
+                  {originalLanguageName || "English"}
+                </span>
               </div>
             </div>
 
