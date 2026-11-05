@@ -1,5 +1,6 @@
 // src/routes/__root.tsx
 import { BugReportModal } from "@/components/BugReportModal";
+import { PublicBugFeedModal } from "@/components/PublicBugFeedModal";
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -105,6 +106,7 @@ function RootComponent() {
   const navigate = useNavigate();
   const [showFirstStartModal, setShowFirstStartModal] = useState(false);
   const [showBugModal, setShowBugModal] = useState(false);
+  const [showBugFeedModal, setShowBugFeedModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const lastScrollYRef = useRef(0);
   const [activeSettingsTab, setActiveSettingsTab] = useState<
@@ -988,8 +990,8 @@ function RootComponent() {
                   />
                 )}
 
-                {/* FEEDBACK & SUPPORT / BUG REPORT BUTTON */}
-                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+                {/* FEEDBACK & SUPPORT / BUG REPORT & FEED BUTTONS */}
+                <div className="space-y-2 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
                     💬 Feedback & Support
                   </h4>
@@ -999,6 +1001,13 @@ function RootComponent() {
                     className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
                   >
                     🐞 Report a Bug / Issue
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBugFeedModal(true)}
+                    className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2"
+                  >
+                    📋 View Bug Reports Feed
                   </button>
                 </div>
 
@@ -1319,6 +1328,12 @@ function RootComponent() {
             onClose={() => setShowBugModal(false)}
             userName={savedProfileName || "Friend"}
             userUnlockCode={typeof window !== "undefined" ? localStorage.getItem("rabtv_age_passcode") || "0000" : "0000"}
+          />
+
+          {/* PUBLIC COMMUNITY BUG FEED MODAL (Client Side) */}
+          <PublicBugFeedModal
+            isOpen={showBugFeedModal}
+            onClose={() => setShowBugFeedModal(false)}
           />
 
           {/* FIRST-START ACTIVATION MODAL CALL */}
