@@ -1,4 +1,5 @@
 // src/routes/__root.tsx
+import { BugReportModal } from "@/components/BugReportModal";
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -103,7 +104,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   const navigate = useNavigate();
   const [showFirstStartModal, setShowFirstStartModal] = useState(false);
-
+  const [showBugModal, setShowBugModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const lastScrollYRef = useRef(0);
   const [activeSettingsTab, setActiveSettingsTab] = useState<
@@ -389,6 +390,19 @@ function RootComponent() {
     }
   };
 
+  <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+    💬 Feedback & Support
+  </h4>
+  <button
+    type="button"
+    onClick={() => setShowBugModal(true)}
+    className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+  >
+    🐞 Report a Bug / Issue
+  </button>
+</div>
+  
   const handleSizeChange = (newSize: CardSize) => {
     saveCardSize(newSize);
     setCardSize(newSize);
@@ -474,6 +488,13 @@ function RootComponent() {
       myList: localStorage.getItem("rabtv_my_list"),
       favorites: localStorage.getItem("rabtv_favorites"),
       backedUpAt: new Date().toISOString(),
+      <BugReportModal
+  isOpen={showBugModal}
+  onClose={() => setShowBugModal(false)}
+  userName={savedProfileName || "Friend"}
+  userUnlockCode={localStorage.getItem("rabtv_age_passcode") || "0000"}
+/>
+        
     };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], {
       type: "application/json",
