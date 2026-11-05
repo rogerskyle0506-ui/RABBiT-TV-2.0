@@ -1108,5 +1108,3 @@ export function DetailsPage() {
     </div>
   );
 }
-
-```
