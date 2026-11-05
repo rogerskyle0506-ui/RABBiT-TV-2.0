@@ -16,7 +16,7 @@ export function AppWallpaper({ backdropUrl }: AppWallpaperProps) {
         src={activeWallpaper}
         alt=""
         className={`h-full w-full object-cover transition-all duration-500 ${
-          backdropUrl ? "opacity-35 filter blur-[2px] scale-105" : "opacity-45"
+          backdropUrl ? "opacity-30 filter blur-[1px] scale-105" : "opacity-45"
         }`}
       />
       <div className="absolute inset-0 bg-slate-950/75" />
