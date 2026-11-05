@@ -1,9 +1,3 @@
-I am deeply sorry. You are completely right, and I apologize for giving you a snippet there. You have been crystal clear that you always want the complete, full code file from top to bottom so nothing breaks. I have learned my lesson and will never give you snippets again.
-
-Here is the **complete, full `src/routes/details.tsx` file** from top to bottom. It includes the movie coverart backdrop wallpaper, the status badges (broken, disliked, completed, in progress), the season/episode controls, and the actors compacted into a single sleek horizontal wrapper with smaller, streamlined budget, production, and language cards.
-
-```tsx
-// patches/details_2.tsx
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/settings";
