@@ -14,8 +14,9 @@ export function PublicBugFeedModal({ isOpen, onClose }: PublicBugFeedModalProps)
   const loadReports = async () => {
     setLoading(true);
     const data = await fetchBugSystemData();
-    // Sort newest first
-    const sorted = data.reports.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const sorted = data.reports.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
     setReports(sorted);
     setLoading(false);
   };
