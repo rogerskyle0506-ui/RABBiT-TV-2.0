@@ -24,7 +24,6 @@ export interface StrikeRecord {
   strikes: number;
 }
 
-const BANNED_USERS_KEY = "rabtv_banned_users_list";
 const STRIKES_KEY = "rabtv_user_strikes";
 
 /**
@@ -192,14 +191,17 @@ export async function updateBugReportStatus(id: string, status: "pending" | "in_
   const index = reports.findIndex(r => r.id === id);
   if (index === -1) return false;
 
-  if (status === "completed") {
-    // Completed/Attempted patch can be archived/removed or kept as completed
-    reports[index].status = "completed";
-  } else {
-    reports[index].status = status;
-  }
-
+  reports[index].status = status;
   return await syncGistFiles(reports, bannedUsers);
+}
+
+/**
+ * Deletes a bug report entirely from the system (for spam control).
+ */
+export async function deleteBugReport(id: string): Promise<boolean> {
+  const { reports, bannedUsers } = await fetchBugSystemData();
+  const filteredReports = reports.filter(r => r.id !== id);
+  return await syncGistFiles(filteredReports, bannedUsers);
 }
 
 /**
@@ -212,4 +214,13 @@ export async function banUserFromReport(name: string, codeSuffix: string): Promi
     bannedUsers.push({ identifier, name, codeSuffix, timestamp: Date.now() });
   }
   return await syncGistFiles(reports, bannedUsers);
+}
+
+/**
+ * Removes a ban for a user identifier from the admin panel.
+ */
+export async function removeBannedUser(identifier: string): Promise<boolean> {
+  const { reports, bannedUsers } = await fetchBugSystemData();
+  const filteredBans = bannedUsers.filter(b => b.identifier !== identifier);
+  return await syncGistFiles(reports, filteredBans);
 }
