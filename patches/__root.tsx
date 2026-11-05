@@ -390,19 +390,6 @@ function RootComponent() {
     }
   };
 
-  <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
-  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-    💬 Feedback & Support
-  </h4>
-  <button
-    type="button"
-    onClick={() => setShowBugModal(true)}
-    className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
-  >
-    🐞 Report a Bug / Issue
-  </button>
-</div>
-  
   const handleSizeChange = (newSize: CardSize) => {
     saveCardSize(newSize);
     setCardSize(newSize);
@@ -488,13 +475,6 @@ function RootComponent() {
       myList: localStorage.getItem("rabtv_my_list"),
       favorites: localStorage.getItem("rabtv_favorites"),
       backedUpAt: new Date().toISOString(),
-      <BugReportModal
-  isOpen={showBugModal}
-  onClose={() => setShowBugModal(false)}
-  userName={savedProfileName || "Friend"}
-  userUnlockCode={localStorage.getItem("rabtv_age_passcode") || "0000"}
-/>
-        
     };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], {
       type: "application/json",
@@ -982,6 +962,20 @@ function RootComponent() {
                   />
                 )}
 
+                {/* FEEDBACK & SUPPORT / BUG REPORT BUTTON */}
+                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    💬 Feedback & Support
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowBugModal(true)}
+                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                  >
+                    🐞 Report a Bug / Issue
+                  </button>
+                </div>
+
                 {/* Update Channel Preference & Manual Check Button */}
                 <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
@@ -1292,6 +1286,14 @@ function RootComponent() {
           <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 md:py-6 overflow-x-hidden pb-20">
             <Outlet />
           </main>
+
+          {/* BUG REPORT MODAL */}
+          <BugReportModal
+            isOpen={showBugModal}
+            onClose={() => setShowBugModal(false)}
+            userName={savedProfileName || "Friend"}
+            userUnlockCode={localStorage.getItem("rabtv_age_passcode") || "0000"}
+          />
 
           {/* FIRST-START ACTIVATION MODAL CALL */}
           <ActivationModal
