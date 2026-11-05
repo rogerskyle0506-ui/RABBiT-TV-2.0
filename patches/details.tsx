@@ -1,3 +1,4 @@
+// src/routes/details.tsx
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/settings";
@@ -637,18 +638,7 @@ export function DetailsPage() {
     <div
       className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative`}
     >
-      {/* 1) Backdrop Wallpaper Background */}
-      {backdropUrl && (
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <img
-            src={backdropUrl}
-            alt="Backdrop Wallpaper"
-            className="w-full h-full object-cover opacity-25 filter blur-xs"
-          />
-          <div className="absolute inset-0 bg-slate-950/80" />
-        </div>
-      )}
-      <AppWallpaper />
+      <AppWallpaper backdropUrl={backdropUrl} />
 
       <div className="relative z-10">
         <Link
