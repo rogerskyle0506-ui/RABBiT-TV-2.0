@@ -294,8 +294,9 @@ export function AdminPanel({
           className="flex items-center justify-between p-3.5 cursor-pointer text-xs font-bold uppercase tracking-wider text-red-300 hover:bg-red-900/20 transition select-none relative overflow-hidden"
           style={{
             backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center center",
           }}
         >
           <div className="absolute inset-0 bg-black/45 pointer-events-none" />
@@ -308,8 +309,9 @@ export function AdminPanel({
           className="p-3.5 border-t border-red-500/20 relative"
           style={{
             backgroundImage: `url(${RABBIT_PANEL})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center center",
           }}
         >
           <div className="absolute inset-0 bg-black/60 pointer-events-none" />
@@ -325,8 +327,9 @@ export function AdminPanel({
           className="flex items-center justify-between p-3.5 cursor-pointer text-xs font-bold uppercase tracking-wider text-red-300 hover:bg-red-900/20 transition select-none relative overflow-hidden"
           style={{
             backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center center",
           }}
         >
           <div className="absolute inset-0 bg-black/45 pointer-events-none" />
@@ -339,8 +342,9 @@ export function AdminPanel({
           className="p-3.5 border-t border-red-500/20 space-y-3 relative"
           style={{
             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center center",
           }}
         >
           <div className="absolute inset-0 bg-black/60 pointer-events-none" />
@@ -385,8 +389,9 @@ export function AdminPanel({
           className="flex items-center justify-between p-3.5 cursor-pointer text-xs font-bold uppercase tracking-wider text-red-300 hover:bg-red-900/20 transition select-none relative overflow-hidden"
           style={{
             backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center center",
           }}
         >
           <div className="absolute inset-0 bg-black/45 pointer-events-none" />
@@ -399,8 +404,9 @@ export function AdminPanel({
           className="p-3.5 border-t border-red-500/20 space-y-3 relative"
           style={{
             backgroundImage: `url(${RABBIT_PANEL})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center center",
           }}
         >
           <div className="absolute inset-0 bg-black/60 pointer-events-none" />
