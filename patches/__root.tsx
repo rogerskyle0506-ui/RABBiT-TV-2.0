@@ -9,7 +9,7 @@ import { HolidayOverlay } from "@/components/HolidayOverlay";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { ActivationModal } from "@/components/ActivationModal";
 import { AdminPanel } from "@/components/AdminPanel";
-import { bgAudio } from "@/lib/background-audio";
+import { bgAudio, RADIO_STATIONS } from "@/lib/background-audio";
 import "@/styles.css";
 import { useState, useEffect } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
@@ -132,6 +132,13 @@ function RootComponent() {
       return localStorage.getItem("rabtv_bg_music_state") || "playing";
     }
     return "playing";
+  });
+
+  const [currentStationUrl, setCurrentStationUrl] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("rabtv_radio_url") || "";
+    }
+    return "";
   });
 
   // Unified age and passcode management states
@@ -471,6 +478,14 @@ function RootComponent() {
       bgAudio.play();
     } else {
       bgAudio.pause();
+    }
+  };
+
+  const handleStationSelect = (url: string) => {
+    bgAudio.setStation(url);
+    setCurrentStationUrl(url);
+    if (bgMusicState === "playing") {
+      bgAudio.play();
     }
   };
 
@@ -1033,31 +1048,62 @@ function RootComponent() {
                       <span className={`transform transition-transform ${activeSidebarSection === "audio" ? "rotate-180" : ""}`}>▼</span>
                     </button>
                     {activeSidebarSection === "audio" && (
-                      <div className="p-3 border-t border-white/10 space-y-2 bg-black/40">
-                        <p className="text-[10px] text-slate-300">Control ambient lobby soundtrack during browsing:</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleBackgroundAudioToggle("playing")}
-                            className={`rounded-lg py-2 text-xs font-bold transition ${
-                              bgMusicState === "playing"
-                                ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                                : `${getSubtlePillBg(appTheme)}`
-                            }`}
-                          >
-                            🎵 Audio ON
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleBackgroundAudioToggle("muted")}
-                            className={`rounded-lg py-2 text-xs font-bold transition ${
-                              bgMusicState === "muted"
-                                ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                                : `${getSubtlePillBg(appTheme)}`
-                            }`}
-                          >
-                            🔇 Mute / OFF
-                          </button>
+                      <div className="p-3 border-t border-white/10 space-y-3 bg-black/40">
+                        <div>
+                          <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Playback Controls:</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleBackgroundAudioToggle("playing")}
+                              className={`rounded-lg py-2 text-xs font-bold transition ${
+                                bgMusicState === "playing"
+                                  ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                  : `${getSubtlePillBg(appTheme)}`
+                              }`}
+                            >
+                              🎵 Audio ON
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBackgroundAudioToggle("muted")}
+                              className={`rounded-lg py-2 text-xs font-bold transition ${
+                                bgMusicState === "muted"
+                                  ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                  : `${getSubtlePillBg(appTheme)}`
+                              }`}
+                            >
+                              🔇 Mute / OFF
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-white/10">
+                          <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Select Channel / Stream:</p>
+                          <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
+                            {Object.entries(RADIO_STATIONS).map(([category, stations]) => (
+                              <div key={category} className="space-y-1">
+                                <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider">{category}</span>
+                                {stations.map((station) => {
+                                  const isSelected = (currentStationUrl === station.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === station.url);
+                                  return (
+                                    <button
+                                      key={station.url}
+                                      type="button"
+                                      onClick={() => handleStationSelect(station.url)}
+                                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-between ${
+                                        isSelected
+                                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                          : `${getSubtlePillBg(appTheme)}`
+                                      }`}
+                                    >
+                                      <span className="truncate pr-1">{station.name}</span>
+                                      {isSelected && <span className="text-[9px] shrink-0">▶ Active</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
