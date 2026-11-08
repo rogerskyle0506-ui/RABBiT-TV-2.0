@@ -49,9 +49,10 @@ const protectedStations: Record<string, RadioStation[]> = {
 const dynamicStations: Record<string, RadioStation[]> = { ...protectedStations };
 
 try {
-  // Automatically glob all flat .m3u files inside the radio-stations directory
+  // Automatically glob all flat .m3u files inside the radio-stations directory using ?raw query
   const m3uFiles = import.meta.glob('../radio-stations/*.m3u', {
-    as: 'raw',
+    query: '?raw',
+    import: 'default',
     eager: true,
   });
 
@@ -72,7 +73,6 @@ try {
       if (!dynamicStations[category]) {
         dynamicStations[category] = [];
       }
-      // Append parsed stations from the .m3u file
       dynamicStations[category].push(...parsed);
     }
   }
@@ -99,7 +99,11 @@ class BackgroundAudioManager {
     if (typeof window !== "undefined") {
       this.audio = new Audio();
       this.audio.loop = true;
-      this.audio.volume = 0.3; // Low ambient background volume by default
+      
+      // Default volume to 50% (0.5), or load from localStorage if saved previously
+      const savedVol = localStorage.getItem("rabtv_bg_volume");
+      const initialVol = savedVol !== null ? parseFloat(savedVol) : 0.5;
+      this.audio.volume = Math.max(0, Math.min(1, initialVol));
     }
   }
 
@@ -189,9 +193,19 @@ class BackgroundAudioManager {
   }
 
   setVolume(vol: number) {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rabtv_bg_volume", vol.toString());
+    }
     if (this.audio) {
       this.audio.volume = Math.max(0, Math.min(1, vol));
     }
+  }
+
+  getVolume(): number {
+    if (this.audio) {
+      return this.audio.volume;
+    }
+    return 0.5;
   }
 }
 
