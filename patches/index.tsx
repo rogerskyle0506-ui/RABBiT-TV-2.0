@@ -1,4 +1,4 @@
-// patches/index.tsx
+// src/routes/index.tsx
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, memo } from "react";
 import type { MediaItem } from "@/lib/tmdb-scraper";
@@ -218,7 +218,6 @@ function Home() {
 
   const [selectedGenre, setSelectedGenre] = useState<string>("Trending");
   
-  // Independent provider filter state (using separate storage key to prevent global feed conflicts)
   const [providerFilter, setProviderFilter] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("rabtv_provider_filter") || "All (Default)";
@@ -411,7 +410,6 @@ function Home() {
       const activeGlobalFeed =
         globalFeedOverride && globalFeedOverride !== "All (Default)" ? globalFeedOverride : undefined;
       
-      // If provider filter is active, use it as subFeed; otherwise use global region/language feed
       const effectiveSubFeed =
         providerFilter && providerFilter !== "All (Default)" ? providerFilter : activeGlobalFeed;
 
