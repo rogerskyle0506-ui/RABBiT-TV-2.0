@@ -1,3 +1,4 @@
+// src/routes/search.tsx
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import type { MediaItem } from "@/lib/tmdb-scraper";
