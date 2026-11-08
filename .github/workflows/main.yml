@@ -1,4 +1,4 @@
-name: Build Global Android APK & Publish Nightly
+Name: Build Global Android APK & Publish Nightly
 
 on:
   push:
@@ -28,6 +28,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+          cache: 'gradle'
 
       - name: Install dependencies
         run: npm install
@@ -304,6 +305,8 @@ jobs:
         run: |
           cd android
           ./gradlew assembleRelease \
+            -Dhttp.socketTimeout=300000 \
+            -Dhttps.socketTimeout=300000 \
             -Pandroid.injected.signing.store.file=$(pwd)/app/rabbittv.keystore \
             -Pandroid.injected.signing.store.password=RABBITV34688643 \
             -Pandroid.injected.signing.key.alias=RABBITV34688643 \
