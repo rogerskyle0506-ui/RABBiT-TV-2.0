@@ -965,8 +965,9 @@ function RootComponent() {
                       className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
                       style={{
                         backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center center",
                       }}
                     >
                       <div className="absolute inset-0 bg-black/45 pointer-events-none" />
@@ -978,8 +979,9 @@ function RootComponent() {
                         className="p-3 border-t border-white/10 space-y-2 relative"
                         style={{
                           backgroundImage: `url(${RABBIT_PANEL})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
+                          backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center center",
                         }}
                       >
                         <div className="absolute inset-0 bg-black/60 pointer-events-none" />
@@ -1011,8 +1013,9 @@ function RootComponent() {
                       className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
                       style={{
                         backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center center",
                       }}
                     >
                       <div className="absolute inset-0 bg-black/45 pointer-events-none" />
@@ -1024,8 +1027,9 @@ function RootComponent() {
                         className="p-3 border-t border-white/10 space-y-3 relative"
                         style={{
                           backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
+                          backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center center",
                         }}
                       >
                         <div className="absolute inset-0 bg-black/60 pointer-events-none" />
@@ -1082,8 +1086,9 @@ function RootComponent() {
                       className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
                       style={{
                         backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center center",
                       }}
                     >
                       <div className="absolute inset-0 bg-black/45 pointer-events-none" />
@@ -1095,8 +1100,9 @@ function RootComponent() {
                         className="p-3 border-t border-white/10 space-y-3 relative"
                         style={{
                           backgroundImage: `url(${RABBIT_PANEL})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
+                          backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center center",
                         }}
                       >
                         <div className="absolute inset-0 bg-black/60 pointer-events-none" />
@@ -1170,8 +1176,9 @@ function RootComponent() {
                       className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
                       style={{
                         backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center center",
                       }}
                     >
                       <div className="absolute inset-0 bg-black/45 pointer-events-none" />
@@ -1184,8 +1191,9 @@ function RootComponent() {
                         className="p-3.5 border-t border-white/10 space-y-3 relative"
                         style={{
                           backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
+                          backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center center",
                         }}
                       >
                         <div className="absolute inset-0 bg-black/60 pointer-events-none" />
@@ -1279,8 +1287,9 @@ function RootComponent() {
                       className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
                       style={{
                         backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center center",
                       }}
                     >
                       <div className="absolute inset-0 bg-black/45 pointer-events-none" />
@@ -1292,8 +1301,9 @@ function RootComponent() {
                         className="p-3.5 border-t border-white/10 space-y-2 relative"
                         style={{
                           backgroundImage: `url(${RABBIT_PANEL})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
+                          backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center center",
                         }}
                       >
                         <div className="absolute inset-0 bg-black/60 pointer-events-none" />
@@ -1329,8 +1339,9 @@ function RootComponent() {
                       className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
                       style={{
                         backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center center",
                       }}
                     >
                       <div className="absolute inset-0 bg-black/45 pointer-events-none" />
@@ -1342,8 +1353,9 @@ function RootComponent() {
                         className="p-3.5 border-t border-white/10 space-y-3 relative"
                         style={{
                           backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
+                          backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center center",
                         }}
                       >
                         <div className="absolute inset-0 bg-black/60 pointer-events-none" />
