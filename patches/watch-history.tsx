@@ -1,3 +1,4 @@
+// src/routes/watch-history.tsx
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import React, { useState, useEffect, useRef } from "react";
 import { AppTheme, CardSize, HistoryScale, getSavedTheme, getSavedCardSize, getHistoryOverscale, getLargeButtons } from "@/lib/settings";
