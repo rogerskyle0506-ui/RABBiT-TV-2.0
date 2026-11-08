@@ -1228,31 +1228,53 @@ function RootComponent() {
                             </div>
 
                             <div className="pt-2 border-t border-white/10 w-full">
-                              <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Select Channel / Stream:</p>
-                              <div className="max-h-52 overflow-y-auto space-y-2 pr-1 w-full">
-                                {Object.entries(RADIO_STATIONS).map(([category, stations]) => (
-                                  <div key={category} className="space-y-1 w-full">
-                                    <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider block">{category}</span>
-                                    {stations.map((station) => {
-                                      const isSelected = (currentStationUrl === station.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === station.url);
-                                      return (
-                                        <button
-                                          key={station.url}
-                                          type="button"
-                                          onClick={() => handleStationSelect(station.url)}
-                                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-between ${
-                                            isSelected
-                                              ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                                              : `${getSubtlePillBg(appTheme)}`
-                                          }`}
-                                        >
-                                          <span className="truncate pr-1">{station.name}</span>
-                                          {isSelected && <span className="text-[9px] shrink-0">▶ Active</span>}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                ))}
+                              <p className="text-[10px] text-slate-300 mb-2 font-semibold">Select Channel / Stream by Genre:</p>
+                              
+                              {/* DYNAMIC GENRE SUBMENU ACCORDIONS */}
+                              <div className="max-h-60 overflow-y-auto space-y-2 pr-1 w-full">
+                                {Object.entries(RADIO_STATIONS).map(([category, stations]) => {
+                                  const hasActiveStation = stations.some(
+                                    s => (currentStationUrl === s.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === s.url)
+                                  );
+
+                                  return (
+                                    <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden">
+                                      <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition">
+                                        <span className="flex items-center gap-2">
+                                          📁 {category}
+                                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
+                                            {stations.length}
+                                          </span>
+                                        </span>
+                                        <div className="flex items-center gap-1.5">
+                                          {hasActiveStation && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Active stream in this category" />}
+                                          <span className="transform group-open:rotate-180 transition-transform text-[10px]">▼</span>
+                                        </div>
+                                      </summary>
+
+                                      <div className="p-2 space-y-1.5 border-t border-white/10 bg-slate-950/40">
+                                        {stations.map((station) => {
+                                          const isSelected = (currentStationUrl === station.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === station.url);
+                                          return (
+                                            <button
+                                              key={station.url}
+                                              type="button"
+                                              onClick={() => handleStationSelect(station.url)}
+                                              className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-between ${
+                                                isSelected
+                                                  ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                                  : `${getSubtlePillBg(appTheme)}`
+                                              }`}
+                                            >
+                                              <span className="truncate pr-1">🎵 {station.name}</span>
+                                              {isSelected && <span className="text-[9px] shrink-0 font-bold bg-black/40 px-1.5 py-0.5 rounded">▶ LIVE</span>}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </details>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>
