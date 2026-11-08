@@ -1,4 +1,4 @@
-Name: Build Global Android APK & Publish Nightly
+name: Build Global Android APK & Publish Nightly
 
 on:
   push:
