@@ -1,4 +1,5 @@
 // src/components/AdminPanel.tsx
+// UPDATED: Uses the same Rabbit.TV panel + header imagery for a cohesive high-end look
 import React, { useState, useEffect } from "react";
 import { AdminBugInbox } from "@/components/AdminBugInbox";
 import { AppTheme } from "@/lib/settings";
@@ -8,6 +9,12 @@ interface AdminPanelProps {
   getPrimaryBgColor: (theme: AppTheme) => string;
   getPrimaryAccentColor: (theme: AppTheme) => string;
 }
+
+// Same assets used in the main sidebar (keep paths consistent)
+const RABBIT_HEADER_PILL = "/assets/rabbit-header-pill.jpg";
+const RABBIT_PANEL       = "/assets/rabbit-panel.jpg";
+const RABBIT_PANEL_ALT   = "/assets/rabbit-panel-alt.jpg";
+const RABBIT_DIVIDER     = "/assets/rabbit-divider.jpg";
 
 export function AdminPanel({
   appTheme,
@@ -280,155 +287,222 @@ export function AdminPanel({
     }
   };
 
+  // Reusable styled header for admin sections
+  const AdminSectionHeader = ({
+    title,
+    icon,
+  }: {
+    title: string;
+    icon: string;
+  }) => (
+    <summary
+      className="flex items-center justify-between p-3.5 cursor-pointer text-xs font-bold uppercase tracking-wider text-white select-none relative overflow-hidden rounded-t-xl group"
+      style={{
+        backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors pointer-events-none" />
+      <span className="relative z-10 flex items-center gap-2">
+        <span>{icon}</span>
+        <span>{title}</span>
+      </span>
+      <span className="relative z-10 transform group-open:rotate-180 transition-transform">▼</span>
+    </summary>
+  );
+
   return (
     <div className="space-y-3">
-      {/* 1. BUG REPORTS INBOX SUBMENU (Collapsed by default) */}
-      <details className="group bg-red-950/40 rounded-xl border border-red-500/30 box-border backdrop-blur-md overflow-hidden transition-all">
-        <summary className="flex items-center justify-between p-3.5 cursor-pointer text-xs font-bold uppercase tracking-wider text-red-300 hover:bg-red-900/20 transition select-none">
-          <span className="flex items-center gap-2">
-            🐞 Bug Reports Inbox
-          </span>
-          <span className="transform group-open:rotate-180 transition-transform">▼</span>
-        </summary>
-        <div className="p-3.5 border-t border-red-500/20 bg-black/40">
-          <AdminBugInbox />
+      {/* 1. BUG REPORTS INBOX */}
+      <details className="group rounded-xl border border-red-500/30 overflow-hidden backdrop-blur-md">
+        <AdminSectionHeader title="Bug Reports Inbox" icon="🐞" />
+        <div
+          className="p-3.5 border-t border-red-500/20 relative"
+          style={{
+            backgroundImage: `url(${RABBIT_PANEL})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+          <div className="relative z-10">
+            <AdminBugInbox />
+          </div>
         </div>
       </details>
 
-      {/* 2. PUSH TOAST NOTIFICATION SUBMENU (Collapsed by default) */}
-      <details className="group bg-red-950/40 rounded-xl border border-red-500/30 box-border backdrop-blur-md overflow-hidden transition-all">
-        <summary className="flex items-center justify-between p-3.5 cursor-pointer text-xs font-bold uppercase tracking-wider text-red-300 hover:bg-red-900/20 transition select-none">
-          <span className="flex items-center gap-2">
-            📢 Push Toast to User
-          </span>
-          <span className="transform group-open:rotate-180 transition-transform">▼</span>
-        </summary>
-        <div className="p-3.5 border-t border-red-500/20 bg-black/40 space-y-3">
-          <p className="text-[10px] text-slate-300">
-            Target user by name, age, or PIN to prompt application updates or alerts directly on their screen.
-          </p>
-          <form onSubmit={handlePushTargetToast} className="space-y-2">
-            <input
-              type="text"
-              placeholder="Target User Identifier (Name, PIN, or Age)"
-              value={targetQuery}
-              onChange={(e) => setTargetQuery(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
-            />
-            <textarea
-              rows={2}
-              placeholder="Notification message (e.g. Please update your app to v2.1)"
-              value={targetMessage}
-              onChange={(e) => setTargetMessage(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none resize-none"
-            />
-            <button
-              type="submit"
-              className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
-            >
-              🚀 Push Toast to User Screen
-            </button>
-          </form>
-          {toastPushStatus && (
-            <div className="rounded-lg bg-black/60 border border-red-400/30 p-2 text-center">
-              <p className="text-xs font-bold text-amber-300">{toastPushStatus}</p>
-            </div>
-          )}
-        </div>
-      </details>
-
-      {/* 3. KEY GENERATOR & MANAGER SUBMENU (Collapsed by default) */}
-      <details className="group bg-red-950/40 rounded-xl border border-red-500/30 box-border backdrop-blur-md overflow-hidden transition-all">
-        <summary className="flex items-center justify-between p-3.5 cursor-pointer text-xs font-bold uppercase tracking-wider text-red-300 hover:bg-red-900/20 transition select-none">
-          <span className="flex items-center gap-2">
-            🔑 Admin Key Generator & Manager
-          </span>
-          <span className="transform group-open:rotate-180 transition-transform">▼</span>
-        </summary>
-        <div className="p-3.5 border-t border-red-500/20 bg-black/40 space-y-3">
-          <form onSubmit={handleKeygen} className="space-y-2">
-            <input
-              type="text"
-              placeholder="User name"
-              value={keygenName}
-              onChange={(e) => setKeygenName(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
-            />
-            <input
-              type="number"
-              min={1}
-              max={120}
-              placeholder="User age"
-              value={keygenAge}
-              onChange={(e) => setKeygenAge(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
-            >
-              Generate & Push Key to Gist
-            </button>
-          </form>
-          {keygenResult && (
-            <div className="rounded-lg bg-black/60 border border-red-400/30 p-2 text-center">
-              <p className="text-xs font-bold text-amber-300">{keygenResult}</p>
-            </div>
-          )}
-
-          {/* Key List & Management Section */}
-          <div className="pt-3 border-t border-red-500/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-200">Active & Used Keys</span>
+      {/* 2. PUSH TOAST NOTIFICATION */}
+      <details className="group rounded-xl border border-red-500/30 overflow-hidden backdrop-blur-md">
+        <AdminSectionHeader title="Push Toast to User" icon="📢" />
+        <div
+          className="p-3.5 border-t border-red-500/20 space-y-3 relative"
+          style={{
+            backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+          <div className="relative z-10 space-y-3">
+            <p className="text-[10px] text-slate-300">
+              Target user by name, age, or PIN to prompt application updates or alerts directly on their screen.
+            </p>
+            <form onSubmit={handlePushTargetToast} className="space-y-2">
+              <input
+                type="text"
+                placeholder="Target User Identifier (Name, PIN, or Age)"
+                value={targetQuery}
+                onChange={(e) => setTargetQuery(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+              />
+              <textarea
+                rows={2}
+                placeholder="Notification message (e.g. Please update your app to v2.1)"
+                value={targetMessage}
+                onChange={(e) => setTargetMessage(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none resize-none"
+              />
               <button
-                type="button"
-                onClick={fetchRemoteKeys}
-                className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition"
+                type="submit"
+                className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
               >
-                {loadingKeys ? "Loading..." : "🔄 Refresh List"}
+                🚀 Push Toast to User Screen
               </button>
-            </div>
+            </form>
+            {toastPushStatus && (
+              <div className="rounded-lg bg-black/60 border border-red-400/30 p-2 text-center">
+                <p className="text-xs font-bold text-amber-300">{toastPushStatus}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </details>
 
-            <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-              {remoteKeys.length === 0 ? (
-                <p className="text-[10px] text-slate-400 text-center py-2">Click refresh to load keys from Gist.</p>
-              ) : (
-                remoteKeys.map((kObj, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-black/50 p-2.5 rounded-lg border border-white/10 text-[11px]">
-                    <div className="truncate pr-2 space-y-0.5">
-                      <div>
-                        <span className="font-mono font-bold text-amber-300">{kObj.key}</span>
-                        <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${kObj.active ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"}`}>
-                          {kObj.active ? "Active" : "Used/Inactive"}
-                        </span>
+      {/* 3. KEY GENERATOR & MANAGER */}
+      <details className="group rounded-xl border border-red-500/30 overflow-hidden backdrop-blur-md">
+        <AdminSectionHeader title="Admin Key Generator & Manager" icon="🔑" />
+        <div
+          className="p-3.5 border-t border-red-500/20 space-y-3 relative"
+          style={{
+            backgroundImage: `url(${RABBIT_PANEL})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+          <div className="relative z-10 space-y-3">
+            <form onSubmit={handleKeygen} className="space-y-2">
+              <input
+                type="text"
+                placeholder="User name"
+                value={keygenName}
+                onChange={(e) => setKeygenName(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+              />
+              <input
+                type="number"
+                min={1}
+                max={120}
+                placeholder="User age"
+                value={keygenAge}
+                onChange={(e) => setKeygenAge(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow transition"
+              >
+                Generate & Push Key to Gist
+              </button>
+            </form>
+            {keygenResult && (
+              <div className="rounded-lg bg-black/60 border border-red-400/30 p-2 text-center">
+                <p className="text-xs font-bold text-amber-300">{keygenResult}</p>
+              </div>
+            )}
+
+            {/* Key List & Management Section */}
+            <div className="pt-3 border-t border-red-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-200">Active & Used Keys</span>
+                <button
+                  type="button"
+                  onClick={fetchRemoteKeys}
+                  className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition"
+                >
+                  {loadingKeys ? "Loading..." : "🔄 Refresh List"}
+                </button>
+              </div>
+
+              <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                {remoteKeys.length === 0 ? (
+                  <p className="text-[10px] text-slate-400 text-center py-2">
+                    Click refresh to load keys from Gist.
+                  </p>
+                ) : (
+                  remoteKeys.map((kObj, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between bg-black/50 p-2.5 rounded-lg border border-white/10 text-[11px]"
+                    >
+                      <div className="truncate pr-2 space-y-0.5">
+                        <div>
+                          <span className="font-mono font-bold text-amber-300">
+                            {kObj.key}
+                          </span>
+                          <span
+                            className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                              kObj.active
+                                ? "bg-emerald-500/20 text-emerald-300"
+                                : "bg-red-500/20 text-red-300"
+                            }`}
+                          >
+                            {kObj.active ? "Active" : "Used/Inactive"}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-300">
+                          👤 <strong>User:</strong>{" "}
+                          {kObj.owner || kObj.usedBy || "Unassigned"}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-300">
-                        👤 <strong>User:</strong> {kObj.owner || kObj.usedBy || "Unassigned"}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleModifyKeyStatus(kObj.key, "toggle")}
+                          className={`px-2 py-0.5 rounded text-[9px] font-bold transition ${
+                            kObj.active
+                              ? "bg-amber-600/40 text-amber-200"
+                              : "bg-emerald-600/40 text-emerald-200"
+                          }`}
+                        >
+                          {kObj.active ? "Mark Unused" : "Reactivate"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleModifyKeyStatus(kObj.key, "delete")}
+                          className="px-1.5 py-0.5 rounded bg-red-600/40 text-red-200 text-[9px] font-bold"
+                        >
+                          ✕
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleModifyKeyStatus(kObj.key, "toggle")}
-                        className={`px-2 py-0.5 rounded text-[9px] font-bold transition ${kObj.active ? "bg-amber-600/40 text-amber-200" : "bg-emerald-600/40 text-emerald-200"}`}
-                      >
-                        {kObj.active ? "Mark Unused" : "Reactivate"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleModifyKeyStatus(kObj.key, "delete")}
-                        className="px-1.5 py-0.5 rounded bg-red-600/40 text-red-200 text-[9px] font-bold"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
       </details>
+
+      {/* Subtle divider at the bottom of admin section */}
+      <div className="pt-1">
+        <img
+          src={RABBIT_DIVIDER}
+          alt=""
+          className="w-full h-2.5 object-contain opacity-70"
+        />
+      </div>
     </div>
   );
 }
