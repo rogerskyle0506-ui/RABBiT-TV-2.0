@@ -29,7 +29,7 @@ export function ScrollPillBar({
   const checkScrollBounds = useCallback(() => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      // Scroll margin threshold (5px) prevents rounding precision glitches on high-DPI displays
+      // Scroll margin threshold (5px) prevents rounding precision glitches on high-DPI displays[cite: 13]
       setCanScrollLeft(scrollLeft > 5);
       setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
     }
@@ -62,7 +62,25 @@ export function ScrollPillBar({
     }
   };
 
-  // Dynamic Theme Color Mapping for the micro-arrows & soft neon aura
+  // D-pad / Keyboard Arrow Key navigation handler for remote control integration
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+    const pillButtons = scrollContainerRef.current?.querySelectorAll<HTMLButtonElement>("button[data-pill-btn]");
+    if (!pillButtons || pillButtons.length === 0) return;
+
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      const nextIndex = (currentIndex + 1) % pillButtons.length;
+      pillButtons[nextIndex]?.focus();
+      pillButtons[nextIndex]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      const prevIndex = (currentIndex - 1 + pillButtons.length) % pillButtons.length;
+      pillButtons[prevIndex]?.focus();
+      pillButtons[prevIndex]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  };
+
+  // Dynamic Theme Color Mapping for the micro-arrows & soft neon aura[cite: 13]
   const getThemeArrowColor = (theme: AppTheme) => {
     switch (theme) {
       case "red":
@@ -93,7 +111,7 @@ export function ScrollPillBar({
           type="button"
           onClick={() => scrollByAmount(-200)}
           aria-label="Scroll left"
-          className="p-1 rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
+          className="p-1 rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 transition cursor-pointer"
         >
           <span className={`text-base font-black transition-colors duration-300 animate-slow-glow ${getThemeArrowColor(appTheme)}`}>
             ‹
@@ -106,12 +124,14 @@ export function ScrollPillBar({
         ref={scrollContainerRef}
         className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto scrollbar-none px-6 py-1 min-w-full sm:min-w-0"
       >
-        {options.map((item) => (
+        {options.map((item, index) => (
           <button
             key={item.id}
             type="button"
+            data-pill-btn
             onClick={() => onSelect(item.id)}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition shrink-0 ${
+            onKeyDown={(e) => handleKeyDown(e, index)}
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 ${
               activeId === item.id
                 ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                 : "bg-white/5 text-slate-300 hover:bg-white/10"
@@ -132,7 +152,7 @@ export function ScrollPillBar({
           type="button"
           onClick={() => scrollByAmount(200)}
           aria-label="Scroll right"
-          className="p-1 rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
+          className="p-1 rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 transition cursor-pointer"
         >
           <span className={`text-base font-black transition-colors duration-300 animate-slow-glow ${getThemeArrowColor(appTheme)}`}>
             ›
