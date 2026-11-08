@@ -8,6 +8,7 @@ import { HolidayOverlay } from "@/components/HolidayOverlay";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { ActivationModal } from "@/components/ActivationModal";
 import { AdminPanel } from "@/components/AdminPanel";
+import { bgAudio } from "@/lib/background-audio";
 import "@/styles.css";
 import { useState, useEffect, useRef } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
@@ -43,7 +44,6 @@ const globalFeedOptions = [
   "Canada (All)",
   "English",
   "German",
-  "Ukrainian",
   "Arabic / Islamic",
   "Russian",
   "British",
@@ -123,7 +123,7 @@ function RootComponent() {
   const [userAgeInput, setUserAgeInput] = useState<string>("");
   const [profileNameInput, setProfileNameInput] = useState<string>("");
   const [savedProfileName, setSavedProfileName] = useState<string>("");
-  
+
   // Unified age and passcode management states
   const [unifiedAgeCodeInput, setUnifiedAgeCodeInput] = useState<string>("");
   const [newPasscode, setNewPasscode] = useState<string>("");
@@ -208,7 +208,7 @@ function RootComponent() {
       window.open(url, "_blank");
     }
   };
-  
+
   const handleToggleProfileMenu = () => {
     if (showProfileMenu) handleCloseAll();
     else {
@@ -226,6 +226,35 @@ function RootComponent() {
       void checkForAppUpdates(true);
     }, 3000);
     return () => clearTimeout(updateTimer);
+  }, []);
+
+  // Lobby Background Audio Lifecycle Hooks (Idea 5)
+  useEffect(() => {
+    const startAudio = () => {
+      bgAudio.play();
+      window.removeEventListener("click", startAudio);
+      window.removeEventListener("keydown", startAudio);
+    };
+
+    window.addEventListener("click", startAudio, { once: true });
+    window.addEventListener("keydown", startAudio, { once: true });
+
+    const handleRouteCheck = () => {
+      const path = window.location.pathname;
+      if (path.includes("details") || path.includes("watch") || path.includes("player")) {
+        bgAudio.pause();
+      } else {
+        bgAudio.play();
+      }
+    };
+
+    window.addEventListener("popstate", handleRouteCheck);
+    return () => {
+      bgAudio.pause();
+      window.removeEventListener("click", startAudio);
+      window.removeEventListener("keydown", startAudio);
+      window.removeEventListener("popstate", handleRouteCheck);
+    };
   }, []);
 
   useEffect(() => {
@@ -326,7 +355,7 @@ function RootComponent() {
       (typeof window !== "undefined" ? localStorage.getItem("rabtv_profile_name") : "") ||
       "Friend";
     const age = getSavedUserAge() || parseInt(userAgeInput, 10) || 0;
-    
+
     const GIST_ID = (import.meta as any).env?.VITE_GIST_ID as string || "";
     const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT as string || "";
     const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
