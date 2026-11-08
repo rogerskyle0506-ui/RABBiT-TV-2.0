@@ -1,3 +1,4 @@
+// src/routes/live-tv.tsx
 import { createFileRoute, Link } from '@tanstack/react-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -14,7 +15,7 @@ import { ScrollPillBar } from '@/components/scroll-pill-bar';
 import { getChannelDescription } from '@/lib/channel-descriptions';
 import { channelCategories } from '@/lib/channel-categories';
 import { AppWallpaper } from '@/components/AppWallpaper';
-import { recordWatchHistory } from '@/lib/watch-history'; // Added import for watch history tracking
+import { recordWatchHistory } from '@/lib/watch-history';
 
 export const Route = createFileRoute('/live-tv')({
   component: LiveTvComponent,
