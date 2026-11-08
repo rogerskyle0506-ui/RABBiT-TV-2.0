@@ -86,6 +86,11 @@ async function updateNativeStatusBar(theme: AppTheme) {
 function verifyCurrentAccess(): boolean {
   if (typeof window === "undefined") return false;
   const status = localStorage.getItem("rabtv_access_status");
+  const profileName = localStorage.getItem("rabtv_profile_name");
+  
+  // Force activation modal if access status or profile name is missing on fresh/clean launch
+  if (!status || !profileName) return false;
+
   if (status === "permanent") return true;
   if (status === "trial") {
     const startTime = Number(localStorage.getItem("rabtv_trial_start_timestamp") || 0);
