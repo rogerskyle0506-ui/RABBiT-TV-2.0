@@ -918,19 +918,21 @@ function RootComponent() {
                 onClick={handleCloseAll}
               />
 
-              {/* Side Blade Drawer Content with 25% transparency (opacity-75) */}
+              {/* Side Blade Drawer Content with 25% transparency and Top/Bottom Fade-Out Mask */}
               <div
-                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl flex flex-col z-10 overflow-y-auto p-5 transition-transform duration-300 animate-slide-right opacity-75"
+                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl flex flex-col z-10 overflow-y-auto p-5 pt-8 pb-8 transition-transform duration-300 animate-slide-right opacity-75"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
                   backgroundSize: "100% 100%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
+                  maskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
                 }}
               >
                 <div className="relative z-10 flex flex-col h-full w-full">
                   {/* Sidebar Header with Perfectly Aligned Logo and Padding */}
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-2 px-1 w-full">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-3 px-1 w-full">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl overflow-hidden border border-white/30 bg-slate-800 shadow-md shrink-0 flex items-center justify-center">
                         <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
