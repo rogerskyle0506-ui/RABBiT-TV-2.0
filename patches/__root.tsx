@@ -992,9 +992,9 @@ function RootComponent() {
                 onClick={handleCloseAll}
               />
 
-              {/* Side Blade Drawer Content with Deep Inset Padding to Contain within RABBIT_PANEL frame */}
+              {/* Side Blade Drawer Content locked strictly within RABBIT_PANEL frame */}
               <div
-                className="relative w-[420px] max-w-[95vw] h-[calc(100dvh-60px)] sm:h-[calc(100dvh-65px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-90 overflow-hidden pt-16 pb-16 px-8"
+                className="relative w-[420px] max-w-[95vw] h-[calc(100dvh-60px)] sm:h-[calc(100dvh-65px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-95 overflow-hidden pt-12 pb-12 px-6"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
                   backgroundSize: "100% 100%",
@@ -1005,28 +1005,28 @@ function RootComponent() {
                 {/* Active Theme Tint Overlay for sidebar */}
                 <div className={`absolute inset-0 pointer-events-none z-0 ${getSidebarThemeTintOverlay(appTheme)}`} />
 
-                {/* Scroll Up Arrow Button for D-pad / Mouse */}
+                {/* Scroll Up Arrow Button */}
                 <button
                   type="button"
                   onClick={() => handleScrollSidebar("up")}
-                  className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-16 h-8 bg-black/70 hover:bg-black/90 border border-white/20 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-md transition cursor-pointer"
+                  className="absolute top-3 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/70 hover:bg-black/90 border border-white/20 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-md transition cursor-pointer"
                   title="Scroll Up"
                 >
                   ▲
                 </button>
 
-                {/* Scrollable Container with Deep Top/Bottom Insets */}
+                {/* Scrollable Container with Strict Containment */}
                 <div
                   ref={sidebarContentRef}
-                  className="flex-1 overflow-y-auto px-2 pt-16 pb-16 w-full scrollbar-none relative z-10"
+                  className="flex-1 overflow-y-auto px-2 pt-10 pb-10 w-full scrollbar-none relative z-10"
                   style={{
-                    maskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
-                    WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
+                    maskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%)",
                   }}
                 >
-                  <div className="relative z-10 flex flex-col h-full w-full">
-                    {/* Sidebar Header with Recessed Padding */}
-                    <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6 pt-2 px-2 w-full">
+                  <div className="relative z-10 flex flex-col w-full">
+                    {/* Sidebar Header */}
+                    <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-1 px-2 w-full">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl overflow-hidden border border-white/30 bg-slate-800 shadow-md shrink-0 flex items-center justify-center">
                           <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
@@ -1041,35 +1041,39 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={handleCloseAll}
-                        className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 transition shrink-0 mr-1"
+                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 transition shrink-0 mr-1"
                       >
                         ✕ Close
                       </button>
                     </div>
 
-                    {/* ACCORDION SECTIONS (WITH 4X TALL PILL PADDING `py-20 px-8`) */}
-                    <div className="space-y-6 flex-1 w-full">
+                    {/* ACCORDION SECTIONS WITH LAYERED BACKGROUND CROPPING */}
+                    <div className="space-y-3 w-full">
 
                       {/* 1. GLOBAL FEED SELECTOR ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "globalFeed" ? null : "globalFeed")}
-                          className="w-full flex items-center justify-between px-8 py-20 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-2xl border border-white/15 shadow-sm"
-                          style={{
-                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
                         >
-                          <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                          <div 
+                            className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
+                            style={{
+                              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/40 w-full h-full" />
+                          </div>
                           <span className="relative z-10 flex items-center gap-2">🌐 Global Feed Selector</span>
                           <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "globalFeed" ? "rotate-180" : ""}`}>▼</span>
                         </button>
                         {activeSidebarSection === "globalFeed" && (
                           <div
-                            className="w-full p-6 border-0 space-y-3 relative rounded-2xl mt-3 shadow-2xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1077,16 +1081,16 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-full">
-                              <p className="text-xs text-slate-300 font-semibold">Select Region Feed:</p>
+                            <div className="relative z-10 space-y-2 w-full">
+                              <p className="text-[11px] text-slate-300 font-semibold">Select Region Feed:</p>
                               <div className="relative w-full">
                                 <div
-                                  className={`flex h-12 w-full items-center justify-between rounded-xl border px-4 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} gap-1 relative pointer-events-auto`}
+                                  className={`flex h-10 w-full items-center justify-between rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} gap-1 relative pointer-events-auto`}
                                 >
                                   <span className="truncate">
                                     🌐 {selectedGlobalFeed === "All (Default)" ? "Global" : selectedGlobalFeed}
                                   </span>
-                                  <span className="text-[10px]">▼</span>
+                                  <span className="text-[9px]">▼</span>
                                   <select
                                     value={selectedGlobalFeed}
                                     onChange={(e) => handleGlobalFeedChange(e.target.value as GlobalFeedOption)}
@@ -1106,25 +1110,29 @@ function RootComponent() {
                       </div>
 
                       {/* 2. WATCH HISTORY ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "history" ? null : "history")}
-                          className="w-full flex items-center justify-between px-8 py-20 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-2xl border border-white/15 shadow-sm"
-                          style={{
-                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
                         >
-                          <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                          <div 
+                            className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
+                            style={{
+                              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/40 w-full h-full" />
+                          </div>
                           <span className="relative z-10 flex items-center gap-2">🕒 Watch History</span>
                           <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "history" ? "rotate-180" : ""}`}>▼</span>
                         </button>
                         {activeSidebarSection === "history" && (
                           <div
-                            className="w-full p-6 border-0 space-y-3 relative rounded-2xl mt-3 shadow-2xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1132,12 +1140,12 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-full">
-                              <p className="text-xs text-slate-300 font-semibold">View previously watched media:</p>
+                            <div className="relative z-10 space-y-2 w-full">
+                              <p className="text-[11px] text-slate-300 font-semibold">View previously watched media:</p>
                               <Link
                                 to="/watch-history"
                                 onClick={handleCloseAll}
-                                className={`flex h-12 w-full items-center justify-center rounded-xl border px-4 text-xs font-bold shadow-sm transition ${activeHeader.btnBg}`}
+                                className={`flex h-10 w-full items-center justify-center rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg}`}
                               >
                                 🕒 Open Watch History
                               </Link>
@@ -1147,25 +1155,29 @@ function RootComponent() {
                       </div>
 
                       {/* 3. APP CUSTOMIZATION ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "theme" ? null : "theme")}
-                          className="w-full flex items-center justify-between px-8 py-20 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-2xl border border-white/15 shadow-sm"
-                          style={{
-                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
                         >
-                          <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                          <div 
+                            className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
+                            style={{
+                              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/40 w-full h-full" />
+                          </div>
                           <span className="relative z-10 flex items-center gap-2">🎨 App Themes & Styling</span>
                           <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "theme" ? "rotate-180" : ""}`}>▼</span>
                         </button>
                         {activeSidebarSection === "theme" && (
                           <div
-                            className="w-full p-6 border-0 space-y-3 relative rounded-2xl mt-3 shadow-2xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1173,13 +1185,13 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 grid grid-cols-2 gap-3 w-full">
+                            <div className="relative z-10 grid grid-cols-2 gap-2 w-full">
                               {allThemesList.map((t) => (
                                 <button
                                   key={t.id}
                                   type="button"
                                   onClick={() => handleThemeChange(t.id)}
-                                  className={`rounded-xl p-3 text-xs font-bold transition text-left w-full ${
+                                  className={`rounded-lg p-2.5 text-xs font-bold transition text-left w-full ${
                                     appTheme === t.id
                                       ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
                                       : `${getSubtlePillBg(appTheme)}`
@@ -1194,25 +1206,29 @@ function RootComponent() {
                       </div>
 
                       {/* 4. OVER SCALE & GRID SIZING ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "scale" ? null : "scale")}
-                          className="w-full flex items-center justify-between px-8 py-20 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-2xl border border-white/15 shadow-sm"
-                          style={{
-                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
                         >
-                          <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                          <div 
+                            className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
+                            style={{
+                              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/40 w-full h-full" />
+                          </div>
                           <span className="relative z-10 flex items-center gap-2">📐 Over Scale & Grid Size</span>
                           <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "scale" ? "rotate-180" : ""}`}>▼</span>
                         </button>
                         {activeSidebarSection === "scale" && (
                           <div
-                            className="w-full p-6 border-0 space-y-4 relative rounded-2xl mt-3 shadow-2xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1220,16 +1236,16 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-4 w-full">
+                            <div className="relative z-10 space-y-3 w-full">
                               <div className="w-full">
-                                <p className="text-xs text-slate-300 mb-2 font-semibold">Catalog Card Size:</p>
-                                <div className="grid grid-cols-3 gap-2 w-full">
+                                <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">Catalog Card Size:</p>
+                                <div className="grid grid-cols-3 gap-1.5 w-full">
                                   {(["small", "medium", "large"] as CardSize[]).map((size) => (
                                     <button
                                       key={size}
                                       type="button"
                                       onClick={() => handleSizeChange(size)}
-                                      className={`rounded-xl py-2.5 text-xs font-bold capitalize transition w-full ${
+                                      className={`rounded-lg py-2 text-xs font-bold capitalize transition w-full ${
                                         cardSize === size
                                           ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                           : `${getSubtlePillBg(appTheme)}`
@@ -1241,15 +1257,15 @@ function RootComponent() {
                                 </div>
                               </div>
 
-                              <div className="pt-3 border-t border-white/10 w-full">
-                                <p className="text-xs text-slate-300 mb-2 font-semibold">History Page Overscale:</p>
-                                <div className="grid grid-cols-4 gap-2 w-full">
+                              <div className="pt-2 border-t border-white/10 w-full">
+                                <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">History Page Overscale:</p>
+                                <div className="grid grid-cols-4 gap-1.5 w-full">
                                   {(["off", "20%", "50%", "80%"] as HistoryScale[]).map((scale) => (
                                     <button
                                       key={scale}
                                       type="button"
                                       onClick={() => handleHistoryOverscaleChange(scale)}
-                                      className={`rounded-xl py-2 text-xs font-bold capitalize transition w-full ${
+                                      className={`rounded-lg py-1.5 text-xs font-bold capitalize transition w-full ${
                                         historyOverscale === scale
                                           ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                           : `${getSubtlePillBg(appTheme)}`
@@ -1266,25 +1282,29 @@ function RootComponent() {
                       </div>
 
                       {/* 5. BACKGROUND MUSIC AUDIO ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "audio" ? null : "audio")}
-                          className="w-full flex items-center justify-between px-8 py-20 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-2xl border border-white/15 shadow-sm"
-                          style={{
-                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
                         >
-                          <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                          <div 
+                            className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
+                            style={{
+                              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/40 w-full h-full" />
+                          </div>
                           <span className="relative z-10 flex items-center gap-2">🎵 Background Lobby Audio</span>
                           <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "audio" ? "rotate-180" : ""}`}>▼</span>
                         </button>
                         {activeSidebarSection === "audio" && (
                           <div
-                            className="w-full p-6 border-0 space-y-4 relative rounded-2xl mt-3 shadow-2xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1292,14 +1312,14 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-4 w-full">
+                            <div className="relative z-10 space-y-3 w-full">
                               <div className="w-full">
-                                <p className="text-xs text-slate-300 mb-2 font-semibold">Playback Controls:</p>
-                                <div className="grid grid-cols-2 gap-2.5 w-full">
+                                <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">Playback Controls:</p>
+                                <div className="grid grid-cols-2 gap-2 w-full">
                                   <button
                                     type="button"
                                     onClick={() => handleBackgroundAudioToggle("playing")}
-                                    className={`rounded-xl py-2.5 text-xs font-bold transition w-full ${
+                                    className={`rounded-lg py-2 text-xs font-bold transition w-full ${
                                       bgMusicState === "playing"
                                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                         : `${getSubtlePillBg(appTheme)}`
@@ -1310,7 +1330,7 @@ function RootComponent() {
                                   <button
                                     type="button"
                                     onClick={() => handleBackgroundAudioToggle("muted")}
-                                    className={`rounded-xl py-2.5 text-xs font-bold transition w-full ${
+                                    className={`rounded-lg py-2 text-xs font-bold transition w-full ${
                                       bgMusicState === "muted"
                                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                         : `${getSubtlePillBg(appTheme)}`
@@ -1322,10 +1342,10 @@ function RootComponent() {
                               </div>
 
                               {/* VOLUME SLIDER CONTROL */}
-                              <div className="pt-3 border-t border-white/10 w-full space-y-2">
+                              <div className="pt-2 border-t border-white/10 w-full space-y-1.5">
                                 <div className="flex items-center justify-between">
-                                  <p className="text-xs text-slate-300 font-semibold">Music Volume:</p>
-                                  <span className="text-xs font-bold text-amber-300">{Math.round(bgMusicVolume * 100)}%</span>
+                                  <p className="text-[11px] text-slate-300 font-semibold">Music Volume:</p>
+                                  <span className="text-[11px] font-bold text-amber-300">{Math.round(bgMusicVolume * 100)}%</span>
                                 </div>
                                 <input
                                   type="range"
@@ -1334,35 +1354,35 @@ function RootComponent() {
                                   step="0.05"
                                   value={bgMusicVolume}
                                   onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
+                                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
                                 />
                               </div>
 
-                              <div className="pt-3 border-t border-white/10 w-full">
-                                <p className="text-xs text-slate-300 mb-2.5 font-semibold">Select Channel / Stream by Genre:</p>
+                              <div className="pt-2 border-t border-white/10 w-full">
+                                <p className="text-[11px] text-slate-300 mb-2 font-semibold">Select Channel / Stream by Genre:</p>
                                 
-                                <div className="max-h-60 overflow-y-auto space-y-2.5 pr-1 w-full">
+                                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 w-full">
                                   {Object.entries(RADIO_STATIONS).map(([category, stations]) => {
                                     const hasActiveStation = stations.some(
                                       s => (currentStationUrl === s.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === s.url)
                                     );
 
                                     return (
-                                      <details key={category} className="group rounded-xl border border-white/10 bg-black/30 overflow-hidden w-full">
-                                        <summary className="flex items-center justify-between px-4 py-3 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition">
+                                      <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden w-full">
+                                        <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition">
                                           <span className="flex items-center gap-2">
                                             📁 {category}
-                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
+                                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
                                               {stations.length}
                                             </span>
                                           </span>
                                           <div className="flex items-center gap-1.5">
-                                            {hasActiveStation && <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" title="Active stream in this category" />}
-                                            <span className="transform group-open:rotate-180 transition-transform text-xs">▼</span>
+                                            {hasActiveStation && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Active stream in this category" />}
+                                            <span className="transform group-open:rotate-180 transition-transform text-[10px]">▼</span>
                                           </div>
                                         </summary>
 
-                                        <div className="p-3 space-y-2 border-t border-white/10 bg-slate-950/40 w-full">
+                                        <div className="p-2 space-y-1.5 border-t border-white/10 bg-slate-950/40 w-full">
                                           {stations.map((station) => {
                                             const isSelected = (currentStationUrl === station.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === station.url);
                                             return (
@@ -1370,14 +1390,14 @@ function RootComponent() {
                                                 key={station.url}
                                                 type="button"
                                                 onClick={() => handleStationSelect(station.url)}
-                                                className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold transition flex items-center justify-between ${
+                                                className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-between ${
                                                   isSelected
                                                     ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                                     : `${getSubtlePillBg(appTheme)}`
                                                 }`}
                                               >
                                                 <span className="truncate pr-1">🎵 {station.name}</span>
-                                                {isSelected && <span className="text-[10px] shrink-0 font-bold bg-black/40 px-2 py-0.5 rounded">▶ LIVE</span>}
+                                                {isSelected && <span className="text-[9px] shrink-0 font-bold bg-black/40 px-1.5 py-0.5 rounded">▶ LIVE</span>}
                                               </button>
                                             );
                                           })}
@@ -1393,26 +1413,30 @@ function RootComponent() {
                       </div>
 
                       {/* 6. SECURITY & PIN MANAGEMENT ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "pin" ? null : "pin")}
-                          className="w-full flex items-center justify-between px-8 py-20 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-2xl border border-white/15 shadow-sm"
-                          style={{
-                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
                         >
-                          <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                          <div 
+                            className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
+                            style={{
+                              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/40 w-full h-full" />
+                          </div>
                           <span className="relative z-10 flex items-center gap-2">🔒 Profile, Age & PIN Settings</span>
                           <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "pin" ? "rotate-180" : ""}`}>▼</span>
                         </button>
                         {activeSidebarSection === "pin" && (
                           <form
                             onSubmit={handleUnifiedProfileUpdate}
-                            className="w-full p-6 border-0 space-y-4 relative rounded-2xl mt-3 shadow-2xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1420,33 +1444,33 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-4 w-full">
-                              <div className="grid grid-cols-2 gap-3 w-full">
+                            <div className="relative z-10 space-y-3 w-full">
+                              <div className="grid grid-cols-2 gap-2 w-full">
                                 <div className="w-full">
-                                  <span className="block text-xs text-slate-300 mb-1.5 font-semibold">Name:</span>
+                                  <span className="block text-[11px] text-slate-300 mb-1 font-semibold">Name:</span>
                                   <input
                                     type="text"
                                     maxLength={25}
                                     value={profileNameInput}
                                     onChange={(e) => setProfileNameInput(e.target.value)}
-                                    className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs text-white focus:outline-none"
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
                                   />
                                 </div>
                                 <div className="w-full">
-                                  <span className="block text-xs text-slate-300 mb-1.5 font-semibold">Age:</span>
+                                  <span className="block text-[11px] text-slate-300 mb-1 font-semibold">Age:</span>
                                   <input
                                     type="number"
                                     min={1}
                                     max={120}
                                     value={userAgeInput}
                                     onChange={(e) => setUserAgeInput(e.target.value)}
-                                    className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs text-white focus:outline-none"
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
                                   />
                                 </div>
                               </div>
 
                               <div className="w-full">
-                                <span className="block text-xs text-slate-300 mb-1.5 font-semibold">Current 4-digit PIN (Required):</span>
+                                <span className="block text-[11px] text-slate-300 mb-1 font-semibold">Current 4-digit PIN (Required):</span>
                                 <input
                                   type="password"
                                   inputMode="numeric"
@@ -1454,13 +1478,13 @@ function RootComponent() {
                                   placeholder="••••"
                                   value={unifiedAgeCodeInput}
                                   onChange={(e) => setUnifiedAgeCodeInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                                  className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs text-white focus:outline-none tracking-widest"
+                                  className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
                                 />
                               </div>
 
-                              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 w-full">
+                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10 w-full">
                                 <div className="w-full">
-                                  <span className="block text-xs text-slate-300 mb-1.5 font-semibold">New PIN (Opt):</span>
+                                  <span className="block text-[11px] text-slate-300 mb-1 font-semibold">New PIN (Opt):</span>
                                   <input
                                     type="password"
                                     inputMode="numeric"
@@ -1468,11 +1492,11 @@ function RootComponent() {
                                     placeholder="••••"
                                     value={newPasscode}
                                     onChange={(e) => setNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                                    className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs text-white focus:outline-none tracking-widest"
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
                                   />
                                 </div>
                                 <div className="w-full">
-                                  <span className="block text-xs text-slate-300 mb-1.5 font-semibold">Confirm PIN:</span>
+                                  <span className="block text-[11px] text-slate-300 mb-1 font-semibold">Confirm PIN:</span>
                                   <input
                                     type="password"
                                     inputMode="numeric"
@@ -1480,20 +1504,20 @@ function RootComponent() {
                                     placeholder="••••"
                                     value={confirmNewPasscode}
                                     onChange={(e) => setConfirmNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                                    className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs text-white focus:outline-none tracking-widest"
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
                                   />
                                 </div>
                               </div>
 
                               <button
                                 type="submit"
-                                className={`w-full py-3 rounded-xl ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
+                                className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
                               >
                                 Save Profile & PIN Updates
                               </button>
 
                               {unifiedUpdateStatus && (
-                                <p className={`text-xs font-bold text-center ${unifiedUpdateStatus.isError ? "text-red-400" : "text-emerald-400"}`}>
+                                <p className={`text-[11px] font-bold text-center ${unifiedUpdateStatus.isError ? "text-red-400" : "text-emerald-400"}`}>
                                   {unifiedUpdateStatus.text}
                                 </p>
                               )}
@@ -1503,25 +1527,29 @@ function RootComponent() {
                       </div>
 
                       {/* 7. BACKUP & RESTORE ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "backup" ? null : "backup")}
-                          className="w-full flex items-center justify-between px-8 py-20 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-2xl border border-white/15 shadow-sm"
-                          style={{
-                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
                         >
-                          <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                          <div 
+                            className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
+                            style={{
+                              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/40 w-full h-full" />
+                          </div>
                           <span className="relative z-10 flex items-center gap-2">💾 Backup & Profile Data</span>
                           <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "backup" ? "rotate-180" : ""}`}>▼</span>
                         </button>
                         {activeSidebarSection === "backup" && (
                           <div
-                            className="w-full p-6 border-0 space-y-3 relative rounded-2xl mt-3 shadow-2xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1529,16 +1557,16 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-full">
-                              <div className="flex gap-2.5 w-full">
+                            <div className="relative z-10 space-y-2.5 w-full">
+                              <div className="flex gap-2 w-full">
                                 <button
                                   type="button"
                                   onClick={handleSaveBackup}
-                                  className={`flex-1 rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
+                                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
                                 >
                                   💾 Export Backup
                                 </button>
-                                <label className={`flex-1 text-center cursor-pointer rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}>
+                                <label className={`flex-1 text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}>
                                   🔄 Restore
                                   <input type="file" accept=".json" onChange={handleRestoreBackup} className="hidden" />
                                 </label>
@@ -1554,25 +1582,29 @@ function RootComponent() {
                       </div>
 
                       {/* 8. ACCESSIBILITY ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "accessibility" ? null : "accessibility")}
-                          className="w-full flex items-center justify-between px-8 py-20 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-2xl border border-white/15 shadow-sm"
-                          style={{
-                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
                         >
-                          <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                          <div 
+                            className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
+                            style={{
+                              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/40 w-full h-full" />
+                          </div>
                           <span className="relative z-10 flex items-center gap-2">♿ Accessibility Options</span>
                           <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "accessibility" ? "rotate-180" : ""}`}>▼</span>
                         </button>
                         {activeSidebarSection === "accessibility" && (
                           <div
-                            className="w-full p-6 border-0 space-y-4 relative rounded-2xl mt-3 shadow-2xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1580,11 +1612,11 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-4 w-full">
+                            <div className="relative z-10 space-y-3 w-full">
                               <div className="flex items-center justify-between w-full">
                                 <div>
                                   <p className="text-xs font-bold text-white">XL Mouse Pointer (3x)</p>
-                                  <p className="text-[11px] text-slate-300">Enlarges cursor for TVs/projectors.</p>
+                                  <p className="text-[10px] text-slate-300">Enlarges cursor for TVs/projectors.</p>
                                 </div>
                                 <button
                                   type="button"
@@ -1596,10 +1628,10 @@ function RootComponent() {
                                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${helpfulMouse ? "translate-x-6" : "translate-x-1"}`} />
                                 </button>
                               </div>
-                              <div className="flex items-center justify-between pt-3 border-t border-white/10 w-full">
+                              <div className="flex items-center justify-between pt-2 border-t border-white/10 w-full">
                                 <div>
                                   <p className="text-xs font-bold text-white">Enlarged Action Buttons</p>
-                                  <p className="text-[11px] text-slate-300">Bigger icons & buttons.</p>
+                                  <p className="text-[10px] text-slate-300">Bigger icons & buttons.</p>
                                 </div>
                                 <button
                                   type="button"
@@ -1620,7 +1652,7 @@ function RootComponent() {
 
                     {/* ADMIN PANEL (IF ADMIN) */}
                     {isAdmin && (
-                      <div className="mt-6 pt-6 border-t border-white/10 w-full">
+                      <div className="mt-4 pt-4 border-t border-white/10 w-full">
                         <AdminPanel
                           appTheme={appTheme}
                           getPrimaryBgColor={getPrimaryBgColor}
@@ -1630,32 +1662,32 @@ function RootComponent() {
                     )}
 
                     {/* FEEDBACK & SUPPORT SECTION */}
-                    <div className="mt-6 pt-6 border-t border-white/10 space-y-3 w-full">
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Feedback & Support</h4>
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Feedback & Support</h4>
                       <button
                         type="button"
                         onClick={() => setShowBugModal(true)}
-                        className={`w-full py-3 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
                       >
                         🐞 Report a Bug / Issue
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowBugFeedModal(true)}
-                        className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2"
+                        className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2"
                       >
                         📋 View Bug Reports Feed
                       </button>
                     </div>
 
                     {/* UPDATE CHANNEL & ACTIONS */}
-                    <div className="mt-6 pt-6 border-t border-white/10 space-y-3 w-full">
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Update Channel</h4>
-                      <div className="grid grid-cols-2 gap-2.5 w-full">
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Update Channel</h4>
+                      <div className="grid grid-cols-2 gap-2 w-full">
                         <button
                           type="button"
                           onClick={() => handleUpdateChannelChange("stable")}
-                          className={`py-2.5 rounded-xl text-xs font-bold transition w-full ${
+                          className={`py-2 rounded-lg text-xs font-bold transition w-full ${
                             updateChannel === "stable" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                           }`}
                         >
@@ -1664,7 +1696,7 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => handleUpdateChannelChange("nightly")}
-                          className={`py-2.5 rounded-xl text-xs font-bold transition w-full ${
+                          className={`py-2 rounded-lg text-xs font-bold transition w-full ${
                             updateChannel === "nightly" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                           }`}
                         >
@@ -1674,60 +1706,60 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => void checkForAppUpdates(false)}
-                        className={`w-full py-3 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
                       >
                         🔍 Check for Updates Now
                       </button>
                     </div>
 
                     {/* LICENSE STATUS */}
-                    <div className="mt-6 pt-6 border-t border-white/10 space-y-3 w-full">
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">License Status</h4>
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Status</h4>
                       {isAdmin ? (
-                        <p className="text-xs text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-3 rounded-xl">
+                        <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-2.5 rounded-lg">
                           🔐 Admin access active.
                         </p>
                       ) : isTrialActive ? (
-                        <div className="space-y-3 w-full">
-                          <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl leading-relaxed">
+                        <div className="space-y-2 w-full">
+                          <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg leading-relaxed">
                             Trial: <strong>{trialDaysRemaining} {trialDaysRemaining === 1 ? "day" : "days"} remaining</strong>.
                           </p>
-                          <form onSubmit={handleUpgradeFromProfile} className="space-y-2 w-full">
+                          <form onSubmit={handleUpgradeFromProfile} className="space-y-1.5 w-full">
                             <input
                               type="password"
                               placeholder="Unlock code"
                               value={unlockCodeInput}
                               onChange={(e) => setUnlockCodeInput(e.target.value)}
-                              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none"
+                              className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
                             />
                             <button
                               type="submit"
-                              className={`w-full py-2.5 rounded-xl ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
+                              className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
                             >
                               Upgrade to Full Unlock
                             </button>
                           </form>
                         </div>
                       ) : (
-                        <p className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl">
+                        <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg">
                           ✅ Full Lifetime Access Unlocked.
                         </p>
                       )}
                       {unlockStatusMsg && (
-                        <p className={`text-xs font-bold text-center ${unlockStatusMsg.isError ? "text-red-400" : "text-emerald-400"}`}>
+                        <p className={`text-[11px] font-bold text-center ${unlockStatusMsg.isError ? "text-red-400" : "text-emerald-400"}`}>
                           {unlockStatusMsg.text}
                         </p>
                       )}
                     </div>
 
                     {/* Sidebar Footer with Divider Asset */}
-                    <div className="mt-8 pt-6 border-t border-white/10 text-center w-full">
+                    <div className="mt-6 pt-4 border-t border-white/10 text-center w-full">
                       <img
                         src={RABBIT_DIVIDER}
                         alt=""
                         className="w-2/3 mx-auto h-2 object-contain opacity-70 mb-3"
                       />
-                      <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                      <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
                         Console UI v2.0 • RABBiT TV
                       </span>
                     </div>
@@ -1738,7 +1770,7 @@ function RootComponent() {
                 <button
                   type="button"
                   onClick={() => handleScrollSidebar("down")}
-                  className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-16 h-8 bg-black/70 hover:bg-black/90 border border-white/20 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-md transition cursor-pointer"
+                  className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/70 hover:bg-black/90 border border-white/20 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-md transition cursor-pointer"
                   title="Scroll Down"
                 >
                   ▼
