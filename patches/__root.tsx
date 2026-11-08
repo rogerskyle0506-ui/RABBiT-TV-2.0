@@ -88,7 +88,6 @@ function verifyCurrentAccess(): boolean {
   const status = localStorage.getItem("rabtv_access_status");
   const profileName = localStorage.getItem("rabtv_profile_name");
   
-  // Force activation modal if access status or profile name is missing on fresh/clean launch
   if (!status || !profileName) return false;
 
   if (status === "permanent") return true;
@@ -124,7 +123,6 @@ function RootComponent() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const lastScrollYRef = useRef(0);
 
-  // Accordion section state for the console-grade side blade sidebar
   const [activeSidebarSection, setActiveSidebarSection] = useState<
     "theme" | "scale" | "audio" | "pin" | "backup" | "accessibility" | "globalFeed" | "history" | null
   >(null);
@@ -140,7 +138,6 @@ function RootComponent() {
   const [profileNameInput, setProfileNameInput] = useState<string>("");
   const [savedProfileName, setSavedProfileName] = useState<string>("");
 
-  // Background Music State
   const [bgMusicState, setBgMusicState] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("rabtv_bg_music_state") || "playing";
@@ -155,7 +152,6 @@ function RootComponent() {
     return "";
   });
 
-  // Unified age and passcode management states
   const [unifiedAgeCodeInput, setUnifiedAgeCodeInput] = useState<string>("");
   const [newPasscode, setNewPasscode] = useState<string>("");
   const [confirmNewPasscode, setConfirmNewPasscode] = useState<string>("");
@@ -173,7 +169,6 @@ function RootComponent() {
   const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Update Channel State ("stable" vs "nightly")
   const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("rabtv_update_channel") as "stable" | "nightly") || "stable";
@@ -251,7 +246,6 @@ function RootComponent() {
     }
   };
 
-  // Trigger silent OTA update check 3 seconds after app launch
   useEffect(() => {
     const updateTimer = setTimeout(() => {
       void checkForAppUpdates(true);
@@ -259,7 +253,6 @@ function RootComponent() {
     return () => clearTimeout(updateTimer);
   }, []);
 
-  // Scroll to close sidebar menu behavior
   useEffect(() => {
     const handleWindowScroll = () => {
       if (showProfileMenu && typeof window !== "undefined") {
@@ -274,7 +267,6 @@ function RootComponent() {
     }
   }, [showProfileMenu]);
 
-  // Lobby Background Audio Lifecycle Hooks
   useEffect(() => {
     const startAudio = () => {
       if (bgMusicState === "playing") {
@@ -926,9 +918,9 @@ function RootComponent() {
                 onClick={handleCloseAll}
               />
 
-              {/* Side Blade Drawer Content (Left Aligned, Full Viewport Height & Stretch) */}
+              {/* Side Blade Drawer Content (Clean background image, no dimmers or blur) */}
               <div
-                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl backdrop-blur-2xl flex flex-col z-10 overflow-y-auto p-5 transition-transform duration-300 animate-slide-right"
+                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl flex flex-col z-10 overflow-y-auto p-5 transition-transform duration-300 animate-slide-right"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
                   backgroundSize: "100% 100%",
@@ -936,9 +928,6 @@ function RootComponent() {
                   backgroundPosition: "center center",
                 }}
               >
-                {/* Darker scroller background overlay for tactile depth */}
-                <div className="absolute inset-0 bg-black/80 pointer-events-none w-full h-full" />
-
                 <div className="relative z-10 flex flex-col h-full w-full">
                   {/* Sidebar Header */}
                   <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 w-full">
@@ -978,7 +967,6 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
-                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🌐 Global Feed Selector</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "globalFeed" ? "rotate-180" : ""}`}>▼</span>
                       </button>
@@ -992,7 +980,6 @@ function RootComponent() {
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
                           <div className="relative z-10 space-y-2 w-full">
                             <p className="text-[10px] text-slate-300 font-semibold">Select Region Feed:</p>
                             <div className="relative w-full">
@@ -1034,7 +1021,6 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
-                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🕒 Watch History</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "history" ? "rotate-180" : ""}`}>▼</span>
                       </button>
@@ -1048,7 +1034,6 @@ function RootComponent() {
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
                           <div className="relative z-10 space-y-2 w-full">
                             <p className="text-[10px] text-slate-300 font-semibold">View previously watched media:</p>
                             <Link
@@ -1076,7 +1061,6 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
-                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🎨 App Themes & Styling</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "theme" ? "rotate-180" : ""}`}>▼</span>
                       </button>
@@ -1090,7 +1074,6 @@ function RootComponent() {
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
                           <div className="relative z-10 grid grid-cols-2 gap-2 w-full">
                             {allThemesList.map((t) => (
                               <button
@@ -1124,7 +1107,6 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
-                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">📐 Over Scale & Grid Size</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "scale" ? "rotate-180" : ""}`}>▼</span>
                       </button>
@@ -1138,7 +1120,6 @@ function RootComponent() {
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
                           <div className="relative z-10 space-y-3 w-full">
                             <div className="w-full">
                               <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Catalog Card Size:</p>
@@ -1197,7 +1178,6 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
-                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🎵 Background Lobby Audio</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "audio" ? "rotate-180" : ""}`}>▼</span>
                       </button>
@@ -1211,7 +1191,6 @@ function RootComponent() {
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
                           <div className="relative z-10 space-y-3 w-full">
                             <div className="w-full">
                               <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Playback Controls:</p>
@@ -1287,7 +1266,6 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
-                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🔒 Profile, Age & PIN Settings</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "pin" ? "rotate-180" : ""}`}>▼</span>
                       </button>
@@ -1302,7 +1280,6 @@ function RootComponent() {
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
                           <div className="relative z-10 space-y-3 w-full">
                             <div className="grid grid-cols-2 gap-2 w-full">
                               <div className="w-full">
@@ -1398,7 +1375,6 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
-                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">💾 Backup & Profile Data</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "backup" ? "rotate-180" : ""}`}>▼</span>
                       </button>
@@ -1412,7 +1388,6 @@ function RootComponent() {
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
                           <div className="relative z-10 space-y-2 w-full">
                             <div className="flex gap-2 w-full">
                               <button
@@ -1450,7 +1425,6 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
-                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">♿ Accessibility Options</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "accessibility" ? "rotate-180" : ""}`}>▼</span>
                       </button>
@@ -1464,7 +1438,6 @@ function RootComponent() {
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
                           <div className="relative z-10 space-y-3 w-full">
                             <div className="flex items-center justify-between w-full">
                               <div>
