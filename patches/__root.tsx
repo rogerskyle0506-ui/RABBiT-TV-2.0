@@ -918,9 +918,9 @@ function RootComponent() {
                 onClick={handleCloseAll}
               />
 
-              {/* Side Blade Drawer Content (Clean background image, no dimmers or blur) */}
+              {/* Side Blade Drawer Content with 25% transparency (opacity-75) */}
               <div
-                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl flex flex-col z-10 overflow-y-auto p-5 transition-transform duration-300 animate-slide-right"
+                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl flex flex-col z-10 overflow-y-auto p-5 transition-transform duration-300 animate-slide-right opacity-75"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
                   backgroundSize: "100% 100%",
@@ -972,7 +972,7 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "globalFeed" && (
                         <div
-                          className="p-3.5 border-0 space-y-2 relative w-full"
+                          className="p-3.5 border-0 space-y-2 relative w-full opacity-75"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
                             backgroundSize: "100% 100%",
@@ -1026,7 +1026,7 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "history" && (
                         <div
-                          className="p-3.5 border-0 space-y-2 relative w-full"
+                          className="p-3.5 border-0 space-y-2 relative w-full opacity-75"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                             backgroundSize: "100% 100%",
@@ -1066,7 +1066,7 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "theme" && (
                         <div
-                          className="p-3.5 border-0 space-y-2 relative w-full"
+                          className="p-3.5 border-0 space-y-2 relative w-full opacity-75"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
                             backgroundSize: "100% 100%",
@@ -1112,7 +1112,7 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "scale" && (
                         <div
-                          className="p-3.5 border-0 space-y-3 relative w-full"
+                          className="p-3.5 border-0 space-y-3 relative w-full opacity-75"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                             backgroundSize: "100% 100%",
@@ -1183,7 +1183,7 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "audio" && (
                         <div
-                          className="p-3.5 border-0 space-y-3 relative w-full"
+                          className="p-3.5 border-0 space-y-3 relative w-full opacity-75"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
                             backgroundSize: "100% 100%",
@@ -1272,7 +1272,7 @@ function RootComponent() {
                       {activeSidebarSection === "pin" && (
                         <form
                           onSubmit={handleUnifiedProfileUpdate}
-                          className="p-3.5 border-0 space-y-3 relative w-full"
+                          className="p-3.5 border-0 space-y-3 relative w-full opacity-75"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                             backgroundSize: "100% 100%",
@@ -1380,7 +1380,7 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "backup" && (
                         <div
-                          className="p-3.5 border-0 space-y-2 relative w-full"
+                          className="p-3.5 border-0 space-y-2 relative w-full opacity-75"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
                             backgroundSize: "100% 100%",
@@ -1430,7 +1430,7 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "accessibility" && (
                         <div
-                          className="p-3.5 border-0 space-y-3 relative w-full"
+                          className="p-3.5 border-0 space-y-3 relative w-full opacity-75"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                             backgroundSize: "100% 100%",
