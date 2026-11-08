@@ -1,6 +1,7 @@
 // src/routes/__root.tsx
 import { BugReportModal } from "@/components/BugReportModal";
 import { PublicBugFeedModal } from "@/components/PublicBugFeedModal";
+import { UserNotifier } from "@/components/UserNotifier";
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -1351,6 +1352,9 @@ function RootComponent() {
           <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 md:py-6 overflow-x-hidden pb-20">
             <Outlet />
           </main>
+
+          {/* USER NOTIFICATION LISTENER TOAST */}
+          <UserNotifier appTheme={appTheme} />
 
           {/* BUG REPORT MODAL */}
           <BugReportModal
