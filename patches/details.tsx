@@ -57,6 +57,10 @@ export function DetailsPage() {
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [showScrollReminder, setShowScrollReminder] = useState(false);
 
+  // Swaedo Fullscreen Wrapper State & Ref
+  const [isFullscreenMode, setIsFullscreenMode] = useState(false);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
+
   const seasonRef = useRef<HTMLDivElement>(null);
   const episodeRef = useRef<HTMLDivElement>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
@@ -70,6 +74,40 @@ export function DetailsPage() {
     setRecommendations([]);
     setLoading(true);
   }, [mediaId, urlType]);
+
+  // Handle native fullscreen change events (e.g. pressing ESC on projector/keyboard)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreenMode(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleTrueFullscreen = () => {
+    const elem = playerContainerRef.current;
+    if (!elem) return;
+
+    if (!document.fullscreenElement) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if ((elem as any).webkitRequestFullscreen) {
+        (elem as any).webkitRequestFullscreen();
+      }
+      setIsFullscreenMode(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+      setIsFullscreenMode(false);
+    }
+  };
 
   useEffect(() => {
     const checkVerticalScroll = () => {
@@ -774,8 +812,15 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* UNTOUCHED DIRECT IFRAME STREAM */}
-            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
+            {/* SWAEDO FULLSCREEN WRAPPER CONTAINER */}
+            <div
+              ref={playerContainerRef}
+              className={`relative w-full overflow-hidden bg-black shadow-2xl shadow-black/50 border border-white/10 transition-all duration-300 ${
+                isFullscreenMode
+                  ? "fixed inset-0 z-50 h-screen w-screen rounded-none border-0 flex items-center justify-center bg-black"
+                  : "aspect-video rounded-2xl"
+              }`}
+            >
               <iframe
                 key={`stable-player-${mediaId}-${season}-${episode}`}
                 src={embedUrl}
@@ -783,6 +828,18 @@ export function DetailsPage() {
                 allowFullScreen
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
               ></iframe>
+
+              {/* Swaedo Controls Overlay / True Fullscreen Trigger Button */}
+              <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleTrueFullscreen}
+                  className="flex items-center gap-1.5 rounded-lg bg-black/75 hover:bg-black px-3.5 py-2 text-xs font-bold text-white backdrop-blur-md border border-white/20 shadow-xl transition focus:outline-none focus:ring-4 focus:ring-violet-400"
+                  title={isFullscreenMode ? "Exit True Fullscreen" : "Launch True Fullscreen"}
+                >
+                  {isFullscreenMode ? "🗗 Exit Fullscreen" : "⛶ Fullscreen"}
+                </button>
+              </div>
             </div>
 
             <div
@@ -989,7 +1046,7 @@ export function DetailsPage() {
               </div>
             </div>
 
-            {/* 2) Cast Section in a Single Compact Wrapper */}
+            {/* Cast Section */}
             {castList.length > 0 && (
               <div className={`mt-6 pt-4 pb-4 px-4 rounded-2xl border ${getCardBackground(appTheme)} backdrop-blur shadow-xl space-y-3`}>
                 <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
@@ -1024,7 +1081,7 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* 3) Compact Budget, Production, & Language Cards */}
+            {/* Budget, Production, & Language Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
               <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
                 <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
