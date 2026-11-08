@@ -122,6 +122,7 @@ function RootComponent() {
   const [showBugFeedModal, setShowBugFeedModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const lastScrollYRef = useRef(0);
+  const sidebarContentRef = useRef<HTMLDivElement>(null);
 
   const [activeSidebarSection, setActiveSidebarSection] = useState<
     "theme" | "scale" | "audio" | "pin" | "backup" | "accessibility" | "globalFeed" | "history" | null
@@ -256,6 +257,48 @@ function RootComponent() {
         lastScrollYRef.current = window.scrollY;
       }
       setShowProfileMenu(true);
+    }
+  };
+
+  // D-pad / Arrow Key navigation handler for sidebar menu items
+  useEffect(() => {
+    if (!showProfileMenu) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!sidebarContentRef.current) return;
+      const focusables = Array.from(
+        sidebarContentRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+
+      if (focusables.length === 0) return;
+
+      const currentIndex = focusables.findIndex(el => el === document.activeElement);
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const nextIndex = currentIndex < focusables.length - 1 ? currentIndex + 1 : 0;
+        focusables[nextIndex]?.focus();
+        focusables[nextIndex]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : focusables.length - 1;
+        focusables[prevIndex]?.focus();
+        focusables[prevIndex]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showProfileMenu]);
+
+  const handleScrollSidebar = (direction: "up" | "down") => {
+    if (sidebarContentRef.current) {
+      sidebarContentRef.current.scrollBy({
+        top: direction === "down" ? 180 : -180,
+        behavior: "smooth",
+      });
     }
   };
 
@@ -931,727 +974,755 @@ function RootComponent() {
                 onClick={handleCloseAll}
               />
 
-              {/* Side Blade Drawer Content with 25% transparency, Inset Padding, and Top/Bottom Fade-Out Mask */}
+              {/* Side Blade Drawer Content with 25% transparency, Inset Padding, and Extended Top/Bottom Fade-Out Mask */}
               <div
-                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl flex flex-col z-10 overflow-y-auto px-4 pt-10 pb-10 transition-transform duration-300 animate-slide-right opacity-75"
+                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-75 overflow-hidden"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
                   backgroundSize: "100% 100%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
-                  maskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
-                  WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
                 }}
               >
-                <div className="relative z-10 flex flex-col h-full w-full">
-                  {/* Sidebar Header with Recessed Padding to Keep Logo & Close Button Inside */}
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-3 px-3 w-full">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl overflow-hidden border border-white/30 bg-slate-800 shadow-md shrink-0 flex items-center justify-center">
-                        <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
-                      </div>
-                      <div>
-                        <h3 className={`text-sm font-black tracking-wide ${getPrimaryAccentColor(appTheme)}`}>
-                          {savedProfileName || "User Profile"}
-                        </h3>
-                        <span className="text-[10px] text-emerald-400 font-semibold">● System Online</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleCloseAll}
-                      className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 transition shrink-0 mr-1"
-                    >
-                      ✕ Close
-                    </button>
-                  </div>
+                {/* Scroll Up Arrow Button for D-pad / Mouse */}
+                <button
+                  type="button"
+                  onClick={() => handleScrollSidebar("up")}
+                  className="absolute top-2 left-1/2 -translate-x-1/2 z-20 w-16 h-7 bg-black/60 hover:bg-black/90 border border-white/20 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-md transition cursor-pointer"
+                  title="Scroll Up"
+                >
+                  ▲
+                </button>
 
-                  {/* ACCORDION SECTIONS */}
-                  <div className="space-y-3.5 flex-1 w-full">
-
-                    {/* 1. GLOBAL FEED SELECTOR ACCORDION */}
-                    <div className="border-0 bg-transparent overflow-hidden w-full">
+                {/* Scrollable Container with Extended Fader Mask */}
+                <div
+                  ref={sidebarContentRef}
+                  className="flex-1 overflow-y-auto px-4 pt-10 pb-10 w-full scrollbar-none"
+                  style={{
+                    maskImage: "linear-gradient(to bottom, transparent 0%, black 1.5%, black 98.5%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 1.5%, black 98.5%, transparent 100%)",
+                  }}
+                >
+                  <div className="relative z-10 flex flex-col h-full w-full">
+                    {/* Sidebar Header with Recessed Padding to Keep Logo & Close Button Inside */}
+                    <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-3 px-3 w-full">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl overflow-hidden border border-white/30 bg-slate-800 shadow-md shrink-0 flex items-center justify-center">
+                          <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h3 className={`text-sm font-black tracking-wide ${getPrimaryAccentColor(appTheme)}`}>
+                            {savedProfileName || "User Profile"}
+                          </h3>
+                          <span className="text-[10px] text-emerald-400 font-semibold">● System Online</span>
+                        </div>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setActiveSidebarSection(activeSidebarSection === "globalFeed" ? null : "globalFeed")}
-                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "center center",
-                        }}
+                        onClick={handleCloseAll}
+                        className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 transition shrink-0 mr-1"
                       >
-                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
-                        <span className="relative z-10 flex items-center gap-2">🌐 Global Feed Selector</span>
-                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "globalFeed" ? "rotate-180" : ""}`}>▼</span>
+                        ✕ Close
                       </button>
-                      {activeSidebarSection === "globalFeed" && (
-                        <div
-                          className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
+                    </div>
+
+                    {/* ACCORDION SECTIONS */}
+                    <div className="space-y-3.5 flex-1 w-full">
+
+                      {/* 1. GLOBAL FEED SELECTOR ACCORDION */}
+                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSidebarSection(activeSidebarSection === "globalFeed" ? null : "globalFeed")}
+                          className="w-[94%] mx-auto flex items-center justify-between px-4 py-[21px] text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                           style={{
-                            backgroundImage: `url(${RABBIT_PANEL})`,
+                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                             backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="relative z-10 space-y-2 w-full">
-                            <p className="text-[10px] text-slate-300 font-semibold">Select Region Feed:</p>
-                            <div className="relative w-full">
-                              <div
-                                className={`flex h-10 w-full items-center justify-between rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} gap-1 relative pointer-events-auto`}
-                              >
-                                <span className="truncate">
-                                  🌐 {selectedGlobalFeed === "All (Default)" ? "Global" : selectedGlobalFeed}
-                                </span>
-                                <span className="text-[9px]">▼</span>
-                                <select
-                                  value={selectedGlobalFeed}
-                                  onChange={(e) => handleGlobalFeedChange(e.target.value as GlobalFeedOption)}
-                                  className="absolute inset-0 w-full h-full opacity-0 bg-transparent text-white cursor-pointer z-50 appearance-none"
+                          <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
+                          <span className="relative z-10 flex items-center gap-2">🌐 Global Feed Selector</span>
+                          <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "globalFeed" ? "rotate-180" : ""}`}>▼</span>
+                        </button>
+                        {activeSidebarSection === "globalFeed" && (
+                          <div
+                            className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
+                            style={{
+                              backgroundImage: `url(${RABBIT_PANEL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="relative z-10 space-y-2 w-full">
+                              <p className="text-[10px] text-slate-300 font-semibold">Select Region Feed:</p>
+                              <div className="relative w-full">
+                                <div
+                                  className={`flex h-10 w-full items-center justify-between rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} gap-1 relative pointer-events-auto`}
                                 >
-                                  {globalFeedOptions.map((opt) => (
-                                    <option key={opt} value={opt} className="bg-slate-900 text-white p-2">
-                                      🌐 {opt}
-                                    </option>
+                                  <span className="truncate">
+                                    🌐 {selectedGlobalFeed === "All (Default)" ? "Global" : selectedGlobalFeed}
+                                  </span>
+                                  <span className="text-[9px]">▼</span>
+                                  <select
+                                    value={selectedGlobalFeed}
+                                    onChange={(e) => handleGlobalFeedChange(e.target.value as GlobalFeedOption)}
+                                    className="absolute inset-0 w-full h-full opacity-0 bg-transparent text-white cursor-pointer z-50 appearance-none"
+                                  >
+                                    {globalFeedOptions.map((opt) => (
+                                      <option key={opt} value={opt} className="bg-slate-900 text-white p-2">
+                                        🌐 {opt}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 2. WATCH HISTORY ACCORDION */}
+                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSidebarSection(activeSidebarSection === "history" ? null : "history")}
+                          className="w-[94%] mx-auto flex items-center justify-between px-4 py-[21px] text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
+                          style={{
+                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                            backgroundSize: "100% 100%",
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "center center",
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
+                          <span className="relative z-10 flex items-center gap-2">🕒 Watch History</span>
+                          <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "history" ? "rotate-180" : ""}`}>▼</span>
+                        </button>
+                        {activeSidebarSection === "history" && (
+                          <div
+                            className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
+                            style={{
+                              backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="relative z-10 space-y-2 w-full">
+                              <p className="text-[10px] text-slate-300 font-semibold">View previously watched media:</p>
+                              <Link
+                                to="/watch-history"
+                                onClick={handleCloseAll}
+                                className={`flex h-10 w-full items-center justify-center rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg}`}
+                              >
+                                🕒 Open Watch History
+                              </Link>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 3. APP CUSTOMIZATION ACCORDION */}
+                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSidebarSection(activeSidebarSection === "theme" ? null : "theme")}
+                          className="w-[94%] mx-auto flex items-center justify-between px-4 py-[21px] text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
+                          style={{
+                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                            backgroundSize: "100% 100%",
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "center center",
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
+                          <span className="relative z-10 flex items-center gap-2">🎨 App Themes & Styling</span>
+                          <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "theme" ? "rotate-180" : ""}`}>▼</span>
+                        </button>
+                        {activeSidebarSection === "theme" && (
+                          <div
+                            className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
+                            style={{
+                              backgroundImage: `url(${RABBIT_PANEL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="relative z-10 grid grid-cols-2 gap-2 w-full">
+                              {allThemesList.map((t) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => handleThemeChange(t.id)}
+                                  className={`rounded-lg p-2 text-xs font-bold transition text-left w-full ${
+                                    appTheme === t.id
+                                      ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
+                                      : `${getSubtlePillBg(appTheme)}`
+                                  }`}
+                                >
+                                  {t.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 4. OVER SCALE & GRID SIZING ACCORDION */}
+                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSidebarSection(activeSidebarSection === "scale" ? null : "scale")}
+                          className="w-[94%] mx-auto flex items-center justify-between px-4 py-[21px] text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
+                          style={{
+                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                            backgroundSize: "100% 100%",
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "center center",
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
+                          <span className="relative z-10 flex items-center gap-2">📐 Over Scale & Grid Size</span>
+                          <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "scale" ? "rotate-180" : ""}`}>▼</span>
+                        </button>
+                        {activeSidebarSection === "scale" && (
+                          <div
+                            className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
+                            style={{
+                              backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="relative z-10 space-y-3 w-full">
+                              <div className="w-full">
+                                <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Catalog Card Size:</p>
+                                <div className="grid grid-cols-3 gap-1.5 w-full">
+                                  {(["small", "medium", "large"] as CardSize[]).map((size) => (
+                                    <button
+                                      key={size}
+                                      type="button"
+                                      onClick={() => handleSizeChange(size)}
+                                      className={`rounded-lg py-2 text-xs font-bold capitalize transition w-full ${
+                                        cardSize === size
+                                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                          : `${getSubtlePillBg(appTheme)}`
+                                      }`}
+                                    >
+                                      {size}
+                                    </button>
                                   ))}
-                                </select>
+                                </div>
+                              </div>
+
+                              <div className="pt-2 border-t border-white/10 w-full">
+                                <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">History Page Overscale:</p>
+                                <div className="grid grid-cols-4 gap-1.5 w-full">
+                                  {(["off", "20%", "50%", "80%"] as HistoryScale[]).map((scale) => (
+                                    <button
+                                      key={scale}
+                                      type="button"
+                                      onClick={() => handleHistoryOverscaleChange(scale)}
+                                      className={`rounded-lg py-1.5 text-xs font-bold capitalize transition w-full ${
+                                        historyOverscale === scale
+                                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                          : `${getSubtlePillBg(appTheme)}`
+                                      }`}
+                                    >
+                                      {scale === "off" ? "Off" : `+${scale}`}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
 
-                    {/* 2. WATCH HISTORY ACCORDION */}
-                    <div className="border-0 bg-transparent overflow-hidden w-full">
-                      <button
-                        type="button"
-                        onClick={() => setActiveSidebarSection(activeSidebarSection === "history" ? null : "history")}
-                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "center center",
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
-                        <span className="relative z-10 flex items-center gap-2">🕒 Watch History</span>
-                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "history" ? "rotate-180" : ""}`}>▼</span>
-                      </button>
-                      {activeSidebarSection === "history" && (
-                        <div
-                          className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
+                      {/* 5. BACKGROUND MUSIC AUDIO ACCORDION */}
+                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSidebarSection(activeSidebarSection === "audio" ? null : "audio")}
+                          className="w-[94%] mx-auto flex items-center justify-between px-4 py-[21px] text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                           style={{
-                            backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                             backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="relative z-10 space-y-2 w-full">
-                            <p className="text-[10px] text-slate-300 font-semibold">View previously watched media:</p>
-                            <Link
-                              to="/watch-history"
-                              onClick={handleCloseAll}
-                              className={`flex h-10 w-full items-center justify-center rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg}`}
-                            >
-                              🕒 Open Watch History
-                            </Link>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 3. APP CUSTOMIZATION ACCORDION */}
-                    <div className="border-0 bg-transparent overflow-hidden w-full">
-                      <button
-                        type="button"
-                        onClick={() => setActiveSidebarSection(activeSidebarSection === "theme" ? null : "theme")}
-                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "center center",
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
-                        <span className="relative z-10 flex items-center gap-2">🎨 App Themes & Styling</span>
-                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "theme" ? "rotate-180" : ""}`}>▼</span>
-                      </button>
-                      {activeSidebarSection === "theme" && (
-                        <div
-                          className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
-                          style={{
-                            backgroundImage: `url(${RABBIT_PANEL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
-                        >
-                          <div className="relative z-10 grid grid-cols-2 gap-2 w-full">
-                            {allThemesList.map((t) => (
-                              <button
-                                key={t.id}
-                                type="button"
-                                onClick={() => handleThemeChange(t.id)}
-                                className={`rounded-lg p-2 text-xs font-bold transition text-left w-full ${
-                                  appTheme === t.id
-                                    ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
-                                    : `${getSubtlePillBg(appTheme)}`
-                                }`}
-                              >
-                                {t.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 4. OVER SCALE & GRID SIZING ACCORDION */}
-                    <div className="border-0 bg-transparent overflow-hidden w-full">
-                      <button
-                        type="button"
-                        onClick={() => setActiveSidebarSection(activeSidebarSection === "scale" ? null : "scale")}
-                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "center center",
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
-                        <span className="relative z-10 flex items-center gap-2">📐 Over Scale & Grid Size</span>
-                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "scale" ? "rotate-180" : ""}`}>▼</span>
-                      </button>
-                      {activeSidebarSection === "scale" && (
-                        <div
-                          className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
-                          style={{
-                            backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
-                        >
-                          <div className="relative z-10 space-y-3 w-full">
-                            <div className="w-full">
-                              <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Catalog Card Size:</p>
-                              <div className="grid grid-cols-3 gap-1.5 w-full">
-                                {(["small", "medium", "large"] as CardSize[]).map((size) => (
+                          <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
+                          <span className="relative z-10 flex items-center gap-2">🎵 Background Lobby Audio</span>
+                          <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "audio" ? "rotate-180" : ""}`}>▼</span>
+                        </button>
+                        {activeSidebarSection === "audio" && (
+                          <div
+                            className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
+                            style={{
+                              backgroundImage: `url(${RABBIT_PANEL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="relative z-10 space-y-3 w-full">
+                              <div className="w-full">
+                                <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Playback Controls:</p>
+                                <div className="grid grid-cols-2 gap-2 w-full">
                                   <button
-                                    key={size}
                                     type="button"
-                                    onClick={() => handleSizeChange(size)}
-                                    className={`rounded-lg py-2 text-xs font-bold capitalize transition w-full ${
-                                      cardSize === size
+                                    onClick={() => handleBackgroundAudioToggle("playing")}
+                                    className={`rounded-lg py-2 text-xs font-bold transition w-full ${
+                                      bgMusicState === "playing"
                                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                         : `${getSubtlePillBg(appTheme)}`
                                     }`}
                                   >
-                                    {size}
+                                    🎵 Audio ON
                                   </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div className="pt-2 border-t border-white/10 w-full">
-                              <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">History Page Overscale:</p>
-                              <div className="grid grid-cols-4 gap-1.5 w-full">
-                                {(["off", "20%", "50%", "80%"] as HistoryScale[]).map((scale) => (
                                   <button
-                                    key={scale}
                                     type="button"
-                                    onClick={() => handleHistoryOverscaleChange(scale)}
-                                    className={`rounded-lg py-1.5 text-xs font-bold capitalize transition w-full ${
-                                      historyOverscale === scale
+                                    onClick={() => handleBackgroundAudioToggle("muted")}
+                                    className={`rounded-lg py-2 text-xs font-bold transition w-full ${
+                                      bgMusicState === "muted"
                                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                         : `${getSubtlePillBg(appTheme)}`
                                     }`}
                                   >
-                                    {scale === "off" ? "Off" : `+${scale}`}
+                                    🔇 Mute / OFF
                                   </button>
-                                ))}
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
 
-                    {/* 5. BACKGROUND MUSIC AUDIO ACCORDION */}
-                    <div className="border-0 bg-transparent overflow-hidden w-full">
-                      <button
-                        type="button"
-                        onClick={() => setActiveSidebarSection(activeSidebarSection === "audio" ? null : "audio")}
-                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "center center",
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
-                        <span className="relative z-10 flex items-center gap-2">🎵 Background Lobby Audio</span>
-                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "audio" ? "rotate-180" : ""}`}>▼</span>
-                      </button>
-                      {activeSidebarSection === "audio" && (
-                        <div
-                          className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
-                          style={{
-                            backgroundImage: `url(${RABBIT_PANEL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
-                        >
-                          <div className="relative z-10 space-y-3 w-full">
-                            <div className="w-full">
-                              <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Playback Controls:</p>
-                              <div className="grid grid-cols-2 gap-2 w-full">
-                                <button
-                                  type="button"
-                                  onClick={() => handleBackgroundAudioToggle("playing")}
-                                  className={`rounded-lg py-2 text-xs font-bold transition w-full ${
-                                    bgMusicState === "playing"
-                                      ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                                      : `${getSubtlePillBg(appTheme)}`
-                                  }`}
-                                >
-                                  🎵 Audio ON
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleBackgroundAudioToggle("muted")}
-                                  className={`rounded-lg py-2 text-xs font-bold transition w-full ${
-                                    bgMusicState === "muted"
-                                      ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                                      : `${getSubtlePillBg(appTheme)}`
-                                  }`}
-                                >
-                                  🔇 Mute / OFF
-                                </button>
+                              {/* VOLUME SLIDER CONTROL (DEFAULT 50%) */}
+                              <div className="pt-2 border-t border-white/10 w-full space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[10px] text-slate-300 font-semibold">Music Volume:</p>
+                                  <span className="text-[10px] font-bold text-amber-300">{Math.round(bgMusicVolume * 100)}%</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="1"
+                                  step="0.05"
+                                  value={bgMusicVolume}
+                                  onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
+                                />
                               </div>
-                            </div>
 
-                            {/* VOLUME SLIDER CONTROL (DEFAULT 50%) */}
-                            <div className="pt-2 border-t border-white/10 w-full space-y-1.5">
-                              <div className="flex items-center justify-between">
-                                <p className="text-[10px] text-slate-300 font-semibold">Music Volume:</p>
-                                <span className="text-[10px] font-bold text-amber-300">{Math.round(bgMusicVolume * 100)}%</span>
-                              </div>
-                              <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.05"
-                                value={bgMusicVolume}
-                                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
-                              />
-                            </div>
+                              <div className="pt-2 border-t border-white/10 w-full">
+                                <p className="text-[10px] text-slate-300 mb-2 font-semibold">Select Channel / Stream by Genre:</p>
+                                
+                                {/* DYNAMIC GENRE SUBMENU ACCORDIONS */}
+                                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 w-full">
+                                  {Object.entries(RADIO_STATIONS).map(([category, stations]) => {
+                                    const hasActiveStation = stations.some(
+                                      s => (currentStationUrl === s.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === s.url)
+                                    );
 
-                            <div className="pt-2 border-t border-white/10 w-full">
-                              <p className="text-[10px] text-slate-300 mb-2 font-semibold">Select Channel / Stream by Genre:</p>
-                              
-                              {/* DYNAMIC GENRE SUBMENU ACCORDIONS */}
-                              <div className="max-h-60 overflow-y-auto space-y-2 pr-1 w-full">
-                                {Object.entries(RADIO_STATIONS).map(([category, stations]) => {
-                                  const hasActiveStation = stations.some(
-                                    s => (currentStationUrl === s.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === s.url)
-                                  );
-
-                                  return (
-                                    <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden">
-                                      <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition">
-                                        <span className="flex items-center gap-2">
-                                          📁 {category}
-                                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
-                                            {stations.length}
+                                    return (
+                                      <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden">
+                                        <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition">
+                                          <span className="flex items-center gap-2">
+                                            📁 {category}
+                                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
+                                              {stations.length}
+                                            </span>
                                           </span>
-                                        </span>
-                                        <div className="flex items-center gap-1.5">
-                                          {hasActiveStation && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Active stream in this category" />}
-                                          <span className="transform group-open:rotate-180 transition-transform text-[10px]">▼</span>
-                                        </div>
-                                      </summary>
+                                          <div className="flex items-center gap-1.5">
+                                            {hasActiveStation && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Active stream in this category" />}
+                                            <span className="transform group-open:rotate-180 transition-transform text-[10px]">▼</span>
+                                          </div>
+                                        </summary>
 
-                                      <div className="p-2 space-y-1.5 border-t border-white/10 bg-slate-950/40">
-                                        {stations.map((station) => {
-                                          const isSelected = (currentStationUrl === station.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === station.url);
-                                          return (
-                                            <button
-                                              key={station.url}
-                                              type="button"
-                                              onClick={() => handleStationSelect(station.url)}
-                                              className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-between ${
-                                                isSelected
-                                                  ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                                                  : `${getSubtlePillBg(appTheme)}`
-                                              }`}
-                                            >
-                                              <span className="truncate pr-1">🎵 {station.name}</span>
-                                              {isSelected && <span className="text-[9px] shrink-0 font-bold bg-black/40 px-1.5 py-0.5 rounded">▶ LIVE</span>}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </details>
-                                  );
-                                })}
+                                        <div className="p-2 space-y-1.5 border-t border-white/10 bg-slate-950/40">
+                                          {stations.map((station) => {
+                                            const isSelected = (currentStationUrl === station.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === station.url);
+                                            return (
+                                              <button
+                                                key={station.url}
+                                                type="button"
+                                                onClick={() => handleStationSelect(station.url)}
+                                                className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-between ${
+                                                  isSelected
+                                                    ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                                    : `${getSubtlePillBg(appTheme)}`
+                                                }`}
+                                              >
+                                                <span className="truncate pr-1">🎵 {station.name}</span>
+                                                {isSelected && <span className="text-[9px] shrink-0 font-bold bg-black/40 px-1.5 py-0.5 rounded">▶ LIVE</span>}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </details>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
 
-                    {/* 6. SECURITY & PIN MANAGEMENT ACCORDION */}
-                    <div className="border-0 bg-transparent overflow-hidden w-full">
-                      <button
-                        type="button"
-                        onClick={() => setActiveSidebarSection(activeSidebarSection === "pin" ? null : "pin")}
-                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "center center",
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
-                        <span className="relative z-10 flex items-center gap-2">🔒 Profile, Age & PIN Settings</span>
-                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "pin" ? "rotate-180" : ""}`}>▼</span>
-                      </button>
-                      {activeSidebarSection === "pin" && (
-                        <form
-                          onSubmit={handleUnifiedProfileUpdate}
-                          className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
+                      {/* 6. SECURITY & PIN MANAGEMENT ACCORDION */}
+                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSidebarSection(activeSidebarSection === "pin" ? null : "pin")}
+                          className="w-[94%] mx-auto flex items-center justify-between px-4 py-[21px] text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                           style={{
-                            backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                             backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
                         >
-                          <div className="relative z-10 space-y-3 w-full">
-                            <div className="grid grid-cols-2 gap-2 w-full">
-                              <div className="w-full">
-                                <span className="block text-[10px] text-slate-300 mb-1">Name:</span>
-                                <input
-                                  type="text"
-                                  maxLength={25}
-                                  value={profileNameInput}
-                                  onChange={(e) => setProfileNameInput(e.target.value)}
-                                  className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                                />
+                          <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
+                          <span className="relative z-10 flex items-center gap-2">🔒 Profile, Age & PIN Settings</span>
+                          <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "pin" ? "rotate-180" : ""}`}>▼</span>
+                        </button>
+                        {activeSidebarSection === "pin" && (
+                          <form
+                            onSubmit={handleUnifiedProfileUpdate}
+                            className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
+                            style={{
+                              backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="relative z-10 space-y-3 w-full">
+                              <div className="grid grid-cols-2 gap-2 w-full">
+                                <div className="w-full">
+                                  <span className="block text-[10px] text-slate-300 mb-1">Name:</span>
+                                  <input
+                                    type="text"
+                                    maxLength={25}
+                                    value={profileNameInput}
+                                    onChange={(e) => setProfileNameInput(e.target.value)}
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                                  />
+                                </div>
+                                <div className="w-full">
+                                  <span className="block text-[10px] text-slate-300 mb-1">Age:</span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={120}
+                                    value={userAgeInput}
+                                    onChange={(e) => setUserAgeInput(e.target.value)}
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                                  />
+                                </div>
                               </div>
-                              <div className="w-full">
-                                <span className="block text-[10px] text-slate-300 mb-1">Age:</span>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  max={120}
-                                  value={userAgeInput}
-                                  onChange={(e) => setUserAgeInput(e.target.value)}
-                                  className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                                />
-                              </div>
-                            </div>
 
-                            <div className="w-full">
-                              <span className="block text-[10px] text-slate-300 mb-1">Current 4-digit PIN (Required):</span>
-                              <input
-                                type="password"
-                                inputMode="numeric"
-                                maxLength={4}
-                                placeholder="••••"
-                                value={unifiedAgeCodeInput}
-                                onChange={(e) => setUnifiedAgeCodeInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                                className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
-                              />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10 w-full">
                               <div className="w-full">
-                                <span className="block text-[10px] text-slate-300 mb-1">New PIN (Opt):</span>
+                                <span className="block text-[10px] text-slate-300 mb-1">Current 4-digit PIN (Required):</span>
                                 <input
                                   type="password"
                                   inputMode="numeric"
                                   maxLength={4}
                                   placeholder="••••"
-                                  value={newPasscode}
-                                  onChange={(e) => setNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                                  value={unifiedAgeCodeInput}
+                                  onChange={(e) => setUnifiedAgeCodeInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
                                   className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
                                 />
                               </div>
-                              <div className="w-full">
-                                <span className="block text-[10px] text-slate-300 mb-1">Confirm PIN:</span>
-                                <input
-                                  type="password"
-                                  inputMode="numeric"
-                                  maxLength={4}
-                                  placeholder="••••"
-                                  value={confirmNewPasscode}
-                                  onChange={(e) => setConfirmNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                                  className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
-                                />
+
+                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10 w-full">
+                                <div className="w-full">
+                                  <span className="block text-[10px] text-slate-300 mb-1">New PIN (Opt):</span>
+                                  <input
+                                    type="password"
+                                    inputMode="numeric"
+                                    maxLength={4}
+                                    placeholder="••••"
+                                    value={newPasscode}
+                                    onChange={(e) => setNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                                  />
+                                </div>
+                                <div className="w-full">
+                                  <span className="block text-[10px] text-slate-300 mb-1">Confirm PIN:</span>
+                                  <input
+                                    type="password"
+                                    inputMode="numeric"
+                                    maxLength={4}
+                                    placeholder="••••"
+                                    value={confirmNewPasscode}
+                                    onChange={(e) => setConfirmNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                                  />
+                                </div>
+                              </div>
+
+                              <button
+                                type="submit"
+                                className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
+                              >
+                                Save Profile & PIN Updates
+                              </button>
+
+                              {unifiedUpdateStatus && (
+                                <p className={`text-[11px] font-bold text-center ${unifiedUpdateStatus.isError ? "text-red-400" : "text-emerald-400"}`}>
+                                  {unifiedUpdateStatus.text}
+                                </p>
+                              )}
+                            </div>
+                          </form>
+                        )}
+                      </div>
+
+                      {/* 7. BACKUP & RESTORE ACCORDION */}
+                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSidebarSection(activeSidebarSection === "backup" ? null : "backup")}
+                          className="w-[94%] mx-auto flex items-center justify-between px-4 py-[21px] text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
+                          style={{
+                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                            backgroundSize: "100% 100%",
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "center center",
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
+                          <span className="relative z-10 flex items-center gap-2">💾 Backup & Profile Data</span>
+                          <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "backup" ? "rotate-180" : ""}`}>▼</span>
+                        </button>
+                        {activeSidebarSection === "backup" && (
+                          <div
+                            className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
+                            style={{
+                              backgroundImage: `url(${RABBIT_PANEL})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="relative z-10 space-y-2 w-full">
+                              <div className="flex gap-2 w-full">
+                                <button
+                                  type="button"
+                                  onClick={handleSaveBackup}
+                                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
+                                >
+                                  💾 Export Backup
+                                </button>
+                                <label className={`flex-1 text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}>
+                                  🔄 Restore
+                                  <input type="file" accept=".json" onChange={handleRestoreBackup} className="hidden" />
+                                </label>
+                              </div>
+                              {backupStatus && (
+                                <span className={`text-xs ${getPrimaryAccentColor(appTheme)} font-semibold block text-center`}>
+                                  {backupStatus}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 8. ACCESSIBILITY ACCORDION */}
+                      <div className="border-0 bg-transparent overflow-hidden w-full">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSidebarSection(activeSidebarSection === "accessibility" ? null : "accessibility")}
+                          className="w-[94%] mx-auto flex items-center justify-between px-4 py-[21px] text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
+                          style={{
+                            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                            backgroundSize: "100% 100%",
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "center center",
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
+                          <span className="relative z-10 flex items-center gap-2">♿ Accessibility Options</span>
+                          <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "accessibility" ? "rotate-180" : ""}`}>▼</span>
+                        </button>
+                        {activeSidebarSection === "accessibility" && (
+                          <div
+                            className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
+                            style={{
+                              backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                              backgroundSize: "100% 100%",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
+                            }}
+                          >
+                            <div className="relative z-10 space-y-3 w-full">
+                              <div className="flex items-center justify-between w-full">
+                                <div>
+                                  <p className="text-xs font-bold text-white">XL Mouse Pointer (3x)</p>
+                                  <p className="text-[10px] text-slate-300">Enlarges cursor for TVs/projectors.</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMouseToggle(!helpfulMouse)}
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                    helpfulMouse ? `${getPrimaryBgColor(appTheme).split(" ")[0]}` : "bg-slate-700"
+                                  }`}
+                                >
+                                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${helpfulMouse ? "translate-x-6" : "translate-x-1"}`} />
+                                </button>
+                              </div>
+                              <div className="flex items-center justify-between pt-2 border-t border-white/10 w-full">
+                                <div>
+                                  <p className="text-xs font-bold text-white">Enlarged Action Buttons</p>
+                                  <p className="text-[10px] text-slate-300">Bigger icons & buttons.</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleLargeButtonsToggle(!largeButtons)}
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                    largeButtons ? `${getPrimaryBgColor(appTheme).split(" ")[0]}` : "bg-slate-700"
+                                  }`}
+                                >
+                                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${largeButtons ? "translate-x-6" : "translate-x-1"}`} />
+                                </button>
                               </div>
                             </div>
+                          </div>
+                        )}
+                      </div>
 
+                    </div>
+
+                    {/* ADMIN PANEL (IF ADMIN) */}
+                    {isAdmin && (
+                      <div className="mt-4 pt-4 border-t border-white/10 w-[94%] mx-auto">
+                        <AdminPanel
+                          appTheme={appTheme}
+                          getPrimaryBgColor={getPrimaryBgColor}
+                          getPrimaryAccentColor={getPrimaryAccentColor}
+                        />
+                      </div>
+                    )}
+
+                    {/* FEEDBACK & SUPPORT SECTION */}
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-[94%] mx-auto">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Feedback & Support</h4>
+                      <button
+                        type="button"
+                        onClick={() => setShowBugModal(true)}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                      >
+                        🐞 Report a Bug / Issue
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowBugFeedModal(true)}
+                        className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2"
+                      >
+                        📋 View Bug Reports Feed
+                      </button>
+                    </div>
+
+                    {/* UPDATE CHANNEL & ACTIONS */}
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-[94%] mx-auto">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Update Channel</h4>
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateChannelChange("stable")}
+                          className={`py-2 rounded-lg text-xs font-bold transition w-full ${
+                            updateChannel === "stable" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                          }`}
+                        >
+                          🛡️ Stable
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateChannelChange("nightly")}
+                          className={`py-2 rounded-lg text-xs font-bold transition w-full ${
+                            updateChannel === "nightly" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                          }`}
+                        >
+                          ⚡ Nightly
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void checkForAppUpdates(false)}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                      >
+                        🔍 Check for Updates Now
+                      </button>
+                    </div>
+
+                    {/* LICENSE STATUS */}
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-[94%] mx-auto">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Status</h4>
+                      {isAdmin ? (
+                        <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-2.5 rounded-lg">
+                          🔐 Admin access active.
+                        </p>
+                      ) : isTrialActive ? (
+                        <div className="space-y-2 w-full">
+                          <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg leading-relaxed">
+                            Trial: <strong>{trialDaysRemaining} {trialDaysRemaining === 1 ? "day" : "days"} remaining</strong>.
+                          </p>
+                          <form onSubmit={handleUpgradeFromProfile} className="space-y-1.5 w-full">
+                            <input
+                              type="password"
+                              placeholder="Unlock code"
+                              value={unlockCodeInput}
+                              onChange={(e) => setUnlockCodeInput(e.target.value)}
+                              className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                            />
                             <button
                               type="submit"
                               className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
                             >
-                              Save Profile & PIN Updates
+                              Upgrade to Full Unlock
                             </button>
-
-                            {unifiedUpdateStatus && (
-                              <p className={`text-[11px] font-bold text-center ${unifiedUpdateStatus.isError ? "text-red-400" : "text-emerald-400"}`}>
-                                {unifiedUpdateStatus.text}
-                              </p>
-                            )}
-                          </div>
-                        </form>
-                      )}
-                    </div>
-
-                    {/* 7. BACKUP & RESTORE ACCORDION */}
-                    <div className="border-0 bg-transparent overflow-hidden w-full">
-                      <button
-                        type="button"
-                        onClick={() => setActiveSidebarSection(activeSidebarSection === "backup" ? null : "backup")}
-                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "center center",
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
-                        <span className="relative z-10 flex items-center gap-2">💾 Backup & Profile Data</span>
-                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "backup" ? "rotate-180" : ""}`}>▼</span>
-                      </button>
-                      {activeSidebarSection === "backup" && (
-                        <div
-                          className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
-                          style={{
-                            backgroundImage: `url(${RABBIT_PANEL})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
-                        >
-                          <div className="relative z-10 space-y-2 w-full">
-                            <div className="flex gap-2 w-full">
-                              <button
-                                type="button"
-                                onClick={handleSaveBackup}
-                                className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
-                              >
-                                💾 Export Backup
-                              </button>
-                              <label className={`flex-1 text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}>
-                                🔄 Restore
-                                <input type="file" accept=".json" onChange={handleRestoreBackup} className="hidden" />
-                              </label>
-                            </div>
-                            {backupStatus && (
-                              <span className={`text-xs ${getPrimaryAccentColor(appTheme)} font-semibold block text-center`}>
-                                {backupStatus}
-                              </span>
-                            )}
-                          </div>
+                          </form>
                         </div>
-                      )}
-                    </div>
-
-                    {/* 8. ACCESSIBILITY ACCORDION */}
-                    <div className="border-0 bg-transparent overflow-hidden w-full">
-                      <button
-                        type="button"
-                        onClick={() => setActiveSidebarSection(activeSidebarSection === "accessibility" ? null : "accessibility")}
-                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "center center",
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
-                        <span className="relative z-10 flex items-center gap-2">♿ Accessibility Options</span>
-                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "accessibility" ? "rotate-180" : ""}`}>▼</span>
-                      </button>
-                      {activeSidebarSection === "accessibility" && (
-                        <div
-                          className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
-                          style={{
-                            backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                            backgroundSize: "100% 100%",
-                            backgroundRepeat: "no-repeat",
-                            backgroundPosition: "center center",
-                          }}
-                        >
-                          <div className="relative z-10 space-y-3 w-full">
-                            <div className="flex items-center justify-between w-full">
-                              <div>
-                                <p className="text-xs font-bold text-white">XL Mouse Pointer (3x)</p>
-                                <p className="text-[10px] text-slate-300">Enlarges cursor for TVs/projectors.</p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleMouseToggle(!helpfulMouse)}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                  helpfulMouse ? `${getPrimaryBgColor(appTheme).split(" ")[0]}` : "bg-slate-700"
-                                }`}
-                              >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${helpfulMouse ? "translate-x-6" : "translate-x-1"}`} />
-                              </button>
-                            </div>
-                            <div className="flex items-center justify-between pt-2 border-t border-white/10 w-full">
-                              <div>
-                                <p className="text-xs font-bold text-white">Enlarged Action Buttons</p>
-                                <p className="text-[10px] text-slate-300">Bigger icons & buttons.</p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleLargeButtonsToggle(!largeButtons)}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                  largeButtons ? `${getPrimaryBgColor(appTheme).split(" ")[0]}` : "bg-slate-700"
-                                }`}
-                              >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${largeButtons ? "translate-x-6" : "translate-x-1"}`} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-
-                  {/* ADMIN PANEL (IF ADMIN) */}
-                  {isAdmin && (
-                    <div className="mt-4 pt-4 border-t border-white/10 w-[94%] mx-auto">
-                      <AdminPanel
-                        appTheme={appTheme}
-                        getPrimaryBgColor={getPrimaryBgColor}
-                        getPrimaryAccentColor={getPrimaryAccentColor}
-                      />
-                    </div>
-                  )}
-
-                  {/* FEEDBACK & SUPPORT SECTION */}
-                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-[94%] mx-auto">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Feedback & Support</h4>
-                    <button
-                      type="button"
-                      onClick={() => setShowBugModal(true)}
-                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
-                    >
-                      🐞 Report a Bug / Issue
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowBugFeedModal(true)}
-                      className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2"
-                    >
-                      📋 View Bug Reports Feed
-                    </button>
-                  </div>
-
-                  {/* UPDATE CHANNEL & ACTIONS */}
-                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-[94%] mx-auto">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Update Channel</h4>
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateChannelChange("stable")}
-                        className={`py-2 rounded-lg text-xs font-bold transition w-full ${
-                          updateChannel === "stable" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                        }`}
-                      >
-                        🛡️ Stable
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateChannelChange("nightly")}
-                        className={`py-2 rounded-lg text-xs font-bold transition w-full ${
-                          updateChannel === "nightly" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                        }`}
-                      >
-                        ⚡ Nightly
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void checkForAppUpdates(false)}
-                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
-                    >
-                      🔍 Check for Updates Now
-                    </button>
-                  </div>
-
-                  {/* LICENSE STATUS */}
-                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-[94%] mx-auto">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Status</h4>
-                    {isAdmin ? (
-                      <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-2.5 rounded-lg">
-                        🔐 Admin access active.
-                      </p>
-                    ) : isTrialActive ? (
-                      <div className="space-y-2 w-full">
-                        <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg leading-relaxed">
-                          Trial: <strong>{trialDaysRemaining} {trialDaysRemaining === 1 ? "day" : "days"} remaining</strong>.
+                      ) : (
+                        <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg">
+                          ✅ Full Lifetime Access Unlocked.
                         </p>
-                        <form onSubmit={handleUpgradeFromProfile} className="space-y-1.5 w-full">
-                          <input
-                            type="password"
-                            placeholder="Unlock code"
-                            value={unlockCodeInput}
-                            onChange={(e) => setUnlockCodeInput(e.target.value)}
-                            className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
-                          />
-                          <button
-                            type="submit"
-                            className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
-                          >
-                            Upgrade to Full Unlock
-                          </button>
-                        </form>
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg">
-                        ✅ Full Lifetime Access Unlocked.
-                      </p>
-                    )}
-                    {unlockStatusMsg && (
-                      <p className={`text-[11px] font-bold text-center ${unlockStatusMsg.isError ? "text-red-400" : "text-emerald-400"}`}>
-                        {unlockStatusMsg.text}
-                      </p>
-                    )}
-                  </div>
+                      )}
+                      {unlockStatusMsg && (
+                        <p className={`text-[11px] font-bold text-center ${unlockStatusMsg.isError ? "text-red-400" : "text-emerald-400"}`}>
+                          {unlockStatusMsg.text}
+                        </p>
+                      )}
+                    </div>
 
-                  {/* Sidebar Footer with Divider Asset */}
-                  <div className="mt-6 pt-4 border-t border-white/10 text-center w-[94%] mx-auto">
-                    <img
-                      src={RABBIT_DIVIDER}
-                      alt=""
-                      className="w-2/3 mx-auto h-2 object-contain opacity-70 mb-3"
-                    />
-                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
-                      Console UI v2.0 • RABBiT TV
-                    </span>
+                    {/* Sidebar Footer with Divider Asset */}
+                    <div className="mt-6 pt-4 border-t border-white/10 text-center w-[94%] mx-auto">
+                      <img
+                        src={RABBIT_DIVIDER}
+                        alt=""
+                        className="w-2/3 mx-auto h-2 object-contain opacity-70 mb-3"
+                      />
+                      <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
+                        Console UI v2.0 • RABBiT TV
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Scroll Down Arrow Button for D-pad / Mouse */}
+                <button
+                  type="button"
+                  onClick={() => handleScrollSidebar("down")}
+                  className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 w-16 h-7 bg-black/60 hover:bg-black/90 border border-white/20 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-md transition cursor-pointer"
+                  title="Scroll Down"
+                >
+                  ▼
+                </button>
               </div>
             </div>
           )}
