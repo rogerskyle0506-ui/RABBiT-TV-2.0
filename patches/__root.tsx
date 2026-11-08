@@ -10,7 +10,7 @@ import { ActivationModal } from "@/components/ActivationModal";
 import { AdminPanel } from "@/components/AdminPanel";
 import { bgAudio } from "@/lib/background-audio";
 import "@/styles.css";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { sendPermanentActivationAlert } from "@/lib/report";
 import { checkForAppUpdates } from "@/lib/updater";
@@ -108,9 +108,10 @@ function RootComponent() {
   const [showBugModal, setShowBugModal] = useState(false);
   const [showBugFeedModal, setShowBugFeedModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const lastScrollYRef = useRef(0);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<
-    "theme" | "scale" | "backup" | null
+
+  // Accordion section state for the console-grade side blade sidebar
+  const [activeSidebarSection, setActiveSidebarSection] = useState<
+    "theme" | "scale" | "audio" | "pin" | "backup" | "accessibility" | null
   >(null);
 
   const [cardSize, setCardSize] = useState<CardSize>("large");
@@ -123,6 +124,14 @@ function RootComponent() {
   const [userAgeInput, setUserAgeInput] = useState<string>("");
   const [profileNameInput, setProfileNameInput] = useState<string>("");
   const [savedProfileName, setSavedProfileName] = useState<string>("");
+
+  // Background Music State
+  const [bgMusicState, setBgMusicState] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("rabtv_bg_music_state") || "playing";
+    }
+    return "playing";
+  });
 
   // Unified age and passcode management states
   const [unifiedAgeCodeInput, setUnifiedAgeCodeInput] = useState<string>("");
@@ -190,7 +199,7 @@ function RootComponent() {
 
   const handleCloseAll = () => {
     setShowProfileMenu(false);
-    setActiveSettingsTab(null);
+    setActiveSidebarSection(null);
   };
 
   const handleOpenExternal = async (url: string, e?: React.MouseEvent) => {
@@ -213,9 +222,6 @@ function RootComponent() {
     if (showProfileMenu) handleCloseAll();
     else {
       handleCloseAll();
-      if (typeof window !== "undefined") {
-        lastScrollYRef.current = window.scrollY;
-      }
       setShowProfileMenu(true);
     }
   };
@@ -228,10 +234,12 @@ function RootComponent() {
     return () => clearTimeout(updateTimer);
   }, []);
 
-  // Lobby Background Audio Lifecycle Hooks (Idea 5)
+  // Lobby Background Audio Lifecycle Hooks
   useEffect(() => {
     const startAudio = () => {
-      bgAudio.play();
+      if (bgMusicState === "playing") {
+        bgAudio.play();
+      }
       window.removeEventListener("click", startAudio);
       window.removeEventListener("keydown", startAudio);
     };
@@ -243,7 +251,7 @@ function RootComponent() {
       const path = window.location.pathname;
       if (path.includes("details") || path.includes("watch") || path.includes("player")) {
         bgAudio.pause();
-      } else {
+      } else if (bgMusicState === "playing") {
         bgAudio.play();
       }
     };
@@ -255,21 +263,7 @@ function RootComponent() {
       window.removeEventListener("keydown", startAudio);
       window.removeEventListener("popstate", handleRouteCheck);
     };
-  }, []);
-
-  useEffect(() => {
-    const handleWindowScroll = () => {
-      if (showProfileMenu && typeof window !== "undefined") {
-        if (Math.abs(window.scrollY - lastScrollYRef.current) > 60) {
-          handleCloseAll();
-        }
-      }
-    };
-    if (typeof window !== "undefined") {
-      window.addEventListener("scroll", handleWindowScroll, { passive: true });
-      return () => window.removeEventListener("scroll", handleWindowScroll);
-    }
-  }, [showProfileMenu]);
+  }, [bgMusicState]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -465,6 +459,18 @@ function RootComponent() {
   const handleLargeButtonsToggle = (enabled: boolean) => {
     setLargeButtons(enabled);
     setLargeButtonsState(enabled);
+  };
+
+  const handleBackgroundAudioToggle = (state: string) => {
+    setBgMusicState(state);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rabtv_bg_music_state", state);
+    }
+    if (state === "playing") {
+      bgAudio.play();
+    } else {
+      bgAudio.pause();
+    }
   };
 
   const handleUnifiedProfileUpdate = (e: React.FormEvent) => {
@@ -804,18 +810,20 @@ function RootComponent() {
                     <button
                       type="button"
                       onClick={handleToggleProfileMenu}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold text-white shadow-sm transition cursor-pointer"
+                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white shadow-md transition cursor-pointer group"
                     >
+                      <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800">
+                        <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
+                      </div>
                       <span>
-                        👋 Hi,{" "}
-                        <strong className="text-white">{savedProfileName}</strong>{" "}
+                        Hi, <strong className="text-white">{savedProfileName}</strong>{" "}
                         {isAdmin
                           ? "(Admin)"
                           : isTrialActive
                           ? `(Trial: ${trialDaysRemaining}d)`
                           : "(Full)"}
                       </span>
-                      <span className="text-[10px] ml-1 text-slate-300">▼</span>
+                      <span className="text-[10px] ml-1 text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
                     </button>
                     {isTrialActive && (
                       <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold animate-pulse">
@@ -888,174 +896,385 @@ function RootComponent() {
             </div>
           </header>
 
-          {/* PROFILE & SETTINGS MENU */}
+          {/* CONSOLE-GRADE LEFT SIDE BLADE SIDEBAR */}
           {showProfileMenu && !showFirstStartModal && (
-            <div
-              className={`fixed top-16 right-3 sm:right-6 z-50 w-96 max-w-[94vw] rounded-2xl border ${getCardBackground(appTheme)} px-4 py-4 backdrop-blur-2xl shadow-2xl max-h-[85vh] overflow-y-auto box-border`}
-            >
-              <div className="mx-auto flex flex-col gap-4 box-border">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                  <h3
-                    className={`text-sm font-black uppercase tracking-wider ${getPrimaryAccentColor(appTheme)}`}
-                  >
-                    👤 Profile & Settings
-                  </h3>
+            <div className="fixed inset-0 z-50 flex">
+              {/* Backdrop Blur Overlay */}
+              <div
+                className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity animate-fade-in"
+                onClick={handleCloseAll}
+              />
+
+              {/* Side Blade Drawer Content (Left Aligned) */}
+              <div
+                className={`relative w-96 max-w-[90vw] h-full ${getCardBackground(appTheme)} border-r border-white/20 shadow-2xl backdrop-blur-2xl flex flex-col z-10 overflow-y-auto p-5 transition-transform duration-300 animate-slide-right`}
+              >
+                {/* Sidebar Header */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/30 bg-slate-800 shadow-md">
+                      <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <h3 className={`text-sm font-black tracking-wide ${getPrimaryAccentColor(appTheme)}`}>
+                        {savedProfileName || "User Profile"}
+                      </h3>
+                      <span className="text-[10px] text-emerald-400 font-semibold">● System Online</span>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={handleCloseAll}
-                    className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5"
+                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 transition"
                   >
                     ✕ Close
                   </button>
                 </div>
 
-                {/* APP SETTINGS TABS & CONTROLS */}
-                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    ⚙️ App Customization
-                  </h4>
-                  <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
-                    {(["theme", "scale", "backup"] as const).map((tab) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() =>
-                          setActiveSettingsTab(
-                            activeSettingsTab === tab ? null : tab
-                          )
-                        }
-                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition shrink-0 capitalize ${
-                          activeSettingsTab === tab
-                            ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                            : `${getSubtlePillBg(appTheme)}`
-                        }`}
-                      >
-                        {tab}
-                      </button>
-                    ))}
+                {/* ACCORDION SECTIONS */}
+                <div className="space-y-3 flex-1">
+
+                  {/* 1. APP CUSTOMIZATION ACCORDION */}
+                  <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSidebarSection(activeSidebarSection === "theme" ? null : "theme")}
+                      className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition"
+                    >
+                      <span className="flex items-center gap-2">🎨 App Themes & Styling</span>
+                      <span className={`transform transition-transform ${activeSidebarSection === "theme" ? "rotate-180" : ""}`}>▼</span>
+                    </button>
+                    {activeSidebarSection === "theme" && (
+                      <div className="p-3 border-t border-white/10 space-y-2 bg-black/40">
+                        <div className="grid grid-cols-2 gap-2">
+                          {allThemesList.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => handleThemeChange(t.id)}
+                              className={`rounded-lg p-2 text-xs font-bold transition text-left ${
+                                appTheme === t.id
+                                  ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
+                                  : `${getSubtlePillBg(appTheme)}`
+                              }`}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {activeSettingsTab === "theme" && (
-                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                      {allThemesList.map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => handleThemeChange(t.id)}
-                          className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
-                            appTheme === t.id
-                              ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
-                              : `${getSubtlePillBg(appTheme)}`
-                          }`}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {/* 2. OVER SCALE & GRID SIZING ACCORDION */}
+                  <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSidebarSection(activeSidebarSection === "scale" ? null : "scale")}
+                      className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition"
+                    >
+                      <span className="flex items-center gap-2">📐 Over Scale & Grid Size</span>
+                      <span className={`transform transition-transform ${activeSidebarSection === "scale" ? "rotate-180" : ""}`}>▼</span>
+                    </button>
+                    {activeSidebarSection === "scale" && (
+                      <div className="p-3 border-t border-white/10 space-y-3 bg-black/40">
+                        <div>
+                          <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">Catalog Card Size:</p>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {(["small", "medium", "large"] as CardSize[]).map((size) => (
+                              <button
+                                key={size}
+                                type="button"
+                                onClick={() => handleSizeChange(size)}
+                                className={`rounded-lg py-2 text-xs font-bold capitalize transition ${
+                                  cardSize === size
+                                    ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                    : `${getSubtlePillBg(appTheme)}`
+                                }`}
+                              >
+                                {size}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                  {activeSettingsTab === "scale" && (
-                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                      {(["small", "medium", "large"] as CardSize[]).map(
-                        (size) => (
+                        <div className="pt-2 border-t border-white/10">
+                          <p className="text-[10px] text-slate-300 mb-1.5 font-semibold">History Page Overscale:</p>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {(["off", "20%", "50%", "80%"] as HistoryScale[]).map((scale) => (
+                              <button
+                                key={scale}
+                                type="button"
+                                onClick={() => handleHistoryOverscaleChange(scale)}
+                                className={`rounded-lg py-1.5 text-xs font-bold capitalize transition ${
+                                  historyOverscale === scale
+                                    ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                    : `${getSubtlePillBg(appTheme)}`
+                                }`}
+                              >
+                                {scale === "off" ? "Off" : `+${scale}`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. BACKGROUND MUSIC AUDIO ACCORDION */}
+                  <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSidebarSection(activeSidebarSection === "audio" ? null : "audio")}
+                      className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition"
+                    >
+                      <span className="flex items-center gap-2">🎵 Background Lobby Audio</span>
+                      <span className={`transform transition-transform ${activeSidebarSection === "audio" ? "rotate-180" : ""}`}>▼</span>
+                    </button>
+                    {activeSidebarSection === "audio" && (
+                      <div className="p-3 border-t border-white/10 space-y-2 bg-black/40">
+                        <p className="text-[10px] text-slate-300">Control ambient lobby soundtrack during browsing:</p>
+                        <div className="grid grid-cols-2 gap-2">
                           <button
-                            key={size}
                             type="button"
-                            onClick={() => handleSizeChange(size)}
-                            className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize transition ${
-                              cardSize === size
+                            onClick={() => handleBackgroundAudioToggle("playing")}
+                            className={`rounded-lg py-2 text-xs font-bold transition ${
+                              bgMusicState === "playing"
                                 ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                 : `${getSubtlePillBg(appTheme)}`
                             }`}
                           >
-                            {size}{" "}
-                            {size === "small"
-                              ? "(25%)"
-                              : size === "medium"
-                              ? "(60%)"
-                              : "(100%)"}
+                            🎵 Audio ON
                           </button>
-                        )
-                      )}
-                    </div>
-                  )}
+                          <button
+                            type="button"
+                            onClick={() => handleBackgroundAudioToggle("muted")}
+                            className={`rounded-lg py-2 text-xs font-bold transition ${
+                              bgMusicState === "muted"
+                                ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
+                                : `${getSubtlePillBg(appTheme)}`
+                            }`}
+                          >
+                            🔇 Mute / OFF
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-                  {activeSettingsTab === "backup" && (
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 w-full pt-2">
-                      <button
-                        type="button"
-                        onClick={handleSaveBackup}
-                        className={`w-full sm:w-auto rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
-                      >
-                        💾 Export Backup
-                      </button>
-                      <label
-                        className={`w-full sm:w-auto text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
-                      >
-                        🔄 Restore Backup
-                        <input
-                          type="file"
-                          accept=".json"
-                          onChange={handleRestoreBackup}
-                          className="hidden"
-                        />
-                      </label>
-                      {backupStatus && (
-                        <span
-                          className={`text-xs ${getPrimaryAccentColor(appTheme)} font-semibold text-center w-full`}
+                  {/* 4. SECURITY & PIN MANAGEMENT ACCORDION */}
+                  <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSidebarSection(activeSidebarSection === "pin" ? null : "pin")}
+                      className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition"
+                    >
+                      <span className="flex items-center gap-2">🔒 Profile, Age & PIN Settings</span>
+                      <span className={`transform transition-transform ${activeSidebarSection === "pin" ? "rotate-180" : ""}`}>▼</span>
+                    </button>
+                    {activeSidebarSection === "pin" && (
+                      <form onSubmit={handleUnifiedProfileUpdate} className="p-3.5 border-t border-white/10 space-y-3 bg-black/40">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="block text-[10px] text-slate-300 mb-1">Name:</span>
+                            <input
+                              type="text"
+                              maxLength={25}
+                              value={profileNameInput}
+                              onChange={(e) => setProfileNameInput(e.target.value)}
+                              className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <span className="block text-[10px] text-slate-300 mb-1">Age:</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={120}
+                              value={userAgeInput}
+                              onChange={(e) => setUserAgeInput(e.target.value)}
+                              className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="block text-[10px] text-slate-300 mb-1">Current 4-digit PIN (Required):</span>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            placeholder="••••"
+                            value={unifiedAgeCodeInput}
+                            onChange={(e) => setUnifiedAgeCodeInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                            className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10">
+                          <div>
+                            <span className="block text-[10px] text-slate-300 mb-1">New PIN (Opt):</span>
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={newPasscode}
+                              onChange={(e) => setNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                              className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                            />
+                          </div>
+                          <div>
+                            <span className="block text-[10px] text-slate-300 mb-1">Confirm PIN:</span>
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={confirmNewPasscode}
+                              onChange={(e) => setConfirmNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                              className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
                         >
-                          {backupStatus}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                          Save Profile & PIN Updates
+                        </button>
+
+                        {unifiedUpdateStatus && (
+                          <p className={`text-[11px] font-bold text-center ${unifiedUpdateStatus.isError ? "text-red-400" : "text-emerald-400"}`}>
+                            {unifiedUpdateStatus.text}
+                          </p>
+                        )}
+                      </form>
+                    )}
+                  </div>
+
+                  {/* 5. BACKUP & RESTORE ACCORDION */}
+                  <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSidebarSection(activeSidebarSection === "backup" ? null : "backup")}
+                      className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition"
+                    >
+                      <span className="flex items-center gap-2">💾 Backup & Profile Data</span>
+                      <span className={`transform transition-transform ${activeSidebarSection === "backup" ? "rotate-180" : ""}`}>▼</span>
+                    </button>
+                    {activeSidebarSection === "backup" && (
+                      <div className="p-3.5 border-t border-white/10 space-y-2 bg-black/40">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleSaveBackup}
+                            className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
+                          >
+                            💾 Export Backup
+                          </button>
+                          <label className={`flex-1 text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}>
+                            🔄 Restore
+                            <input type="file" accept=".json" onChange={handleRestoreBackup} className="hidden" />
+                          </label>
+                        </div>
+                        {backupStatus && (
+                          <span className={`text-xs ${getPrimaryAccentColor(appTheme)} font-semibold block text-center`}>
+                            {backupStatus}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 6. ACCESSIBILITY ACCORDION */}
+                  <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSidebarSection(activeSidebarSection === "accessibility" ? null : "accessibility")}
+                      className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition"
+                    >
+                      <span className="flex items-center gap-2">♿ Accessibility Options</span>
+                      <span className={`transform transition-transform ${activeSidebarSection === "accessibility" ? "rotate-180" : ""}`}>▼</span>
+                    </button>
+                    {activeSidebarSection === "accessibility" && (
+                      <div className="p-3.5 border-t border-white/10 space-y-3 bg-black/40">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-white">XL Mouse Pointer (3x)</p>
+                            <p className="text-[10px] text-slate-300">Enlarges cursor for TVs/projectors.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleMouseToggle(!helpfulMouse)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              helpfulMouse ? `${getPrimaryBgColor(appTheme).split(" ")[0]}` : "bg-slate-700"
+                            }`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${helpfulMouse ? "translate-x-6" : "translate-x-1"}`} />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                          <div>
+                            <p className="text-xs font-bold text-white">Enlarged Action Buttons</p>
+                            <p className="text-[10px] text-slate-300">Bigger icons & buttons.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleLargeButtonsToggle(!largeButtons)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              largeButtons ? `${getPrimaryBgColor(appTheme).split(" ")[0]}` : "bg-slate-700"
+                            }`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${largeButtons ? "translate-x-6" : "translate-x-1"}`} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
 
+                {/* ADMIN PANEL (IF ADMIN) */}
                 {isAdmin && (
-                  <AdminPanel
-                    appTheme={appTheme}
-                    getPrimaryBgColor={getPrimaryBgColor}
-                    getPrimaryAccentColor={getPrimaryAccentColor}
-                  />
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <AdminPanel
+                      appTheme={appTheme}
+                      getPrimaryBgColor={getPrimaryBgColor}
+                      getPrimaryAccentColor={getPrimaryAccentColor}
+                    />
+                  </div>
                 )}
 
-                {/* FEEDBACK & SUPPORT / BUG REPORT & FEED BUTTONS */}
-                <div className="space-y-2 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    💬 Feedback & Support
-                  </h4>
+                {/* FEEDBACK & SUPPORT SECTION */}
+                <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Feedback & Support</h4>
                   <button
                     type="button"
                     onClick={() => setShowBugModal(true)}
-                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                    className={`w-full py-2 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
                   >
                     🐞 Report a Bug / Issue
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowBugFeedModal(true)}
-                    className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2"
+                    className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2"
                   >
                     📋 View Bug Reports Feed
                   </button>
                 </div>
 
-                {/* Update Channel Preference & Manual Check Button */}
-                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    🚀 Update Channel & Actions
-                  </h4>
-                  <p className="text-[10px] text-slate-300 leading-relaxed">
-                    Choose whether you want stable releases or bleeding-edge nightly builds.
-                  </p>
+                {/* UPDATE CHANNEL & ACTIONS */}
+                <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Update Channel</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => handleUpdateChannelChange("stable")}
-                      className={`py-2 rounded-xl text-xs font-bold transition ${
-                        updateChannel === "stable"
-                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                          : "bg-slate-800/80 text-slate-300 hover:bg-slate-700"
+                      className={`py-1.5 rounded-lg text-xs font-bold transition ${
+                        updateChannel === "stable" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                       }`}
                     >
                       🛡️ Stable
@@ -1063,285 +1282,67 @@ function RootComponent() {
                     <button
                       type="button"
                       onClick={() => handleUpdateChannelChange("nightly")}
-                      className={`py-2 rounded-xl text-xs font-bold transition ${
-                        updateChannel === "nightly"
-                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                          : "bg-slate-800/80 text-slate-300 hover:bg-slate-700"
+                      className={`py-1.5 rounded-lg text-xs font-bold transition ${
+                        updateChannel === "nightly" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                       }`}
                     >
                       ⚡ Nightly
                     </button>
                   </div>
-
                   <button
                     type="button"
-                    onClick={() => {
-                      void checkForAppUpdates(false);
-                    }}
-                    className={`w-full mt-2 py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                    onClick={() => void checkForAppUpdates(false)}
+                    className={`w-full py-2 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
                   >
                     🔍 Check for Updates Now
                   </button>
                 </div>
 
-                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    License Status
-                  </h4>
+                {/* LICENSE STATUS */}
+                <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Status</h4>
                   {isAdmin ? (
-                    <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-2.5 rounded-lg">
+                    <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-2 rounded-lg">
                       🔐 Admin access active.
                     </p>
                   ) : isTrialActive ? (
-                    <div className="space-y-3">
-                      <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg leading-relaxed">
-                        Trial:{" "}
-                        <strong>
-                          {trialDaysRemaining}{" "}
-                          {trialDaysRemaining === 1 ? "day" : "days"} remaining
-                        </strong>
-                        .
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg leading-relaxed">
+                        Trial: <strong>{trialDaysRemaining} {trialDaysRemaining === 1 ? "day" : "days"} remaining</strong>.
                       </p>
-                      <form
-                        onSubmit={handleUpgradeFromProfile}
-                        className="space-y-2"
-                      >
-                        <label className="block text-[10px] uppercase font-semibold text-slate-300">
-                          Enter Full Unlock Code:
-                        </label>
+                      <form onSubmit={handleUpgradeFromProfile} className="space-y-1.5">
                         <input
                           type="password"
                           placeholder="Unlock code"
                           value={unlockCodeInput}
                           onChange={(e) => setUnlockCodeInput(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+                          className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none"
                         />
                         <button
                           type="submit"
-                          className={`w-full py-2 rounded-xl ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
+                          className={`w-full py-1.5 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
                         >
                           Upgrade to Full Unlock
                         </button>
                       </form>
                     </div>
                   ) : (
-                    <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg">
+                    <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg">
                       ✅ Full Lifetime Access Unlocked.
                     </p>
                   )}
                   {unlockStatusMsg && (
-                    <p
-                      className={`text-[11px] font-bold text-center ${
-                        unlockStatusMsg.isError
-                          ? "text-red-400"
-                          : "text-emerald-400"
-                      }`}
-                    >
+                    <p className={`text-[11px] font-bold text-center ${unlockStatusMsg.isError ? "text-red-400" : "text-emerald-400"}`}>
                       {unlockStatusMsg.text}
                     </p>
                   )}
                 </div>
 
-                {/* UNIFIED PROFILE, AGE & PASSCODE CHANGE SECTION */}
-                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                    👤 Profile Name, Age & Age-Lock PIN
-                  </h4>
-                  <p className="text-[10px] text-slate-300">
-                    Update your profile details and/or change your 4-digit age-lock passcode.
-                  </p>
-
-                  <form onSubmit={handleUnifiedProfileUpdate} className="space-y-2.5 box-border">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <div>
-                        <span className="block text-[11px] text-slate-300 mb-1">Name:</span>
-                        <input
-                          type="text"
-                          maxLength={25}
-                          value={profileNameInput}
-                          onChange={(e) => setProfileNameInput(e.target.value)}
-                          placeholder="Your Name"
-                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
-                        />
-                      </div>
-                      <div>
-                        <span className="block text-[11px] text-slate-300 mb-1">Age:</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={120}
-                          value={userAgeInput}
-                          onChange={(e) => setUserAgeInput(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="block text-[11px] text-slate-300 mb-1">Current 4-digit PIN (Required to save):</span>
-                      <input
-                        type="password"
-                        inputMode="numeric"
-                        maxLength={4}
-                        placeholder="••••"
-                        value={unifiedAgeCodeInput}
-                        onChange={(e) =>
-                          setUnifiedAgeCodeInput(
-                            e.target.value.replace(/\D/g, "").slice(0, 4)
-                          )
-                        }
-                        className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-white/10">
-                      <div>
-                        <span className="block text-[11px] text-slate-300 mb-1">New PIN (Optional):</span>
-                        <input
-                          type="password"
-                          inputMode="numeric"
-                          maxLength={4}
-                          placeholder="••••"
-                          value={newPasscode}
-                          onChange={(e) =>
-                            setNewPasscode(
-                              e.target.value.replace(/\D/g, "").slice(0, 4)
-                            )
-                          }
-                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
-                        />
-                      </div>
-                      <div>
-                        <span className="block text-[11px] text-slate-300 mb-1">Confirm New PIN:</span>
-                        <input
-                          type="password"
-                          inputMode="numeric"
-                          maxLength={4}
-                          placeholder="••••"
-                          value={confirmNewPasscode}
-                          onChange={(e) =>
-                            setConfirmNewPasscode(
-                              e.target.value.replace(/\D/g, "").slice(0, 4)
-                            )
-                          }
-                          className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-bold text-white focus:outline-none box-border tracking-widest"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className={`w-full mt-2 py-2 rounded-xl ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition box-border`}
-                    >
-                      Save Profile & PIN Updates
-                    </button>
-
-                    {unifiedUpdateStatus && (
-                      <p
-                        className={`text-[11px] font-bold mt-1 text-center ${
-                          unifiedUpdateStatus.isError
-                            ? "text-red-400"
-                            : "text-emerald-400"
-                        }`}
-                      >
-                        {unifiedUpdateStatus.text}
-                      </p>
-                    )}
-                  </form>
-                </div>
-
-                {/* Accessibility */}
-                <div className="space-y-3 bg-black/25 p-3.5 rounded-xl border border-white/10 box-border backdrop-blur-md">
-                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider block">
-                    Accessibility
+                {/* Sidebar Footer */}
+                <div className="mt-6 pt-4 border-t border-white/10 text-center">
+                  <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
+                    Console UI v2.0 • RABBiT TV
                   </span>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-bold text-white">
-                        XL Mouse Pointer (3x)
-                      </p>
-                      <p className="text-[10px] text-slate-300">
-                        Enlarges cursor for TVs/projectors.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleMouseToggle(!helpfulMouse)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
-                        helpfulMouse
-                          ? `${getPrimaryBgColor(appTheme).split(" ")[0]} bg-opacity-100`
-                          : "bg-slate-700"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          helpfulMouse ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-xs font-bold text-white">
-                          History Page Overscale
-                        </p>
-                        <p className="text-[10px] text-slate-300">
-                          Card size on history page.
-                        </p>
-                      </div>
-                      <span className="text-xs font-bold text-violet-400">
-                        {historyOverscale === "off"
-                          ? "Off"
-                          : `+${historyOverscale}`}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      {(["off", "20%", "50%", "80%"] as HistoryScale[]).map(
-                        (scale) => (
-                          <button
-                            key={scale}
-                            type="button"
-                            onClick={() =>
-                              handleHistoryOverscaleChange(scale)
-                            }
-                            className={`rounded-lg py-1.5 text-xs font-bold capitalize transition ${
-                              historyOverscale === scale
-                                ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                                : `${getSubtlePillBg(appTheme)}`
-                            }`}
-                          >
-                            {scale === "off" ? "Off" : `+${scale}`}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
-                    <div>
-                      <p className="text-xs font-bold text-white">
-                        Enlarged Action Buttons
-                      </p>
-                      <p className="text-[10px] text-slate-300">
-                        Bigger eye / thumb / X buttons.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleLargeButtonsToggle(!largeButtons)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
-                        largeButtons
-                          ? `${getPrimaryBgColor(appTheme).split(" ")[0]} bg-opacity-100`
-                          : "bg-slate-700"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          largeButtons ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1356,10 +1357,10 @@ function RootComponent() {
             isOpen={showBugModal}
             onClose={() => setShowBugModal(false)}
             userName={savedProfileName || "Friend"}
-            userUnlockCode={typeof window !== "undefined" ? localStorage.getItem("rabtv_age_passcode") || "0000" : "0000"}
+            userUnlockCode={typeof window !== "undefined" ? localStorage.getItem(AGE_LOCK_KEY) || "0000" : "0000"}
           />
 
-          {/* PUBLIC COMMUNITY BUG FEED MODAL (Client Side) */}
+          {/* PUBLIC COMMUNITY BUG FEED MODAL */}
           <PublicBugFeedModal
             isOpen={showBugFeedModal}
             onClose={() => setShowBugFeedModal(false)}
