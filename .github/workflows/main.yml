@@ -1,4 +1,4 @@
-name: Build Global Android APK & Publish Nightly
+Name: Build Global Android APK & Publish Nightly
 
 on:
   push:
@@ -156,30 +156,6 @@ jobs:
 
           echo "Building RABBiT TV Nightly version ${VERSION}"
 
-      - name: Generate Nightly Manifest JSON
-        run: |
-          VERSION="${{ steps.version-extractor.outputs.version }}"
-          MAJOR=$(echo $VERSION | cut -d. -f1)
-          MINOR=$(echo $VERSION | cut -d. -f2)
-          PATCH=$(echo $VERSION | cut -d. -f3)
-          BUILD=$(echo $VERSION | cut -d. -f4)
-          [ -z "$BUILD" ] && BUILD=0
-          VERSION_CODE=$((MAJOR * 1000000 + MINOR * 10000 + PATCH * 100 + BUILD))
-          
-          APK_FILENAME="${{ steps.version-extractor.outputs.apk_filename }}"
-          APK_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/${APK_FILENAME}"
-
-          mkdir -p updates
-          cat << EOF > updates/nightly_manifest.json
-          {
-            "versionCode": ${VERSION_CODE},
-            "versionName": "${VERSION}",
-            "apkUrl": "${APK_URL}",
-            "releaseNotes": "Automated nightly build v${VERSION} compiled and verified via GitHub Actions."
-          }
-          EOF
-          echo "Generated updates/nightly_manifest.json for version ${VERSION}"
-
       - name: Map TanStack Shell to Capacitor index.html
         run: |
           if [ -f dist/client/_shell.html ]; then
@@ -221,43 +197,6 @@ jobs:
 
           if [ -f android/gradlew ]; then
             chmod +x android/gradlew
-          fi
-
-      - name: Download Gradle via Curl & Multi-Mirror Fallback
-        run: |
-          echo "Clearing old Gradle wrapper cache..."
-          rm -rf ~/.gradle/wrapper/dists/gradle-8.2.1-*
-
-          echo "Downloading Gradle 8.2.1 distribution with mirror fallback..."
-          URLS=(
-            "https://services.gradle.org/distributions/gradle-8.2.1-all.zip"
-            "https://github.com/gradle/gradle/releases/download/v8.2.1/gradle-8.2.1-all.zip"
-          )
-          
-          SUCCESS=false
-          for url in "${URLS[@]}"; do
-            echo "Attempting download from: $url"
-            if curl -f -L --retry 3 --connect-timeout 30 --max-time 180 -o /tmp/gradle-8.2.1-all.zip "$url"; then
-              echo "Successfully downloaded from $url"
-              SUCCESS=true
-              break
-            else
-              echo "Download from $url failed. Trying next mirror..."
-            fi
-          done
-
-          if [ "$SUCCESS" = false ]; then
-            echo "Error: All Gradle download mirrors failed!"
-            exit 1
-          fi
-
-          PROP_FILE="android/gradle/wrapper/gradle-wrapper.properties"
-          if [ -f "$PROP_FILE" ]; then
-            sed -i 's#distributionUrl=.*#distributionUrl=file:///tmp/gradle-8.2.1-all.zip#' "$PROP_FILE"
-            echo "Successfully redirected Gradle wrapper to local pre-downloaded archive."
-          else
-            echo "Error: gradle-wrapper.properties not found!"
-            exit 1
           fi
 
       - name: Sync Package.json Version to Android Build.gradle
@@ -356,9 +295,9 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.io"
-          # Only commit config changes, version bumps, and the nightly manifest—never commit the raw APK binary
-          git add package.json capacitor.config.json android/app/build.gradle src/lib/version.ts updates/nightly_manifest.json
-          git commit -m "chore: auto-bump version and update nightly manifest to v${{ steps.version-extractor.outputs.version }} [skip ci]" || echo "No changes to commit"
+          # Only commit config changes and package version bumps—never commit the raw APK binary to prevent token revocation
+          git add package.json capacitor.config.json android/app/build.gradle src/lib/version.ts
+          git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} [skip ci]" || echo "No changes to commit"
           git push
 
       - name: Upload APK Artifact
