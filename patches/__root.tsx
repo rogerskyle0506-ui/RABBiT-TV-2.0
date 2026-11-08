@@ -145,6 +145,19 @@ function RootComponent() {
     return "playing";
   });
 
+  const [bgMusicVolume, setBgMusicVolume] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("rabtv_bg_volume");
+      return saved !== null ? parseFloat(saved) : 0.5;
+    }
+    return 0.5;
+  });
+
+  const handleVolumeChange = (newVol: number) => {
+    setBgMusicVolume(newVol);
+    bgAudio.setVolume(newVol);
+  };
+
   const [currentStationUrl, setCurrentStationUrl] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("rabtv_radio_url") || "";
@@ -1225,6 +1238,23 @@ function RootComponent() {
                                   🔇 Mute / OFF
                                 </button>
                               </div>
+                            </div>
+
+                            {/* VOLUME SLIDER CONTROL (DEFAULT 50%) */}
+                            <div className="pt-2 border-t border-white/10 w-full space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] text-slate-300 font-semibold">Music Volume:</p>
+                                <span className="text-[10px] font-bold text-amber-300">{Math.round(bgMusicVolume * 100)}%</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={bgMusicVolume}
+                                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
+                              />
                             </div>
 
                             <div className="pt-2 border-t border-white/10 w-full">
