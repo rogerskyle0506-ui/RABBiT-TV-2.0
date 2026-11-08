@@ -906,7 +906,7 @@ function RootComponent() {
                 className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl backdrop-blur-2xl flex flex-col z-10 overflow-y-auto p-5 transition-transform duration-300 animate-slide-right"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
-                  backgroundSize: "cover",
+                  backgroundSize: "100% 100%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
                 }}
@@ -941,7 +941,7 @@ function RootComponent() {
                   <div className="space-y-3 flex-1 w-full">
 
                     {/* 1. GLOBAL FEED SELECTOR ACCORDION */}
-                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                    <div className="border-0 bg-transparent overflow-hidden w-full">
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "globalFeed" ? null : "globalFeed")}
@@ -959,10 +959,10 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "globalFeed" && (
                         <div
-                          className="p-3 border-t border-white/10 space-y-2 relative w-full"
+                          className="p-3.5 border-0 space-y-2 relative w-full"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
-                            backgroundSize: "cover",
+                            backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
@@ -997,7 +997,7 @@ function RootComponent() {
                     </div>
 
                     {/* 2. WATCH HISTORY ACCORDION */}
-                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                    <div className="border-0 bg-transparent overflow-hidden w-full">
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "history" ? null : "history")}
@@ -1015,10 +1015,10 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "history" && (
                         <div
-                          className="p-3 border-t border-white/10 space-y-2 relative w-full"
+                          className="p-3.5 border-0 space-y-2 relative w-full"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                            backgroundSize: "cover",
+                            backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
@@ -1039,7 +1039,7 @@ function RootComponent() {
                     </div>
 
                     {/* 3. APP CUSTOMIZATION ACCORDION */}
-                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                    <div className="border-0 bg-transparent overflow-hidden w-full">
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "theme" ? null : "theme")}
@@ -1057,10 +1057,10 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "theme" && (
                         <div
-                          className="p-3 border-t border-white/10 space-y-2 relative w-full"
+                          className="p-3.5 border-0 space-y-2 relative w-full"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
-                            backgroundSize: "cover",
+                            backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
@@ -1087,7 +1087,7 @@ function RootComponent() {
                     </div>
 
                     {/* 4. OVER SCALE & GRID SIZING ACCORDION */}
-                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                    <div className="border-0 bg-transparent overflow-hidden w-full">
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "scale" ? null : "scale")}
@@ -1105,10 +1105,10 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "scale" && (
                         <div
-                          className="p-3 border-t border-white/10 space-y-3 relative w-full"
+                          className="p-3.5 border-0 space-y-3 relative w-full"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                            backgroundSize: "cover",
+                            backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
@@ -1160,7 +1160,7 @@ function RootComponent() {
                     </div>
 
                     {/* 5. BACKGROUND MUSIC AUDIO ACCORDION */}
-                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                    <div className="border-0 bg-transparent overflow-hidden w-full">
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "audio" ? null : "audio")}
@@ -1178,10 +1178,10 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "audio" && (
                         <div
-                          className="p-3 border-t border-white/10 space-y-3 relative w-full"
+                          className="p-3.5 border-0 space-y-3 relative w-full"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
-                            backgroundSize: "cover",
+                            backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
@@ -1250,7 +1250,7 @@ function RootComponent() {
                     </div>
 
                     {/* 6. SECURITY & PIN MANAGEMENT ACCORDION */}
-                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                    <div className="border-0 bg-transparent overflow-hidden w-full">
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "pin" ? null : "pin")}
@@ -1269,10 +1269,10 @@ function RootComponent() {
                       {activeSidebarSection === "pin" && (
                         <form
                           onSubmit={handleUnifiedProfileUpdate}
-                          className="p-3.5 border-t border-white/10 space-y-3 relative w-full"
+                          className="p-3.5 border-0 space-y-3 relative w-full"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                            backgroundSize: "cover",
+                            backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
@@ -1361,7 +1361,7 @@ function RootComponent() {
                     </div>
 
                     {/* 7. BACKUP & RESTORE ACCORDION */}
-                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                    <div className="border-0 bg-transparent overflow-hidden w-full">
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "backup" ? null : "backup")}
@@ -1379,10 +1379,10 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "backup" && (
                         <div
-                          className="p-3.5 border-t border-white/10 space-y-2 relative w-full"
+                          className="p-3.5 border-0 space-y-2 relative w-full"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
-                            backgroundSize: "cover",
+                            backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
@@ -1413,7 +1413,7 @@ function RootComponent() {
                     </div>
 
                     {/* 8. ACCESSIBILITY ACCORDION */}
-                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                    <div className="border-0 bg-transparent overflow-hidden w-full">
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "accessibility" ? null : "accessibility")}
@@ -1431,10 +1431,10 @@ function RootComponent() {
                       </button>
                       {activeSidebarSection === "accessibility" && (
                         <div
-                          className="p-3.5 border-t border-white/10 space-y-3 relative w-full"
+                          className="p-3.5 border-0 space-y-3 relative w-full"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                            backgroundSize: "cover",
+                            backgroundSize: "100% 100%",
                             backgroundRepeat: "no-repeat",
                             backgroundPosition: "center center",
                           }}
