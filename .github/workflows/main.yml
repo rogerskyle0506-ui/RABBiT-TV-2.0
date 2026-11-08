@@ -1,4 +1,4 @@
-name: Build Global Android APK & Publish Nightly
+Name: Build Global Android APK & Publish Nightly
 
 on:
   push:
@@ -156,6 +156,30 @@ jobs:
 
           echo "Building RABBiT TV Nightly version ${VERSION}"
 
+      - name: Generate Nightly Manifest JSON
+        run: |
+          VERSION="${{ steps.version-extractor.outputs.version }}"
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+          BUILD=$(echo $VERSION | cut -d. -f4)
+          [ -z "$BUILD" ] && BUILD=0
+          VERSION_CODE=$((MAJOR * 1000000 + MINOR * 10000 + PATCH * 100 + BUILD))
+          
+          APK_FILENAME="${{ steps.version-extractor.outputs.apk_filename }}"
+          APK_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/${APK_FILENAME}"
+
+          mkdir -p updates
+          cat << EOF > updates/nightly_manifest.json
+          {
+            "versionCode": ${VERSION_CODE},
+            "versionName": "${VERSION}",
+            "apkUrl": "${APK_URL}",
+            "releaseNotes": "Automated nightly build v${VERSION} compiled and verified via GitHub Actions."
+          }
+          EOF
+          echo "Generated updates/nightly_manifest.json for version ${VERSION}"
+
       - name: Map TanStack Shell to Capacitor index.html
         run: |
           if [ -f dist/client/_shell.html ]; then
@@ -295,9 +319,9 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.io"
-          # Only commit config changes and package version bumps—never commit the raw APK binary to prevent token revocation
-          git add package.json capacitor.config.json android/app/build.gradle src/lib/version.ts
-          git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} [skip ci]" || echo "No changes to commit"
+          # Only commit config changes, version bumps, and the nightly manifest—never commit the raw APK binary
+          git add package.json capacitor.config.json android/app/build.gradle src/lib/version.ts updates/nightly_manifest.json
+          git commit -m "chore: auto-bump version and update nightly manifest to v${{ steps.version-extractor.outputs.version }} [skip ci]" || echo "No changes to commit"
           git push
 
       - name: Upload APK Artifact
