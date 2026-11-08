@@ -924,12 +924,14 @@ function RootComponent() {
                     <button
                       type="button"
                       onClick={handleToggleProfileMenu}
-                      className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-3.5 py-2 rounded-xl border border-white/20 text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden"
+                      className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border-0"
                       style={{
                         backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                         backgroundSize: "cover",
                         backgroundRepeat: "no-repeat",
                         backgroundPosition: "center center",
+                        WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.1) 100%)",
+                        maskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.1) 100%)",
                       }}
                     >
                       <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
@@ -1047,7 +1049,7 @@ function RootComponent() {
                       </button>
                     </div>
 
-                    {/* ACCORDION SECTIONS WITH LAYERED BACKGROUND CROPPING */}
+                    {/* ACCORDION SECTIONS WITH BORDERLESS EDGES & BLENDED TRANSPARENCY */}
                     <div className="space-y-3 w-full">
 
                       {/* 1. GLOBAL FEED SELECTOR ACCORDION */}
@@ -1055,7 +1057,11 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "globalFeed" ? null : "globalFeed")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          style={{
+                            WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                            maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                          }}
                         >
                           <div 
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
@@ -1114,7 +1120,11 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "history" ? null : "history")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          style={{
+                            WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                            maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                          }}
                         >
                           <div 
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
@@ -1159,7 +1169,11 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "theme" ? null : "theme")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          style={{
+                            WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                            maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                          }}
                         >
                           <div 
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
@@ -1210,7 +1224,11 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "scale" ? null : "scale")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          style={{
+                            WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                            maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                          }}
                         >
                           <div 
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
@@ -1286,7 +1304,11 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "audio" ? null : "audio")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          style={{
+                            WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                            maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                          }}
                         >
                           <div 
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
@@ -1304,7 +1326,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "audio" && (
                           <div
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "cover",
@@ -1312,7 +1334,7 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-full">
+                            <div className="relative z-10 space-y-3 w-full box-border">
                               <div className="w-full">
                                 <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">Playback Controls:</p>
                                 <div className="grid grid-cols-2 gap-2 w-full">
@@ -1361,28 +1383,28 @@ function RootComponent() {
                               <div className="pt-2 border-t border-white/10 w-full">
                                 <p className="text-[11px] text-slate-300 mb-2 font-semibold">Select Channel / Stream by Genre:</p>
                                 
-                                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 w-full">
+                                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 w-full box-border">
                                   {Object.entries(RADIO_STATIONS).map(([category, stations]) => {
                                     const hasActiveStation = stations.some(
                                       s => (currentStationUrl === s.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === s.url)
                                     );
 
                                     return (
-                                      <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden w-full relative">
+                                      <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden w-full relative box-border">
                                         <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition">
-                                          <span className="flex items-center gap-2">
+                                          <span className="flex items-center gap-2 truncate pr-2">
                                             📁 {category}
-                                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
+                                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 shrink-0">
                                               {stations.length}
                                             </span>
                                           </span>
-                                          <div className="flex items-center gap-1.5">
+                                          <div className="flex items-center gap-1.5 shrink-0">
                                             {hasActiveStation && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Active stream in this category" />}
                                             <span className="transform group-open:rotate-180 transition-transform text-[10px]">▼</span>
                                           </div>
                                         </summary>
 
-                                        <div className="p-2 space-y-1.5 border-t border-white/10 bg-slate-950/40 w-full overflow-hidden">
+                                        <div className="p-2 space-y-1.5 border-t border-white/10 bg-slate-950/40 w-full overflow-hidden box-border">
                                           {stations.map((station) => {
                                             const isSelected = (currentStationUrl === station.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === station.url);
                                             return (
@@ -1390,7 +1412,7 @@ function RootComponent() {
                                                 key={station.url}
                                                 type="button"
                                                 onClick={() => handleStationSelect(station.url)}
-                                                className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-between ${
+                                                className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-between box-border overflow-hidden ${
                                                   isSelected
                                                     ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                                     : `${getSubtlePillBg(appTheme)}`
@@ -1417,7 +1439,11 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "pin" ? null : "pin")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          style={{
+                            WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                            maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                          }}
                         >
                           <div 
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
@@ -1531,7 +1557,11 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "backup" ? null : "backup")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          style={{
+                            WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                            maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                          }}
                         >
                           <div 
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
@@ -1586,7 +1616,11 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "accessibility" ? null : "accessibility")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border border-white/15 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          style={{
+                            WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                            maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
+                          }}
                         >
                           <div 
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
