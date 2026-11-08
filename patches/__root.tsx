@@ -11,7 +11,7 @@ import { ActivationModal } from "@/components/ActivationModal";
 import { AdminPanel } from "@/components/AdminPanel";
 import { bgAudio, RADIO_STATIONS } from "@/lib/background-audio";
 import "@/styles.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { sendPermanentActivationAlert } from "@/lib/report";
 import { checkForAppUpdates } from "@/lib/updater";
@@ -45,6 +45,7 @@ const globalFeedOptions = [
   "Canada (All)",
   "English",
   "German",
+  "Ukrainian",
   "Arabic / Islamic",
   "Russian",
   "British",
@@ -116,6 +117,7 @@ function RootComponent() {
   const [showBugModal, setShowBugModal] = useState(false);
   const [showBugFeedModal, setShowBugFeedModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const lastScrollYRef = useRef(0);
 
   // Accordion section state for the console-grade side blade sidebar
   const [activeSidebarSection, setActiveSidebarSection] = useState<
@@ -237,6 +239,9 @@ function RootComponent() {
     if (showProfileMenu) handleCloseAll();
     else {
       handleCloseAll();
+      if (typeof window !== "undefined") {
+        lastScrollYRef.current = window.scrollY;
+      }
       setShowProfileMenu(true);
     }
   };
@@ -248,6 +253,21 @@ function RootComponent() {
     }, 3000);
     return () => clearTimeout(updateTimer);
   }, []);
+
+  // Scroll to close sidebar menu behavior
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      if (showProfileMenu && typeof window !== "undefined") {
+        if (Math.abs(window.scrollY - lastScrollYRef.current) > 60) {
+          handleCloseAll();
+        }
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("scroll", handleWindowScroll, { passive: true });
+      return () => window.removeEventListener("scroll", handleWindowScroll);
+    }
+  }, [showProfileMenu]);
 
   // Lobby Background Audio Lifecycle Hooks
   useEffect(() => {
