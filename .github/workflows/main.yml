@@ -1,4 +1,4 @@
-name: Build Global Android APK & Publish Nightly
+Name: Build Global Android APK & Publish Nightly
 
 on:
   push:
@@ -225,8 +225,11 @@ jobs:
 
       - name: Download Gradle via Curl & Bypass Wrapper Timeout
         run: |
+          echo "Clearing old Gradle wrapper cache..."
+          rm -rf ~/.gradle/wrapper/dists/gradle-8.2.1-*
+
           echo "Downloading Gradle 8.2.1 distribution with extended timeout..."
-          curl -L --retry 5 --connect-timeout 60 --max-time 300 -o /tmp/gradle-8.2.1-all.zip https://services.gradle.org/distributions/gradle-8.2.1-all.zip
+          curl -f -L --retry 5 --connect-timeout 60 --max-time 300 -o /tmp/gradle-8.2.1-all.zip https://services.gradle.org/distributions/gradle-8.2.1-all.zip
           
           PROP_FILE="android/gradle/wrapper/gradle-wrapper.properties"
           if [ -f "$PROP_FILE" ]; then
