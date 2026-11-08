@@ -918,9 +918,9 @@ function RootComponent() {
                 onClick={handleCloseAll}
               />
 
-              {/* Side Blade Drawer Content with 25% transparency and Top/Bottom Fade-Out Mask */}
+              {/* Side Blade Drawer Content with 25% transparency, Inset Padding, and Top/Bottom Fade-Out Mask */}
               <div
-                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl flex flex-col z-10 overflow-y-auto p-5 pt-8 pb-8 transition-transform duration-300 animate-slide-right opacity-75"
+                className="relative w-96 max-w-[90vw] h-[100dvh] border-r border-white/20 shadow-2xl flex flex-col z-10 overflow-y-auto px-4 pt-10 pb-10 transition-transform duration-300 animate-slide-right opacity-75"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
                   backgroundSize: "100% 100%",
@@ -931,8 +931,8 @@ function RootComponent() {
                 }}
               >
                 <div className="relative z-10 flex flex-col h-full w-full">
-                  {/* Sidebar Header with Perfectly Aligned Logo and Padding */}
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-3 px-1 w-full">
+                  {/* Sidebar Header with Recessed Padding to Keep Logo & Close Button Inside */}
+                  <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-3 px-3 w-full">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl overflow-hidden border border-white/30 bg-slate-800 shadow-md shrink-0 flex items-center justify-center">
                         <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
@@ -947,7 +947,7 @@ function RootComponent() {
                     <button
                       type="button"
                       onClick={handleCloseAll}
-                      className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 transition shrink-0"
+                      className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 transition shrink-0 mr-1"
                     >
                       ✕ Close
                     </button>
@@ -961,7 +961,7 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "globalFeed" ? null : "globalFeed")}
-                        className="w-full flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                         style={{
                           backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                           backgroundSize: "100% 100%",
@@ -969,12 +969,13 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
+                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🌐 Global Feed Selector</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "globalFeed" ? "rotate-180" : ""}`}>▼</span>
                       </button>
                       {activeSidebarSection === "globalFeed" && (
                         <div
-                          className="p-4 border-0 space-y-2 relative w-full opacity-75"
+                          className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
                             backgroundSize: "100% 100%",
@@ -1015,7 +1016,7 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "history" ? null : "history")}
-                        className="w-full flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                         style={{
                           backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                           backgroundSize: "100% 100%",
@@ -1023,12 +1024,13 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
+                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🕒 Watch History</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "history" ? "rotate-180" : ""}`}>▼</span>
                       </button>
                       {activeSidebarSection === "history" && (
                         <div
-                          className="p-4 border-0 space-y-2 relative w-full opacity-75"
+                          className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                             backgroundSize: "100% 100%",
@@ -1055,7 +1057,7 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "theme" ? null : "theme")}
-                        className="w-full flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                         style={{
                           backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                           backgroundSize: "100% 100%",
@@ -1063,12 +1065,13 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
+                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🎨 App Themes & Styling</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "theme" ? "rotate-180" : ""}`}>▼</span>
                       </button>
                       {activeSidebarSection === "theme" && (
                         <div
-                          className="p-4 border-0 space-y-2 relative w-full opacity-75"
+                          className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
                             backgroundSize: "100% 100%",
@@ -1101,7 +1104,7 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "scale" ? null : "scale")}
-                        className="w-full flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                         style={{
                           backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                           backgroundSize: "100% 100%",
@@ -1109,12 +1112,13 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
+                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">📐 Over Scale & Grid Size</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "scale" ? "rotate-180" : ""}`}>▼</span>
                       </button>
                       {activeSidebarSection === "scale" && (
                         <div
-                          className="p-4 border-0 space-y-3 relative w-full opacity-75"
+                          className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                             backgroundSize: "100% 100%",
@@ -1172,7 +1176,7 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "audio" ? null : "audio")}
-                        className="w-full flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                         style={{
                           backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                           backgroundSize: "100% 100%",
@@ -1180,12 +1184,13 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
+                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🎵 Background Lobby Audio</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "audio" ? "rotate-180" : ""}`}>▼</span>
                       </button>
                       {activeSidebarSection === "audio" && (
                         <div
-                          className="p-4 border-0 space-y-3 relative w-full opacity-75"
+                          className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
                             backgroundSize: "100% 100%",
@@ -1260,7 +1265,7 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "pin" ? null : "pin")}
-                        className="w-full flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                         style={{
                           backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                           backgroundSize: "100% 100%",
@@ -1268,13 +1273,14 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
+                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">🔒 Profile, Age & PIN Settings</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "pin" ? "rotate-180" : ""}`}>▼</span>
                       </button>
                       {activeSidebarSection === "pin" && (
                         <form
                           onSubmit={handleUnifiedProfileUpdate}
-                          className="p-4 border-0 space-y-3 relative w-full opacity-75"
+                          className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                             backgroundSize: "100% 100%",
@@ -1369,7 +1375,7 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "backup" ? null : "backup")}
-                        className="w-full flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                         style={{
                           backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                           backgroundSize: "100% 100%",
@@ -1377,12 +1383,13 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
+                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">💾 Backup & Profile Data</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "backup" ? "rotate-180" : ""}`}>▼</span>
                       </button>
                       {activeSidebarSection === "backup" && (
                         <div
-                          className="p-4 border-0 space-y-2 relative w-full opacity-75"
+                          className="w-[94%] mx-auto p-4 border-0 space-y-2 relative opacity-75 rounded-xl mt-1"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL})`,
                             backgroundSize: "100% 100%",
@@ -1419,7 +1426,7 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => setActiveSidebarSection(activeSidebarSection === "accessibility" ? null : "accessibility")}
-                        className="w-full flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        className="w-[94%] mx-auto flex items-center justify-between px-4 py-4 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden rounded-xl border border-white/10 shadow-sm"
                         style={{
                           backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                           backgroundSize: "100% 100%",
@@ -1427,12 +1434,13 @@ function RootComponent() {
                           backgroundPosition: "center center",
                         }}
                       >
+                        <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
                         <span className="relative z-10 flex items-center gap-2">♿ Accessibility Options</span>
                         <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "accessibility" ? "rotate-180" : ""}`}>▼</span>
                       </button>
                       {activeSidebarSection === "accessibility" && (
                         <div
-                          className="p-4 border-0 space-y-3 relative w-full opacity-75"
+                          className="w-[94%] mx-auto p-4 border-0 space-y-3 relative opacity-75 rounded-xl mt-1"
                           style={{
                             backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                             backgroundSize: "100% 100%",
@@ -1480,7 +1488,7 @@ function RootComponent() {
 
                   {/* ADMIN PANEL (IF ADMIN) */}
                   {isAdmin && (
-                    <div className="mt-4 pt-4 border-t border-white/10 w-full">
+                    <div className="mt-4 pt-4 border-t border-white/10 w-[94%] mx-auto">
                       <AdminPanel
                         appTheme={appTheme}
                         getPrimaryBgColor={getPrimaryBgColor}
@@ -1490,7 +1498,7 @@ function RootComponent() {
                   )}
 
                   {/* FEEDBACK & SUPPORT SECTION */}
-                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full">
+                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-[94%] mx-auto">
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Feedback & Support</h4>
                     <button
                       type="button"
@@ -1509,7 +1517,7 @@ function RootComponent() {
                   </div>
 
                   {/* UPDATE CHANNEL & ACTIONS */}
-                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full">
+                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-[94%] mx-auto">
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Update Channel</h4>
                     <div className="grid grid-cols-2 gap-2 w-full">
                       <button
@@ -1541,7 +1549,7 @@ function RootComponent() {
                   </div>
 
                   {/* LICENSE STATUS */}
-                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full">
+                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-[94%] mx-auto">
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Status</h4>
                     {isAdmin ? (
                       <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-2.5 rounded-lg">
@@ -1581,7 +1589,7 @@ function RootComponent() {
                   </div>
 
                   {/* Sidebar Footer with Divider Asset */}
-                  <div className="mt-6 pt-4 border-t border-white/10 text-center w-full">
+                  <div className="mt-6 pt-4 border-t border-white/10 text-center w-[94%] mx-auto">
                     <img
                       src={RABBIT_DIVIDER}
                       alt=""
