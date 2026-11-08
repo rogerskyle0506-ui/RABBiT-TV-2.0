@@ -119,7 +119,7 @@ function RootComponent() {
 
   // Accordion section state for the console-grade side blade sidebar
   const [activeSidebarSection, setActiveSidebarSection] = useState<
-    "theme" | "scale" | "audio" | "pin" | "backup" | "accessibility" | null
+    "theme" | "scale" | "audio" | "pin" | "backup" | "accessibility" | "globalFeed" | "history" | null
   >(null);
 
   const [cardSize, setCardSize] = useState<CardSize>("large");
@@ -887,42 +887,6 @@ function RootComponent() {
                       🔍
                     </button>
                   </form>
-
-                  <div className="relative shrink-0">
-                    <div
-                      className={`flex h-9 sm:h-10 items-center justify-center rounded-xl border px-3 text-[11px] sm:text-xs font-bold shadow-sm transition focus-within:ring-2 ${activeHeader.btnBg} gap-1 relative pointer-events-auto`}
-                    >
-                      <span className="whitespace-nowrap pointer-events-none truncate max-w-[90px] sm:max-w-none">
-                        🌐{" "}
-                        {selectedGlobalFeed === "All (Default)"
-                          ? "Global"
-                          : selectedGlobalFeed}
-                      </span>
-                      <span className="text-[9px] pointer-events-none">▼</span>
-                      <select
-                        value={selectedGlobalFeed}
-                        onChange={(e) =>
-                          handleGlobalFeedChange(
-                            e.target.value as GlobalFeedOption
-                          )
-                        }
-                        className="absolute inset-0 w-full h-full opacity-0 bg-transparent text-white cursor-pointer z-50 appearance-none"
-                      >
-                        {globalFeedOptions.map((opt) => (
-                          <option key={opt} value={opt} className="bg-slate-900 text-white p-2">
-                            🌐 {opt}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <Link
-                    to="/watch-history"
-                    className={`flex h-9 sm:h-10 items-center justify-center rounded-xl border px-3 text-[11px] sm:text-xs font-bold shadow-sm transition focus:outline-none focus:ring-2 shrink-0 ${activeHeader.btnBg}`}
-                  >
-                    🕒 History
-                  </Link>
                 </div>
               )}
             </div>
@@ -976,7 +940,105 @@ function RootComponent() {
                   {/* ACCORDION SECTIONS */}
                   <div className="space-y-3 flex-1 w-full">
 
-                    {/* 1. APP CUSTOMIZATION ACCORDION */}
+                    {/* 1. GLOBAL FEED SELECTOR ACCORDION */}
+                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                      <button
+                        type="button"
+                        onClick={() => setActiveSidebarSection(activeSidebarSection === "globalFeed" ? null : "globalFeed")}
+                        className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        style={{
+                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                          backgroundSize: "100% 100%",
+                          backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center center",
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
+                        <span className="relative z-10 flex items-center gap-2">🌐 Global Feed Selector</span>
+                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "globalFeed" ? "rotate-180" : ""}`}>▼</span>
+                      </button>
+                      {activeSidebarSection === "globalFeed" && (
+                        <div
+                          className="p-3 border-t border-white/10 space-y-2 relative w-full"
+                          style={{
+                            backgroundImage: `url(${RABBIT_PANEL})`,
+                            backgroundSize: "cover",
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "center center",
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
+                          <div className="relative z-10 space-y-2 w-full">
+                            <p className="text-[10px] text-slate-300 font-semibold">Select Region Feed:</p>
+                            <div className="relative w-full">
+                              <div
+                                className={`flex h-10 w-full items-center justify-between rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} gap-1 relative pointer-events-auto`}
+                              >
+                                <span className="truncate">
+                                  🌐 {selectedGlobalFeed === "All (Default)" ? "Global" : selectedGlobalFeed}
+                                </span>
+                                <span className="text-[9px]">▼</span>
+                                <select
+                                  value={selectedGlobalFeed}
+                                  onChange={(e) => handleGlobalFeedChange(e.target.value as GlobalFeedOption)}
+                                  className="absolute inset-0 w-full h-full opacity-0 bg-transparent text-white cursor-pointer z-50 appearance-none"
+                                >
+                                  {globalFeedOptions.map((opt) => (
+                                    <option key={opt} value={opt} className="bg-slate-900 text-white p-2">
+                                      🌐 {opt}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. WATCH HISTORY ACCORDION */}
+                    <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
+                      <button
+                        type="button"
+                        onClick={() => setActiveSidebarSection(activeSidebarSection === "history" ? null : "history")}
+                        className="w-full flex items-center justify-between p-3.5 text-left text-xs font-bold text-white hover:bg-white/5 transition relative overflow-hidden"
+                        style={{
+                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                          backgroundSize: "100% 100%",
+                          backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center center",
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-black/45 pointer-events-none w-full h-full" />
+                        <span className="relative z-10 flex items-center gap-2">🕒 Watch History</span>
+                        <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "history" ? "rotate-180" : ""}`}>▼</span>
+                      </button>
+                      {activeSidebarSection === "history" && (
+                        <div
+                          className="p-3 border-t border-white/10 space-y-2 relative w-full"
+                          style={{
+                            backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                            backgroundSize: "cover",
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "center center",
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-black/85 pointer-events-none w-full h-full" />
+                          <div className="relative z-10 space-y-2 w-full">
+                            <p className="text-[10px] text-slate-300 font-semibold">View previously watched media:</p>
+                            <Link
+                              to="/watch-history"
+                              onClick={handleCloseAll}
+                              className={`flex h-10 w-full items-center justify-center rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg}`}
+                            >
+                              🕒 Open Watch History
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. APP CUSTOMIZATION ACCORDION */}
                     <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
                       <button
                         type="button"
@@ -1024,7 +1086,7 @@ function RootComponent() {
                       )}
                     </div>
 
-                    {/* 2. OVER SCALE & GRID SIZING ACCORDION */}
+                    {/* 4. OVER SCALE & GRID SIZING ACCORDION */}
                     <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
                       <button
                         type="button"
@@ -1097,7 +1159,7 @@ function RootComponent() {
                       )}
                     </div>
 
-                    {/* 3. BACKGROUND MUSIC AUDIO ACCORDION */}
+                    {/* 5. BACKGROUND MUSIC AUDIO ACCORDION */}
                     <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
                       <button
                         type="button"
@@ -1187,7 +1249,7 @@ function RootComponent() {
                       )}
                     </div>
 
-                    {/* 4. SECURITY & PIN MANAGEMENT ACCORDION */}
+                    {/* 6. SECURITY & PIN MANAGEMENT ACCORDION */}
                     <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
                       <button
                         type="button"
@@ -1298,7 +1360,7 @@ function RootComponent() {
                       )}
                     </div>
 
-                    {/* 5. BACKUP & RESTORE ACCORDION */}
+                    {/* 7. BACKUP & RESTORE ACCORDION */}
                     <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
                       <button
                         type="button"
@@ -1350,7 +1412,7 @@ function RootComponent() {
                       )}
                     </div>
 
-                    {/* 6. ACCESSIBILITY ACCORDION */}
+                    {/* 8. ACCESSIBILITY ACCORDION */}
                     <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden backdrop-blur-md w-full">
                       <button
                         type="button"
