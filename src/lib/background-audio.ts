@@ -6,27 +6,33 @@ export interface RadioStation {
   category: string;
 }
 
-export const RADIO_STATIONS: Record<string, RadioStation[]> = {
-  "House / EDM": [
-    { name: "Dance Wave! | MP3", url: "https://dancewave.online/dance.mp3", category: "House / EDM" },
-    { name: "1.FM - Deep House Radio", url: "http://strm112.1.fm/deephouse_mobile_mp3", category: "House / EDM" },
-  ],
-  "Rock": [
-    { name: "RadioX UK", url: "http://icecast.thisisdax.com/RadioXUKMP3", category: "Rock" },
-    { name: "Arrow Classic Rock", url: "http://stream.gal.io/arrow", category: "Rock" },
-  ],
-  "Jazz": [
-    { name: "Adroit Jazz Underground", url: "https://icecast.walmradio.com:8443/jazz", category: "Jazz" },
-    { name: "101 SMOOTH JAZZ", url: "http://jking.cdnstream1.com/b22139_128mp3", category: "Jazz" },
-  ],
-  "Hip Hop & R&B": [
-    { name: "181.FM - Old School HipHop/RnB", url: "http://listen.181fm.com/181-oldschool_128k.mp3", category: "Hip Hop & R&B" },
-    { name: "181.FM - The Beat (HipHop/R&B)", url: "http://listen.181fm.com/181-beat_128k.mp3", category: "Hip Hop & R&B" },
-  ],
-  "Top 100 / Pop": [
-    { name: ".977 Hitz", url: "http://15313.live.streamtheworld.com/977_HITS_SC", category: "Top 100 / Pop" },
-    { name: "Capital FM London", url: "http://media-ice.musicradio.com/CapitalMP3", category: "Top 100 / Pop" },
-  ],
+// Helper function to parse raw .m3u / .m3u8 playlist text files
+function parseM3U(content: string, category: string): RadioStation[] {
+  const lines = content.split(/\r?\n/);
+  const stations: RadioStation[] = [];
+  let currentName = "";
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("#EXTINF:")) {
+      const commaIndex = trimmed.lastIndexOf(",");
+      if (commaIndex !== -1) {
+        currentName = trimmed.substring(commaIndex + 1).trim();
+      }
+    } else if (trimmed && !trimmed.startsWith("#")) {
+      stations.push({
+        name: currentName || "Unknown Station",
+        url: trimmed,
+        category: category,
+      });
+      currentName = "";
+    }
+  }
+  return stations;
+}
+
+// 1. Permanently protected seasonal stations (Guaranteed not to be lost)
+const protectedStations: Record<string, RadioStation[]> = {
   "Christmas": [
     { name: "Christmas Vinyl HD", url: "https://icecast.walmradio.com:8443/christmas", category: "Christmas" },
     { name: "109.0 FM Christmas Kids", url: "http://stream.dar.fm/97821", category: "Christmas" },
@@ -38,6 +44,51 @@ export const RADIO_STATIONS: Record<string, RadioStation[]> = {
     { name: "SomaFM Secret Agent (128k MP3)", url: "https://ice5.somafm.com/secretagent-128-mp3", category: "Halloween" },
   ],
 };
+
+// 2. Initialize dynamic station list incorporating protected seasonal stations
+const dynamicStations: Record<string, RadioStation[]> = { ...protectedStations };
+
+try {
+  // Automatically glob all flat .m3u files inside the radio-stations directory
+  const m3uFiles = import.meta.glob('../radio-stations/*.m3u', {
+    as: 'raw',
+    eager: true,
+  });
+
+  for (const [path, rawContent] of Object.entries(m3uFiles)) {
+    const parts = path.split('/');
+    const fileName = parts[parts.length - 1]; // e.g., "classic-rock.m3u"
+    const baseName = fileName.replace(/\.[^/.]+$/, ""); // "classic-rock"
+    
+    // Format filename into a clean category name (e.g. "classic-rock" -> "Classic Rock", "2000s" -> "2000s")
+    const category = baseName
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+
+    const parsed = parseM3U(rawContent as string, category);
+
+    if (parsed.length > 0) {
+      if (!dynamicStations[category]) {
+        dynamicStations[category] = [];
+      }
+      // Append parsed stations from the .m3u file
+      dynamicStations[category].push(...parsed);
+    }
+  }
+} catch (err) {
+  console.warn("Dynamic folder scanning skipped or unavailable, using fallback/protected stations.", err);
+}
+
+// Absolute fallback default if folder scanning fails or is empty
+if (!dynamicStations["House"] && Object.keys(dynamicStations).length <= 3) {
+  dynamicStations["House"] = [
+    { name: "Dance Wave! | MP3", url: "https://dancewave.online/dance.mp3", category: "House" },
+    { name: "1.FM - Deep House Radio", url: "http://strm112.1.fm/deephouse_mobile_mp3", category: "House" },
+  ];
+}
+
+export const RADIO_STATIONS: Record<string, RadioStation[]> = dynamicStations;
 
 class BackgroundAudioManager {
   private audio: HTMLAudioElement | null = null;
@@ -59,15 +110,21 @@ class BackgroundAudioManager {
 
     // Christmas Override: Dec 10 - Dec 28
     if (month === 12 && day >= 10 && day <= 28) {
-      return RADIO_STATIONS["Christmas"][0];
+      if (RADIO_STATIONS["Christmas"] && RADIO_STATIONS["Christmas"].length > 0) {
+        return RADIO_STATIONS["Christmas"][0];
+      }
     }
     // Valentine's Override: Feb 7 - Feb 15 (1 week before through day after)
     if (month === 2 && day >= 7 && day <= 15) {
-      return RADIO_STATIONS["Valentine's"][0];
+      if (RADIO_STATIONS["Valentine's"] && RADIO_STATIONS["Valentine's"].length > 0) {
+        return RADIO_STATIONS["Valentine's"][0];
+      }
     }
     // Halloween Override: Oct 17 - Nov 1 (2 weeks before through day after)
     if ((month === 10 && day >= 17 && day <= 31) || (month === 11 && day === 1)) {
-      return RADIO_STATIONS["Halloween"][0];
+      if (RADIO_STATIONS["Halloween"] && RADIO_STATIONS["Halloween"].length > 0) {
+        return RADIO_STATIONS["Halloween"][0];
+      }
     }
 
     // Check user-selected station from localStorage
@@ -79,8 +136,9 @@ class BackgroundAudioManager {
       }
     }
 
-    // Absolute fallback default (First station under House / EDM)
-    return RADIO_STATIONS["House / EDM"][0];
+    // Absolute fallback default (First available station in the first category)
+    const firstCategory = Object.values(RADIO_STATIONS)[0];
+    return firstCategory ? firstCategory[0] : { name: "Default Stream", url: "https://dancewave.online/dance.mp3", category: "House" };
   }
 
   getCurrentStation(): RadioStation {
