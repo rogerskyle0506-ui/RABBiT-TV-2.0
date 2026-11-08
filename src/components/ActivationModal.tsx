@@ -160,6 +160,9 @@ export function ActivationModal({
     localStorage.setItem("rabtv_access_status", "permanent");
     localStorage.removeItem("rabtv_trial_start_timestamp");
 
+    // CRITICAL: Stamp session verification so session knows it's authorized
+    sessionStorage.setItem("rabtv_session_verified", "true");
+
     saveAgeLockCode(ageLockCode);
 
     if (options?.admin) {
@@ -241,6 +244,9 @@ export function ActivationModal({
       localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));
       localStorage.setItem("rabtv_trial_used_flag", "true");
       localStorage.removeItem("rabtv_is_admin");
+
+      // CRITICAL: Stamp session verification for trial as well
+      sessionStorage.setItem("rabtv_session_verified", "true");
 
       saveAgeLockCode(ageLock);
       saveCardSize(cardSize);
