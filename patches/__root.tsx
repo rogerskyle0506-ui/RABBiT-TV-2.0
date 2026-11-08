@@ -927,7 +927,7 @@ function RootComponent() {
                       className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-3.5 py-2 rounded-xl border border-white/20 text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden"
                       style={{
                         backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                        backgroundSize: "100% 100%",
+                        backgroundSize: "cover",
                         backgroundRepeat: "no-repeat",
                         backgroundPosition: "center center",
                       }}
@@ -997,7 +997,7 @@ function RootComponent() {
                 className="relative w-[420px] max-w-[95vw] h-[calc(100dvh-60px)] sm:h-[calc(100dvh-65px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-95 overflow-hidden pt-12 pb-12 px-6"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
-                  backgroundSize: "100% 100%",
+                  backgroundSize: "cover",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
                 }}
@@ -1061,7 +1061,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1076,7 +1076,7 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1120,7 +1120,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1135,7 +1135,7 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1165,7 +1165,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1180,7 +1180,7 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1216,7 +1216,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1231,7 +1231,7 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1292,7 +1292,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1307,7 +1307,7 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1368,7 +1368,7 @@ function RootComponent() {
                                     );
 
                                     return (
-                                      <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden w-full">
+                                      <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden w-full relative">
                                         <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition">
                                           <span className="flex items-center gap-2">
                                             📁 {category}
@@ -1382,7 +1382,7 @@ function RootComponent() {
                                           </div>
                                         </summary>
 
-                                        <div className="p-2 space-y-1.5 border-t border-white/10 bg-slate-950/40 w-full">
+                                        <div className="p-2 space-y-1.5 border-t border-white/10 bg-slate-950/40 w-full overflow-hidden">
                                           {stations.map((station) => {
                                             const isSelected = (currentStationUrl === station.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === station.url);
                                             return (
@@ -1423,7 +1423,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1439,7 +1439,7 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1537,7 +1537,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1552,7 +1552,7 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1592,7 +1592,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1607,7 +1607,7 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "cover",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
