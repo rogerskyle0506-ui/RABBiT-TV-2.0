@@ -7,6 +7,7 @@ import { MediaCard } from "@/routes/index";
 import type { MediaItem } from "@/lib/tmdb-scraper";
 import { saveWatchProgress, getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
 import { AppWallpaper } from "@/components/AppWallpaper";
+import { bgAudio } from "@/lib/background-audio";
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
@@ -61,6 +62,10 @@ export function DetailsPage() {
   const [isFullscreenMode, setIsFullscreenMode] = useState(false);
   const playerContainerRef = useRef<HTMLDivElement>(null);
 
+  // Fullscreen Overlay Inactivity Auto-Hide State
+  const [showPlayerControls, setShowPlayerControls] = useState(true);
+  const playerInactivityTimerRef = useRef<number | null>(null);
+
   const seasonRef = useRef<HTMLDivElement>(null);
   const episodeRef = useRef<HTMLDivElement>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
@@ -108,6 +113,41 @@ export function DetailsPage() {
       setIsFullscreenMode(false);
     }
   };
+
+  // Inactivity auto-hide logic for the player overlay (5 seconds)
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const handlePlayerActivity = () => {
+      setShowPlayerControls(true);
+      if (playerInactivityTimerRef.current) {
+        clearTimeout(playerInactivityTimerRef.current);
+      }
+      playerInactivityTimerRef.current = window.setTimeout(() => {
+        setShowPlayerControls(false);
+      }, 5000);
+    };
+
+    handlePlayerActivity(); // Initialize timer
+
+    const container = playerContainerRef.current;
+    if (container) {
+      container.addEventListener("mousemove", handlePlayerActivity);
+      container.addEventListener("mousedown", handlePlayerActivity);
+      container.addEventListener("touchstart", handlePlayerActivity);
+    }
+
+    return () => {
+      if (playerInactivityTimerRef.current) {
+        clearTimeout(playerInactivityTimerRef.current);
+      }
+      if (container) {
+        container.removeEventListener("mousemove", handlePlayerActivity);
+        container.removeEventListener("mousedown", handlePlayerActivity);
+        container.removeEventListener("touchstart", handlePlayerActivity);
+      }
+    };
+  }, [isPlaying]);
 
   useEffect(() => {
     const checkVerticalScroll = () => {
@@ -527,6 +567,10 @@ export function DetailsPage() {
 
   const handlePlay = () => {
     if (!mediaDetails || !mediaId) return;
+    
+    // Stop background audio immediately to prevent audio clash
+    bgAudio.pause();
+
     setIsPlaying(true);
 
     try {
@@ -829,8 +873,12 @@ export function DetailsPage() {
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
               ></iframe>
 
-              {/* Swaedo Controls Overlay / True Fullscreen Trigger Button */}
-              <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+              {/* Swaedo Controls Overlay / True Fullscreen Trigger Button (Auto-hides after 5s of inactivity) */}
+              <div
+                className={`absolute top-3 right-3 z-30 flex items-center gap-2 transition-opacity duration-300 ${
+                  showPlayerControls ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={toggleTrueFullscreen}
