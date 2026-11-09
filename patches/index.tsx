@@ -665,8 +665,8 @@ function Home() {
           "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
         accentText: "text-violet-300",
         borderGlow: "border-violet-500/30",
-        activeGlow: "border border-violet-400 bg-violet-950/40 text-white shadow-sm scale-105",
-        inactiveGlow: "border-white/10 hover:border-violet-400/50 bg-black/50 text-slate-300",
+        activeGlow: "bg-violet-950/50 text-white shadow-sm scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
       },
       red: {
         bg: "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80",
@@ -675,8 +675,8 @@ function Home() {
           "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
         accentText: "text-red-400",
         borderGlow: "border-red-500/30",
-        activeGlow: "border border-red-400 bg-red-950/40 text-white shadow-sm scale-105",
-        inactiveGlow: "border-white/10 hover:border-red-400/50 bg-black/50 text-slate-300",
+        activeGlow: "bg-red-950/50 text-white shadow-sm scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
       },
       midnight: {
         bg: "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80",
@@ -685,8 +685,8 @@ function Home() {
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
         accentText: "text-sky-300",
         borderGlow: "border-sky-500/30",
-        activeGlow: "border border-sky-400 bg-sky-950/40 text-white shadow-sm scale-105",
-        inactiveGlow: "border-white/10 hover:border-sky-400/50 bg-black/50 text-slate-300",
+        activeGlow: "bg-sky-950/50 text-white shadow-sm scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
       },
       emerald: {
         bg: "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80",
@@ -695,8 +695,8 @@ function Home() {
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
         accentText: "text-emerald-300",
         borderGlow: "border-emerald-500/30",
-        activeGlow: "border border-emerald-400 bg-emerald-950/40 text-white shadow-sm scale-105",
-        inactiveGlow: "border-white/10 hover:border-emerald-400/50 bg-black/50 text-slate-300",
+        activeGlow: "bg-emerald-950/50 text-white shadow-sm scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
       },
       amber: {
         bg: "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80",
@@ -705,8 +705,8 @@ function Home() {
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
         accentText: "text-amber-300",
         borderGlow: "border-amber-500/30",
-        activeGlow: "border border-amber-400 bg-amber-950/40 text-white shadow-sm scale-105",
-        inactiveGlow: "border-white/10 hover:border-amber-400/50 bg-black/50 text-slate-300",
+        activeGlow: "bg-amber-950/50 text-white shadow-sm scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
       },
       cyan: {
         bg: "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80",
@@ -715,8 +715,8 @@ function Home() {
           "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
         accentText: "text-cyan-300",
         borderGlow: "border-cyan-500/30",
-        activeGlow: "border border-cyan-400 bg-cyan-950/40 text-white shadow-sm scale-105",
-        inactiveGlow: "border-white/10 hover:border-cyan-400/50 bg-black/50 text-slate-300",
+        activeGlow: "bg-cyan-950/50 text-white shadow-sm scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
       },
     }[appTheme] ?? {
       bg: "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80",
@@ -725,8 +725,8 @@ function Home() {
         "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
       accentText: "text-violet-300",
       borderGlow: "border-violet-500/30",
-      activeGlow: "border border-violet-400 bg-violet-950/40 text-white shadow-sm scale-105",
-      inactiveGlow: "border-white/10 hover:border-violet-400/50 bg-black/50 text-slate-300",
+      activeGlow: "bg-violet-950/50 text-white shadow-sm scale-105",
+      inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
     };
 
   const getPrimaryBgColor = (theme: AppTheme) => {
@@ -775,12 +775,14 @@ function Home() {
         {/* Navigation Tabs Pill Bar Container */}
         <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 flex justify-center">
           <div
-            className="relative max-w-7xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
+            className="relative max-w-7xl w-full overflow-x-auto scrollbar-none rounded-2xl shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
             style={{
               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
               backgroundSize: "117% 380%",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
+              maskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
             }}
           >
             <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
@@ -795,7 +797,7 @@ function Home() {
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                       isActive
                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
-                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                        : "bg-black/40 hover:bg-black/60 text-slate-200"
                     }`}
                   >
                     {tab}
@@ -811,7 +813,7 @@ function Home() {
             <Link
               to="/details"
               search={heroDetailsSearch}
-              className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[320px] sm:h-[360px] flex flex-col group focus:outline-none focus:ring-4 ${themeStyles.borderGlow}`}
+              className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[320px] sm:h-[360px] flex flex-col group focus:outline-none focus:ring-4`}
             >
               <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
                 <img
@@ -823,7 +825,7 @@ function Home() {
               </div>
 
               <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 flex flex-col justify-end z-10">
-                <div className="bg-black/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-white/10 flex flex-col space-y-1 shadow-2xl text-left">
+                <div className="bg-black/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl flex flex-col space-y-1 shadow-2xl text-left">
                   <div
                     className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] ${themeStyles.accentText}`}
                   >
@@ -837,7 +839,7 @@ function Home() {
                       {activeHeroItem.title}
                     </h2>
                     {activeHeroItem.rating && (
-                      <span className="rounded-full border border-yellow-400/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 px-2 py-0.5 uppercase tracking-[0.2em] text-yellow-200 text-[10px] font-semibold shrink-0">
+                      <span className="rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/10 px-2 py-0.5 uppercase tracking-[0.2em] text-yellow-200 text-[10px] font-semibold shrink-0">
                         ⭐ {activeHeroItem.rating}
                       </span>
                     )}
@@ -856,7 +858,7 @@ function Home() {
             </Link>
           ) : (
             <section
-              className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] border ${themeStyles.borderGlow} bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[320px] sm:h-[360px] flex flex-col items-center justify-center`}
+              className={`mb-4 w-full max-w-5xl overflow-hidden rounded-[24px] bg-gradient-to-br ${themeStyles.cardGradient} shadow-2xl relative h-[320px] sm:h-[360px] flex flex-col items-center justify-center`}
             >
               <div className="text-slate-300 text-center px-4">
                 {loading ? `Loading ${activeTab}...` : error ?? "No media found in this section."}
@@ -869,12 +871,14 @@ function Home() {
               {/* Genre Categories Pill Bar Container */}
               <div className="flex justify-center w-full px-3">
                 <div
-                  className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2 flex items-center justify-start sm:justify-center gap-2"
+                  className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl shadow-xl px-4 py-2 flex items-center justify-start sm:justify-center gap-2"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                     backgroundSize: "117% 380%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
+                    maskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
                   }}
                 >
                   <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
@@ -889,7 +893,7 @@ function Home() {
                           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                             isActive
                               ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
-                              : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                              : "bg-black/40 hover:bg-black/60 text-slate-200"
                           }`}
                         >
                           {genre}
@@ -903,12 +907,14 @@ function Home() {
               {/* Provider Categories Logo Pill Bar Container */}
               <div className="flex justify-center w-full px-3">
                 <div
-                  className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-4"
+                  className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-4"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                     backgroundSize: "117% 380%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
+                    maskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
                   }}
                 >
                   <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
@@ -945,12 +951,14 @@ function Home() {
           {activeTab === "My List" && (
             <section className="mb-4 flex justify-center w-full px-3">
               <div
-                className="relative max-w-4xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
+                className="relative max-w-4xl w-full overflow-x-auto scrollbar-none rounded-2xl shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
                 style={{
                   backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                   backgroundSize: "117% 380%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
+                  maskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+                  WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
                 }}
               >
                 <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
@@ -961,7 +969,7 @@ function Home() {
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                       myListSubTab === "all"
                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
-                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                        : "bg-black/40 hover:bg-black/60 text-slate-200"
                     }`}
                   >
                     All Saved ({savedMyList.length + savedFavorites.length + inProgressHistory.length})
@@ -973,7 +981,7 @@ function Home() {
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                       myListSubTab === "in_progress"
                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
-                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                        : "bg-black/40 hover:bg-black/60 text-slate-200"
                     }`}
                   >
                     ⏳ In Progress ({inProgressHistory.length})
@@ -985,7 +993,7 @@ function Home() {
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                       myListSubTab === "mylist"
                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
-                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                        : "bg-black/40 hover:bg-black/60 text-slate-200"
                     }`}
                   >
                     🔖 Watch Later ({savedMyList.length})
@@ -997,7 +1005,7 @@ function Home() {
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                       myListSubTab === "favorites"
                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
-                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                        : "bg-black/40 hover:bg-black/60 text-slate-200"
                     }`}
                   >
                     ⭐ Favorites ({savedFavorites.length})
@@ -1025,7 +1033,7 @@ function Home() {
               </div>
             ) : (
               <div
-                className={`rounded-[20px] bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-6 text-center mx-2`}
+                className={`rounded-[20px] bg-gradient-to-r ${themeStyles.cardGradient} p-6 text-center mx-2`}
               >
                 <p className="text-sm text-slate-300">
                   {activeTab === "My List"
@@ -1086,7 +1094,7 @@ function Home() {
 
           {activeTab !== "My List" && totalPages > 1 && (
             <div
-              className={`mb-6 flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} border ${themeStyles.borderGlow} p-3 mx-2 w-full max-w-md`}
+              className={`mb-6 flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r ${themeStyles.cardGradient} p-3 mx-2 w-full max-w-md`}
             >
               <button
                 type="button"
