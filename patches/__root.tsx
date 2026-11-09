@@ -913,7 +913,7 @@ function RootComponent() {
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                   style={{
                     backgroundImage: `url(${RABBIT_MENU_STRIP})`,
-                    backgroundSize: "100% 100%",
+                    backgroundSize: "115% 100%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                   }}
@@ -953,7 +953,7 @@ function RootComponent() {
                     className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border-0"
                     style={{
                       backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                      backgroundSize: "cover",
+                      backgroundSize: "115% 100%",
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "center center",
                       WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.1) 100%)",
@@ -1054,8 +1054,9 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "globalFeed" ? null : "globalFeed")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
+                          className="w-full flex items-center justify-between px-8 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border -mx-2"
                           style={{
+                            width: "calc(100% + 1rem)",
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                           }}
@@ -1064,8 +1065,9 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "115% 100%",
                               backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1075,7 +1077,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "globalFeed" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1086,7 +1088,7 @@ function RootComponent() {
                               <p className="text-[11px] text-slate-300 font-semibold">Select Region Feed:</p>
                               <div className="relative w-full box-border">
                                 <div
-                                  className={`flex h-10 w-full items-center justify-between rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} gap-1 relative pointer-events-auto box-border`}
+                                  className={`flex h-10 w-full items-center justify-between rounded-xl border-0 px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} gap-1 relative pointer-events-auto box-border`}
                                 >
                                   <span className="truncate">
                                     🌐 {selectedGlobalFeed === "All (Default)" ? "Global" : selectedGlobalFeed}
@@ -1115,8 +1117,9 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "history" ? null : "history")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
+                          className="w-full flex items-center justify-between px-8 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border -mx-2"
                           style={{
+                            width: "calc(100% + 1rem)",
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                           }}
@@ -1125,8 +1128,9 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "115% 100%",
                               backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1136,7 +1140,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "history" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1148,7 +1152,7 @@ function RootComponent() {
                               <Link
                                 to="/watch-history"
                                 onClick={handleCloseAll}
-                                className={`flex h-10 w-full items-center justify-center rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} box-border`}
+                                className={`flex h-10 w-full items-center justify-center rounded-xl border-0 px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} box-border`}
                               >
                                 🕒 Open Watch History
                               </Link>
@@ -1162,8 +1166,9 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "theme" ? null : "theme")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
+                          className="w-full flex items-center justify-between px-8 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border -mx-2"
                           style={{
+                            width: "calc(100% + 1rem)",
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                           }}
@@ -1172,8 +1177,9 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "115% 100%",
                               backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1183,7 +1189,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "theme" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1196,7 +1202,7 @@ function RootComponent() {
                                   key={t.id}
                                   type="button"
                                   onClick={() => handleThemeChange(t.id)}
-                                  className={`rounded-lg p-2.5 text-xs font-bold transition text-left w-full box-border ${
+                                  className={`rounded-lg p-2.5 text-xs font-bold transition text-left w-full box-border border-0 ${
                                     appTheme === t.id
                                       ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
                                       : `${getSubtlePillBg(appTheme)}`
@@ -1215,8 +1221,9 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "scale" ? null : "scale")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
+                          className="w-full flex items-center justify-between px-8 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border -mx-2"
                           style={{
+                            width: "calc(100% + 1rem)",
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                           }}
@@ -1225,8 +1232,9 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "115% 100%",
                               backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1236,7 +1244,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "scale" && (
                           <div
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1252,7 +1260,7 @@ function RootComponent() {
                                       key={size}
                                       type="button"
                                       onClick={() => handleSizeChange(size)}
-                                      className={`rounded-lg py-2 text-xs font-bold capitalize transition w-full box-border ${
+                                      className={`rounded-lg py-2 text-xs font-bold capitalize transition w-full box-border border-0 ${
                                         cardSize === size
                                           ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                           : `${getSubtlePillBg(appTheme)}`
@@ -1272,7 +1280,7 @@ function RootComponent() {
                                       key={scale}
                                       type="button"
                                       onClick={() => handleHistoryOverscaleChange(scale)}
-                                      className={`rounded-lg py-1.5 text-xs font-bold capitalize transition w-full box-border ${
+                                      className={`rounded-lg py-1.5 text-xs font-bold capitalize transition w-full box-border border-0 ${
                                         historyOverscale === scale
                                           ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                           : `${getSubtlePillBg(appTheme)}`
@@ -1293,8 +1301,9 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "audio" ? null : "audio")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
+                          className="w-full flex items-center justify-between px-8 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border -mx-2"
                           style={{
+                            width: "calc(100% + 1rem)",
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                           }}
@@ -1303,8 +1312,9 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "115% 100%",
                               backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1314,21 +1324,21 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "audio" && (
                           <div
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
+                            className="w-full pt-3 pb-4 px-3 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-full box-border">
+                            <div className="relative z-10 space-y-2.5 w-full box-border">
                               <div className="w-full box-border">
-                                <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">Playback Controls:</p>
+                                <p className="text-[11px] text-slate-300 mb-1 font-semibold">Playback Controls:</p>
                                 <div className="grid grid-cols-2 gap-2 w-full box-border">
                                   <button
                                     type="button"
                                     onClick={() => handleBackgroundAudioToggle("playing")}
-                                    className={`rounded-lg py-2 text-xs font-bold transition w-full box-border ${
+                                    className={`rounded-lg py-1.5 text-xs font-bold transition w-full box-border border-0 ${
                                       bgMusicState === "playing"
                                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                         : `${getSubtlePillBg(appTheme)}`
@@ -1339,7 +1349,7 @@ function RootComponent() {
                                   <button
                                     type="button"
                                     onClick={() => handleBackgroundAudioToggle("muted")}
-                                    className={`rounded-lg py-2 text-xs font-bold transition w-full box-border ${
+                                    className={`rounded-lg py-1.5 text-xs font-bold transition w-full box-border border-0 ${
                                       bgMusicState === "muted"
                                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                         : `${getSubtlePillBg(appTheme)}`
@@ -1351,7 +1361,7 @@ function RootComponent() {
                               </div>
 
                               {/* VOLUME SLIDER CONTROL */}
-                              <div className="pt-2 border-t border-white/10 w-full space-y-1.5 box-border">
+                              <div className="pt-1.5 border-t border-white/10 w-full space-y-1 box-border">
                                 <div className="flex items-center justify-between">
                                   <p className="text-[11px] text-slate-300 font-semibold">Music Volume:</p>
                                   <span className="text-[11px] font-bold text-amber-300">{Math.round(bgMusicVolume * 100)}%</span>
@@ -1367,18 +1377,18 @@ function RootComponent() {
                                 />
                               </div>
 
-                              <div className="pt-2 border-t border-white/10 w-full box-border">
-                                <p className="text-[11px] text-slate-300 mb-2 font-semibold">Select Channel / Stream by Genre:</p>
+                              <div className="pt-1.5 border-t border-white/10 w-full box-border">
+                                <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">Select Channel / Stream by Genre:</p>
                                 
-                                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 w-full box-border">
+                                <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1 w-full box-border scrollbar-none">
                                   {Object.entries(RADIO_STATIONS).map(([category, stations]) => {
                                     const hasActiveStation = stations.some(
                                       s => (currentStationUrl === s.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === s.url)
                                     );
 
                                     return (
-                                      <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden w-full relative box-border">
-                                        <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition box-border">
+                                      <details key={category} className="group rounded-lg border-0 bg-black/30 overflow-hidden w-full relative box-border">
+                                        <summary className="flex items-center justify-between px-3 py-1.5 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition box-border">
                                           <span className="flex items-center gap-2 truncate pr-2">
                                             📁 {category}
                                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 shrink-0">
@@ -1391,7 +1401,7 @@ function RootComponent() {
                                           </div>
                                         </summary>
 
-                                        <div className="p-2 space-y-1.5 border-t border-white/10 bg-slate-950/40 w-full overflow-hidden box-border">
+                                        <div className="p-1.5 space-y-1 border-t border-white/10 bg-slate-950/40 w-full overflow-hidden box-border">
                                           {stations.map((station) => {
                                             const isSelected = (currentStationUrl === station.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === station.url);
                                             return (
@@ -1399,7 +1409,7 @@ function RootComponent() {
                                                 key={station.url}
                                                 type="button"
                                                 onClick={() => handleStationSelect(station.url)}
-                                                className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-between box-border overflow-hidden ${
+                                                className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-between box-border overflow-hidden border-0 ${
                                                   isSelected
                                                     ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                                     : `${getSubtlePillBg(appTheme)}`
@@ -1426,8 +1436,9 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "pin" ? null : "pin")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
+                          className="w-full flex items-center justify-between px-8 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border -mx-2"
                           style={{
+                            width: "calc(100% + 1rem)",
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                           }}
@@ -1436,8 +1447,9 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "115% 100%",
                               backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1448,7 +1460,7 @@ function RootComponent() {
                         {activeSidebarSection === "pin" && (
                           <form
                             onSubmit={handleUnifiedProfileUpdate}
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1522,7 +1534,7 @@ function RootComponent() {
 
                               <button
                                 type="submit"
-                                className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition box-border`}
+                                className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition box-border border-0`}
                               >
                                 Save Profile & PIN Updates
                               </button>
@@ -1542,8 +1554,9 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "backup" ? null : "backup")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
+                          className="w-full flex items-center justify-between px-8 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border -mx-2"
                           style={{
+                            width: "calc(100% + 1rem)",
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                           }}
@@ -1552,8 +1565,9 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "115% 100%",
                               backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1563,7 +1577,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "backup" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1575,11 +1589,11 @@ function RootComponent() {
                                 <button
                                   type="button"
                                   onClick={handleSaveBackup}
-                                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)} box-border`}
+                                  className={`flex-1 rounded-lg border-0 px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)} box-border`}
                                 >
                                   💾 Export Backup
                                 </button>
-                                <label className={`flex-1 text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)} box-border`}>
+                                <label className={`flex-1 text-center cursor-pointer rounded-lg border-0 px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)} box-border`}>
                                   🔄 Restore
                                   <input type="file" accept=".json" onChange={handleRestoreBackup} className="hidden" />
                                 </label>
@@ -1599,8 +1613,9 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "accessibility" ? null : "accessibility")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
+                          className="w-full flex items-center justify-between px-8 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border -mx-2"
                           style={{
+                            width: "calc(100% + 1rem)",
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                           }}
@@ -1609,8 +1624,9 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "115% 100%",
                               backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1620,7 +1636,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "accessibility" && (
                           <div
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1636,7 +1652,7 @@ function RootComponent() {
                                 <button
                                   type="button"
                                   onClick={() => handleMouseToggle(!helpfulMouse)}
-                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors border-0 ${
                                     helpfulMouse ? `${getPrimaryBgColor(appTheme).split(" ")[0]}` : "bg-slate-700"
                                   }`}
                                 >
@@ -1651,7 +1667,7 @@ function RootComponent() {
                                 <button
                                   type="button"
                                   onClick={() => handleLargeButtonsToggle(!largeButtons)}
-                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors border-0 ${
                                     largeButtons ? `${getPrimaryBgColor(appTheme).split(" ")[0]}` : "bg-slate-700"
                                   }`}
                                 >
@@ -1682,14 +1698,14 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => setShowBugModal(true)}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md box-border`}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md box-border border-0`}
                       >
                         🐞 Report a Bug / Issue
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowBugFeedModal(true)}
-                        className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2 box-border"
+                        className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border-0 flex items-center justify-center gap-2 box-border"
                       >
                         📋 View Bug Reports Feed
                       </button>
@@ -1702,7 +1718,7 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => handleUpdateChannelChange("stable")}
-                          className={`py-2 rounded-lg text-xs font-bold transition w-full box-border ${
+                          className={`py-2 rounded-lg text-xs font-bold transition w-full box-border border-0 ${
                             updateChannel === "stable" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                           }`}
                         >
@@ -1711,7 +1727,7 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => handleUpdateChannelChange("nightly")}
-                          className={`py-2 rounded-lg text-xs font-bold transition w-full box-border ${
+                          className={`py-2 rounded-lg text-xs font-bold transition w-full box-border border-0 ${
                             updateChannel === "nightly" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                           }`}
                         >
@@ -1721,7 +1737,7 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => void checkForAppUpdates(false)}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md box-border`}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md box-border border-0`}
                       >
                         🔍 Check for Updates Now
                       </button>
@@ -1731,12 +1747,12 @@ function RootComponent() {
                     <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full box-border">
                       <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Status</h4>
                       {isAdmin ? (
-                        <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-2.5 rounded-lg box-border">
+                        <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border-0 p-2.5 rounded-lg box-border">
                           🔐 Admin access active.
                         </p>
                       ) : isTrialActive ? (
                         <div className="space-y-2 w-full box-border">
-                          <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg leading-relaxed box-border">
+                          <p className="text-[11px] text-amber-300 bg-amber-500/10 border-0 p-2.5 rounded-lg leading-relaxed box-border">
                             Trial: <strong>{trialDaysRemaining} {trialDaysRemaining === 1 ? "day" : "days"} remaining</strong>.
                           </p>
                           <form onSubmit={handleUpgradeFromProfile} className="space-y-1.5 w-full box-border">
@@ -1749,14 +1765,14 @@ function RootComponent() {
                             />
                             <button
                               type="submit"
-                              className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition box-border`}
+                              className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition box-border border-0`}
                             >
                               Upgrade to Full Unlock
                             </button>
                           </form>
                         </div>
                       ) : (
-                        <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg box-border">
+                        <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border-0 p-2.5 rounded-lg box-border">
                           ✅ Full Lifetime Access Unlocked.
                         </p>
                       )}
