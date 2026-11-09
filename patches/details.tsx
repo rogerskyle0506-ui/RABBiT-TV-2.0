@@ -120,7 +120,7 @@ export function DetailsPage() {
     }
   };
 
-  // Inactivity auto-hide logic for the player overlay (6 seconds), listening to container & window d-pad / mouse activity
+  // Inactivity auto-hide logic for the player overlay (6 seconds), listening to container & window d-pad / mouse / touch activity
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -142,8 +142,13 @@ export function DetailsPage() {
       container.addEventListener("mousedown", handlePlayerActivity);
       container.addEventListener("touchstart", handlePlayerActivity);
       container.addEventListener("click", handlePlayerActivity);
+      container.addEventListener("pointerdown", handlePlayerActivity);
     }
     window.addEventListener("mousemove", handlePlayerActivity);
+    window.addEventListener("mousedown", handlePlayerActivity);
+    window.addEventListener("touchstart", handlePlayerActivity);
+    window.addEventListener("click", handlePlayerActivity);
+    window.addEventListener("pointerdown", handlePlayerActivity);
     window.addEventListener("keydown", handlePlayerActivity);
 
     return () => {
@@ -155,8 +160,13 @@ export function DetailsPage() {
         container.removeEventListener("mousedown", handlePlayerActivity);
         container.removeEventListener("touchstart", handlePlayerActivity);
         container.removeEventListener("click", handlePlayerActivity);
+        container.removeEventListener("pointerdown", handlePlayerActivity);
       }
       window.removeEventListener("mousemove", handlePlayerActivity);
+      window.removeEventListener("mousedown", handlePlayerActivity);
+      window.removeEventListener("touchstart", handlePlayerActivity);
+      window.removeEventListener("click", handlePlayerActivity);
+      window.removeEventListener("pointerdown", handlePlayerActivity);
       window.removeEventListener("keydown", handlePlayerActivity);
     };
   }, [isPlaying]);
@@ -926,12 +936,12 @@ export function DetailsPage() {
                     e.stopPropagation();
                     handlePosterOverlayClick();
                   }}
-                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 cursor-pointer group transition-all"
+                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/30 cursor-pointer group transition-all"
                 >
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <img src={poster} alt={title} className="w-full h-full object-cover filter brightness-75 scale-105" />
+                    <img src={poster} alt={title} className="w-full h-full object-cover filter brightness-100 scale-105" />
                   </div>
-                  <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+                  <div className="absolute inset-0 bg-black/20 pointer-events-none" />
 
                   <div className="relative z-10 flex flex-col items-center gap-4 p-6 text-center">
                     <button
@@ -940,10 +950,16 @@ export function DetailsPage() {
                         e.stopPropagation();
                         handleTogglePlayPauseOverlay(e);
                       }}
-                      className={`flex items-center justify-center w-14 h-14 rounded-full ${activeTheme.bg} text-white shadow-2xl ${activeTheme.shadow} group-hover:scale-110 transition-transform border-2 border-white`}
+                      className={`flex items-center justify-center w-16 h-16 rounded-full bg-black/10 text-white shadow-lg group-hover:scale-110 transition-transform border border-white/20`}
                       title={isContentPlaying ? "Pause" : "Play"}
                     >
-                      <span className="text-xl font-black">{isContentPlaying ? "⏸" : "▶"}</span>
+                      <svg className={`w-8 h-8 ${activeTheme.text}`} fill="currentColor" viewBox="0 0 24 24">
+                        {isContentPlaying ? (
+                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        ) : (
+                          <path d="M8 5v14l11-7z"/>
+                        )}
+                      </svg>
                     </button>
                     <div className="flex flex-col items-center gap-1">
                       <span className="text-lg font-black text-white tracking-wide drop-shadow-md">
