@@ -923,14 +923,14 @@ export function DetailsPage() {
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
               ></iframe>
 
-              {/* Movie Poster Overlay covering the iframe when NOT in fullscreen (PERFECTLY CENTERED on all screen sizes & orientations) */}
+              {/* Movie Poster Overlay covering the iframe when NOT in fullscreen (Pushed slightly below center in portrait mode via pt-8 sm:pt-0) */}
               {isPlaying && !isFullscreenMode && (
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
                     handlePosterOverlayClick();
                   }}
-                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/30 cursor-pointer group transition-all"
+                  className="absolute inset-0 z-30 flex flex-col items-center justify-center pt-8 sm:pt-0 bg-black/30 cursor-pointer group transition-all"
                 >
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <img src={poster} alt={title} className="w-full h-full object-cover filter brightness-100 scale-105" />
