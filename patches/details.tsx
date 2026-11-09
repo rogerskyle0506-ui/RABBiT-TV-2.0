@@ -892,20 +892,9 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* SWAEDO FULLSCREEN WRAPPER CONTAINER (Hardened with Click Capture & Strict Sandbox) */}
+            {/* SWAEDO FULLSCREEN WRAPPER CONTAINER */}
             <div
               ref={playerContainerRef}
-              onClickCapture={(e) => {
-                const target = e.target as HTMLElement;
-                if (target.tagName === "A" || target.closest("a")) {
-                  const anchor = target.tagName === "A" ? target : target.closest("a");
-                  const href = anchor?.getAttribute("href") || "";
-                  if (href && !href.startsWith("/") && !href.includes(window.location.hostname) && !href.includes("vidsrc")) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                }
-              }}
               onClick={() => {
                 setShowPlayerControls(true);
                 if (playerInactivityTimerRef.current) clearTimeout(playerInactivityTimerRef.current);
@@ -929,7 +918,6 @@ export function DetailsPage() {
               <iframe
                 key={`stable-player-${mediaId}-${season}-${episode}`}
                 src={embedUrl}
-                sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"
                 className="h-full w-full border-0"
                 allowFullScreen
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
