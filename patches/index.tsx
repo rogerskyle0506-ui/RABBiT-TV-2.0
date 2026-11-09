@@ -665,8 +665,8 @@ function Home() {
           "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
         accentText: "text-violet-300",
         borderGlow: "border-violet-500/30",
-        activeGlow: "ring-4 ring-violet-400 shadow-[0_0_15px_rgba(167,139,250,0.7)] scale-105 border-violet-400",
-        inactiveGlow: "hover:shadow-[0_0_10px_rgba(167,139,250,0.4)] border-white/10 hover:border-violet-400/50",
+        activeGlow: "border border-violet-400 bg-violet-950/40 text-white shadow-sm scale-105",
+        inactiveGlow: "border-white/10 hover:border-violet-400/50 bg-black/50 text-slate-300",
       },
       red: {
         bg: "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80",
@@ -675,8 +675,8 @@ function Home() {
           "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
         accentText: "text-red-400",
         borderGlow: "border-red-500/30",
-        activeGlow: "ring-4 ring-red-400 shadow-[0_0_15px_rgba(248,113,113,0.7)] scale-105 border-red-400",
-        inactiveGlow: "hover:shadow-[0_0_10px_rgba(248,113,113,0.4)] border-white/10 hover:border-red-400/50",
+        activeGlow: "border border-red-400 bg-red-950/40 text-white shadow-sm scale-105",
+        inactiveGlow: "border-white/10 hover:border-red-400/50 bg-black/50 text-slate-300",
       },
       midnight: {
         bg: "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80",
@@ -685,8 +685,8 @@ function Home() {
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
         accentText: "text-sky-300",
         borderGlow: "border-sky-500/30",
-        activeGlow: "ring-4 ring-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.7)] scale-105 border-sky-400",
-        inactiveGlow: "hover:shadow-[0_0_10px_rgba(56,189,248,0.4)] border-white/10 hover:border-sky-400/50",
+        activeGlow: "border border-sky-400 bg-sky-950/40 text-white shadow-sm scale-105",
+        inactiveGlow: "border-white/10 hover:border-sky-400/50 bg-black/50 text-slate-300",
       },
       emerald: {
         bg: "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80",
@@ -695,8 +695,8 @@ function Home() {
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
         accentText: "text-emerald-300",
         borderGlow: "border-emerald-500/30",
-        activeGlow: "ring-4 ring-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.7)] scale-105 border-emerald-400",
-        inactiveGlow: "hover:shadow-[0_0_10px_rgba(52,211,153,0.4)] border-white/10 hover:border-emerald-400/50",
+        activeGlow: "border border-emerald-400 bg-emerald-950/40 text-white shadow-sm scale-105",
+        inactiveGlow: "border-white/10 hover:border-emerald-400/50 bg-black/50 text-slate-300",
       },
       amber: {
         bg: "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80",
@@ -705,8 +705,8 @@ function Home() {
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
         accentText: "text-amber-300",
         borderGlow: "border-amber-500/30",
-        activeGlow: "ring-4 ring-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.7)] scale-105 border-amber-400",
-        inactiveGlow: "hover:shadow-[0_0_10px_rgba(251,191,36,0.4)] border-white/10 hover:border-amber-400/50",
+        activeGlow: "border border-amber-400 bg-amber-950/40 text-white shadow-sm scale-105",
+        inactiveGlow: "border-white/10 hover:border-amber-400/50 bg-black/50 text-slate-300",
       },
       cyan: {
         bg: "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80",
@@ -715,8 +715,8 @@ function Home() {
           "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
         accentText: "text-cyan-300",
         borderGlow: "border-cyan-500/30",
-        activeGlow: "ring-4 ring-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.7)] scale-105 border-cyan-400",
-        inactiveGlow: "hover:shadow-[0_0_10px_rgba(34,211,238,0.4)] border-white/10 hover:border-cyan-400/50",
+        activeGlow: "border border-cyan-400 bg-cyan-950/40 text-white shadow-sm scale-105",
+        inactiveGlow: "border-white/10 hover:border-cyan-400/50 bg-black/50 text-slate-300",
       },
     }[appTheme] ?? {
       bg: "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80",
@@ -725,8 +725,8 @@ function Home() {
         "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
       accentText: "text-violet-300",
       borderGlow: "border-violet-500/30",
-      activeGlow: "ring-4 ring-violet-400 shadow-[0_0_15px_rgba(167,139,250,0.7)] scale-105 border-violet-400",
-      inactiveGlow: "hover:shadow-[0_0_10px_rgba(167,139,250,0.4)] border-white/10 hover:border-violet-400/50",
+      activeGlow: "border border-violet-400 bg-violet-950/40 text-white shadow-sm scale-105",
+      inactiveGlow: "border-white/10 hover:border-violet-400/50 bg-black/50 text-slate-300",
     };
 
   const getPrimaryBgColor = (theme: AppTheme) => {
@@ -778,7 +778,7 @@ function Home() {
             className="relative max-w-7xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
             style={{
               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-              backgroundSize: "117% 220%",
+              backgroundSize: "117% 320%",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
             }}
@@ -872,7 +872,7 @@ function Home() {
                   className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2 flex items-center justify-start sm:justify-center gap-2"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 220%",
+                    backgroundSize: "117% 320%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                   }}
@@ -906,7 +906,7 @@ function Home() {
                   className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-4"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 250%",
+                    backgroundSize: "117% 320%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                   }}
@@ -920,7 +920,7 @@ function Home() {
                           key={prov.name}
                           type="button"
                           onClick={() => handleProviderSelect(prov.name)}
-                          className={`relative group rounded-xl p-2 transition-all cursor-pointer shrink-0 bg-black/50 border ${
+                          className={`relative group rounded-xl p-2 transition-all cursor-pointer shrink-0 ${
                             isActive ? themeStyles.activeGlow : themeStyles.inactiveGlow
                           }`}
                           title={prov.name}
@@ -928,7 +928,7 @@ function Home() {
                           <img
                             src={prov.logo}
                             alt={prov.name}
-                            className="h-7 w-auto object-contain transition-transform group-hover:scale-105"
+                            className="h-7 w-auto object-contain transition-transform group-hover:scale-105 mix-blend-screen"
                           />
                         </button>
                       );
@@ -945,7 +945,7 @@ function Home() {
                 className="relative max-w-4xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
                 style={{
                   backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "117% 250%",
+                  backgroundSize: "117% 320%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
                 }}
