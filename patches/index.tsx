@@ -41,7 +41,7 @@ const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY as string;
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 
-// Background asset matching the console sidebar style
+// Background asset matching the console pill bar and side menu style
 const RABBIT_HEADER_PILL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
 const RABBIT_PANEL       = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
 const RABBIT_PANEL_ALT   = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
@@ -758,10 +758,19 @@ function Home() {
     <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 relative`}>
       <AppWallpaper />
       <div className="relative z-10">
-        {/* Navigation Pill Bar - Seamless transparent container matching sidebar style */}
-        <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 bg-transparent backdrop-blur-md">
-          <div className="mx-auto flex max-w-7xl items-center justify-center text-center overflow-x-auto scrollbar-none">
-            <div className="flex items-center gap-2 px-2">
+        {/* Navigation Tabs Pill Bar Container */}
+        <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 flex justify-center">
+          <div
+            className="relative max-w-7xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
+            style={{
+              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+              backgroundSize: "cover",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center center",
+            }}
+          >
+            <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
+            <div className="relative z-10 flex items-center gap-2 min-w-max mx-auto">
               {navTabs.map((tab) => {
                 const isActive = activeTab === tab;
                 return (
@@ -769,17 +778,13 @@ function Home() {
                     key={tab}
                     type="button"
                     onClick={() => handleTabSelect(tab)}
-                    className={`relative px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group overflow-hidden border-0 shrink-0 ${
-                      isActive ? `${getPrimaryBgColor(appTheme)} scale-105` : "hover:brightness-125"
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                      isActive
+                        ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
                     }`}
-                    style={{
-                      backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                      backgroundSize: "100% 100%",
-                      backgroundRepeat: "no-repeat",
-                    }}
                   >
-                    <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
-                    <span className="relative z-10">{tab}</span>
+                    {tab}
                   </button>
                 );
               })}
@@ -847,127 +852,138 @@ function Home() {
 
           {activeTab !== "My List" && (
             <section className="mb-4 space-y-2.5 flex flex-col items-center justify-center text-center w-full">
-              {/* Genre Categories Pill Bar */}
-              <div className="flex justify-center w-full overflow-x-auto scrollbar-none px-2 py-1">
-                <div className="flex items-center gap-2">
-                  {genreCategories.map((genre) => {
-                    const isActive = selectedGenre === genre;
-                    return (
-                      <button
-                        key={genre}
-                        type="button"
-                        onClick={() => setSelectedGenre(genre)}
-                        className={`relative px-3.5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group overflow-hidden border-0 shrink-0 ${
-                          isActive ? `${getPrimaryBgColor(appTheme)} scale-105` : "hover:brightness-125"
-                        }`}
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
-                        <span className="relative z-10">{genre}</span>
-                      </button>
-                    );
-                  })}
+              {/* Genre Categories Pill Bar Container */}
+              <div className="flex justify-center w-full px-3">
+                <div
+                  className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2 flex items-center justify-start sm:justify-center gap-2"
+                  style={{
+                    backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                    backgroundSize: "cover",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center center",
+                  }}
+                >
+                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
+                  <div className="relative z-10 flex items-center gap-2 min-w-max mx-auto">
+                    {genreCategories.map((genre) => {
+                      const isActive = selectedGenre === genre;
+                      return (
+                        <button
+                          key={genre}
+                          type="button"
+                          onClick={() => setSelectedGenre(genre)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                            isActive
+                              ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                              : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                          }`}
+                        >
+                          {genre}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {/* Provider Categories Pill Bar */}
-              <div className="flex justify-center w-full overflow-x-auto scrollbar-none px-2 py-1">
-                <div className="flex items-center gap-2">
-                  {providerCategories.map((prov) => {
-                    const isActive = providerFilter === prov;
-                    return (
-                      <button
-                        key={prov}
-                        type="button"
-                        onClick={() => handleProviderSelect(prov)}
-                        className={`relative px-3.5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group overflow-hidden border-0 shrink-0 ${
-                          isActive ? `${getPrimaryBgColor(appTheme)} scale-105` : "hover:brightness-125"
-                        }`}
-                        style={{
-                          backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
-                        <span className="relative z-10">🌐 {prov}</span>
-                      </button>
-                    );
-                  })}
+              {/* Provider Categories Pill Bar Container */}
+              <div className="flex justify-center w-full px-3">
+                <div
+                  className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2 flex items-center justify-start sm:justify-center gap-2"
+                  style={{
+                    backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                    backgroundSize: "cover",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center center",
+                  }}
+                >
+                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
+                  <div className="relative z-10 flex items-center gap-2 min-w-max mx-auto">
+                    {providerCategories.map((prov) => {
+                      const isActive = providerFilter === prov;
+                      return (
+                        <button
+                          key={prov}
+                          type="button"
+                          onClick={() => handleProviderSelect(prov)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                            isActive
+                              ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                              : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                          }`}
+                        >
+                          🌐 {prov}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </section>
           )}
 
           {activeTab === "My List" && (
-            <section className="mb-4 flex flex-wrap items-center justify-center gap-2 border-b border-white/10 pb-3 px-2 text-center w-full max-w-4xl mx-auto bg-transparent">
-              <button
-                type="button"
-                onClick={() => setMyListSubTab("all")}
-                className={`relative px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group overflow-hidden border-0 shrink-0 ${
-                  myListSubTab === "all" ? `${getPrimaryBgColor(appTheme)} scale-105` : "hover:brightness-125"
-                }`}
+            <section className="mb-4 flex justify-center w-full px-3">
+              <div
+                className="relative max-w-4xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
                 style={{
                   backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "100% 100%",
+                  backgroundSize: "cover",
                   backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center center",
                 }}
               >
-                <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
-                <span className="relative z-10">All Saved ({savedMyList.length + savedFavorites.length + inProgressHistory.length})</span>
-              </button>
+                <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
+                <div className="relative z-10 flex items-center gap-2 min-w-max mx-auto">
+                  <button
+                    type="button"
+                    onClick={() => setMyListSubTab("all")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                      myListSubTab === "all"
+                        ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                    }`}
+                  >
+                    All Saved ({savedMyList.length + savedFavorites.length + inProgressHistory.length})
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setMyListSubTab("in_progress")}
-                className={`relative px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group overflow-hidden border-0 shrink-0 ${
-                  myListSubTab === "in_progress" ? `${getPrimaryBgColor(appTheme)} scale-105` : "hover:brightness-125"
-                }`}
-                style={{
-                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "100% 100%",
-                  backgroundRepeat: "no-repeat",
-                }}
-              >
-                <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
-                <span className="relative z-10">⏳ In Progress ({inProgressHistory.length})</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setMyListSubTab("in_progress")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                      myListSubTab === "in_progress"
+                        ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                    }`}
+                  >
+                    ⏳ In Progress ({inProgressHistory.length})
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setMyListSubTab("mylist")}
-                className={`relative px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group overflow-hidden border-0 shrink-0 ${
-                  myListSubTab === "mylist" ? `${getPrimaryBgColor(appTheme)} scale-105` : "hover:brightness-125"
-                }`}
-                style={{
-                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "100% 100%",
-                  backgroundRepeat: "no-repeat",
-                }}
-              >
-                <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
-                <span className="relative z-10">🔖 Watch Later ({savedMyList.length})</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setMyListSubTab("mylist")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                      myListSubTab === "mylist"
+                        ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                    }`}
+                  >
+                    🔖 Watch Later ({savedMyList.length})
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setMyListSubTab("favorites")}
-                className={`relative px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group overflow-hidden border-0 shrink-0 ${
-                  myListSubTab === "favorites" ? `${getPrimaryBgColor(appTheme)} scale-105` : "hover:brightness-125"
-                }`}
-                style={{
-                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "100% 100%",
-                  backgroundRepeat: "no-repeat",
-                }}
-              >
-                <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
-                <span className="relative z-10">⭐ Favorites ({savedFavorites.length})</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setMyListSubTab("favorites")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                      myListSubTab === "favorites"
+                        ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                        : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                    }`}
+                  >
+                    ⭐ Favorites ({savedFavorites.length})
+                  </button>
+                </div>
+              </div>
             </section>
           )}
 
