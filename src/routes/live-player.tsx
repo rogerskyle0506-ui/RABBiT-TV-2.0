@@ -1,3 +1,4 @@
+// src/routes/live-player.tsx
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { AppTheme, getSavedTheme } from '@/lib/settings';
@@ -5,6 +6,7 @@ import { fetchLiveCategories, fetchChannelsByCategory, LiveChannel } from '@/lib
 import { logLiveChannelWatch } from '@/lib/watch-history';
 import { getChannelDescription } from '@/lib/channel-descriptions';
 import { AppWallpaper } from '@/components/AppWallpaper';
+import { bgAudio } from '@/lib/background-audio';
 
 export const Route = createFileRoute('/live-player')({
   component: LivePlayerComponent,
@@ -49,6 +51,11 @@ function LivePlayerComponent() {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Halt background radio audio to prevent clashing audio and lag
+    bgAudio.pause();
+  }, []);
 
   useEffect(() => {
     const handler = () => setAppTheme(getSavedTheme());
