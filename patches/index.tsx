@@ -30,9 +30,9 @@ const genreCategories = [
 ];
 
 const providerCategories = [
-  { name: "All (Default)", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/AllDefault.webp" },
-  { name: "Netflix", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/netflix-vector-flat-logo-735811696261671nhzlvgcmyf.png" },
-  { name: "Prime", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Prime.webp" },
+  { name: "All (Default)", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/AllDefault.jpg" },
+  { name: "Netflix", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/netflix-.png" },
+  { name: "Prime", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Prime.png" },
   { name: "Disney+", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/disney-plus-logo-white.png" },
 ];
 
@@ -778,7 +778,7 @@ function Home() {
             className="relative max-w-7xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
             style={{
               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-              backgroundSize: "117% 320%",
+              backgroundSize: "117% 380%",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
             }}
@@ -872,7 +872,7 @@ function Home() {
                   className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2 flex items-center justify-start sm:justify-center gap-2"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 320%",
+                    backgroundSize: "117% 380%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                   }}
@@ -906,7 +906,7 @@ function Home() {
                   className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-4"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 320%",
+                    backgroundSize: "117% 380%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                   }}
@@ -915,12 +915,13 @@ function Home() {
                   <div className="relative z-10 flex items-center gap-4 min-w-max mx-auto">
                     {providerCategories.map((prov) => {
                       const isActive = providerFilter === prov.name;
+                      const isDefault = prov.name === "All (Default)";
                       return (
                         <button
                           key={prov.name}
                           type="button"
                           onClick={() => handleProviderSelect(prov.name)}
-                          className={`relative group rounded-xl p-2 transition-all cursor-pointer shrink-0 ${
+                          className={`relative group rounded-xl p-2 transition-all cursor-pointer shrink-0 flex items-center justify-center ${
                             isActive ? themeStyles.activeGlow : themeStyles.inactiveGlow
                           }`}
                           title={prov.name}
@@ -928,7 +929,9 @@ function Home() {
                           <img
                             src={prov.logo}
                             alt={prov.name}
-                            className="h-7 w-auto object-contain transition-transform group-hover:scale-105 mix-blend-screen"
+                            className={`h-7 transition-transform group-hover:scale-105 ${
+                              isDefault ? "w-12 sm:w-14 object-contain" : "w-auto object-contain"
+                            }`}
                           />
                         </button>
                       );
@@ -945,7 +948,7 @@ function Home() {
                 className="relative max-w-4xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
                 style={{
                   backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "117% 320%",
+                  backgroundSize: "117% 380%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
                 }}
