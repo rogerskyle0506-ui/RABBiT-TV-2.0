@@ -66,6 +66,12 @@ export function DetailsPage() {
   const [showPlayerControls, setShowPlayerControls] = useState(true);
   const playerInactivityTimerRef = useRef<number | null>(null);
 
+  // Poster Overlay Play State
+  const [isContentPlaying, setIsContentPlaying] = useState(true);
+
+  // Cast Scroll Ref
+  const castScrollRef = useRef<HTMLDivElement>(null);
+
   const seasonRef = useRef<HTMLDivElement>(null);
   const episodeRef = useRef<HTMLDivElement>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
@@ -114,7 +120,7 @@ export function DetailsPage() {
     }
   };
 
-  // Inactivity auto-hide logic for the player overlay (5 seconds)
+  // Inactivity auto-hide logic for the player overlay (5 seconds), listening to container & window d-pad / mouse activity
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -136,6 +142,8 @@ export function DetailsPage() {
       container.addEventListener("mousedown", handlePlayerActivity);
       container.addEventListener("touchstart", handlePlayerActivity);
     }
+    window.addEventListener("mousemove", handlePlayerActivity);
+    window.addEventListener("keydown", handlePlayerActivity);
 
     return () => {
       if (playerInactivityTimerRef.current) {
@@ -146,8 +154,29 @@ export function DetailsPage() {
         container.removeEventListener("mousedown", handlePlayerActivity);
         container.removeEventListener("touchstart", handlePlayerActivity);
       }
+      window.removeEventListener("mousemove", handlePlayerActivity);
+      window.removeEventListener("keydown", handlePlayerActivity);
     };
   }, [isPlaying]);
+
+  const handlePosterOverlayClick = () => {
+    setIsContentPlaying(true);
+    toggleTrueFullscreen();
+  };
+
+  const handleTogglePlayPauseOverlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsContentPlaying(!isContentPlaying);
+  };
+
+  const scrollCast = (direction: "left" | "right") => {
+    if (castScrollRef.current) {
+      castScrollRef.current.scrollBy({
+        left: direction === "left" ? -350 : 350,
+        behavior: "smooth",
+      });
+    }
+  };
 
   useEffect(() => {
     const checkVerticalScroll = () => {
@@ -572,6 +601,7 @@ export function DetailsPage() {
     bgAudio.pause();
 
     setIsPlaying(true);
+    setIsContentPlaying(true);
 
     try {
       saveWatchProgress({
@@ -873,6 +903,38 @@ export function DetailsPage() {
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
               ></iframe>
 
+              {/* Movie Poster Overlay covering the iframe when NOT in fullscreen */}
+              {isPlaying && !isFullscreenMode && (
+                <div
+                  onClick={handlePosterOverlayClick}
+                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/85 backdrop-blur-md cursor-pointer group transition-all"
+                >
+                  <div className="absolute inset-0 opacity-40 overflow-hidden pointer-events-none">
+                    <img src={poster} alt={title} className="w-full h-full object-cover filter blur-md scale-105" />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/40 pointer-events-none" />
+
+                  <div className="relative z-10 flex flex-col items-center gap-4 p-6 text-center">
+                    <button
+                      type="button"
+                      onClick={handleTogglePlayPauseOverlay}
+                      className={`flex items-center justify-center w-20 h-20 rounded-full ${activeTheme.bg} text-white shadow-2xl ${activeTheme.shadow} group-hover:scale-110 transition-transform border border-white/30`}
+                      title={isContentPlaying ? "Pause" : "Play"}
+                    >
+                      <span className="text-2xl font-black">{isContentPlaying ? "⏸" : "▶"}</span>
+                    </button>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-lg font-black text-white tracking-wide drop-shadow-md">
+                        {title}
+                      </span>
+                      <span className="text-xs font-bold text-amber-300 bg-black/70 px-3 py-1 rounded-full border border-amber-500/30 shadow">
+                        Click to launch video
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Swaedo Controls Overlay / True Fullscreen Trigger Button (Auto-hides after 5s of inactivity) */}
               <div
                 className={`absolute top-3 right-3 z-30 flex items-center gap-2 transition-opacity duration-300 ${
@@ -882,7 +944,7 @@ export function DetailsPage() {
                 <button
                   type="button"
                   onClick={toggleTrueFullscreen}
-                  className="flex items-center gap-1.5 rounded-lg bg-black/75 hover:bg-black px-3.5 py-2 text-xs font-bold text-white backdrop-blur-md border border-white/20 shadow-xl transition focus:outline-none focus:ring-4 focus:ring-violet-400"
+                  className="flex items-center gap-1.5 rounded-lg bg-black/75 hover:bg-black px-3.5 py-2 text-xs font-bold text-white backdrop-blur-md border border-white/20 shadow-xl transition focus:outline-none focus:ring-4 focus:ring-violet-400 cursor-pointer"
                   title={isFullscreenMode ? "Exit True Fullscreen" : "Launch True Fullscreen"}
                 >
                   {isFullscreenMode ? "🗗 Exit Fullscreen" : "⛶ Fullscreen"}
@@ -1042,7 +1104,7 @@ export function DetailsPage() {
                   <button
                     type="button"
                     onClick={handlePlay}
-                    className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105`}
+                    className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105 cursor-pointer`}
                   >
                     ▶ Play{" "}
                     {inferredMediaType === "tv"
@@ -1053,7 +1115,7 @@ export function DetailsPage() {
                   <button
                     type="button"
                     onClick={toggleMyList}
-                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} ${
+                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} cursor-pointer ${
                       inMyList
                         ? `${activeTheme.border} bg-white/10 ${activeTheme.text}`
                         : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
@@ -1065,7 +1127,7 @@ export function DetailsPage() {
                   <button
                     type="button"
                     onClick={toggleFavorites}
-                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 ${
+                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer ${
                       inFavorites
                         ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
                         : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
@@ -1077,7 +1139,7 @@ export function DetailsPage() {
                   <button
                     type="button"
                     onClick={handleReportBroken}
-                    className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500"
+                    className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer"
                     title="Report link as broken and hide globally"
                   >
                     ⚠️ Report Broken
@@ -1094,13 +1156,33 @@ export function DetailsPage() {
               </div>
             </div>
 
-            {/* Cast Section */}
+            {/* Cast Section with Left/Right Arrow Scroll */}
             {castList.length > 0 && (
               <div className={`mt-6 pt-4 pb-4 px-4 rounded-2xl border ${getCardBackground(appTheme)} backdrop-blur shadow-xl space-y-3`}>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
-                  Cast
-                </h2>
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                    Cast
+                  </h2>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => scrollCast("left")}
+                      className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black border border-white/20 flex items-center justify-center text-xs font-bold text-white shadow transition cursor-pointer"
+                      aria-label="Scroll left"
+                    >
+                      ◀
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollCast("right")}
+                      className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black border border-white/20 flex items-center justify-center text-xs font-bold text-white shadow transition cursor-pointer"
+                      aria-label="Scroll right"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                </div>
+                <div ref={castScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-none scroll-smooth">
                   {castList.slice(0, 15).map((actor: any) => (
                     <div
                       key={actor.id}
