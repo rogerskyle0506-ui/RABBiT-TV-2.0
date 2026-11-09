@@ -781,7 +781,18 @@ function Home() {
       <div className="relative z-10">
         {/* Navigation Tabs Pill Bar Container */}
         <div className="sticky top-0 z-30 mb-4 mt-2 px-3 py-2.5 flex justify-center">
-          <div className="relative max-w-7xl w-full flex items-center justify-center">
+          <div
+            className="relative max-w-7xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
+            style={{
+              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+              backgroundSize: "117% 380%",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center center",
+              maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+            }}
+          >
+            <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
             <button
               type="button"
               onClick={() => scrollPill("nav-tabs-pill", "left")}
@@ -792,18 +803,9 @@ function Home() {
             </button>
             <div
               id="nav-tabs-pill"
-              className="relative max-w-7xl w-full overflow-x-auto scrollbar-none rounded-2xl shadow-xl px-10 sm:px-14 py-2.5 flex items-center justify-start sm:justify-center gap-2"
-              style={{
-                backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                backgroundSize: "117% 380%",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center center",
-                maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-                WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-              }}
+              className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-14 py-2.5 flex items-center justify-start sm:justify-center gap-2"
             >
-              <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
-              <div className="relative z-10 flex items-center gap-2 min-w-max mx-auto">
+              <div className="flex items-center gap-2 min-w-max mx-auto">
                 {navTabs.map((tab) => {
                   const isActive = activeTab === tab;
                   return (
@@ -896,7 +898,18 @@ function Home() {
             <section className="mb-4 space-y-2.5 flex flex-col items-center justify-center text-center w-full">
               {/* Genre Categories Pill Bar Container */}
               <div className="flex justify-center w-full px-3">
-                <div className="relative max-w-3xl w-full flex items-center justify-center">
+                <div
+                  className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
+                  style={{
+                    backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                    backgroundSize: "117% 380%",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center center",
+                    maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+                  }}
+                >
+                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
                   <button
                     type="button"
                     onClick={() => scrollPill("genre-pill", "left")}
@@ -907,18 +920,9 @@ function Home() {
                   </button>
                   <div
                     id="genre-pill"
-                    className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl shadow-xl px-10 sm:px-14 py-2 flex items-center justify-start sm:justify-center gap-2"
-                    style={{
-                      backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                      backgroundSize: "117% 380%",
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "center center",
-                      maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-                      WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-                    }}
+                    className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-14 py-2 flex items-center justify-start sm:justify-center gap-2"
                   >
-                    <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
-                    <div className="relative z-10 flex items-center gap-2 min-w-max mx-auto">
+                    <div className="flex items-center gap-2 min-w-max mx-auto">
                       {genreCategories.map((genre) => {
                         const isActive = selectedGenre === genre;
                         return (
@@ -951,7 +955,18 @@ function Home() {
 
               {/* Provider Categories Logo Pill Bar Container */}
               <div className="flex justify-center w-full px-3">
-                <div className="relative max-w-3xl w-full flex items-center justify-center">
+                <div
+                  className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
+                  style={{
+                    backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                    backgroundSize: "117% 380%",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center center",
+                    maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+                  }}
+                >
+                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
                   <button
                     type="button"
                     onClick={() => scrollPill("provider-pill", "left")}
@@ -962,18 +977,9 @@ function Home() {
                   </button>
                   <div
                     id="provider-pill"
-                    className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl shadow-xl px-10 sm:px-14 py-2.5 flex items-center justify-start sm:justify-center gap-4"
-                    style={{
-                      backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                      backgroundSize: "117% 380%",
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "center center",
-                      maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-                      WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-                    }}
+                    className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-14 py-2.5 flex items-center justify-start sm:justify-center gap-4"
                   >
-                    <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
-                    <div className="relative z-10 flex items-center gap-4 min-w-max mx-auto">
+                    <div className="flex items-center gap-4 min-w-max mx-auto">
                       {providerCategories.map((prov) => {
                         const isActive = providerFilter === prov.name;
                         const isDefault = prov.name === "All (Default)";
@@ -1014,7 +1020,18 @@ function Home() {
 
           {activeTab === "My List" && (
             <section className="mb-4 flex justify-center w-full px-3">
-              <div className="relative max-w-4xl w-full flex items-center justify-center">
+              <div
+                className="relative max-w-4xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
+                style={{
+                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                  backgroundSize: "117% 380%",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center center",
+                  maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+                  WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+                }}
+              >
+                <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
                 <button
                   type="button"
                   onClick={() => scrollPill("mylist-pill", "left")}
@@ -1025,18 +1042,9 @@ function Home() {
                 </button>
                 <div
                   id="mylist-pill"
-                  className="relative max-w-4xl w-full overflow-x-auto scrollbar-none rounded-2xl shadow-xl px-10 sm:px-14 py-2.5 flex items-center justify-start sm:justify-center gap-2"
-                  style={{
-                    backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 380%",
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center center",
-                    maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-                    WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-                  }}
+                  className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-14 py-2.5 flex items-center justify-start sm:justify-center gap-2"
                 >
-                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
-                  <div className="relative z-10 flex items-center gap-2 min-w-max mx-auto">
+                  <div className="flex items-center gap-2 min-w-max mx-auto">
                     <button
                       type="button"
                       onClick={() => setMyListSubTab("all")}
