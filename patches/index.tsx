@@ -997,7 +997,7 @@ function Home() {
                               src={prov.logo}
                               alt={prov.name}
                               className={`h-7 transition-transform group-hover:scale-105 ${
-                                isDefault ? "w-12 sm:w-14 object-contain" : "w-auto object-contain"
+                                isDefault ? "w-45 sm:w-43 object-contain" : "w-auto object-contain"
                               }`}
                             />
                           </button>
