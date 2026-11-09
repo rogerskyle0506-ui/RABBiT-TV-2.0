@@ -764,7 +764,7 @@ function Home() {
             className="relative max-w-7xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
             style={{
               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-              backgroundSize: "117% 130%",
+              backgroundSize: "117% 150%",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
             }}
@@ -858,7 +858,7 @@ function Home() {
                   className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2 flex items-center justify-start sm:justify-center gap-2"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 130%",
+                    backgroundSize: "117% 150%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                   }}
@@ -892,7 +892,7 @@ function Home() {
                   className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2 flex items-center justify-start sm:justify-center gap-2"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 130%",
+                    backgroundSize: "117% 150%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                   }}
@@ -928,7 +928,7 @@ function Home() {
                 className="relative max-w-4xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-2"
                 style={{
                   backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "117% 130%",
+                  backgroundSize: "117% 150%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
                 }}
