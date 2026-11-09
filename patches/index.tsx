@@ -672,8 +672,8 @@ function Home() {
           "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
         accentText: "text-violet-300",
         borderGlow: "border-violet-500/30",
-        activeGlow: "bg-violet-950/50 text-white shadow-sm scale-105",
-        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
+        activeGlow: "bg-violet-950/80 text-white shadow-lg shadow-violet-500/50 border-2 border-violet-400 scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300 border border-white/10",
       },
       red: {
         bg: "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80",
@@ -682,8 +682,8 @@ function Home() {
           "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
         accentText: "text-red-400",
         borderGlow: "border-red-500/30",
-        activeGlow: "bg-red-950/50 text-white shadow-sm scale-105",
-        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
+        activeGlow: "bg-red-950/80 text-white shadow-lg shadow-red-500/50 border-2 border-red-400 scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300 border border-white/10",
       },
       midnight: {
         bg: "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80",
@@ -692,8 +692,8 @@ function Home() {
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
         accentText: "text-sky-300",
         borderGlow: "border-sky-500/30",
-        activeGlow: "bg-sky-950/50 text-white shadow-sm scale-105",
-        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
+        activeGlow: "bg-sky-950/80 text-white shadow-lg shadow-sky-500/50 border-2 border-sky-400 scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300 border border-white/10",
       },
       emerald: {
         bg: "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80",
@@ -702,8 +702,8 @@ function Home() {
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
         accentText: "text-emerald-300",
         borderGlow: "border-emerald-500/30",
-        activeGlow: "bg-emerald-950/50 text-white shadow-sm scale-105",
-        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
+        activeGlow: "bg-emerald-950/80 text-white shadow-lg shadow-emerald-500/50 border-2 border-emerald-400 scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300 border border-white/10",
       },
       amber: {
         bg: "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80",
@@ -712,8 +712,8 @@ function Home() {
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
         accentText: "text-amber-300",
         borderGlow: "border-amber-500/30",
-        activeGlow: "bg-amber-950/50 text-white shadow-sm scale-105",
-        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
+        activeGlow: "bg-amber-950/80 text-white shadow-lg shadow-amber-500/50 border-2 border-amber-400 scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300 border border-white/10",
       },
       cyan: {
         bg: "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80",
@@ -722,8 +722,8 @@ function Home() {
           "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
         accentText: "text-cyan-300",
         borderGlow: "border-cyan-500/30",
-        activeGlow: "bg-cyan-950/50 text-white shadow-sm scale-105",
-        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
+        activeGlow: "bg-cyan-950/80 text-white shadow-lg shadow-cyan-500/50 border-2 border-cyan-400 scale-105",
+        inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300 border border-white/10",
       },
     }[appTheme] ?? {
       bg: "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80",
@@ -732,8 +732,8 @@ function Home() {
         "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
       accentText: "text-violet-300",
       borderGlow: "border-violet-500/30",
-      activeGlow: "bg-violet-950/50 text-white shadow-sm scale-105",
-      inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300",
+      activeGlow: "bg-violet-950/80 text-white shadow-lg shadow-violet-500/50 border-2 border-violet-400 scale-105",
+      inactiveGlow: "bg-black/50 hover:bg-black/80 text-slate-300 border border-white/10",
     };
 
   const getPrimaryBgColor = (theme: AppTheme) => {
@@ -953,13 +953,13 @@ function Home() {
                 </div>
               </div>
 
-              {/* Provider Categories Logo Pill Bar Container (3x taller logos & proportional pill height + static overlay) */}
+              {/* Provider Categories Logo Pill Bar Container (3x taller logos, balanced background size, glow ring & static overlay) */}
               <div className="flex justify-center w-full px-3">
                 <div
                   className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 950%",
+                    backgroundSize: "117% 480%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                     maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
