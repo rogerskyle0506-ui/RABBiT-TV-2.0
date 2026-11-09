@@ -161,9 +161,10 @@ function RootComponent() {
 
   const [currentStationUrl, setCurrentStationUrl] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("rabtv_radio_url") || "";
+      const saved = localStorage.getItem("rabtv_radio_url");
+      if (saved) return saved;
     }
-    return "";
+    return RADIO_STATIONS["80s"]?.[0]?.url || "";
   });
 
   const [unifiedAgeCodeInput, setUnifiedAgeCodeInput] = useState<string>("");
@@ -307,6 +308,16 @@ function RootComponent() {
       void checkForAppUpdates(true);
     }, 3000);
     return () => clearTimeout(updateTimer);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("rabtv_radio_url")) {
+      const default80s = RADIO_STATIONS["80s"]?.[0]?.url;
+      if (default80s) {
+        bgAudio.setStation(default80s);
+        setCurrentStationUrl(default80s);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -904,14 +915,14 @@ function RootComponent() {
           <header className={`sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)}`}>
             <div className="absolute inset-0 pointer-events-none opacity-20">
               <img
-                src={HEADER_ICON_URL}
+                src={RABBIT_HEADER_PILL}
                 alt="Header Background"
-                className="w-full h-full object-fill"
+                className="w-full h-full object-cover"
               />
             </div>
 
-            <div className="relative z-10 mx-auto flex max-w-7xl flex-col sm:flex-row items-stretch sm:items-center justify-between px-3 py-2.5 sm:px-6 gap-2.5">
-              <div className="flex items-center justify-between sm:justify-start gap-2.5">
+            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 gap-3">
+              <div className="flex items-center gap-3 flex-1 max-w-2xl">
                 <Link
                   to="/"
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/40 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
@@ -919,58 +930,17 @@ function RootComponent() {
                   <span className="whitespace-nowrap">RABBiT TV</span>
                 </Link>
 
-                {savedProfileName && !showFirstStartModal && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleToggleProfileMenu}
-                      className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border-0"
-                      style={{
-                        backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                        backgroundSize: "cover",
-                        backgroundRepeat: "no-repeat",
-                        backgroundPosition: "center center",
-                        WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.1) 100%)",
-                        maskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.1) 100%)",
-                      }}
-                    >
-                      <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
-                      <div className="relative z-10 flex items-center gap-2 w-full">
-                        <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
-                          <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
-                        </div>
-                        <span className="truncate">
-                          Hi, <strong className="text-white">{savedProfileName}</strong>{" "}
-                          {isAdmin
-                            ? "(Admin)"
-                            : isTrialActive
-                            ? `(Trial: ${trialDaysRemaining}d)`
-                            : "(Full)"}
-                        </span>
-                        <span className="text-[10px] ml-auto text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
-                      </div>
-                    </button>
-                    {isTrialActive && (
-                      <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold animate-pulse">
-                        <span>⏳ {trialDaysRemaining}d left</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {!showFirstStartModal && (
-                <div className="flex items-center justify-between sm:justify-end gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                {!showFirstStartModal && (
                   <form
                     onSubmit={handleHeaderSearchSubmit}
-                    className="flex items-center gap-1.5 shrink-0 flex-1 sm:flex-initial"
+                    className="flex items-center gap-1.5 flex-1 max-w-md"
                   >
                     <input
                       type="text"
                       value={headerSearchInput}
                       onChange={(e) => setHeaderSearchInput(e.target.value)}
                       placeholder="Search..."
-                      className="h-9 sm:h-10 w-full sm:w-32 lg:w-44 rounded-xl border border-white/10 bg-slate-900/70 px-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
+                      className="h-9 sm:h-10 w-full rounded-xl border border-white/10 bg-slate-900/70 px-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
                     />
                     <button
                       type="submit"
@@ -980,6 +950,45 @@ function RootComponent() {
                       🔍
                     </button>
                   </form>
+                )}
+              </div>
+
+              {savedProfileName && !showFirstStartModal && (
+                <div className="flex items-center gap-2 shrink-0 ml-auto">
+                  <button
+                    type="button"
+                    onClick={handleToggleProfileMenu}
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border-0"
+                    style={{
+                      backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                      backgroundSize: "cover",
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "center center",
+                      WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.1) 100%)",
+                      maskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.1) 100%)",
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                    <div className="relative z-10 flex items-center gap-2 w-full">
+                      <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
+                        <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
+                      </div>
+                      <span className="truncate">
+                        Hi, <strong className="text-white">{savedProfileName}</strong>{" "}
+                        {isAdmin
+                          ? "(Admin)"
+                          : isTrialActive
+                          ? `(Trial: ${trialDaysRemaining}d)`
+                          : "(Full)"}
+                      </span>
+                      <span className="text-[10px] ml-auto text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
+                    </div>
+                  </button>
+                  {isTrialActive && (
+                    <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold animate-pulse">
+                      <span>⏳ {trialDaysRemaining}d left</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -987,16 +996,16 @@ function RootComponent() {
 
           {/* CONSOLE-GRADE LEFT SIDE BLADE SIDEBAR */}
           {showProfileMenu && !showFirstStartModal && (
-            <div className="fixed inset-0 z-50 flex pt-[60px] sm:pt-[65px]">
-              {/* Backdrop Blur Overlay */}
+            <div className="fixed inset-0 z-50 flex pt-[60px] sm:pt-[65px] pointer-events-none">
+              {/* Transparent Backdrop without blur/black overlay */}
               <div
-                className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity animate-fade-in"
+                className="fixed inset-0 bg-transparent pointer-events-auto"
                 onClick={handleCloseAll}
               />
 
-              {/* Side Blade Drawer Content locked strictly within RABBIT_PANEL frame */}
+              {/* Side Blade Drawer Content with inset margins so outer glow shows */}
               <div
-                className="relative w-[420px] max-w-[95vw] h-[calc(100dvh-60px)] sm:h-[calc(100dvh-65px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-95 overflow-hidden pt-12 pb-12 px-6"
+                className="relative mx-3 my-2 w-[420px] max-w-[95vw] h-[calc(100dvh-75px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-95 overflow-hidden pt-12 pb-12 px-6 rounded-3xl border border-white/10 pointer-events-auto"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
                   backgroundSize: "cover",
@@ -1020,15 +1029,15 @@ function RootComponent() {
                 {/* Scrollable Container with Strict Containment */}
                 <div
                   ref={sidebarContentRef}
-                  className="flex-1 overflow-y-auto px-2 pt-10 pb-10 w-full scrollbar-none relative z-10"
+                  className="flex-1 overflow-y-auto px-2 pt-10 pb-10 w-full scrollbar-none relative z-10 box-border"
                   style={{
                     maskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%)",
                     WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%)",
                   }}
                 >
-                  <div className="relative z-10 flex flex-col w-full">
+                  <div className="relative z-10 flex flex-col w-full box-border">
                     {/* Sidebar Header */}
-                    <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-1 px-2 w-full">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-1 px-2 w-full box-border">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl overflow-hidden border border-white/30 bg-slate-800 shadow-md shrink-0 flex items-center justify-center">
                           <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
@@ -1050,14 +1059,14 @@ function RootComponent() {
                     </div>
 
                     {/* ACCORDION SECTIONS WITH BORDERLESS EDGES & BLENDED TRANSPARENCY */}
-                    <div className="space-y-3 w-full">
+                    <div className="space-y-3 w-full box-border">
 
                       {/* 1. GLOBAL FEED SELECTOR ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative box-border">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "globalFeed" ? null : "globalFeed")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
                           style={{
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
@@ -1079,7 +1088,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "globalFeed" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "cover",
@@ -1087,11 +1096,11 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-2 w-full">
+                            <div className="relative z-10 space-y-2 w-full box-border">
                               <p className="text-[11px] text-slate-300 font-semibold">Select Region Feed:</p>
-                              <div className="relative w-full">
+                              <div className="relative w-full box-border">
                                 <div
-                                  className={`flex h-10 w-full items-center justify-between rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} gap-1 relative pointer-events-auto`}
+                                  className={`flex h-10 w-full items-center justify-between rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} gap-1 relative pointer-events-auto box-border`}
                                 >
                                   <span className="truncate">
                                     🌐 {selectedGlobalFeed === "All (Default)" ? "Global" : selectedGlobalFeed}
@@ -1116,11 +1125,11 @@ function RootComponent() {
                       </div>
 
                       {/* 2. WATCH HISTORY ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative box-border">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "history" ? null : "history")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
                           style={{
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
@@ -1142,7 +1151,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "history" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "cover",
@@ -1150,12 +1159,12 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-2 w-full">
+                            <div className="relative z-10 space-y-2 w-full box-border">
                               <p className="text-[11px] text-slate-300 font-semibold">View previously watched media:</p>
                               <Link
                                 to="/watch-history"
                                 onClick={handleCloseAll}
-                                className={`flex h-10 w-full items-center justify-center rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg}`}
+                                className={`flex h-10 w-full items-center justify-center rounded-xl border px-3 text-xs font-bold shadow-sm transition ${activeHeader.btnBg} box-border`}
                               >
                                 🕒 Open Watch History
                               </Link>
@@ -1165,11 +1174,11 @@ function RootComponent() {
                       </div>
 
                       {/* 3. APP CUSTOMIZATION ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative box-border">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "theme" ? null : "theme")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
                           style={{
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
@@ -1191,7 +1200,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "theme" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "cover",
@@ -1199,13 +1208,13 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 grid grid-cols-2 gap-2 w-full">
+                            <div className="relative z-10 grid grid-cols-2 gap-2 w-full box-border">
                               {allThemesList.map((t) => (
                                 <button
                                   key={t.id}
                                   type="button"
                                   onClick={() => handleThemeChange(t.id)}
-                                  className={`rounded-lg p-2.5 text-xs font-bold transition text-left w-full ${
+                                  className={`rounded-lg p-2.5 text-xs font-bold transition text-left w-full box-border ${
                                     appTheme === t.id
                                       ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
                                       : `${getSubtlePillBg(appTheme)}`
@@ -1220,11 +1229,11 @@ function RootComponent() {
                       </div>
 
                       {/* 4. OVER SCALE & GRID SIZING ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative box-border">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "scale" ? null : "scale")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
                           style={{
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
@@ -1246,7 +1255,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "scale" && (
                           <div
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "cover",
@@ -1254,16 +1263,16 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-full">
-                              <div className="w-full">
+                            <div className="relative z-10 space-y-3 w-full box-border">
+                              <div className="w-full box-border">
                                 <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">Catalog Card Size:</p>
-                                <div className="grid grid-cols-3 gap-1.5 w-full">
+                                <div className="grid grid-cols-3 gap-1.5 w-full box-border">
                                   {(["small", "medium", "large"] as CardSize[]).map((size) => (
                                     <button
                                       key={size}
                                       type="button"
                                       onClick={() => handleSizeChange(size)}
-                                      className={`rounded-lg py-2 text-xs font-bold capitalize transition w-full ${
+                                      className={`rounded-lg py-2 text-xs font-bold capitalize transition w-full box-border ${
                                         cardSize === size
                                           ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                           : `${getSubtlePillBg(appTheme)}`
@@ -1275,15 +1284,15 @@ function RootComponent() {
                                 </div>
                               </div>
 
-                              <div className="pt-2 border-t border-white/10 w-full">
+                              <div className="pt-2 border-t border-white/10 w-full box-border">
                                 <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">History Page Overscale:</p>
-                                <div className="grid grid-cols-4 gap-1.5 w-full">
+                                <div className="grid grid-cols-4 gap-1.5 w-full box-border">
                                   {(["off", "20%", "50%", "80%"] as HistoryScale[]).map((scale) => (
                                     <button
                                       key={scale}
                                       type="button"
                                       onClick={() => handleHistoryOverscaleChange(scale)}
-                                      className={`rounded-lg py-1.5 text-xs font-bold capitalize transition w-full ${
+                                      className={`rounded-lg py-1.5 text-xs font-bold capitalize transition w-full box-border ${
                                         historyOverscale === scale
                                           ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                           : `${getSubtlePillBg(appTheme)}`
@@ -1300,11 +1309,11 @@ function RootComponent() {
                       </div>
 
                       {/* 5. BACKGROUND MUSIC AUDIO ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative box-border">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "audio" ? null : "audio")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
                           style={{
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
@@ -1335,13 +1344,13 @@ function RootComponent() {
                             }}
                           >
                             <div className="relative z-10 space-y-3 w-full box-border">
-                              <div className="w-full">
+                              <div className="w-full box-border">
                                 <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">Playback Controls:</p>
-                                <div className="grid grid-cols-2 gap-2 w-full">
+                                <div className="grid grid-cols-2 gap-2 w-full box-border">
                                   <button
                                     type="button"
                                     onClick={() => handleBackgroundAudioToggle("playing")}
-                                    className={`rounded-lg py-2 text-xs font-bold transition w-full ${
+                                    className={`rounded-lg py-2 text-xs font-bold transition w-full box-border ${
                                       bgMusicState === "playing"
                                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                         : `${getSubtlePillBg(appTheme)}`
@@ -1352,7 +1361,7 @@ function RootComponent() {
                                   <button
                                     type="button"
                                     onClick={() => handleBackgroundAudioToggle("muted")}
-                                    className={`rounded-lg py-2 text-xs font-bold transition w-full ${
+                                    className={`rounded-lg py-2 text-xs font-bold transition w-full box-border ${
                                       bgMusicState === "muted"
                                         ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
                                         : `${getSubtlePillBg(appTheme)}`
@@ -1364,7 +1373,7 @@ function RootComponent() {
                               </div>
 
                               {/* VOLUME SLIDER CONTROL */}
-                              <div className="pt-2 border-t border-white/10 w-full space-y-1.5">
+                              <div className="pt-2 border-t border-white/10 w-full space-y-1.5 box-border">
                                 <div className="flex items-center justify-between">
                                   <p className="text-[11px] text-slate-300 font-semibold">Music Volume:</p>
                                   <span className="text-[11px] font-bold text-amber-300">{Math.round(bgMusicVolume * 100)}%</span>
@@ -1380,7 +1389,7 @@ function RootComponent() {
                                 />
                               </div>
 
-                              <div className="pt-2 border-t border-white/10 w-full">
+                              <div className="pt-2 border-t border-white/10 w-full box-border">
                                 <p className="text-[11px] text-slate-300 mb-2 font-semibold">Select Channel / Stream by Genre:</p>
                                 
                                 <div className="max-h-60 overflow-y-auto space-y-2 pr-1 w-full box-border">
@@ -1391,7 +1400,7 @@ function RootComponent() {
 
                                     return (
                                       <details key={category} className="group rounded-lg border border-white/10 bg-black/30 overflow-hidden w-full relative box-border">
-                                        <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition">
+                                        <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition box-border">
                                           <span className="flex items-center gap-2 truncate pr-2">
                                             📁 {category}
                                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 shrink-0">
@@ -1435,11 +1444,11 @@ function RootComponent() {
                       </div>
 
                       {/* 6. SECURITY & PIN MANAGEMENT ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative box-border">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "pin" ? null : "pin")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
                           style={{
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
@@ -1462,7 +1471,7 @@ function RootComponent() {
                         {activeSidebarSection === "pin" && (
                           <form
                             onSubmit={handleUnifiedProfileUpdate}
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "cover",
@@ -1470,19 +1479,19 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-full">
-                              <div className="grid grid-cols-2 gap-2 w-full">
-                                <div className="w-full">
+                            <div className="relative z-10 space-y-3 w-full box-border">
+                              <div className="grid grid-cols-2 gap-2 w-full box-border">
+                                <div className="w-full box-border">
                                   <span className="block text-[11px] text-slate-300 mb-1 font-semibold">Name:</span>
                                   <input
                                     type="text"
                                     maxLength={25}
                                     value={profileNameInput}
                                     onChange={(e) => setProfileNameInput(e.target.value)}
-                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none box-border"
                                   />
                                 </div>
-                                <div className="w-full">
+                                <div className="w-full box-border">
                                   <span className="block text-[11px] text-slate-300 mb-1 font-semibold">Age:</span>
                                   <input
                                     type="number"
@@ -1490,12 +1499,12 @@ function RootComponent() {
                                     max={120}
                                     value={userAgeInput}
                                     onChange={(e) => setUserAgeInput(e.target.value)}
-                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none box-border"
                                   />
                                 </div>
                               </div>
 
-                              <div className="w-full">
+                              <div className="w-full box-border">
                                 <span className="block text-[11px] text-slate-300 mb-1 font-semibold">Current 4-digit PIN (Required):</span>
                                 <input
                                   type="password"
@@ -1504,12 +1513,12 @@ function RootComponent() {
                                   placeholder="••••"
                                   value={unifiedAgeCodeInput}
                                   onChange={(e) => setUnifiedAgeCodeInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                                  className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                                  className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest box-border"
                                 />
                               </div>
 
-                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10 w-full">
-                                <div className="w-full">
+                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/10 w-full box-border">
+                                <div className="w-full box-border">
                                   <span className="block text-[11px] text-slate-300 mb-1 font-semibold">New PIN (Opt):</span>
                                   <input
                                     type="password"
@@ -1518,10 +1527,10 @@ function RootComponent() {
                                     placeholder="••••"
                                     value={newPasscode}
                                     onChange={(e) => setNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest box-border"
                                   />
                                 </div>
-                                <div className="w-full">
+                                <div className="w-full box-border">
                                   <span className="block text-[11px] text-slate-300 mb-1 font-semibold">Confirm PIN:</span>
                                   <input
                                     type="password"
@@ -1530,14 +1539,14 @@ function RootComponent() {
                                     placeholder="••••"
                                     value={confirmNewPasscode}
                                     onChange={(e) => setConfirmNewPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                                    className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest box-border"
                                   />
                                 </div>
                               </div>
 
                               <button
                                 type="submit"
-                                className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
+                                className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition box-border`}
                               >
                                 Save Profile & PIN Updates
                               </button>
@@ -1553,11 +1562,11 @@ function RootComponent() {
                       </div>
 
                       {/* 7. BACKUP & RESTORE ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative box-border">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "backup" ? null : "backup")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
                           style={{
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
@@ -1579,7 +1588,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "backup" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "cover",
@@ -1587,16 +1596,16 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-2.5 w-full">
-                              <div className="flex gap-2 w-full">
+                            <div className="relative z-10 space-y-2.5 w-full box-border">
+                              <div className="flex gap-2 w-full box-border">
                                 <button
                                   type="button"
                                   onClick={handleSaveBackup}
-                                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}
+                                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)} box-border`}
                                 >
                                   💾 Export Backup
                                 </button>
-                                <label className={`flex-1 text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)}`}>
+                                <label className={`flex-1 text-center cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${getSubtlePillBg(appTheme)} box-border`}>
                                   🔄 Restore
                                   <input type="file" accept=".json" onChange={handleRestoreBackup} className="hidden" />
                                 </label>
@@ -1612,11 +1621,11 @@ function RootComponent() {
                       </div>
 
                       {/* 8. ACCESSIBILITY ACCORDION */}
-                      <div className="border-0 bg-transparent overflow-hidden w-full relative">
+                      <div className="border-0 bg-transparent overflow-hidden w-full relative box-border">
                         <button
                           type="button"
                           onClick={() => setActiveSidebarSection(activeSidebarSection === "accessibility" ? null : "accessibility")}
-                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer"
+                          className="w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-bold text-white relative overflow-hidden rounded-xl border-0 shadow-sm group cursor-pointer box-border"
                           style={{
                             WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
                             maskImage: "linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.05) 100%)",
@@ -1638,7 +1647,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "accessibility" && (
                           <div
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden"
+                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "cover",
@@ -1646,8 +1655,8 @@ function RootComponent() {
                               backgroundPosition: "center center",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-full">
-                              <div className="flex items-center justify-between w-full">
+                            <div className="relative z-10 space-y-3 w-full box-border">
+                              <div className="flex items-center justify-between w-full box-border">
                                 <div>
                                   <p className="text-xs font-bold text-white">XL Mouse Pointer (3x)</p>
                                   <p className="text-[10px] text-slate-300">Enlarges cursor for TVs/projectors.</p>
@@ -1662,7 +1671,7 @@ function RootComponent() {
                                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${helpfulMouse ? "translate-x-6" : "translate-x-1"}`} />
                                 </button>
                               </div>
-                              <div className="flex items-center justify-between pt-2 border-t border-white/10 w-full">
+                              <div className="flex items-center justify-between pt-2 border-t border-white/10 w-full box-border">
                                 <div>
                                   <p className="text-xs font-bold text-white">Enlarged Action Buttons</p>
                                   <p className="text-[10px] text-slate-300">Bigger icons & buttons.</p>
@@ -1686,7 +1695,7 @@ function RootComponent() {
 
                     {/* ADMIN PANEL (IF ADMIN) */}
                     {isAdmin && (
-                      <div className="mt-4 pt-4 border-t border-white/10 w-full">
+                      <div className="mt-4 pt-4 border-t border-white/10 w-full box-border">
                         <AdminPanel
                           appTheme={appTheme}
                           getPrimaryBgColor={getPrimaryBgColor}
@@ -1696,32 +1705,32 @@ function RootComponent() {
                     )}
 
                     {/* FEEDBACK & SUPPORT SECTION */}
-                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full">
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full box-border">
                       <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Feedback & Support</h4>
                       <button
                         type="button"
                         onClick={() => setShowBugModal(true)}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md box-border`}
                       >
                         🐞 Report a Bug / Issue
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowBugFeedModal(true)}
-                        className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2"
+                        className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition border border-white/10 flex items-center justify-center gap-2 box-border"
                       >
                         📋 View Bug Reports Feed
                       </button>
                     </div>
 
                     {/* UPDATE CHANNEL & ACTIONS */}
-                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full">
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full box-border">
                       <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Update Channel</h4>
-                      <div className="grid grid-cols-2 gap-2 w-full">
+                      <div className="grid grid-cols-2 gap-2 w-full box-border">
                         <button
                           type="button"
                           onClick={() => handleUpdateChannelChange("stable")}
-                          className={`py-2 rounded-lg text-xs font-bold transition w-full ${
+                          className={`py-2 rounded-lg text-xs font-bold transition w-full box-border ${
                             updateChannel === "stable" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                           }`}
                         >
@@ -1730,7 +1739,7 @@ function RootComponent() {
                         <button
                           type="button"
                           onClick={() => handleUpdateChannelChange("nightly")}
-                          className={`py-2 rounded-lg text-xs font-bold transition w-full ${
+                          className={`py-2 rounded-lg text-xs font-bold transition w-full box-border ${
                             updateChannel === "nightly" ? `${getPrimaryBgColor(appTheme)} text-white` : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                           }`}
                         >
@@ -1740,42 +1749,42 @@ function RootComponent() {
                       <button
                         type="button"
                         onClick={() => void checkForAppUpdates(false)}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md`}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${getPrimaryBgColor(appTheme)} text-white shadow-md box-border`}
                       >
                         🔍 Check for Updates Now
                       </button>
                     </div>
 
                     {/* LICENSE STATUS */}
-                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full">
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-2 w-full box-border">
                       <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Status</h4>
                       {isAdmin ? (
-                        <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-2.5 rounded-lg">
+                        <p className="text-[11px] text-red-300 font-semibold bg-red-500/10 border border-red-500/30 p-2.5 rounded-lg box-border">
                           🔐 Admin access active.
                         </p>
                       ) : isTrialActive ? (
-                        <div className="space-y-2 w-full">
-                          <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg leading-relaxed">
+                        <div className="space-y-2 w-full box-border">
+                          <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg leading-relaxed box-border">
                             Trial: <strong>{trialDaysRemaining} {trialDaysRemaining === 1 ? "day" : "days"} remaining</strong>.
                           </p>
-                          <form onSubmit={handleUpgradeFromProfile} className="space-y-1.5 w-full">
+                          <form onSubmit={handleUpgradeFromProfile} className="space-y-1.5 w-full box-border">
                             <input
                               type="password"
                               placeholder="Unlock code"
                               value={unlockCodeInput}
                               onChange={(e) => setUnlockCodeInput(e.target.value)}
-                              className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                              className="w-full rounded-lg border border-white/10 bg-slate-800/80 px-2.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none box-border"
                             />
                             <button
                               type="submit"
-                              className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition`}
+                              className={`w-full py-2 rounded-lg ${getPrimaryBgColor(appTheme)} text-xs font-bold shadow transition box-border`}
                             >
                               Upgrade to Full Unlock
                             </button>
                           </form>
                         </div>
                       ) : (
-                        <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg">
+                        <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg box-border">
                           ✅ Full Lifetime Access Unlocked.
                         </p>
                       )}
@@ -1787,7 +1796,7 @@ function RootComponent() {
                     </div>
 
                     {/* Sidebar Footer with Divider Asset */}
-                    <div className="mt-6 pt-4 border-t border-white/10 text-center w-full">
+                    <div className="mt-6 pt-4 border-t border-white/10 text-center w-full box-border">
                       <img
                         src={RABBIT_DIVIDER}
                         alt=""
