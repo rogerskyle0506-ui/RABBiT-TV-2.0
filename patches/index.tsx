@@ -953,13 +953,13 @@ function Home() {
                 </div>
               </div>
 
-              {/* Provider Categories Logo Pill Bar Container (3x taller logos, brighter bg, top-aligned bg position, glow ring & static overlay) */}
+              {/* Provider Categories Logo Pill Bar Container (3x taller logos, 118% 350% background size, top-aligned, glow ring & static overlay) */}
               <div className="flex justify-center w-full px-3">
                 <div
                   className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "120% 350%",
+                    backgroundSize: "118% 350%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center top",
                     maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
@@ -1146,7 +1146,7 @@ function Home() {
                 @keyframes flashTwice {
                   0% { opacity: 0; }
                   25% { opacity: 1; }
-                  50% { opacity: 0; }
+                  50% { opacity: 1; }
                   75% { opacity: 1; }
                   100% { opacity: 0; }
                 }
