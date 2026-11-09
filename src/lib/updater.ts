@@ -4,6 +4,7 @@ import { APP_VERSION } from "./version";
 const GITHUB_REPO = (import.meta as any).env?.VITE_GH_REPO || "rogerskyle0506-ui/RABBiT-TV-2.0";
 const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_REPO}`;
 const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT || "";
+const TARGET_RELEASE_TAG = "RABBiTTV2.3.0.1";
 
 /**
  * Parses a version string into numeric segments [major, minor, patch, build]
@@ -84,56 +85,96 @@ export async function checkForAppUpdates(silent = false) {
       headers["Authorization"] = `Bearer ${GITHUB_TOKEN}`;
     }
 
-    if (channel === "nightly") {
-      // Step 1: Check GitHub Releases API including pre-releases for Nightly
-      const res = await fetch(`${GITHUB_API_BASE}/releases`, { headers });
-      
-      if (res.ok) {
-        const releases = await res.json();
-        if (Array.isArray(releases) && releases.length > 0) {
-          // Find the latest release (or pre-release) tag
-          const latestRelease = releases[0];
-          latestVersion = latestRelease.tag_name?.replace(/^v/i, "") || "";
-          
-          const apkAsset = latestRelease.assets?.find((asset: any) => asset.name.endsWith(".apk"));
-          if (apkAsset) {
-            downloadUrl = apkAsset.browser_download_url;
-          } else {
-            // Fallback to construct direct release download URL
-            downloadUrl = `https://github.com/${GITHUB_REPO}/releases/download/${latestRelease.tag_name}/app-release.apk`;
+    // Step 1: Check the specific target release tag provided or list releases
+    const targetTagRes = await fetch(`${GITHUB_API_BASE}/releases/tags/${TARGET_RELEASE_TAG}`, { headers });
+    let releasesList: any[] = [];
+
+    if (targetTagRes.ok) {
+      const targetRelease = await targetTagRes.json();
+      releasesList = [targetRelease];
+    }
+
+    // Fetch general releases list to ensure full scanning capability
+    const res = await fetch(`${GITHUB_API_BASE}/releases`, { headers });
+    if (res.ok) {
+      const fetchedReleases = await res.json();
+      if (Array.isArray(fetchedReleases)) {
+        // Merge without duplicates based on tag_name/id
+        const existingIds = new Set(releasesList.map((r) => r.id));
+        for (const rel of fetchedReleases) {
+          if (!existingIds.has(rel.id)) {
+            releasesList.push(rel);
           }
         }
       }
+    }
 
-      // Step 2: Fallback to manifest if release endpoint is restricted or missing
-      if (!latestVersion || !downloadUrl) {
-        const rawManifestUrl = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/updates/nightly_manifest.json`;
-        const manifestRes = await fetch(rawManifestUrl, { cache: "no-store" });
-
-        if (manifestRes.ok) {
-          const manifest = await manifestRes.json();
-          latestVersion = manifest.versionName || manifest.version || "";
-          downloadUrl = manifest.apkUrl || manifest.download_url || "";
+    if (releasesList.length > 0) {
+      if (channel === "nightly") {
+        // Search releases for an asset marked with "nightly"
+        for (const release of releasesList) {
+          const nightlyAsset = release.assets?.find((asset: any) =>
+            asset.name.toLowerCase().endsWith(".apk") && asset.name.toLowerCase().includes("nightly")
+          );
+          if (nightlyAsset) {
+            downloadUrl = nightlyAsset.browser_download_url;
+            const match = nightlyAsset.name.match(/v?(\d+\.\d+\.\d+(?:\.\d+)?)/i);
+            latestVersion = match ? match[1] : (release.tag_name?.replace(/^v/i, "") || "");
+            break;
+          }
         }
-      }
-    } else {
-      // Stable updates fetch specifically from latest tagged release
-      const res = await fetch(`${GITHUB_API_BASE}/releases/latest`, { headers });
-      if (!res.ok) {
-        if (!silent) {
-          alert(`❌ Stable Update Check Failed!\nReason: HTTP ${res.status} (${res.statusText})\nCheck GitHub Releases repository permissions.`);
+        // Fallback to latest release general APK if no explicit nightly asset was found
+        if (!downloadUrl && releasesList[0]) {
+          const latestRelease = releasesList[0];
+          latestVersion = latestRelease.tag_name?.replace(/^v/i, "") || "";
+          const apkAsset = latestRelease.assets?.find((asset: any) => asset.name.endsWith(".apk"));
+          if (apkAsset) {
+            downloadUrl = apkAsset.browser_download_url;
+          }
         }
-        return;
-      }
-
-      const release = await res.json();
-      latestVersion = release.tag_name?.replace(/^v/i, "") || currentVersion;
-
-      const apkAsset = release.assets?.find((asset: any) => asset.name.endsWith(".apk"));
-      if (apkAsset) {
-        downloadUrl = apkAsset.browser_download_url;
       } else {
-        downloadUrl = `https://github.com/${GITHUB_REPO}/releases/download/${release.tag_name}/app-release.apk`;
+        // Stable track: find the appropriate stable version/APK missing the nightly format
+        for (const release of releasesList) {
+          const stableAsset = release.assets?.find((asset: any) =>
+            asset.name.toLowerCase().endsWith(".apk") && !asset.name.toLowerCase().includes("nightly")
+          );
+          if (stableAsset) {
+            downloadUrl = stableAsset.browser_download_url;
+            const match = stableAsset.name.match(/v?(\d+\.\d+\.\d+(?:\.\d+)?)/i);
+            latestVersion = match ? match[1] : (release.tag_name?.replace(/^v/i, "") || "");
+            break;
+          }
+        }
+      }
+    }
+
+    // Fallback to manifest if release endpoint or asset matching fails for nightly
+    if ((!latestVersion || !downloadUrl) && channel === "nightly") {
+      const rawManifestUrl = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/updates/nightly_manifest.json`;
+      const manifestRes = await fetch(rawManifestUrl, { cache: "no-store" });
+
+      if (manifestRes.ok) {
+        const manifest = await manifestRes.json();
+        latestVersion = manifest.versionName || manifest.version || "";
+        downloadUrl = manifest.apkUrl || manifest.download_url || "";
+      }
+    }
+
+    // Fallback to /releases/latest for stable if needed
+    if ((!latestVersion || !downloadUrl) && channel === "stable") {
+      const latestRes = await fetch(`${GITHUB_API_BASE}/releases/latest`, { headers });
+      if (latestRes.ok) {
+        const release = await latestRes.json();
+        latestVersion = release.tag_name?.replace(/^v/i, "") || currentVersion;
+        const stableAsset = release.assets?.find((asset: any) =>
+          asset.name.endsWith(".apk") && !asset.name.toLowerCase().includes("nightly")
+        );
+        if (stableAsset) {
+          downloadUrl = stableAsset.browser_download_url;
+        } else {
+          const anyApk = release.assets?.find((asset: any) => asset.name.endsWith(".apk"));
+          if (anyApk) downloadUrl = anyApk.browser_download_url;
+        }
       }
     }
 
@@ -152,7 +193,7 @@ export async function checkForAppUpdates(silent = false) {
         `🚀 New ${channel.toUpperCase()} Update Available!\n\n` +
         `Installed Version: v${currentVersion}\n` +
         `Latest Build: v${latestVersion}\n\n` +
-        `Direct APK Link:\n${downloadUrl}\n\n` +
+        `Direct APK Link (Copy or write down):\n${downloadUrl}\n\n` +
         `Would you like to open the download link now?`
       );
 
@@ -164,7 +205,8 @@ export async function checkForAppUpdates(silent = false) {
         `✅ Up to Date!\n\n` +
         `Track: ${channel.toUpperCase()}\n` +
         `Current Version: v${currentVersion}\n` +
-        `Remote Version: v${latestVersion}`
+        `Remote Version: v${latestVersion}\n\n` +
+        `Direct APK Link:\n${downloadUrl}`
       );
     }
   } catch (err: any) {
