@@ -923,21 +923,21 @@ export function DetailsPage() {
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
               ></iframe>
 
-              {/* Movie Poster Overlay covering the iframe when NOT in fullscreen (Lowered positioning & strictly play button) */}
+              {/* Movie Poster Overlay covering the iframe when NOT in fullscreen (PERFECTLY CENTERED on all screen sizes & orientations) */}
               {isPlaying && !isFullscreenMode && (
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
                     handlePosterOverlayClick();
                   }}
-                  className="absolute inset-0 z-30 flex flex-col justify-end pb-12 items-center bg-black/30 cursor-pointer group transition-all"
+                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/30 cursor-pointer group transition-all"
                 >
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <img src={poster} alt={title} className="w-full h-full object-cover filter brightness-100 scale-105" />
                   </div>
                   <div className="absolute inset-0 bg-black/20 pointer-events-none" />
 
-                  <div className="relative z-10 flex flex-col items-center gap-4 p-6 text-center">
+                  <div className="relative z-10 flex flex-col items-center justify-center gap-4 p-6 text-center">
                     <button
                       type="button"
                       onClick={(e) => {
