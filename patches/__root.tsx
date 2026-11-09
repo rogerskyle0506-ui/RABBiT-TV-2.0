@@ -921,8 +921,9 @@ function RootComponent() {
               />
             </div>
 
-            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 gap-3">
-              <div className="flex items-center gap-3 flex-1 max-w-2xl">
+            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 gap-2 sm:gap-3">
+              {/* Left group: RABBiT TV and Search Bar */}
+              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                 <Link
                   to="/"
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/40 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
@@ -933,14 +934,14 @@ function RootComponent() {
                 {!showFirstStartModal && (
                   <form
                     onSubmit={handleHeaderSearchSubmit}
-                    className="flex items-center gap-1.5 flex-1 max-w-md"
+                    className="flex items-center gap-1.5 flex-1 min-w-[100px] sm:min-w-[160px] max-w-md"
                   >
                     <input
                       type="text"
                       value={headerSearchInput}
                       onChange={(e) => setHeaderSearchInput(e.target.value)}
                       placeholder="Search..."
-                      className="h-9 sm:h-10 w-full rounded-xl border border-white/10 bg-slate-900/70 px-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
+                      className="h-9 sm:h-10 w-full min-w-0 rounded-xl border border-white/10 bg-slate-900/70 px-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
                     />
                     <button
                       type="submit"
@@ -953,8 +954,9 @@ function RootComponent() {
                 )}
               </div>
 
+              {/* Far Right: Profile Pill */}
               {savedProfileName && !showFirstStartModal && (
-                <div className="flex items-center gap-2 shrink-0 ml-auto">
+                <div className="flex items-center gap-2 shrink-0 ml-2">
                   <button
                     type="button"
                     onClick={handleToggleProfileMenu}
@@ -1003,14 +1005,13 @@ function RootComponent() {
                 onClick={handleCloseAll}
               />
 
-              {/* Side Blade Drawer Content with inset margins so outer glow shows */}
+              {/* Side Blade Drawer Content with 100% 100% background sizing to avoid clipping */}
               <div
-                className="relative mx-3 my-2 w-[420px] max-w-[95vw] h-[calc(100dvh-75px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-95 overflow-hidden pt-12 pb-12 px-6 rounded-3xl border border-white/10 pointer-events-auto"
+                className="relative mx-3 my-2 w-[420px] max-w-[95vw] h-[calc(100dvh-75px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-95 overflow-hidden pt-12 pb-12 px-6 rounded-3xl border border-white/10 pointer-events-auto box-border"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
-                  backgroundSize: "cover",
+                  backgroundSize: "100% 100%",
                   backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center center",
                 }}
               >
                 {/* Active Theme Tint Overlay for sidebar */}
@@ -1029,7 +1030,7 @@ function RootComponent() {
                 {/* Scrollable Container with Strict Containment */}
                 <div
                   ref={sidebarContentRef}
-                  className="flex-1 overflow-y-auto px-2 pt-10 pb-10 w-full scrollbar-none relative z-10 box-border"
+                  className="flex-1 overflow-y-auto px-2 pt-10 pb-10 w-full scrollbar-none relative z-10 box-border overflow-x-hidden"
                   style={{
                     maskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%)",
                     WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%)",
@@ -1058,7 +1059,7 @@ function RootComponent() {
                       </button>
                     </div>
 
-                    {/* ACCORDION SECTIONS WITH BORDERLESS EDGES & BLENDED TRANSPARENCY */}
+                    {/* ACCORDION SECTIONS WITH STRICT CONTAINER BOUNDS & 100% 100% BG */}
                     <div className="space-y-3 w-full box-border">
 
                       {/* 1. GLOBAL FEED SELECTOR ACCORDION */}
@@ -1076,9 +1077,8 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1091,9 +1091,8 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="relative z-10 space-y-2 w-full box-border">
@@ -1139,9 +1138,8 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1154,9 +1152,8 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="relative z-10 space-y-2 w-full box-border">
@@ -1188,9 +1185,8 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1203,9 +1199,8 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="relative z-10 grid grid-cols-2 gap-2 w-full box-border">
@@ -1243,9 +1238,8 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1258,9 +1252,8 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="relative z-10 space-y-3 w-full box-border">
@@ -1323,9 +1316,8 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1338,9 +1330,8 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="relative z-10 space-y-3 w-full box-border">
@@ -1458,9 +1449,8 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1474,9 +1464,8 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="relative z-10 space-y-3 w-full box-border">
@@ -1576,9 +1565,8 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1591,9 +1579,8 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="relative z-10 space-y-2.5 w-full box-border">
@@ -1635,9 +1622,8 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
@@ -1650,9 +1636,8 @@ function RootComponent() {
                             className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border border-white/10 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                              backgroundSize: "cover",
+                              backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center center",
                             }}
                           >
                             <div className="relative z-10 space-y-3 w-full box-border">
