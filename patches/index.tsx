@@ -953,33 +953,33 @@ function Home() {
                 </div>
               </div>
 
-              {/* Provider Categories Logo Pill Bar Container */}
+              {/* Provider Categories Logo Pill Bar Container (3x taller logos & proportional pill height + static overlay) */}
               <div className="flex justify-center w-full px-3">
                 <div
                   className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 380%",
+                    backgroundSize: "117% 950%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                     maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
                     WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
                   }}
                 >
-                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
+                  <div className="absolute inset-0 bg-black/45 pointer-events-none rounded-2xl z-0" />
                   <button
                     type="button"
                     onClick={() => scrollPill("provider-pill", "left")}
-                    className="absolute left-1 z-20 w-7 h-7 bg-black/70 hover:bg-black/90 text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer"
+                    className="absolute left-1 z-20 w-8 h-8 bg-black/70 hover:bg-black/90 text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer"
                     title="Scroll Left"
                   >
                     ‹
                   </button>
                   <div
                     id="provider-pill"
-                    className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-14 py-2.5 flex items-center justify-start sm:justify-center gap-4"
+                    className="relative z-10 w-full overflow-x-auto scrollbar-none px-12 sm:px-16 py-6 sm:py-7 flex items-center justify-start sm:justify-center gap-6"
                   >
-                    <div className="flex items-center gap-4 min-w-max mx-auto">
+                    <div className="flex items-center gap-6 min-w-max mx-auto">
                       {providerCategories.map((prov) => {
                         const isActive = providerFilter === prov.name;
                         const isDefault = prov.name === "All (Default)";
@@ -988,7 +988,7 @@ function Home() {
                             key={prov.name}
                             type="button"
                             onClick={() => handleProviderSelect(prov.name)}
-                            className={`relative group rounded-xl p-2 transition-all cursor-pointer shrink-0 flex items-center justify-center ${
+                            className={`relative group rounded-xl p-3 transition-all cursor-pointer shrink-0 flex items-center justify-center ${
                               isActive ? themeStyles.activeGlow : themeStyles.inactiveGlow
                             }`}
                             title={prov.name}
@@ -996,8 +996,8 @@ function Home() {
                             <img
                               src={prov.logo}
                               alt={prov.name}
-                              className={`h-7 transition-transform group-hover:scale-105 ${
-                                isDefault ? "w-45 sm:w-43 object-contain" : "w-auto object-contain"
+                              className={`h-[84px] transition-transform group-hover:scale-105 ${
+                                isDefault ? "w-[144px] sm:w-[168px] object-contain" : "w-auto object-contain"
                               }`}
                             />
                           </button>
@@ -1008,7 +1008,7 @@ function Home() {
                   <button
                     type="button"
                     onClick={() => scrollPill("provider-pill", "right")}
-                    className="absolute right-1 z-20 w-7 h-7 bg-black/70 hover:bg-black/90 text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer"
+                    className="absolute right-1 z-20 w-8 h-8 bg-black/70 hover:bg-black/90 text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer"
                     title="Scroll Right"
                   >
                     ›
