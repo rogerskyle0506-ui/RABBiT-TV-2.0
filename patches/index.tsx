@@ -30,10 +30,10 @@ const genreCategories = [
 ];
 
 const providerCategories = [
-  "All (Default)",
-  "Netflix",
-  "Prime",
-  "Disney+",
+  { name: "All (Default)", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/AllDefault.webp" },
+  { name: "Netflix", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/netflix-vector-flat-logo-735811696261671nhzlvgcmyf.png" },
+  { name: "Prime", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Prime.webp" },
+  { name: "Disney+", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/disney-plus-logo-white.png" },
 ];
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
@@ -665,6 +665,8 @@ function Home() {
           "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
         accentText: "text-violet-300",
         borderGlow: "border-violet-500/30",
+        activeGlow: "ring-4 ring-violet-400 shadow-[0_0_15px_rgba(167,139,250,0.7)] scale-105 border-violet-400",
+        inactiveGlow: "hover:shadow-[0_0_10px_rgba(167,139,250,0.4)] border-white/10 hover:border-violet-400/50",
       },
       red: {
         bg: "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80",
@@ -673,6 +675,8 @@ function Home() {
           "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
         accentText: "text-red-400",
         borderGlow: "border-red-500/30",
+        activeGlow: "ring-4 ring-red-400 shadow-[0_0_15px_rgba(248,113,113,0.7)] scale-105 border-red-400",
+        inactiveGlow: "hover:shadow-[0_0_10px_rgba(248,113,113,0.4)] border-white/10 hover:border-red-400/50",
       },
       midnight: {
         bg: "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80",
@@ -681,6 +685,8 @@ function Home() {
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
         accentText: "text-sky-300",
         borderGlow: "border-sky-500/30",
+        activeGlow: "ring-4 ring-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.7)] scale-105 border-sky-400",
+        inactiveGlow: "hover:shadow-[0_0_10px_rgba(56,189,248,0.4)] border-white/10 hover:border-sky-400/50",
       },
       emerald: {
         bg: "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80",
@@ -689,6 +695,8 @@ function Home() {
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
         accentText: "text-emerald-300",
         borderGlow: "border-emerald-500/30",
+        activeGlow: "ring-4 ring-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.7)] scale-105 border-emerald-400",
+        inactiveGlow: "hover:shadow-[0_0_10px_rgba(52,211,153,0.4)] border-white/10 hover:border-emerald-400/50",
       },
       amber: {
         bg: "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80",
@@ -697,6 +705,8 @@ function Home() {
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
         accentText: "text-amber-300",
         borderGlow: "border-amber-500/30",
+        activeGlow: "ring-4 ring-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.7)] scale-105 border-amber-400",
+        inactiveGlow: "hover:shadow-[0_0_10px_rgba(251,191,36,0.4)] border-white/10 hover:border-amber-400/50",
       },
       cyan: {
         bg: "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80",
@@ -705,6 +715,8 @@ function Home() {
           "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
         accentText: "text-cyan-300",
         borderGlow: "border-cyan-500/30",
+        activeGlow: "ring-4 ring-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.7)] scale-105 border-cyan-400",
+        inactiveGlow: "hover:shadow-[0_0_10px_rgba(34,211,238,0.4)] border-white/10 hover:border-cyan-400/50",
       },
     }[appTheme] ?? {
       bg: "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80",
@@ -713,6 +725,8 @@ function Home() {
         "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
       accentText: "text-violet-300",
       borderGlow: "border-violet-500/30",
+      activeGlow: "ring-4 ring-violet-400 shadow-[0_0_15px_rgba(167,139,250,0.7)] scale-105 border-violet-400",
+      inactiveGlow: "hover:shadow-[0_0_10px_rgba(167,139,250,0.4)] border-white/10 hover:border-violet-400/50",
     };
 
   const getPrimaryBgColor = (theme: AppTheme) => {
@@ -886,10 +900,10 @@ function Home() {
                 </div>
               </div>
 
-              {/* Provider Categories Pill Bar Container */}
+              {/* Provider Categories Logo Pill Bar Container */}
               <div className="flex justify-center w-full px-3">
                 <div
-                  className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2 flex items-center justify-start sm:justify-center gap-2"
+                  className="relative max-w-3xl w-full overflow-x-auto scrollbar-none rounded-2xl border border-white/10 shadow-xl px-4 py-2.5 flex items-center justify-start sm:justify-center gap-4"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                     backgroundSize: "117% 180%",
@@ -898,21 +912,24 @@ function Home() {
                   }}
                 >
                   <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl" />
-                  <div className="relative z-10 flex items-center gap-2 min-w-max mx-auto">
+                  <div className="relative z-10 flex items-center gap-4 min-w-max mx-auto">
                     {providerCategories.map((prov) => {
-                      const isActive = providerFilter === prov;
+                      const isActive = providerFilter === prov.name;
                       return (
                         <button
-                          key={prov}
+                          key={prov.name}
                           type="button"
-                          onClick={() => handleProviderSelect(prov)}
-                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
-                            isActive
-                              ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
-                              : "bg-black/40 hover:bg-black/60 text-slate-200 border border-white/10"
+                          onClick={() => handleProviderSelect(prov.name)}
+                          className={`relative group rounded-xl p-2 transition-all cursor-pointer shrink-0 bg-black/50 border ${
+                            isActive ? themeStyles.activeGlow : themeStyles.inactiveGlow
                           }`}
+                          title={prov.name}
                         >
-                          🌐 {prov}
+                          <img
+                            src={prov.logo}
+                            alt={prov.name}
+                            className="h-7 w-auto object-contain transition-transform group-hover:scale-105"
+                          />
                         </button>
                       );
                     })}
