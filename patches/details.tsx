@@ -66,9 +66,6 @@ export function DetailsPage() {
   const [showPlayerControls, setShowPlayerControls] = useState(true);
   const playerInactivityTimerRef = useRef<number | null>(null);
 
-  // Poster Overlay Play State
-  const [isContentPlaying, setIsContentPlaying] = useState(true);
-
   // Cast Scroll Ref
   const castScrollRef = useRef<HTMLDivElement>(null);
 
@@ -120,7 +117,7 @@ export function DetailsPage() {
     }
   };
 
-  // Inactivity auto-hide logic for the player overlay (6 seconds), listening to container & window d-pad / mouse / touch activity
+  // Robust inactivity & interaction listener to instantly bring back controls on any user activity
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -150,6 +147,8 @@ export function DetailsPage() {
     window.addEventListener("click", handlePlayerActivity);
     window.addEventListener("pointerdown", handlePlayerActivity);
     window.addEventListener("keydown", handlePlayerActivity);
+    document.addEventListener("pointermove", handlePlayerActivity);
+    document.addEventListener("click", handlePlayerActivity);
 
     return () => {
       if (playerInactivityTimerRef.current) {
@@ -168,17 +167,13 @@ export function DetailsPage() {
       window.removeEventListener("click", handlePlayerActivity);
       window.removeEventListener("pointerdown", handlePlayerActivity);
       window.removeEventListener("keydown", handlePlayerActivity);
+      document.removeEventListener("pointermove", handlePlayerActivity);
+      document.removeEventListener("click", handlePlayerActivity);
     };
   }, [isPlaying]);
 
   const handlePosterOverlayClick = () => {
-    setIsContentPlaying(true);
     toggleTrueFullscreen();
-  };
-
-  const handleTogglePlayPauseOverlay = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsContentPlaying(!isContentPlaying);
   };
 
   const scrollCast = (direction: "left" | "right") => {
@@ -613,7 +608,6 @@ export function DetailsPage() {
     bgAudio.pause();
 
     setIsPlaying(true);
-    setIsContentPlaying(true);
 
     try {
       saveWatchProgress({
@@ -929,14 +923,14 @@ export function DetailsPage() {
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
               ></iframe>
 
-              {/* Movie Poster Overlay covering the iframe when NOT in fullscreen */}
+              {/* Movie Poster Overlay covering the iframe when NOT in fullscreen (Lowered positioning & strictly play button) */}
               {isPlaying && !isFullscreenMode && (
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
                     handlePosterOverlayClick();
                   }}
-                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/30 cursor-pointer group transition-all"
+                  className="absolute inset-0 z-30 flex flex-col justify-end pb-12 items-center bg-black/30 cursor-pointer group transition-all"
                 >
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <img src={poster} alt={title} className="w-full h-full object-cover filter brightness-100 scale-105" />
@@ -948,17 +942,13 @@ export function DetailsPage() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleTogglePlayPauseOverlay(e);
+                        handlePosterOverlayClick();
                       }}
                       className={`flex items-center justify-center w-16 h-16 rounded-full bg-black/10 text-white shadow-lg group-hover:scale-110 transition-transform border border-white/20`}
-                      title={isContentPlaying ? "Pause" : "Play"}
+                      title="Play"
                     >
                       <svg className={`w-8 h-8 ${activeTheme.text}`} fill="currentColor" viewBox="0 0 24 24">
-                        {isContentPlaying ? (
-                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                        ) : (
-                          <path d="M8 5v14l11-7z"/>
-                        )}
+                        <path d="M8 5v14l11-7z"/>
                       </svg>
                     </button>
                     <div className="flex flex-col items-center gap-1">
@@ -973,9 +963,9 @@ export function DetailsPage() {
                 </div>
               )}
 
-              {/* Swaedo Controls Overlay / True Fullscreen Trigger Button (Auto-hides after inactivity) */}
+              {/* Swaedo Controls Overlay / True Fullscreen Trigger Button (Auto-hides after inactivity, persistent z-[9999]) */}
               <div
-                className={`absolute top-4 right-4 z-40 flex items-center gap-2 transition-opacity duration-300 ${
+                className={`absolute top-4 right-4 z-[9999] flex items-center gap-2 transition-opacity duration-300 pointer-events-auto ${
                   showPlayerControls ? "opacity-100" : "opacity-0 pointer-events-none"
                 }`}
               >
@@ -985,7 +975,7 @@ export function DetailsPage() {
                     e.stopPropagation();
                     toggleTrueFullscreen();
                   }}
-                  className="flex items-center gap-2 rounded-xl bg-black/80 hover:bg-black px-4 py-2.5 text-xs font-bold text-white backdrop-blur-md border border-white/30 shadow-2xl transition focus:outline-none focus:ring-4 focus:ring-violet-400 cursor-pointer"
+                  className="flex items-center gap-2 rounded-xl bg-black/85 hover:bg-black px-4 py-2.5 text-xs font-bold text-white backdrop-blur-md border border-white/30 shadow-2xl transition focus:outline-none focus:ring-4 focus:ring-violet-400 cursor-pointer pointer-events-auto"
                   title={isFullscreenMode ? "Exit Fullscreen" : "Launch Fullscreen"}
                 >
                   {isFullscreenMode ? "❌ Exit Fullscreen" : "⛶ Fullscreen"}
