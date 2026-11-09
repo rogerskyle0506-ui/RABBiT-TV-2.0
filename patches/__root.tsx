@@ -913,7 +913,7 @@ function RootComponent() {
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                   style={{
                     backgroundImage: `url(${RABBIT_MENU_STRIP})`,
-                    backgroundSize: "115% 100%",
+                    backgroundSize: "130% 100%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                   }}
@@ -950,14 +950,14 @@ function RootComponent() {
                   <button
                     type="button"
                     onClick={handleToggleProfileMenu}
-                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border-0"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border-0"
                     style={{
                       backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                      backgroundSize: "115% 100%",
+                      backgroundSize: "130% 100%",
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "center center",
-                      WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.1) 100%)",
-                      maskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, rgba(0,0,0,0.1) 100%)",
+                      WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.1) 100%)",
+                      maskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.1) 100%)",
                     }}
                   >
                     <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
@@ -1065,7 +1065,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "115% 100%",
+                              backgroundSize: "130% 100%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1077,7 +1077,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "globalFeed" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
+                            className="w-full px-6 py-5 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1128,7 +1128,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "115% 100%",
+                              backgroundSize: "130% 100%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1140,7 +1140,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "history" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
+                            className="w-full px-6 py-5 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1177,7 +1177,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "115% 100%",
+                              backgroundSize: "130% 100%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1189,7 +1189,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "theme" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
+                            className="w-full px-6 py-5 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1232,7 +1232,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "115% 100%",
+                              backgroundSize: "130% 100%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1244,7 +1244,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "scale" && (
                           <div
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
+                            className="w-full px-6 py-5 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1312,7 +1312,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "115% 100%",
+                              backgroundSize: "130% 100%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1324,14 +1324,14 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "audio" && (
                           <div
-                            className="w-full pt-3 pb-4 px-3 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
+                            className="w-full px-6 py-5 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
                               backgroundRepeat: "no-repeat",
                             }}
                           >
-                            <div className="relative z-10 space-y-2.5 w-full box-border">
+                            <div className="relative z-10 space-y-3 w-full box-border">
                               <div className="w-full box-border">
                                 <p className="text-[11px] text-slate-300 mb-1 font-semibold">Playback Controls:</p>
                                 <div className="grid grid-cols-2 gap-2 w-full box-border">
@@ -1361,7 +1361,7 @@ function RootComponent() {
                               </div>
 
                               {/* VOLUME SLIDER CONTROL */}
-                              <div className="pt-1.5 border-t border-white/10 w-full space-y-1 box-border">
+                              <div className="pt-2 border-t border-white/10 w-full space-y-1.5 box-border">
                                 <div className="flex items-center justify-between">
                                   <p className="text-[11px] text-slate-300 font-semibold">Music Volume:</p>
                                   <span className="text-[11px] font-bold text-amber-300">{Math.round(bgMusicVolume * 100)}%</span>
@@ -1377,10 +1377,10 @@ function RootComponent() {
                                 />
                               </div>
 
-                              <div className="pt-1.5 border-t border-white/10 w-full box-border">
-                                <p className="text-[11px] text-slate-300 mb-1.5 font-semibold">Select Channel / Stream by Genre:</p>
+                              <div className="pt-2 border-t border-white/10 w-full box-border">
+                                <p className="text-[11px] text-slate-300 mb-2 font-semibold">Select Channel / Stream by Genre:</p>
                                 
-                                <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1 w-full box-border scrollbar-none">
+                                <div className="max-h-32 overflow-y-auto space-y-1.5 pr-1 w-full box-border scrollbar-none">
                                   {Object.entries(RADIO_STATIONS).map(([category, stations]) => {
                                     const hasActiveStation = stations.some(
                                       s => (currentStationUrl === s.url) || (!currentStationUrl && bgAudio.getCurrentStation().url === s.url)
@@ -1447,7 +1447,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "115% 100%",
+                              backgroundSize: "130% 100%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1460,7 +1460,7 @@ function RootComponent() {
                         {activeSidebarSection === "pin" && (
                           <form
                             onSubmit={handleUnifiedProfileUpdate}
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
+                            className="w-full px-6 py-5 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
@@ -1565,7 +1565,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "115% 100%",
+                              backgroundSize: "130% 100%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1577,7 +1577,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "backup" && (
                           <div
-                            className="w-full p-4 border-0 space-y-2.5 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
+                            className="w-full px-6 py-5 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
                               backgroundSize: "100% 100%",
@@ -1624,7 +1624,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "115% 100%",
+                              backgroundSize: "130% 100%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1636,7 +1636,7 @@ function RootComponent() {
                         </button>
                         {activeSidebarSection === "accessibility" && (
                           <div
-                            className="w-full p-4 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
+                            className="w-full px-6 py-5 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                               backgroundSize: "100% 100%",
