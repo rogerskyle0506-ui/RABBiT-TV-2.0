@@ -953,20 +953,20 @@ function Home() {
                 </div>
               </div>
 
-              {/* Provider Categories Logo Pill Bar Container (3x taller logos, balanced background size, glow ring & static overlay) */}
+              {/* Provider Categories Logo Pill Bar Container (3x taller logos, brighter bg, top-aligned bg position, glow ring & static overlay) */}
               <div className="flex justify-center w-full px-3">
                 <div
                   className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "117% 480%",
+                    backgroundSize: "120% 350%",
                     backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center center",
+                    backgroundPosition: "center top",
                     maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
                     WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
                   }}
                 >
-                  <div className="absolute inset-0 bg-black/45 pointer-events-none rounded-2xl z-0" />
+                  <div className="absolute inset-0 bg-black/20 pointer-events-none rounded-2xl z-0" />
                   <button
                     type="button"
                     onClick={() => scrollPill("provider-pill", "left")}
