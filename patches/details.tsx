@@ -120,7 +120,7 @@ export function DetailsPage() {
     }
   };
 
-  // Inactivity auto-hide logic for the player overlay (5 seconds), listening to container & window d-pad / mouse activity
+  // Inactivity auto-hide logic for the player overlay (6 seconds), listening to container & window d-pad / mouse activity
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -131,7 +131,7 @@ export function DetailsPage() {
       }
       playerInactivityTimerRef.current = window.setTimeout(() => {
         setShowPlayerControls(false);
-      }, 5000);
+      }, 6000);
     };
 
     handlePlayerActivity(); // Initialize timer
@@ -141,6 +141,7 @@ export function DetailsPage() {
       container.addEventListener("mousemove", handlePlayerActivity);
       container.addEventListener("mousedown", handlePlayerActivity);
       container.addEventListener("touchstart", handlePlayerActivity);
+      container.addEventListener("click", handlePlayerActivity);
     }
     window.addEventListener("mousemove", handlePlayerActivity);
     window.addEventListener("keydown", handlePlayerActivity);
@@ -153,6 +154,7 @@ export function DetailsPage() {
         container.removeEventListener("mousemove", handlePlayerActivity);
         container.removeEventListener("mousedown", handlePlayerActivity);
         container.removeEventListener("touchstart", handlePlayerActivity);
+        container.removeEventListener("click", handlePlayerActivity);
       }
       window.removeEventListener("mousemove", handlePlayerActivity);
       window.removeEventListener("keydown", handlePlayerActivity);
@@ -889,6 +891,20 @@ export function DetailsPage() {
             {/* SWAEDO FULLSCREEN WRAPPER CONTAINER */}
             <div
               ref={playerContainerRef}
+              onClick={() => {
+                setShowPlayerControls(true);
+                if (playerInactivityTimerRef.current) clearTimeout(playerInactivityTimerRef.current);
+                playerInactivityTimerRef.current = window.setTimeout(() => {
+                  setShowPlayerControls(false);
+                }, 6000);
+              }}
+              onTouchStart={() => {
+                setShowPlayerControls(true);
+                if (playerInactivityTimerRef.current) clearTimeout(playerInactivityTimerRef.current);
+                playerInactivityTimerRef.current = window.setTimeout(() => {
+                  setShowPlayerControls(false);
+                }, 6000);
+              }}
               className={`relative w-full overflow-hidden bg-black shadow-2xl shadow-black/50 border border-white/10 transition-all duration-300 ${
                 isFullscreenMode
                   ? "fixed inset-0 z-50 h-screen w-screen rounded-none border-0 flex items-center justify-center bg-black"
@@ -906,28 +922,34 @@ export function DetailsPage() {
               {/* Movie Poster Overlay covering the iframe when NOT in fullscreen */}
               {isPlaying && !isFullscreenMode && (
                 <div
-                  onClick={handlePosterOverlayClick}
-                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/85 backdrop-blur-md cursor-pointer group transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePosterOverlayClick();
+                  }}
+                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 cursor-pointer group transition-all"
                 >
-                  <div className="absolute inset-0 opacity-40 overflow-hidden pointer-events-none">
-                    <img src={poster} alt={title} className="w-full h-full object-cover filter blur-md scale-105" />
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <img src={poster} alt={title} className="w-full h-full object-cover filter brightness-75 scale-105" />
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/40 pointer-events-none" />
+                  <div className="absolute inset-0 bg-black/60 pointer-events-none" />
 
                   <div className="relative z-10 flex flex-col items-center gap-4 p-6 text-center">
                     <button
                       type="button"
-                      onClick={handleTogglePlayPauseOverlay}
-                      className={`flex items-center justify-center w-20 h-20 rounded-full ${activeTheme.bg} text-white shadow-2xl ${activeTheme.shadow} group-hover:scale-110 transition-transform border border-white/30`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTogglePlayPauseOverlay(e);
+                      }}
+                      className={`flex items-center justify-center w-14 h-14 rounded-full ${activeTheme.bg} text-white shadow-2xl ${activeTheme.shadow} group-hover:scale-110 transition-transform border-2 border-white`}
                       title={isContentPlaying ? "Pause" : "Play"}
                     >
-                      <span className="text-2xl font-black">{isContentPlaying ? "⏸" : "▶"}</span>
+                      <span className="text-xl font-black">{isContentPlaying ? "⏸" : "▶"}</span>
                     </button>
                     <div className="flex flex-col items-center gap-1">
                       <span className="text-lg font-black text-white tracking-wide drop-shadow-md">
                         {title}
                       </span>
-                      <span className="text-xs font-bold text-amber-300 bg-black/70 px-3 py-1 rounded-full border border-amber-500/30 shadow">
+                      <span className="text-xs font-bold text-amber-300 bg-black/80 px-3.5 py-1.5 rounded-full border border-amber-500/40 shadow">
                         Click to launch video
                       </span>
                     </div>
@@ -935,19 +957,22 @@ export function DetailsPage() {
                 </div>
               )}
 
-              {/* Swaedo Controls Overlay / True Fullscreen Trigger Button (Auto-hides after 5s of inactivity) */}
+              {/* Swaedo Controls Overlay / True Fullscreen Trigger Button (Auto-hides after inactivity) */}
               <div
-                className={`absolute top-3 right-3 z-30 flex items-center gap-2 transition-opacity duration-300 ${
+                className={`absolute top-4 right-4 z-40 flex items-center gap-2 transition-opacity duration-300 ${
                   showPlayerControls ? "opacity-100" : "opacity-0 pointer-events-none"
                 }`}
               >
                 <button
                   type="button"
-                  onClick={toggleTrueFullscreen}
-                  className="flex items-center gap-1.5 rounded-lg bg-black/75 hover:bg-black px-3.5 py-2 text-xs font-bold text-white backdrop-blur-md border border-white/20 shadow-xl transition focus:outline-none focus:ring-4 focus:ring-violet-400 cursor-pointer"
-                  title={isFullscreenMode ? "Exit True Fullscreen" : "Launch True Fullscreen"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTrueFullscreen();
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-black/80 hover:bg-black px-4 py-2.5 text-xs font-bold text-white backdrop-blur-md border border-white/30 shadow-2xl transition focus:outline-none focus:ring-4 focus:ring-violet-400 cursor-pointer"
+                  title={isFullscreenMode ? "Exit Fullscreen" : "Launch Fullscreen"}
                 >
-                  {isFullscreenMode ? "🗗 Exit Fullscreen" : "⛶ Fullscreen"}
+                  {isFullscreenMode ? "❌ Exit Fullscreen" : "⛶ Fullscreen"}
                 </button>
               </div>
             </div>
