@@ -866,24 +866,6 @@ function RootComponent() {
     }
   };
 
-  const getSidebarThemeTintOverlay = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-red-950/30";
-      case "midnight":
-        return "bg-blue-950/30";
-      case "emerald":
-        return "bg-emerald-950/30";
-      case "amber":
-        return "bg-yellow-950/30";
-      case "cyan":
-        return "bg-cyan-950/30";
-      case "violet":
-      default:
-        return "bg-purple-950/30";
-    }
-  };
-
   const allThemesList: { id: AppTheme; label: string }[] = [
     { id: "violet", label: "🟣 Violet / Neon" },
     { id: "red", label: "🔴 Red & Black" },
@@ -913,22 +895,30 @@ function RootComponent() {
         <AppWallpaper />
         <AuthProvider>
           <header className={`sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)}`}>
-            <div className="absolute inset-0 pointer-events-none opacity-20">
+            {/* Header background container using rabbit-menu-strip for dynamic viewport sizing */}
+            <div className="absolute inset-0 pointer-events-none opacity-85">
               <img
-                src={RABBIT_HEADER_PILL}
-                alt="Header Background"
-                className="w-full h-full object-cover"
+                src={RABBIT_MENU_STRIP}
+                alt="Header Background Strip"
+                className="w-full h-full object-cover object-center"
               />
             </div>
+            <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
             <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 gap-2 sm:gap-3">
               {/* Left group: RABBiT TV and Search Bar */}
               <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                 <Link
                   to="/"
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/40 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  style={{
+                    backgroundImage: `url(${RABBIT_MENU_STRIP})`,
+                    backgroundSize: "100% 100%",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center center",
+                  }}
                 >
-                  <span className="whitespace-nowrap">RABBiT TV</span>
+                  <span className="whitespace-nowrap relative z-10">RABBiT TV</span>
                 </Link>
 
                 {!showFirstStartModal && (
@@ -1005,7 +995,7 @@ function RootComponent() {
                 onClick={handleCloseAll}
               />
 
-              {/* Side Blade Drawer Content with 100% 100% background sizing to avoid clipping */}
+              {/* Side Blade Drawer Content with 100% 100% background sizing and strict boundary containment */}
               <div
                 className="relative mx-3 my-2 w-[420px] max-w-[95vw] h-[calc(100dvh-75px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-95 overflow-hidden pt-12 pb-12 px-6 rounded-3xl border border-white/10 pointer-events-auto box-border"
                 style={{
@@ -1014,9 +1004,6 @@ function RootComponent() {
                   backgroundRepeat: "no-repeat",
                 }}
               >
-                {/* Active Theme Tint Overlay for sidebar */}
-                <div className={`absolute inset-0 pointer-events-none z-0 ${getSidebarThemeTintOverlay(appTheme)}`} />
-
                 {/* Scroll Up Arrow Button */}
                 <button
                   type="button"
@@ -1027,16 +1014,16 @@ function RootComponent() {
                   ▲
                 </button>
 
-                {/* Scrollable Container with Strict Containment */}
+                {/* Scrollable Container with Strict Containment to prevent exceeding bottom glow bar */}
                 <div
                   ref={sidebarContentRef}
-                  className="flex-1 overflow-y-auto px-2 pt-10 pb-10 w-full scrollbar-none relative z-10 box-border overflow-x-hidden"
+                  className="flex-1 overflow-y-auto px-2 pt-10 pb-10 w-full scrollbar-none relative z-10 box-border overflow-x-hidden max-h-[calc(100dvh-150px)]"
                   style={{
                     maskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%)",
                     WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%)",
                   }}
                 >
-                  <div className="relative z-10 flex flex-col w-full box-border">
+                  <div className="relative z-10 flex flex-col w-full box-border pb-6">
                     {/* Sidebar Header */}
                     <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 pt-1 px-2 w-full box-border">
                       <div className="flex items-center gap-3">
