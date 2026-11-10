@@ -962,7 +962,7 @@ function Home() {
                     backgroundSize: "117% 175%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center",
-                    maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+                    maskImage: "linear-gradient(to right, transparent 0%, black 45%, black 94%, transparent 100%)",
                     WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
                   }}
                 >
