@@ -1,2 +1,2 @@
 // Auto-generated at build time - do not modify manually
-export const APP_VERSION = "2.3.7.6";
+export const APP_VERSION = "2.3.7.7";
