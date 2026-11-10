@@ -953,15 +953,15 @@ function Home() {
                 </div>
               </div>
 
-              {/* Provider Categories Logo Pill Bar Container (Stepped down to 114% 180% background size) */}
+              {/* Provider Categories Logo Pill Bar Container (Restored background size to 117% and shifted position to center 25%) */}
               <div className="flex justify-center w-full px-3">
                 <div
                   className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "114% 180%",
+                    backgroundSize: "117% 180%",
                     backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center top",
+                    backgroundPosition: "center 25%",
                     maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
                     WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
                   }}
