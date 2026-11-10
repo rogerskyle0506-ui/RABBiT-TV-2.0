@@ -785,7 +785,7 @@ function Home() {
             className="relative max-w-7xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
             style={{
               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-              backgroundSize: "115% 380%",
+              backgroundSize: "113% 380%",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
               maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
@@ -896,70 +896,13 @@ function Home() {
 
           {activeTab !== "My List" && (
             <section className="mb-4 space-y-2.5 flex flex-col items-center justify-center text-center w-full">
-              {/* Genre Categories Pill Bar Container */}
+                           {/* Provider Categories Logo Pill Bar Container (Restored background size to 117% and shifted position to center 25%) */}
               <div className="flex justify-center w-full px-3">
                 <div
                   className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "115% 380%",
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center center",
-                    maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-                    WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-                  }}
-                >
-                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-                  <button
-                    type="button"
-                    onClick={() => scrollPill("genre-pill", "left")}
-                    className="absolute left-1 z-20 w-7 h-7 bg-black/70 hover:bg-black/90 text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer"
-                    title="Scroll Left"
-                  >
-                    ‹
-                  </button>
-                  <div
-                    id="genre-pill"
-                    className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-14 py-2 flex items-center justify-start sm:justify-center gap-2"
-                  >
-                    <div className="flex items-center gap-2 min-w-max mx-auto">
-                      {genreCategories.map((genre) => {
-                        const isActive = selectedGenre === genre;
-                        return (
-                          <button
-                            key={genre}
-                            type="button"
-                            onClick={() => setSelectedGenre(genre)}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
-                              isActive
-                                ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
-                                : "bg-black/40 hover:bg-black/60 text-slate-200"
-                            }`}
-                          >
-                            {genre}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => scrollPill("genre-pill", "right")}
-                    className="absolute right-1 z-20 w-7 h-7 bg-black/70 hover:bg-black/90 text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer"
-                    title="Scroll Right"
-                  >
-                    ›
-                  </button>
-                </div>
-              </div>
-
-              {/* Provider Categories Logo Pill Bar Container (Restored background size to 117% and shifted position to center 25%) */}
-              <div className="flex justify-center w-full px-3">
-                <div
-                  className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
-                  style={{
-                    backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "115% 380%",
+                    backgroundSize: "113% 380%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center",
                     maskImage: "linear-gradient(to right, transparent 0%, black 45%, black 94%, transparent 100%)",
@@ -1009,6 +952,63 @@ function Home() {
                     type="button"
                     onClick={() => scrollPill("provider-pill", "right")}
                     className="absolute right-1 z-20 w-8 h-8 bg-black/70 hover:bg-black/90 text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer"
+                    title="Scroll Right"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+              
+              {/* Genre Categories Pill Bar Container */}
+              <div className="flex justify-center w-full px-3">
+                <div
+                  className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
+                  style={{
+                    backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                    backgroundSize: "113% 380%",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center center",
+                    maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+                  }}
+                >
+                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
+                  <button
+                    type="button"
+                    onClick={() => scrollPill("genre-pill", "left")}
+                    className="absolute left-1 z-20 w-7 h-7 bg-black/70 hover:bg-black/90 text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer"
+                    title="Scroll Left"
+                  >
+                    ‹
+                  </button>
+                  <div
+                    id="genre-pill"
+                    className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-14 py-2 flex items-center justify-start sm:justify-center gap-2"
+                  >
+                    <div className="flex items-center gap-2 min-w-max mx-auto">
+                      {genreCategories.map((genre) => {
+                        const isActive = selectedGenre === genre;
+                        return (
+                          <button
+                            key={genre}
+                            type="button"
+                            onClick={() => setSelectedGenre(genre)}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                              isActive
+                                ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                                : "bg-black/40 hover:bg-black/60 text-slate-200"
+                            }`}
+                          >
+                            {genre}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => scrollPill("genre-pill", "right")}
+                    className="absolute right-1 z-20 w-7 h-7 bg-black/70 hover:bg-black/90 text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer"
                     title="Scroll Right"
                   >
                     ›
