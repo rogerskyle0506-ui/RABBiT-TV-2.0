@@ -58,8 +58,13 @@ export function DetailsPage() {
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [showScrollReminder, setShowScrollReminder] = useState(false);
 
+  // Swaedo Fullscreen Wrapper State & Ref
   const [isFullscreenMode, setIsFullscreenMode] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fullscreen Overlay Inactivity Auto-Hide State
+  const [showPlayerControls, setShowPlayerControls] = useState(true);
+  const playerInactivityTimerRef = useRef<number | null>(null);
 
   // Cast Scroll Ref
   const castScrollRef = useRef<HTMLDivElement>(null);
@@ -78,7 +83,7 @@ export function DetailsPage() {
     setLoading(true);
   }, [mediaId, urlType]);
 
-  // Sync state when entering/exiting native device full screen
+  // Handle native fullscreen change events (e.g. pressing ESC on projector/keyboard)
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreenMode(!!document.fullscreenElement);
@@ -91,8 +96,8 @@ export function DetailsPage() {
     };
   }, []);
 
-  const triggerNativeFullscreen = () => {
-    const elem = iframeRef.current;
+  const toggleTrueFullscreen = () => {
+    const elem = playerContainerRef.current;
     if (!elem) return;
 
     if (!document.fullscreenElement) {
@@ -100,10 +105,75 @@ export function DetailsPage() {
         elem.requestFullscreen();
       } else if ((elem as any).webkitRequestFullscreen) {
         (elem as any).webkitRequestFullscreen();
-      } else if ((elem as any).msRequestFullscreen) {
-        (elem as any).msRequestFullscreen();
       }
+      setIsFullscreenMode(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+      setIsFullscreenMode(false);
     }
+  };
+
+  // Robust inactivity & interaction listener to instantly bring back controls on any user activity
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const handlePlayerActivity = () => {
+      setShowPlayerControls(true);
+      if (playerInactivityTimerRef.current) {
+        clearTimeout(playerInactivityTimerRef.current);
+      }
+      playerInactivityTimerRef.current = window.setTimeout(() => {
+        setShowPlayerControls(false);
+      }, 6000);
+    };
+
+    handlePlayerActivity(); // Initialize timer
+
+    const container = playerContainerRef.current;
+    if (container) {
+      container.addEventListener("mousemove", handlePlayerActivity);
+      container.addEventListener("mousedown", handlePlayerActivity);
+      container.addEventListener("touchstart", handlePlayerActivity);
+      container.addEventListener("click", handlePlayerActivity);
+      container.addEventListener("pointerdown", handlePlayerActivity);
+    }
+    window.addEventListener("mousemove", handlePlayerActivity);
+    window.addEventListener("mousedown", handlePlayerActivity);
+    window.addEventListener("touchstart", handlePlayerActivity);
+    window.addEventListener("click", handlePlayerActivity);
+    window.addEventListener("pointerdown", handlePlayerActivity);
+    window.addEventListener("keydown", handlePlayerActivity);
+    document.addEventListener("pointermove", handlePlayerActivity);
+    document.addEventListener("click", handlePlayerActivity);
+
+    return () => {
+      if (playerInactivityTimerRef.current) {
+        clearTimeout(playerInactivityTimerRef.current);
+      }
+      if (container) {
+        container.removeEventListener("mousemove", handlePlayerActivity);
+        container.removeEventListener("mousedown", handlePlayerActivity);
+        container.removeEventListener("touchstart", handlePlayerActivity);
+        container.removeEventListener("click", handlePlayerActivity);
+        container.removeEventListener("pointerdown", handlePlayerActivity);
+      }
+      window.removeEventListener("mousemove", handlePlayerActivity);
+      window.removeEventListener("mousedown", handlePlayerActivity);
+      window.removeEventListener("touchstart", handlePlayerActivity);
+      window.removeEventListener("click", handlePlayerActivity);
+      window.removeEventListener("pointerdown", handlePlayerActivity);
+      window.removeEventListener("keydown", handlePlayerActivity);
+      document.removeEventListener("pointermove", handlePlayerActivity);
+      document.removeEventListener("click", handlePlayerActivity);
+    };
+  }, [isPlaying]);
+
+  const handlePosterOverlayClick = () => {
+    toggleTrueFullscreen();
   };
 
   const scrollCast = (direction: "left" | "right") => {
@@ -367,6 +437,7 @@ export function DetailsPage() {
       }
 
       const apiKey = import.meta.env.VITE_TMDB_API_KEY as string;
+
       let activeFetchType: "movie" | "tv" = urlType;
 
       try {
@@ -532,14 +603,11 @@ export function DetailsPage() {
 
   const handlePlay = () => {
     if (!mediaDetails || !mediaId) return;
-
+    
+    // Stop background audio immediately to prevent audio clash
     bgAudio.pause();
-    setIsPlaying(true);
 
-    // Launch native fullscreen directly on the player iframe
-    setTimeout(() => {
-      triggerNativeFullscreen();
-    }, 150);
+    setIsPlaying(true);
 
     try {
       saveWatchProgress({
@@ -824,31 +892,101 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* Direct Native Player Container */}
-            <div className="relative w-full aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
+            {/* SWAEDO FULLSCREEN WRAPPER CONTAINER */}
+            <div
+              ref={playerContainerRef}
+              onClick={() => {
+                setShowPlayerControls(true);
+                if (playerInactivityTimerRef.current) clearTimeout(playerInactivityTimerRef.current);
+                playerInactivityTimerRef.current = window.setTimeout(() => {
+                  setShowPlayerControls(false);
+                }, 6000);
+              }}
+              onTouchStart={() => {
+                setShowPlayerControls(true);
+                if (playerInactivityTimerRef.current) clearTimeout(playerInactivityTimerRef.current);
+                playerInactivityTimerRef.current = window.setTimeout(() => {
+                  setShowPlayerControls(false);
+                }, 6000);
+              }}
+              className={`relative w-full overflow-hidden bg-black shadow-2xl shadow-black/50 border border-white/10 transition-all duration-300 ${
+                isFullscreenMode
+                  ? "fixed inset-0 z-50 h-screen w-screen rounded-none border-0 flex items-center justify-center bg-black"
+                  : "aspect-video rounded-2xl"
+              }`}
+            >
               <iframe
-                ref={iframeRef}
                 key={`stable-player-${mediaId}-${season}-${episode}`}
                 src={embedUrl}
                 className="h-full w-full border-0"
                 allowFullScreen
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
               ></iframe>
+
+              {/* Movie Poster Overlay covering the iframe when NOT in fullscreen (Pushed slightly below center in portrait mode via pt-8 sm:pt-0) */}
+              {isPlaying && !isFullscreenMode && (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePosterOverlayClick();
+                  }}
+                  className="absolute inset-0 z-30 flex flex-col items-center justify-center pt-8 sm:pt-0 bg-black/30 cursor-pointer group transition-all"
+                >
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <img src={poster} alt={title} className="w-full h-full object-cover filter brightness-100 scale-105" />
+                  </div>
+                  <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+
+                  <div className="relative z-10 flex flex-col items-center justify-center gap-4 p-6 text-center">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePosterOverlayClick();
+                      }}
+                      className={`flex items-center justify-center w-16 h-16 rounded-full bg-black/10 text-white shadow-lg group-hover:scale-110 transition-transform border border-white/20`}
+                      title="Play"
+                    >
+                      <svg className={`w-8 h-8 ${activeTheme.text}`} fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    </button>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-lg font-black text-white tracking-wide drop-shadow-md">
+                        {title}
+                      </span>
+                      <span className="text-xs font-bold text-amber-300 bg-black/80 px-3.5 py-1.5 rounded-full border border-amber-500/40 shadow">
+                        Click to launch video
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Swaedo Controls Overlay / True Fullscreen Trigger Button (Auto-hides after inactivity, persistent z-[9999]) */}
+              <div
+                className={`absolute top-4 right-4 z-[9999] flex items-center gap-2 transition-opacity duration-300 pointer-events-auto ${
+                  showPlayerControls ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTrueFullscreen();
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-black/85 hover:bg-black px-4 py-2.5 text-xs font-bold text-white backdrop-blur-md border border-white/30 shadow-2xl transition focus:outline-none focus:ring-4 focus:ring-violet-400 cursor-pointer pointer-events-auto"
+                  title={isFullscreenMode ? "Exit Fullscreen" : "Launch Fullscreen"}
+                >
+                  {isFullscreenMode ? "❌ Exit Fullscreen" : "⛶ Fullscreen"}
+                </button>
+              </div>
             </div>
 
             <div
               className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}
             >
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-white">{title}</h1>
-                <button
-                  type="button"
-                  onClick={() => setIsPlaying(false)}
-                  className="rounded-xl border border-white/20 bg-black/60 hover:bg-black px-4 py-2 text-xs font-bold text-white transition focus:outline-none focus:ring-4 focus:ring-violet-400 cursor-pointer"
-                >
-                  ✕ Close Video Mode
-                </button>
-              </div>
+              <h1 className="text-2xl font-bold text-white">{title}</h1>
               <p className="text-sm leading-relaxed text-slate-300">{overview}</p>
             </div>
           </div>
@@ -1049,7 +1187,7 @@ export function DetailsPage() {
               </div>
             </div>
 
-            {/* Cast Section */}
+            {/* Cast Section with Left/Right Arrow Scroll */}
             {castList.length > 0 && (
               <div className={`mt-6 pt-4 pb-4 px-4 rounded-2xl border ${getCardBackground(appTheme)} backdrop-blur shadow-xl space-y-3`}>
                 <div className="flex items-center justify-between">
