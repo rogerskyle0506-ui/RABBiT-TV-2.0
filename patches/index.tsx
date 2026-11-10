@@ -785,7 +785,7 @@ function Home() {
             className="relative max-w-7xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
             style={{
               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-              backgroundSize: "116% 380%",
+              backgroundSize: "112% 380%",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
               maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
@@ -902,7 +902,7 @@ function Home() {
                   className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "116% 380%",
+                    backgroundSize: "112% 380%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                     maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
@@ -959,7 +959,7 @@ function Home() {
                   className="relative max-w-3xl w-full flex items-center justify-center rounded-2xl shadow-xl overflow-hidden"
                   style={{
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "116% 220%",
+                    backgroundSize: "112% 380%",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center",
                     maskImage: "linear-gradient(to right, transparent 0%, black 45%, black 94%, transparent 100%)",
