@@ -892,28 +892,6 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* SWAEDO FULLSCREEN WRAPPER CONTAINER */}
-            <div
-              ref={playerContainerRef}
-              onClick={() => {
-                setShowPlayerControls(true);
-                if (playerInactivityTimerRef.current) clearTimeout(playerInactivityTimerRef.current);
-                playerInactivityTimerRef.current = window.setTimeout(() => {
-                  setShowPlayerControls(false);
-                }, 6000);
-              }}
-              onTouchStart={() => {
-                setShowPlayerControls(true);
-                if (playerInactivityTimerRef.current) clearTimeout(playerInactivityTimerRef.current);
-                playerInactivityTimerRef.current = window.setTimeout(() => {
-                  setShowPlayerControls(false);
-                }, 6000);
-              }}
-              className={`relative w-full overflow-hidden bg-black shadow-2xl shadow-black/50 border border-white/10 transition-all duration-300 ${
-                isFullscreenMode
-                  ? "fixed inset-0 z-50 h-screen w-screen rounded-none border-0 flex items-center justify-center bg-black"
-                  : "aspect-video rounded-2xl"
-              }`}
             >
               <iframe
                 key={`stable-player-${mediaId}-${season}-${episode}`}
