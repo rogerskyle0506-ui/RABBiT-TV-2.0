@@ -7,8 +7,8 @@ android {
         applicationId "com.rabbittv.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2040009
-        versionName "2.4.0.9"
+        versionCode 2040100
+        versionName "2.4.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
