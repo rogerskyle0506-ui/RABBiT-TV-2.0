@@ -908,7 +908,7 @@ function RootComponent() {
               <img
                 src={RABBITHEADERWALL}
                 alt="Header Background Logo"
-                className="w-100% h-35% object-cover object-center border-b border-blue/5 transition-colors duration-350 relative overflow-hidden ${getHeaderThemeBg(appTheme)}"
+                className={"w-100% h-35% object-cover object-center border-b border-blue/5 transition-colors duration-350 relative overflow-hidden ${getHeaderThemeBg(appTheme)}"}
               />
             </div>
             <div className="absolute inset-0 bg-black/15 pointer-events-none" />
@@ -918,7 +918,7 @@ function RootComponent() {
               <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                 <Link
                   to="/"
-                  className={`flex items-center gap-2 px-8.5 py-4 rounded-2xl bg-black/30 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  className={`flex items-center gap-2 px-18.5 py-9 rounded-2xl bg-black/30 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                   style={{
                     backgroundImage: `url(${RABBIT_LOGO_URL})`,
                     backgroundSize: "cover",
