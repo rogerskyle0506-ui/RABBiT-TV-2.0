@@ -11,6 +11,7 @@ import { bgAudio } from "@/lib/background-audio";
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
+const RABBIT_HEADER_PILL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
 
 export const Route = createFileRoute("/details")({
   component: DetailsPage,
@@ -799,17 +800,20 @@ export function DetailsPage() {
               ></iframe>
             </div>
 
-            {/* Pill bar wrapper for Return Button */}
-            <div className="relative flex items-center justify-center py-4 my-2">
+            {/* Pill bar wrapper for Return Button (114% width, 380% height, centered) */}
+            <div className="relative flex items-center justify-center py-6 my-2">
               <div
-                className="absolute pointer-events-none rounded-full border border-white/10 shadow-2xl"
+                className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
                 style={{
                   width: "114%",
                   height: "380%",
-                  backgroundImage: `radial-gradient(circle at center, rgba(15, 23, 42, 0.95) 0%, rgba(3, 7, 18, 0.98) 100%)`,
-                  backdropFilter: "blur(12px)",
+                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                  backgroundSize: "112% 380%",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center center",
                 }}
               />
+              <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
               <div className="relative z-10">
                 <button
                   type="button"
@@ -823,18 +827,21 @@ export function DetailsPage() {
 
             {/* Recommended Movies Section on the Player View */}
             {mappedRecommendations.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-white/10 space-y-4">
-                {/* Pill bar wrapper for Recommended Movies header */}
-                <div className="relative flex items-center justify-center py-4 my-2">
+              <div className="mt-8 pt-4 border-t border-white/10 space-y-4">
+                {/* Pill bar wrapper for Recommended Movies header (114% width, 380% height, centered) */}
+                <div className="relative flex items-center justify-center py-6 my-2">
                   <div
-                    className="absolute pointer-events-none rounded-full border border-white/10 shadow-2xl"
+                    className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
                     style={{
                       width: "114%",
                       height: "380%",
-                      backgroundImage: `radial-gradient(circle at center, rgba(15, 23, 42, 0.95) 0%, rgba(3, 7, 18, 0.98) 100%)`,
-                      backdropFilter: "blur(12px)",
+                      backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                      backgroundSize: "112% 380%",
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "center center",
                     }}
                   />
+                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
                   <div className="relative z-10">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
                       <span>✨ Recommended Movies</span>
@@ -1175,4 +1182,3 @@ export function DetailsPage() {
     </div>
   );
 }
-
