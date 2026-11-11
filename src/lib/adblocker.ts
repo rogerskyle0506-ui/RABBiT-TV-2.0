@@ -119,7 +119,6 @@ function pageContainsScamText(): boolean {
 
 /**
  * Validates if an outgoing navigation request is allowed to leave the app.
- * (Same public signature as original)
  */
 export function shouldAllowExternalNavigation(url: string): boolean {
   if (!url) return false;
@@ -150,7 +149,6 @@ export function shouldAllowExternalNavigation(url: string): boolean {
   }
 
   // On the details/player page we are extremely strict
-  // (same behaviour as your original)
   const currentPath =
     typeof window !== "undefined" ? window.location.pathname : "";
   if (currentPath.includes("/details")) {
@@ -167,7 +165,6 @@ export function shouldAllowExternalNavigation(url: string): boolean {
 
 /**
  * Intercepts link click or window opening intents.
- * (Same public signature as original)
  */
 export function handleExternalUrlIntent(
   targetUrl: string,
@@ -185,8 +182,7 @@ export function handleExternalUrlIntent(
 }
 
 /**
- * Self-contained ad-blocking interceptor suite.
- * (Same public signature as original – returns a cleanup function)
+ * Self-contained ad-blocking interceptor suite with enhanced overlay and popup neutralization.
  */
 export function initAdBlockerGlobalInterceptors(): () => void {
   if (typeof window === "undefined") return () => {};
@@ -206,11 +202,12 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     return originalOpen.call(window, url, target, features);
   };
 
-  // 2. Capture-phase click interceptor (catches injected <a> tags)
+  // 2. Capture-phase click interceptor (catches injected <a> tags and transparent ad overlays)
   const handleDocumentClick = (event: MouseEvent) => {
     const target = event.target as HTMLElement | null;
     if (!target) return;
 
+    // Check if clicking an anchor tag
     const anchor = target.closest("a");
     if (anchor && anchor.href) {
       if (!shouldAllowExternalNavigation(anchor.href)) {
@@ -218,6 +215,32 @@ export function initAdBlockerGlobalInterceptors(): () => void {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
+        return;
+      }
+    }
+
+    // Neutralize transparent/invisible overlays injected directly over the page/player
+    const currentPath = window.location.pathname;
+    if (currentPath.includes("/details")) {
+      const style = window.getComputedStyle(target);
+      const isTransparentOrFixed =
+        (style.position === "fixed" || style.position === "absolute") &&
+        (style.backgroundColor === "rgba(0, 0, 0, 0)" ||
+          style.opacity === "0" ||
+          target.tagName.toLowerCase() === "a");
+
+      if (
+        isTransparentOrFixed &&
+        target.tagName.toLowerCase() !== "button" &&
+        !target.closest("iframe") &&
+        !target.closest("nav") &&
+        !target.closest("header")
+      ) {
+        console.warn("[AdBlocker] Neutralized suspicious overlay element click:", target);
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        target.remove();
       }
     }
   };
@@ -277,12 +300,35 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     return el;
   };
 
-  // 6. Watch for scam text that leaks onto the parent page
-  const observer = new MutationObserver(() => {
+  // 6. MutationObserver to automatically strip out injected full-screen transparent ad overlays or suspicious popup elements
+  const observer = new MutationObserver((mutations) => {
     if (pageContainsScamText()) {
       console.warn(
         "[AdBlocker] Scam text detected on parent page – hard block mode active"
       );
+    }
+
+    const currentPath = window.location.pathname;
+    if (currentPath.includes("/details")) {
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.addedNodes)) {
+          if (node instanceof HTMLElement) {
+            const tagName = node.tagName.toLowerCase();
+            const style = window.getComputedStyle(node);
+            
+            const isFullOverlay =
+              (style.position === "fixed" || style.position === "absolute") &&
+              (parseInt(style.zIndex, 10) > 100 || style.zIndex === "auto") &&
+              (style.opacity === "0" || style.backgroundColor === "rgba(0, 0, 0, 0)") &&
+              tagName !== "iframe";
+
+            if (isFullOverlay) {
+              console.warn("[AdBlocker] Stripped injected ad overlay element:", node);
+              node.remove();
+            }
+          }
+        }
+      }
     }
   });
 
@@ -292,7 +338,7 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     characterData: true,
   });
 
-  // Cleanup function (same contract as original)
+  // Cleanup function
   return () => {
     window.open = originalOpen;
     document.removeEventListener("click", handleDocumentClick, true);
@@ -302,3 +348,4 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     observer.disconnect();
   };
 }
+
