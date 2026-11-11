@@ -57,6 +57,9 @@ export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 const HEADER_ICON_URL =
   "https://avatars.githubusercontent.com/u/330663733?v=4";
 
+const RABBITHEADERWALL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/HeaderPirate.jpg"
+
 const RABBIT_LOGO_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/1794279353317.jpg";
 
@@ -903,7 +906,7 @@ function RootComponent() {
             {/* Header background container using new logo / menu strip with brightened overlay */}
             <div className="absolute inset-0 pointer-events-none opacity-95">
               <img
-                src={https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/HeaderPirate.jpg}
+                src={RABBITHEADERWALL}
                 alt="Header Background Logo"
                 className="w-full h-full object-cover object-center"
               />
@@ -915,7 +918,7 @@ function RootComponent() {
               <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                 <Link
                   to="/"
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/30 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  className={`flex items-center gap-2 px-8.5 py-4 rounded-2xl bg-black/30 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                   style={{
                     backgroundImage: `url(${RABBIT_LOGO_URL})`,
                     backgroundSize: "cover",
