@@ -789,7 +789,7 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* Direct Player Container (Overlay Removed) */}
+            {/* Direct Player Container */}
             <div className="relative w-full aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
               <iframe
                 key={`stable-player-${mediaId}-${season}-${episode}`}
@@ -798,6 +798,22 @@ export function DetailsPage() {
                 allowFullScreen
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
               ></iframe>
+            </div>
+
+            {/* Media Plot Details / Title Information Box on Player View */}
+            <div className={`rounded-2xl border ${getCardBackground(appTheme)} p-5 backdrop-blur shadow-xl space-y-2`}>
+              <div className="flex items-center flex-wrap gap-2">
+                <h2 className="text-xl font-black text-white">{title}</h2>
+                {releaseYear && (
+                  <span className="text-xs text-slate-400 font-semibold">{releaseYear}</span>
+                )}
+                {rating !== "N/A" && (
+                  <span className="text-xs text-yellow-300 font-bold">⭐ {rating}</span>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm leading-relaxed text-slate-300">
+                {overview}
+              </p>
             </div>
 
             {/* Pill bar wrapper for Return Button (Compact sizing with 6-point buffer and 114% width & 380% background scaling) */}
