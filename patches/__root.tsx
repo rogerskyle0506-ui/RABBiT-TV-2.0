@@ -908,7 +908,7 @@ function RootComponent() {
               <img
                 src={RABBITHEADERWALL}
                 alt="Header Background Logo"
-                className="w-100% h-100% object-cover object-center border-b border-blue/10 transition-colors duration-350 relative overflow-hidden ${getHeaderThemeBg(appTheme)}"
+                className="w-100% h-65% object-cover object-center border-b border-blue/5 transition-colors duration-350 relative overflow-hidden ${getHeaderThemeBg(appTheme)}"
               />
             </div>
             <div className="absolute inset-0 bg-black/15 pointer-events-none" />
