@@ -288,7 +288,7 @@ export async function organizeStations(
     results = await checkStations(flat, {
       onProgress: (done, total) => {
         if (done % 5 === 0 || done === total) {
-          console.log(`[RadioOrganizer] \( {done}/ \){total}`);
+          console.log(`[RadioOrganizer] ${done}/${total}`);
         }
       },
     });
@@ -333,7 +333,7 @@ export async function getOrganizedStations() {
 }
 
 // ──────────────────────────────────────────────
-// Background Audio Manager (unchanged logic)
+// Background Audio Manager
 // ──────────────────────────────────────────────
 class BackgroundAudioManager {
   private audio: HTMLAudioElement | null = null;
@@ -344,6 +344,8 @@ class BackgroundAudioManager {
     if (typeof window !== "undefined") {
       this.audio = new Audio();
       this.audio.loop = true;
+      // Tag element so screensaver logic knows this is background audio
+      this.audio.dataset.bgAudio = "true";
 
       const savedVol = localStorage.getItem("rabtv_bg_volume");
       const initialVol = savedVol !== null ? parseFloat(savedVol) : 0.5;
