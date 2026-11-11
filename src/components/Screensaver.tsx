@@ -1,5 +1,6 @@
 // src/components/Screensaver.tsx
 import { useState, useEffect, useRef, useCallback } from "react";
+import { bgAudio } from "@/lib/background-audio";
 
 const TIMEOUT_STORAGE_KEY = "rabtv_screensaver_timeout_ms";
 const DEFAULT_TIMEOUT = 2.5 * 60 * 60 * 1000; // 2.5 hours in milliseconds
@@ -20,48 +21,69 @@ const LOGO_URL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-
 export function Screensaver() {
   const [isActive, setIsActive] = useState(false);
   const [timeoutMs, setTimeoutMs] = useState<number>(() => {
+    if (typeof window === "undefined") return DEFAULT_TIMEOUT;
     const saved = localStorage.getItem(TIMEOUT_STORAGE_KEY);
     return saved ? Number(saved) : DEFAULT_TIMEOUT;
   });
+
+  const [currentStationName, setCurrentStationName] = useState<string>("");
 
   const idleTimerRef = useRef<number | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
   // Position and velocity for the bouncing logo (slow speed to prevent burn-in)
   const posRef = useRef({ x: 100, y: 100 });
-  const velRef = useRef({ vx: 0.8, vy: 0.8 });
+  const velRef = useRef({ vx: 0.75, vy: 0.75 });
   const logoRef = useRef<HTMLDivElement>(null);
 
   // Save timeout setting
   const updateTimeout = (newMs: number) => {
     setTimeoutMs(newMs);
-    localStorage.setItem(TIMEOUT_STORAGE_KEY, String(newMs));
+    if (typeof window !== "undefined") {
+      localStorage.setItem(TIMEOUT_STORAGE_KEY, String(newMs));
+    }
   };
 
   // Check if media is currently playing or fullscreen is active
   const isMediaActive = useCallback(() => {
+    if (typeof window === "undefined") return false;
+
     // 1. Check if document is in fullscreen mode
     if (document.fullscreenElement) {
       return true;
     }
 
-    // 2. Check all video/audio elements across the DOM
+    // 2. Check all video/audio elements across the DOM (excluding background music player if desired, or general media)
     const mediaElements = document.querySelectorAll("video, audio");
     for (const el of mediaElements) {
       const media = el as HTMLMediaElement;
+      // Skip background audio element if tracked, but check standard media/video streams
       if (!media.paused && !media.ended && media.readyState > 2) {
+        // If it's part of the background audio system, we allow screensaver
+        if (media.dataset && media.dataset.bgAudio === "true") {
+          continue;
+        }
         return true;
       }
     }
 
-    // 3. Check for active iframes (like vidsrc players in details or live tv)
-    const iframes = document.querySelectorAll("iframe");
-    for (const iframe of iframes) {
-      // If an iframe is present and playing in details/live tv view
-      const src = iframe.src || "";
-      if (src.includes("vidsrc") || src.includes("embed") || src.includes("live")) {
-        // If user is actively on details player or live tv with iframe loaded
-        if (window.location.pathname.includes("/details") || window.location.pathname.includes("/live")) {
+    // 3. Check for active iframes (vidsrc players in details, live tv, or watch pages)
+    const path = window.location.pathname || "";
+    if (
+      path.includes("/details") ||
+      path.includes("/live") ||
+      path.includes("/watch") ||
+      path.includes("/player")
+    ) {
+      const iframes = document.querySelectorAll("iframe");
+      for (const iframe of iframes) {
+        const src = iframe.src || "";
+        if (
+          src.includes("vidsrc") ||
+          src.includes("embed") ||
+          src.includes("live") ||
+          src.includes("player")
+        ) {
           return true;
         }
       }
@@ -72,7 +94,7 @@ export function Screensaver() {
 
   // Reset idle timer
   const resetIdleTimer = useCallback(() => {
-    if (isActive) return; // If screensaver is already active, don't reset on background events unless dismissed
+    if (typeof window === "undefined" || isActive) return;
 
     if (idleTimerRef.current) {
       window.clearTimeout(idleTimerRef.current);
@@ -81,6 +103,18 @@ export function Screensaver() {
     idleTimerRef.current = window.setTimeout(() => {
       // Before activating, verify no media or fullscreen is active
       if (!isMediaActive()) {
+        // Update current radio station label if background audio is playing
+        try {
+          const station = bgAudio.getCurrentStation();
+          if (station && station.name) {
+            setCurrentStationName(station.name);
+          } else {
+            setCurrentStationName("");
+          }
+        } catch {
+          setCurrentStationName("");
+        }
+
         setIsActive(true);
       } else {
         // Delay again if media is currently playing
@@ -91,6 +125,8 @@ export function Screensaver() {
 
   // Setup user activity listeners
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const events = ["mousedown", "mousemove", "keydown", "touchstart", "scroll", "click"];
     const handleActivity = () => {
       if (isActive) {
@@ -115,13 +151,13 @@ export function Screensaver() {
 
   // Bouncing animation loop
   useEffect(() => {
-    if (!isActive) {
+    if (!isActive || typeof window === "undefined") {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       return;
     }
 
-    const logoWidth = 260;
-    const logoHeight = 120;
+    const logoWidth = 280;
+    const logoHeight = 150; // Extra height accounted for radio station label
 
     // Initialize random starting position within bounds
     posRef.current = {
@@ -131,7 +167,7 @@ export function Screensaver() {
 
     // Randomize initial direction (slow linear movement)
     const angle = Math.random() * Math.PI * 2;
-    const speed = 0.75; // Slow movement to prevent burn-in
+    const speed = 0.7; // Slow movement to prevent burn-in
     velRef.current = {
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
@@ -184,19 +220,30 @@ export function Screensaver() {
     >
       <div
         ref={logoRef}
-        className="absolute w-[260px] h-[120px] rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_30px_rgba(192,132,252,0.3)] pointer-events-none"
+        className="absolute flex flex-col items-center w-[280px] pointer-events-none"
         style={{ willChange: "transform" }}
       >
-        <img
-          src={LOGO_URL}
-          alt="RABBiT TV Screensaver"
-          className="w-full h-full object-cover opacity-90"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end justify-center pb-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-violet-400 drop-shadow-md">
-            RABBiT TV
-          </span>
+        <div className="w-full h-[120px] rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_35px_rgba(192,132,252,0.35)] relative">
+          <img
+            src={LOGO_URL}
+            alt="RABBiT TV Screensaver"
+            className="w-full h-full object-cover opacity-90"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center pb-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-violet-400 drop-shadow-md">
+              RABBiT TV
+            </span>
+          </div>
         </div>
+
+        {/* Current Radio Station Playing Sub-Label */}
+        {currentStationName && (
+          <div className="mt-2 px-3 py-1 rounded-xl bg-black/80 border border-violet-500/30 backdrop-blur-md shadow-lg text-center max-w-full">
+            <span className="text-[10px] font-bold text-violet-300 truncate block drop-shadow">
+              🎵 Playing: {currentStationName}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
