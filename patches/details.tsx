@@ -58,7 +58,7 @@ export function DetailsPage() {
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [showScrollReminder, setShowScrollReminder] = useState(false);
 
-  // True Fullscreen State & Ref
+  // Swaedo Fullscreen Wrapper State & Ref
   const [isFullscreenMode, setIsFullscreenMode] = useState(false);
   const playerContainerRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +83,7 @@ export function DetailsPage() {
     setLoading(true);
   }, [mediaId, urlType]);
 
-  // Handle native fullscreen change events (ESC, browser UI, etc.)
+  // Handle native fullscreen change events (e.g. pressing ESC on projector/keyboard)
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreenMode(!!document.fullscreenElement);
@@ -102,20 +102,22 @@ export function DetailsPage() {
 
     if (!document.fullscreenElement) {
       if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(console.warn);
+        elem.requestFullscreen();
       } else if ((elem as any).webkitRequestFullscreen) {
         (elem as any).webkitRequestFullscreen();
       }
+      setIsFullscreenMode(true);
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
       } else if ((document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
       }
+      setIsFullscreenMode(false);
     }
   };
 
-  // Robust inactivity & interaction listener
+  // Robust inactivity & interaction listener to instantly bring back controls on any user activity
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -261,7 +263,7 @@ export function DetailsPage() {
       try {
         const apiKey = import.meta.env.VITE_TMDB_API_KEY as string;
         const res = await fetch(
-          `https://api.themoviedb.org/3/tv/\( {mediaId}/season/ \){season}?api_key=${apiKey}`
+          `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
         );
         const data = await res.json();
         setSeasonEpisodes(data.episodes || []);
@@ -349,12 +351,12 @@ export function DetailsPage() {
   };
 
   const activeTheme = getThemeClasses(appTheme);
-  const prefixedId = `\( {mediaType}- \){mediaId}`;
+  const prefixedId = `${mediaType}-${mediaId}`;
 
   const mediaStatusBadge = useMemo(() => {
     if (!mediaId) return null;
     const cleanId = String(mediaId);
-    const prefId = `\( {mediaType}- \){cleanId}`;
+    const prefId = `${mediaType}-${cleanId}`;
 
     if (isTitleBroken(cleanId) || isTitleBroken(prefId)) {
       return (
@@ -439,7 +441,7 @@ export function DetailsPage() {
       let activeFetchType: "movie" | "tv" = urlType;
 
       try {
-        const cacheKey = `rabtv_cache_\( {activeFetchType}_ \){mediaId}`;
+        const cacheKey = `rabtv_cache_${activeFetchType}_${mediaId}`;
         const cachedItem = localStorage.getItem(cacheKey);
         if (cachedItem) {
           const { data, timestamp } = JSON.parse(cachedItem);
@@ -458,7 +460,7 @@ export function DetailsPage() {
         }
 
         let res = await fetch(
-          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}?api_key=${apiKey}&append_to_response=credits`
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
         );
         let data = await res.json();
 
@@ -466,7 +468,7 @@ export function DetailsPage() {
           const otherType: "movie" | "tv" =
             activeFetchType === "movie" ? "tv" : "movie";
           res = await fetch(
-            `https://api.themoviedb.org/3/\( {otherType}/ \){mediaId}?api_key=${apiKey}&append_to_response=credits`
+            `https://api.themoviedb.org/3/${otherType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
           );
           data = await res.json();
           if (data && data.success !== false && !data.status_code) {
@@ -482,7 +484,7 @@ export function DetailsPage() {
             activeFetchType === "tv";
           setMediaType(isTv ? "tv" : "movie");
           localStorage.setItem(
-            `rabtv_cache_\( {activeFetchType}_ \){mediaId}`,
+            `rabtv_cache_${activeFetchType}_${mediaId}`,
             JSON.stringify({ data, timestamp: Date.now() })
           );
           setMediaDetails(data);
@@ -491,7 +493,7 @@ export function DetailsPage() {
         }
 
         const recRes = await fetch(
-          `https://api.themoviedb.org/3/\( {activeFetchType}/ \){mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
         );
         const recData = await recRes.json();
         if (!cancelled && recData?.results) {
@@ -499,7 +501,7 @@ export function DetailsPage() {
             recData.results.filter(
               (item: any) =>
                 !isTitleBroken(String(item.id)) &&
-                !isTitleBroken(`\( {activeFetchType}- \){item.id}`)
+                !isTitleBroken(`${activeFetchType}-${item.id}`)
             )
           );
         }
@@ -567,11 +569,11 @@ export function DetailsPage() {
         : undefined;
 
       return {
-        id: `\( {recType}- \){recId}`,
+        id: `${recType}-${recId}`,
         title: recTitle,
         description: rec.overview || "",
         image: recPoster,
-        href: `/details?id=\( {recId}&type= \){recType}`,
+        href: `/details?id=${recId}&type=${recType}`,
         genre: recType === "tv" ? "TV SHOW" : "MOVIE",
         year: year || undefined,
         rating,
@@ -581,14 +583,14 @@ export function DetailsPage() {
   }, [recommendations]);
 
   const buildCatalogItem = () => ({
-    id: `\( {inferredMediaType}- \){mediaId}`,
+    id: `${inferredMediaType}-${mediaId}`,
     mediaId: String(mediaId),
     title: mediaDetails?.title || mediaDetails?.name || "Untitled",
     description: mediaDetails?.overview || "",
     image: mediaDetails?.poster_path
       ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
       : "",
-    href: `/details?id=\( {mediaId}&type= \){inferredMediaType}`,
+    href: `/details?id=${mediaId}&type=${inferredMediaType}`,
     year: (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split(
       "-"
     )[0],
@@ -601,7 +603,7 @@ export function DetailsPage() {
 
   const handlePlay = () => {
     if (!mediaDetails || !mediaId) return;
-
+    
     // Stop background audio immediately to prevent audio clash
     bgAudio.pause();
 
@@ -609,7 +611,7 @@ export function DetailsPage() {
 
     try {
       saveWatchProgress({
-        id: `\( {inferredMediaType}- \){mediaId}`,
+        id: `${inferredMediaType}-${mediaId}`,
         mediaId: String(mediaId),
         title: mediaDetails.title || mediaDetails.name || "Untitled",
         mediaType: inferredMediaType,
@@ -740,7 +742,7 @@ export function DetailsPage() {
 
   const embedUrl =
     inferredMediaType === "tv"
-      ? `https://vidsrc.to/embed/tv/\( {mediaId}/ \){season}/${episode}`
+      ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
       : `https://vidsrc.to/embed/movie/${mediaId}`;
 
   const currentSeasonObj = mediaDetails?.seasons?.find(
@@ -890,22 +892,16 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* ===== PLAYER CONTAINER – this is what goes into true fullscreen ===== */}
-            <div
-              ref={playerContainerRef}
-              className={`relative w-full overflow-hidden rounded-2xl bg-black ${
-                isFullscreenMode ? "h-screen w-screen rounded-none" : "aspect-video"
-              }`}
             >
               <iframe
-                key={`stable-player-\( {mediaId}- \){season}-${episode}`}
+                key={`stable-player-${mediaId}-${season}-${episode}`}
                 src={embedUrl}
                 className="h-full w-full border-0"
                 allowFullScreen
                 allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
-              />
+              ></iframe>
 
-              {/* Poster Overlay – only when NOT in true fullscreen */}
+              {/* Movie Poster Overlay covering the iframe when NOT in fullscreen (Pushed slightly below center in portrait mode via pt-8 sm:pt-0) */}
               {isPlaying && !isFullscreenMode && (
                 <div
                   onClick={(e) => {
@@ -915,11 +911,7 @@ export function DetailsPage() {
                   className="absolute inset-0 z-30 flex flex-col items-center justify-center pt-8 sm:pt-0 bg-black/30 cursor-pointer group transition-all"
                 >
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <img
-                      src={poster}
-                      alt={title}
-                      className="w-full h-full object-cover filter brightness-100 scale-105"
-                    />
+                    <img src={poster} alt={title} className="w-full h-full object-cover filter brightness-100 scale-105" />
                   </div>
                   <div className="absolute inset-0 bg-black/20 pointer-events-none" />
 
@@ -931,14 +923,10 @@ export function DetailsPage() {
                         handlePosterOverlayClick();
                       }}
                       className={`flex items-center justify-center w-16 h-16 rounded-full bg-black/10 text-white shadow-lg group-hover:scale-110 transition-transform border border-white/20`}
-                      title="Play in Fullscreen"
+                      title="Play"
                     >
-                      <svg
-                        className={`w-8 h-8 ${activeTheme.text}`}
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M8 5v14l11-7z" />
+                      <svg className={`w-8 h-8 ${activeTheme.text}`} fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
                       </svg>
                     </button>
                     <div className="flex flex-col items-center gap-1">
@@ -946,14 +934,14 @@ export function DetailsPage() {
                         {title}
                       </span>
                       <span className="text-xs font-bold text-amber-300 bg-black/80 px-3.5 py-1.5 rounded-full border border-amber-500/40 shadow">
-                        Click to launch fullscreen
+                        Click to launch video
                       </span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Fullscreen control button (auto-hides) */}
+              {/* Swaedo Controls Overlay / True Fullscreen Trigger Button (Auto-hides after inactivity, persistent z-[9999]) */}
               <div
                 className={`absolute top-4 right-4 z-[9999] flex items-center gap-2 transition-opacity duration-300 pointer-events-auto ${
                   showPlayerControls ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -1039,7 +1027,7 @@ export function DetailsPage() {
                       >
                         <span>
                           {currentSeasonObj
-                            ? `\( {currentSeasonObj.name} ( \){currentSeasonObj.episode_count} Episodes)`
+                            ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
                             : `Season ${season}`}
                         </span>
                         <span>▾</span>
@@ -1129,7 +1117,7 @@ export function DetailsPage() {
                   >
                     ▶ Play{" "}
                     {inferredMediaType === "tv"
-                      ? `S\( {season}:E \){episode}`
+                      ? `S${season}:E${episode}`
                       : "Movie"}
                   </button>
 
