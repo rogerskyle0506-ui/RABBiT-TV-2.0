@@ -1,3 +1,4 @@
+// src/lib/settings.ts
 export type CardSize = "small" | "medium" | "large";
 export type AppTheme = "violet" | "red" | "midnight" | "emerald" | "amber" | "cyan";
 export type StreamQuality = "1080p" | "720p" | "480p" | "auto";
@@ -11,6 +12,19 @@ export const STREAM_QUALITY_KEY = "rabtv_stream_quality";
 export const USER_AGE_KEY = "rabtv_user_age";
 export const HISTORY_OVERSCALE_KEY = "rabtv_history_overscale";
 export const LARGE_BUTTONS_KEY = "rabtv_large_buttons";
+export const SCREENSAVER_TIMEOUT_KEY = "rabtv_screensaver_timeout_ms";
+
+export const DEFAULT_SCREENSAVER_TIMEOUT = 2.5 * 60 * 60 * 1000; // 2.5 hours
+
+export const SCREENSAVER_TIMEOUT_OPTIONS = [
+  { label: "3 Hours", value: 3 * 60 * 60 * 1000 },
+  { label: "2.5 Hours (Default)", value: 2.5 * 60 * 60 * 1000 },
+  { label: "2 Hours", value: 2 * 60 * 60 * 1000 },
+  { label: "1 Hour", value: 1 * 60 * 60 * 1000 },
+  { label: "30 Minutes", value: 30 * 60 * 1000 },
+  { label: "20 Minutes", value: 20 * 60 * 1000 },
+  { label: "5 Minutes", value: 5 * 60 * 1000 },
+];
 
 export function getSavedCardSize(): CardSize {
   if (typeof window === "undefined") return "large";
@@ -78,6 +92,21 @@ export function setLargeButtons(enabled: boolean): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(LARGE_BUTTONS_KEY, enabled ? "true" : "false");
   window.dispatchEvent(new Event("rabtv_settings_updated"));
+}
+
+/** SCREENSAVER TIMEOUT HELPERS */
+
+export function getSavedScreensaverTimeout(): number {
+  if (typeof window === "undefined") return DEFAULT_SCREENSAVER_TIMEOUT;
+  const val = localStorage.getItem(SCREENSAVER_TIMEOUT_KEY);
+  return val ? Number(val) : DEFAULT_SCREENSAVER_TIMEOUT;
+}
+
+export function saveScreensaverTimeout(timeoutMs: number): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(SCREENSAVER_TIMEOUT_KEY, String(timeoutMs));
+    window.dispatchEvent(new Event("rabtv_settings_updated"));
+  }
 }
 
 /** AGE TIER & RATING VERIFICATION HELPERS */
