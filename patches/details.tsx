@@ -800,8 +800,8 @@ export function DetailsPage() {
               ></iframe>
             </div>
 
-            {/* Pill bar wrapper for Return Button (114% width, 380% height, centered) */}
-            <div className="relative flex items-center justify-center py-6 my-2">
+            {/* Pill bar wrapper for Return Button (Compact sizing with 6-point buffer and 114% width & 380% background scaling) */}
+            <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-xs mx-auto overflow-hidden rounded-2xl shadow-xl">
               <div
                 className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
                 style={{
@@ -814,11 +814,11 @@ export function DetailsPage() {
                 }}
               />
               <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-              <div className="relative z-10">
+              <div className="relative z-10 py-1">
                 <button
                   type="button"
                   onClick={() => setIsPlaying(false)}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-black/60 hover:bg-black px-6 py-3 text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-black/60 hover:bg-black px-4 py-2 text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                 >
                   <span>✕</span> Return to movie details
                 </button>
@@ -828,8 +828,8 @@ export function DetailsPage() {
             {/* Recommended Movies Section on the Player View */}
             {mappedRecommendations.length > 0 && (
               <div className="mt-8 pt-4 border-t border-white/10 space-y-4">
-                {/* Pill bar wrapper for Recommended Movies header (114% width, 380% height, centered) */}
-                <div className="relative flex items-center justify-center py-6 my-2">
+                {/* Pill bar wrapper for Recommended Movies header on Player View */}
+                <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-sm mx-auto overflow-hidden rounded-2xl shadow-xl">
                   <div
                     className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
                     style={{
@@ -842,8 +842,8 @@ export function DetailsPage() {
                     }}
                   />
                   <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-                  <div className="relative z-10">
-                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <div className="relative z-10 py-1">
+                    <h2 className="text-sm font-bold text-white flex items-center gap-2">
                       <span>✨ Recommended Movies</span>
                     </h2>
                   </div>
@@ -1136,9 +1136,26 @@ export function DetailsPage() {
 
             {mappedRecommendations.length > 0 && (
               <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span>✨ Similar Recommendations</span>
-                </h2>
+                {/* Pill bar wrapper for Similar Recommendations header on Details View */}
+                <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-sm mx-auto overflow-hidden rounded-2xl shadow-xl">
+                  <div
+                    className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
+                    style={{
+                      width: "114%",
+                      height: "380%",
+                      backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                      backgroundSize: "112% 380%",
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "center center",
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
+                  <div className="relative z-10 py-1">
+                    <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>✨ Similar Recommendations</span>
+                    </h2>
+                  </div>
+                </div>
                 <div className={gridColsClass}>
                   {mappedRecommendations.slice(0, 5).map((item) => (
                     <MediaCard item={item} key={item.id} />
