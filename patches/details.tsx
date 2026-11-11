@@ -802,17 +802,19 @@ export function DetailsPage() {
             <div
               className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}
             >
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-white">{title}</h1>
+              <h1 className="text-2xl font-bold text-white">{title}</h1>
+              <p className="text-sm leading-relaxed text-slate-300">{overview}</p>
+              
+              {/* Return to movie details button at the very bottom, single line with theme depth */}
+              <div className="pt-2">
                 <button
                   type="button"
                   onClick={() => setIsPlaying(false)}
-                  className="rounded-xl border border-white/20 bg-black/60 hover:bg-black px-4 py-2 text-xs font-bold text-white transition focus:outline-none focus:ring-4 focus:ring-violet-400 cursor-pointer"
+                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-black/60 hover:bg-black px-6 py-3 text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                 >
-                  ✕ Close Video Mode
+                  <span>✕</span> Return to movie details
                 </button>
               </div>
-              <p className="text-sm leading-relaxed text-slate-300">{overview}</p>
             </div>
           </div>
         ) : (
@@ -1099,7 +1101,7 @@ export function DetailsPage() {
                   <span>✨ Similar Recommendations</span>
                 </h2>
                 <div className={gridColsClass}>
-                  {mappedRecommendations.slice(0, 12).map((item) => (
+                  {mappedRecommendations.slice(0, 5).map((item) => (
                     <MediaCard item={item} key={item.id} />
                   ))}
                 </div>
