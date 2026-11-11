@@ -924,7 +924,7 @@ function RootComponent() {
                   }}
                 >
                   <div className="absolute inset-0 bg-black/25 rounded-2xl pointer-events-none" />
-                  <span className="whitespace-nowrap relative z-10 drop-shadow-md">RABBiT TV</span>
+                  <span className="whitespace-nowrap relative z-10 drop-shadow-md"></span>
                 </Link>
 
                 {!showFirstStartModal && (
