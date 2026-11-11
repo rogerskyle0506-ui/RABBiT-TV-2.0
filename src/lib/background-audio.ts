@@ -392,8 +392,8 @@ class BackgroundAudioManager {
       ? firstCategory[0]
       : {
           name: "Default Stream",
-          url: "https://dancewave.online/dance.mp3",
-          category: "House",
+          url: "https://media-ssl.musicradio.com/HeartDance",
+          category: "Rabbits Lobby Dance",
         };
   }
 
