@@ -799,23 +799,55 @@ export function DetailsPage() {
               ></iframe>
             </div>
 
-            <div
-              className={`flex flex-col gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-6 backdrop-blur`}
-            >
-              <h1 className="text-2xl font-bold text-white">{title}</h1>
-              <p className="text-sm leading-relaxed text-slate-300">{overview}</p>
-              
-              {/* Return to movie details button at the very bottom, single line with theme depth */}
-              <div className="pt-2">
+            {/* Pill bar wrapper for Return Button */}
+            <div className="relative flex items-center justify-center py-4 my-2">
+              <div
+                className="absolute pointer-events-none rounded-full border border-white/10 shadow-2xl"
+                style={{
+                  width: "114%",
+                  height: "380%",
+                  backgroundImage: `radial-gradient(circle at center, rgba(15, 23, 42, 0.95) 0%, rgba(3, 7, 18, 0.98) 100%)`,
+                  backdropFilter: "blur(12px)",
+                }}
+              />
+              <div className="relative z-10">
                 <button
                   type="button"
                   onClick={() => setIsPlaying(false)}
-                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-black/60 hover:bg-black px-6 py-3 text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-black/60 hover:bg-black px-6 py-3 text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                 >
                   <span>✕</span> Return to movie details
                 </button>
               </div>
             </div>
+
+            {/* Recommended Movies Section on the Player View */}
+            {mappedRecommendations.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-white/10 space-y-4">
+                {/* Pill bar wrapper for Recommended Movies header */}
+                <div className="relative flex items-center justify-center py-4 my-2">
+                  <div
+                    className="absolute pointer-events-none rounded-full border border-white/10 shadow-2xl"
+                    style={{
+                      width: "114%",
+                      height: "380%",
+                      backgroundImage: `radial-gradient(circle at center, rgba(15, 23, 42, 0.95) 0%, rgba(3, 7, 18, 0.98) 100%)`,
+                      backdropFilter: "blur(12px)",
+                    }}
+                  />
+                  <div className="relative z-10">
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                      <span>✨ Recommended Movies</span>
+                    </h2>
+                  </div>
+                </div>
+                <div className={gridColsClass}>
+                  {mappedRecommendations.slice(0, 5).map((item) => (
+                    <MediaCard item={item} key={item.id} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mx-auto flex max-w-5xl flex-col gap-8">
@@ -1143,3 +1175,4 @@ export function DetailsPage() {
     </div>
   );
 }
+
