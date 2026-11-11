@@ -903,7 +903,7 @@ function RootComponent() {
             {/* Header background container using new logo / menu strip with brightened overlay */}
             <div className="absolute inset-0 pointer-events-none opacity-95">
               <img
-                src={RABBIT_LOGO_URL}
+                src={https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/HeaderPirate.jpg}
                 alt="Header Background Logo"
                 className="w-full h-full object-cover object-center"
               />
