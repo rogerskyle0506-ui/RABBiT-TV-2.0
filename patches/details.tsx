@@ -892,7 +892,6 @@ export function DetailsPage() {
               </div>
             )}
 
-            >
               <iframe
                 key={`stable-player-${mediaId}-${season}-${episode}`}
                 src={embedUrl}
