@@ -2,6 +2,7 @@
 import { BugReportModal } from "@/components/BugReportModal";
 import { PublicBugFeedModal } from "@/components/PublicBugFeedModal";
 import { UserNotifier } from "@/components/UserNotifier";
+import { Screensaver } from "@/components/Screensaver";
 import { Outlet, createRootRoute, HeadContent, Scripts, Link, useNavigate } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -55,6 +56,9 @@ export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 
 const HEADER_ICON_URL =
   "https://avatars.githubusercontent.com/u/330663733?v=4";
+
+const RABBIT_LOGO_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/1794279353317.jpg";
 
 // Background assets for the side menu depth and styling
 const RABBIT_HEADER_PILL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
@@ -723,18 +727,18 @@ function RootComponent() {
   const getHeaderThemeBg = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-red-950/60 backdrop-blur-xl";
+        return "bg-red-950/40 backdrop-blur-xl";
       case "midnight":
-        return "bg-blue-950/60 backdrop-blur-xl";
+        return "bg-blue-950/40 backdrop-blur-xl";
       case "emerald":
-        return "bg-emerald-950/60 backdrop-blur-xl";
+        return "bg-emerald-950/40 backdrop-blur-xl";
       case "amber":
-        return "bg-yellow-950/60 backdrop-blur-xl";
+        return "bg-yellow-950/40 backdrop-blur-xl";
       case "cyan":
-        return "bg-cyan-950/60 backdrop-blur-xl";
+        return "bg-cyan-950/40 backdrop-blur-xl";
       case "violet":
       default:
-        return "bg-purple-950/60 backdrop-blur-xl";
+        return "bg-purple-950/40 backdrop-blur-xl";
     }
   };
 
@@ -893,32 +897,34 @@ function RootComponent() {
         <PreviewHostBridge />
         <HolidayOverlay />
         <AppWallpaper />
+        <Screensaver />
         <AuthProvider>
           <header className={`sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)}`}>
-            {/* Header background container using rabbit-menu-strip for dynamic viewport sizing */}
-            <div className="absolute inset-0 pointer-events-none opacity-85">
+            {/* Header background container using new logo / menu strip with brightened overlay */}
+            <div className="absolute inset-0 pointer-events-none opacity-95">
               <img
-                src={RABBIT_MENU_STRIP}
-                alt="Header Background Strip"
+                src={RABBIT_LOGO_URL}
+                alt="Header Background Logo"
                 className="w-full h-full object-cover object-center"
               />
             </div>
-            <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/15 pointer-events-none" />
 
             <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 gap-2 sm:gap-3">
-              {/* Left group: RABBiT TV and Search Bar */}
+              {/* Left group: RABBiT TV Brand and Search Bar */}
               <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                 <Link
                   to="/"
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/30 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                   style={{
-                    backgroundImage: `url(${RABBIT_MENU_STRIP})`,
-                    backgroundSize: "130% 100%",
+                    backgroundImage: `url(${RABBIT_LOGO_URL})`,
+                    backgroundSize: "cover",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center center",
                   }}
                 >
-                  <span className="whitespace-nowrap relative z-10">RABBiT TV</span>
+                  <div className="absolute inset-0 bg-black/25 rounded-2xl pointer-events-none" />
+                  <span className="whitespace-nowrap relative z-10 drop-shadow-md">RABBiT TV</span>
                 </Link>
 
                 {!showFirstStartModal && (
@@ -931,7 +937,7 @@ function RootComponent() {
                       value={headerSearchInput}
                       onChange={(e) => setHeaderSearchInput(e.target.value)}
                       placeholder="Search..."
-                      className="h-9 sm:h-10 w-full min-w-0 rounded-xl border border-white/10 bg-slate-900/70 px-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
+                      className="h-9 sm:h-10 w-full min-w-0 rounded-xl border border-white/15 bg-slate-900/60 px-3 text-xs text-white placeholder-slate-300 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
                     />
                     <button
                       type="submit"
@@ -960,7 +966,7 @@ function RootComponent() {
                       maskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.1) 100%)",
                     }}
                   >
-                    <div className="absolute inset-0 bg-black/40 pointer-events-none w-full h-full" />
+                    <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
                     <div className="relative z-10 flex items-center gap-2 w-full">
                       <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
                         <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
