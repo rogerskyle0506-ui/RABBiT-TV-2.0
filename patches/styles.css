@@ -98,7 +98,7 @@ body {
 }
 
 /* --- Global Role-Based Font Mappings --- */
-/* Headers, Titles, Buttons -> Havoc */
+/* Headers, Titles, Buttons -> Aresink */
 h1, h2, h3, h4, h5, h6, 
 .font-aresink, 
 button, 
@@ -113,9 +113,9 @@ button,
   font-family: 'Cayu', sans-serif !important;
 }
 
-/* General Body & Sidebar text -> Kaysteve */
+/* General Body & Sidebar text -> Dancing-Majesty */
 p, span, a, li, label, input, 
-.font-dancing-majesty {
+.font-dancingmajesty {
   font-family: 'Dancing-Majesty', sans-serif;
 }
 
