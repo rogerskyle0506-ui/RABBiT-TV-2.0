@@ -58,7 +58,7 @@ const HEADER_ICON_URL =
   "https://avatars.githubusercontent.com/u/330663733?v=4";
 
 const RABBITHEADERWALL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/HeaderPirate.jpg"
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/HeaderPirate.jpg";
 
 const RABBIT_LOGO_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/1794279353317.jpg";
@@ -903,22 +903,22 @@ function RootComponent() {
         <Screensaver />
         <AuthProvider>
           <header className={`sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)}`}>
-            {/* Header background container using new logo / menu strip with brightened overlay */}
-            <div className="absolute inset-0 pointer-events-none opacity-95">
+            {/* Header background container using new logo / menu strip with brightened overlay and zero white bars */}
+            <div className="absolute inset-0 pointer-events-none opacity-40">
               <img
                 src={RABBITHEADERWALL}
                 alt="Header Background Logo"
-                className={"w-100% h-35% justify-center object-cover object-center border-b border-blue/5/8 transition-colors duration-350 relative overflow-hidden opacity-50 ${getHeaderThemeBg(appTheme)}"}
+                className="w-full h-full object-cover object-center"
               />
             </div>
-            <div className="absolute inset-0 bg-black/15 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
-            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 gap-2 sm:gap-3">
-              {/* Left group: RABBiT TV Brand and Search Bar */}
-              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 gap-2 sm:gap-4">
+              {/* Left group: Longer, Wider Rabbit TV Logo */}
+              <div className="flex items-center shrink-0">
                 <Link
                   to="/"
-                  className={`flex items-center gap-2 px-10.5 py-5 rounded-2xl bg-black/30 backdrop-blur-md border text-sm sm:text-lg font-black tracking-wider text-white focus:outline-none shrink-0 group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  className={`flex items-center gap-2.5 w-[160px] sm:w-[200px] h-11 sm:h-12 px-3.5 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-base font-black tracking-wider text-white focus:outline-none group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                   style={{
                     backgroundImage: `url(${RABBIT_LOGO_URL})`,
                     backgroundSize: "cover",
@@ -926,68 +926,58 @@ function RootComponent() {
                     backgroundPosition: "center center",
                   }}
                 >
-                  <div className="absolute inset-0 bg-black/25 rounded-2xl pointer-events-none" />
-                  <span className="whitespace-nowrap relative z-10 drop-shadow-md"></span>
+                  <div className="absolute inset-0 bg-black/30 rounded-2xl pointer-events-none" />
+                  <span className="whitespace-nowrap relative z-10 drop-shadow-md">RABBiT TV</span>
                 </Link>
-
-                {!showFirstStartModal && (
-                  <form
-                    onSubmit={handleHeaderSearchSubmit}
-                    className="flex items-center gap-1.5 flex-1 min-w-[100px] sm:min-w-[160px] max-w-md"
-                  >
-                    <input
-                      type="text"
-                      value={headerSearchInput}
-                      onChange={(e) => setHeaderSearchInput(e.target.value)}
-                      placeholder="Search..."
-                      className="h-9 sm:h-10 w-full min-w-0 rounded-xl border border-white/15 bg-slate-900/60 px-3 text-xs text-white placeholder-slate-300 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
-                    />
-                    <button
-                      type="submit"
-                      className={`flex h-9 sm:h-10 px-3 items-center justify-center rounded-xl border text-xs font-bold shadow-sm transition shrink-0 ${activeHeader.btnBg}`}
-                      aria-label="Search"
-                    >
-                      🔍
-                    </button>
-                  </form>
-                )}
               </div>
+
+              {/* Center / Flexible Search Bar */}
+              {!showFirstStartModal && (
+                <form
+                  onSubmit={handleHeaderSearchSubmit}
+                  className="flex items-center gap-1.5 flex-1 min-w-[120px] sm:min-w-[180px] max-w-xl mx-2 sm:mx-6"
+                >
+                  <input
+                    type="text"
+                    value={headerSearchInput}
+                    onChange={(e) => setHeaderSearchInput(e.target.value)}
+                    placeholder="Search movies, TV shows..."
+                    className="h-10 sm:h-11 w-full min-w-0 rounded-xl border border-white/15 bg-slate-900/80 px-3.5 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
+                  />
+                  <button
+                    type="submit"
+                    className={`flex h-10 sm:h-11 px-4 items-center justify-center rounded-xl border text-xs font-bold shadow-sm transition shrink-0 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
+                    aria-label="Search"
+                  >
+                    🔍
+                  </button>
+                </form>
+              )}
 
               {/* Far Right: Profile Pill */}
               {savedProfileName && !showFirstStartModal && (
-                <div className="flex items-center gap-2 shrink-0 ml-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={handleToggleProfileMenu}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border-0"
-                    style={{
-                      backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                      backgroundSize: "130% 100%",
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "center center",
-                      WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.1) 100%)",
-                      maskImage: "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 12%, rgba(0,0,0,1) 88%, rgba(0,0,0,0.1) 100%)",
-                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border border-white/15 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
                   >
-                    <div className="absolute inset-0 bg-black/30 pointer-events-none w-full h-full" />
-                    <div className="relative z-10 flex items-center gap-2 w-full">
-                      <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
-                        <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
-                      </div>
-                      <span className="truncate">
-                        Hi, <strong className="text-white">{savedProfileName}</strong>{" "}
-                        {isAdmin
-                          ? "(Admin)"
-                          : isTrialActive
-                          ? `(Trial: ${trialDaysRemaining}d)`
-                          : "(Full)"}
-                      </span>
-                      <span className="text-[10px] ml-auto text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
+                    <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
+                      <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
                     </div>
+                    <span className="truncate max-w-[110px] sm:max-w-none">
+                      Hi, <strong className="text-white">{savedProfileName}</strong>{" "}
+                      {isAdmin
+                        ? "(Admin)"
+                        : isTrialActive
+                        ? `(${trialDaysRemaining}d)`
+                        : ""}
+                    </span>
+                    <span className="text-[10px] ml-1 text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
                   </button>
                   {isTrialActive && (
                     <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold animate-pulse">
-                      <span>⏳ {trialDaysRemaining}d left</span>
+                      <span>⏳ {trialDaysRemaining}d</span>
                     </div>
                   )}
                 </div>
