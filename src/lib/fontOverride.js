@@ -23,9 +23,9 @@ Text.render = function (...args) {
     return origin;
   }
 
-  let targetFont = FONTS.kaysteve; // Default baseline (Sidebar menu / general body text)
+  let targetFont = FONTS.dancingmajesty; // Default baseline (Sidebar menu / general body text)
 
-  // 3. Detect Headers, Titles, and Buttons -> Havoc
+  // 3. Detect Headers, Titles, and Buttons -> Aresink
   const isHeaderRole = 
     props.accessibilityRole === 'header' || 
     props.role === 'header' ||
@@ -36,7 +36,7 @@ Text.render = function (...args) {
     flattenedStyle.fontWeight === '700' || 
     (flattenedStyle.fontSize && flattenedStyle.fontSize >= 18);
 
-  // 4. Detect Media Details -> Last Honey
+  // 4. Detect Media Details -> Cayu
   const isMediaRole = 
     flattenedStyle.isMediaDetail || 
     flattenedStyle.isMedia || 
@@ -45,11 +45,11 @@ Text.render = function (...args) {
     props.isMedia;
 
   if (isHeaderRole) {
-    targetFont = FONTS.havoc;
+    targetFont = FONTS.aresink;
   } else if (isMediaRole) {
-    targetFont = FONTS.lastHoney;
+    targetFont = FONTS.cayu;
   } else {
-    targetFont = FONTS.kaysteve;
+    targetFont = FONTS.dancingmajesty;
   }
 
   // 5. Prevent infinite rendering loops by checking if the exact style is already applied
