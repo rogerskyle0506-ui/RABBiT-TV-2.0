@@ -2,24 +2,24 @@
 
 /* --- Custom Font Declarations --- */
 @font-face {
-  font-family: 'HavrockDemo-Regular';
-  src: url('/assets/fonts/HavrockDemo-Regular.otf') format('opentype');
+  font-family: 'Aresink.otf';
+  src: url('/assets/fonts/Aresink.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'KaysteveScript-Regular';
-  src: url('/assets/fonts/KaysteveScript-Regular.ttf') format('truetype');
+  font-family: 'Dancing-Majesty';
+  src: url('/assets/fonts/Dancing-Majesty.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Lasthoney-Regular';
-  src: url('/assets/fonts/Lasthoney-Regular.ttf') format('truetype');
+  font-family: 'Cayu';
+  src: url('/assets/fonts/Cayu.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -27,7 +27,7 @@
 
 :root {
   color-scheme: dark;
-  font-family: "KaysteveScript-Regular", "Inter", "Segoe UI", sans-serif;
+  font-family: "Dancing-Majesty", "Inter", "Segoe UI", sans-serif;
   --app-bg: #050b16;
   --app-panel: #090e1f;
   --app-accent: #a855f7;
@@ -87,7 +87,7 @@ body {
   margin: 0;
   min-height: 100%;
   background-color: var(--app-bg);
-  font-family: 'KaysteveScript-Regular', sans-serif;
+  font-family: 'Dancing-Majesty', sans-serif;
 }
 
 body {
@@ -100,23 +100,23 @@ body {
 /* --- Global Role-Based Font Mappings --- */
 /* Headers, Titles, Buttons -> Havoc */
 h1, h2, h3, h4, h5, h6, 
-.font-havoc, 
+.font-aresink, 
 button, 
 [role="button"] {
-  font-family: 'HavrockDemo-Regular', sans-serif !important;
+  font-family: 'Aresink', sans-serif !important;
 }
 
 /* Media Details -> Last Honey */
 .media-detail, 
 .media-details, 
-.font-lasthoney {
-  font-family: 'Lasthoney-Regular', sans-serif !important;
+.font-cayu {
+  font-family: 'Cayu', sans-serif !important;
 }
 
 /* General Body & Sidebar text -> Kaysteve */
 p, span, a, li, label, input, 
-.font-kaysteve {
-  font-family: 'KaysteveScript-Regular', sans-serif;
+.font-dancing-majesty {
+  font-family: 'Dancing-Majesty', sans-serif;
 }
 
 button,
