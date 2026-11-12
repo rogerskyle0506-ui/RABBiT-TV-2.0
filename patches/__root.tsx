@@ -1063,7 +1063,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "130% 100%",
+                              backgroundSize: "113% 380%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1126,7 +1126,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "130% 100%",
+                              backgroundSize: "113% 380%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1175,7 +1175,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "130% 100%",
+                              backgroundSize: "113% 380%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1230,7 +1230,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "130% 100%",
+                              backgroundSize: "113% 380%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1310,14 +1310,14 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "130% 100%",
+                              backgroundSize: "113% 380%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
                           >
                             <div className="absolute inset-0 bg-black/40 w-full h-full" />
                           </div>
-                          <span className="relative z-10 flex items-center gap-2">🎵 Background Lobby Audio</span>
+                          <span className="relative z-10 flex items-center gap-2">🎵 Background Lobby Radio</span>
                           <span className={`relative z-10 transform transition-transform ${activeSidebarSection === "audio" ? "rotate-180" : ""}`}>▼</span>
                         </button>
                         {activeSidebarSection === "audio" && (
@@ -1325,12 +1325,12 @@ function RootComponent() {
                             className="w-full px-6 py-5 border-0 space-y-3 relative rounded-xl mt-2 shadow-xl border-0 overflow-hidden box-border"
                             style={{
                               backgroundImage: `url(${RABBIT_PANEL})`,
-                              backgroundSize: "100% 100%",
+                              backgroundSize: "100% 110%",
                               backgroundRepeat: "no-repeat",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-full box-border">
-                              <div className="w-full box-border">
+                            <div className="relative z-10 space-y-3 w-95% box-border">
+                              <div className="w-95% box-border">
                                 <p className="text-[11px] text-slate-300 mb-1 font-semibold">Playback Controls:</p>
                                 <div className="grid grid-cols-2 gap-2 w-full box-border">
                                   <button
@@ -1342,7 +1342,7 @@ function RootComponent() {
                                         : `${getSubtlePillBg(appTheme)}`
                                     }`}
                                   >
-                                    🎵 Audio ON
+                                    🎵 Radio ON
                                   </button>
                                   <button
                                     type="button"
@@ -1353,7 +1353,7 @@ function RootComponent() {
                                         : `${getSubtlePillBg(appTheme)}`
                                     }`}
                                   >
-                                    🔇 Mute / OFF
+                                    🔇 Radio Off
                                   </button>
                                 </div>
                               </div>
@@ -1445,7 +1445,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "130% 100%",
+                              backgroundSize: "113% 380%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1563,7 +1563,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "130% 100%",
+                              backgroundSize: "113% 380%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1622,7 +1622,7 @@ function RootComponent() {
                             className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-0"
                             style={{
                               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                              backgroundSize: "130% 100%",
+                              backgroundSize: "113% 380%",
                               backgroundRepeat: "no-repeat",
                               backgroundPosition: "center center",
                             }}
@@ -1771,7 +1771,7 @@ function RootComponent() {
                         </div>
                       ) : (
                         <p className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border-0 p-2.5 rounded-lg box-border">
-                          ✅ Full Lifetime Access Unlocked.
+                          ✅ Lifetime Access Unlocked.
                         </p>
                       )}
                       {unlockStatusMsg && (
@@ -1789,7 +1789,7 @@ function RootComponent() {
                         className="w-2/3 mx-auto h-2 object-contain opacity-70 mb-3"
                       />
                       <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
-                        Console UI v2.0 • RABBiT TV
+                        Console UI v2.5 • RABBiT TV
                       </span>
                     </div>
                   </div>
