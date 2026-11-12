@@ -1157,10 +1157,10 @@ export function DetailsPage() {
                   <div
                     className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
                     style={{
-                      width: "114%",
-                      height: "380%",
+                      width: "100",
+                      height: "100",
                       backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                      backgroundSize: "112% 380%",
+                      backgroundSize: "113% 380%",
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "center center",
                     }}
