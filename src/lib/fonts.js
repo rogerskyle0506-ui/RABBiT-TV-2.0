@@ -1,6 +1,6 @@
 // lib/fonts.js
 export const FONTS = {
-  havoc: 'HavrockDemo-Regular',        // Headers, titles, buttons
-  kaysteve: 'KaysteveScript-Regular',  // Sidebar menu & general default
-  lastHoney: 'Lasthoney-Regular',      // Media details
+  aresink: 'Aresink',        // Headers, titles, buttons
+  dancingmajesty: 'Dancing-Majesty',  // Sidebar menu & general default
+  cayu: 'Cayu',      // Media details
 };
