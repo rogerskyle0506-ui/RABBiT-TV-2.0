@@ -902,7 +902,7 @@ function RootComponent() {
         <AppWallpaper />
         <Screensaver />
         <AuthProvider>
-          <header className={`sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)}`}>
+          <header className={`sticky top-0 z-40 border transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)} ${getThemeGlowClass(appTheme)}`}>
             {/* Header background container using new logo / menu strip with brightened overlay and zero white bars */}
             <div className="absolute inset-0 pointer-events-none opacity-40">
               <img
@@ -914,11 +914,11 @@ function RootComponent() {
             <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
             <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 gap-2 sm:gap-4">
-              {/* Left group: Longer, Wider Rabbit TV Logo */}
+              {/* Left group: Longer, Wider Rabbit TV Logo (Text removed) */}
               <div className="flex items-center shrink-0">
                 <Link
                   to="/"
-                  className={`flex items-center gap-2.5 w-[160px] sm:w-[200px] h-11 sm:h-12 px-3.5 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-base font-black tracking-wider text-white focus:outline-none group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  className={`flex items-center gap-2.5 w-[140px] sm:w-[190px] h-11 sm:h-12 px-3.5 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-base font-black tracking-wider text-white focus:outline-none group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                   style={{
                     backgroundImage: `url(${RABBIT_LOGO_URL})`,
                     backgroundSize: "cover",
@@ -927,53 +927,52 @@ function RootComponent() {
                   }}
                 >
                   <div className="absolute inset-0 bg-black/30 rounded-2xl pointer-events-none" />
-                  <span className="whitespace-nowrap relative z-10 drop-shadow-md">RABBiT TV</span>
                 </Link>
               </div>
 
-              {/* Center / Flexible Search Bar */}
+              {/* Center / Flexible Search Bar with Search Button on Left */}
               {!showFirstStartModal && (
                 <form
                   onSubmit={handleHeaderSearchSubmit}
-                  className="flex items-center gap-1.5 flex-1 min-w-[120px] sm:min-w-[180px] max-w-xl mx-2 sm:mx-6"
+                  className="flex items-center gap-1.5 flex-1 min-w-0 mx-2 sm:mx-4"
                 >
+                  <button
+                    type="submit"
+                    className={`flex h-10 sm:h-11 px-3 sm:px-4 items-center justify-center rounded-xl border text-xs font-bold shadow-sm transition shrink-0 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
+                    aria-label="Search"
+                  >
+                    🔍
+                  </button>
                   <input
                     type="text"
                     value={headerSearchInput}
                     onChange={(e) => setHeaderSearchInput(e.target.value)}
                     placeholder="Search movies, TV shows..."
-                    className="h-10 sm:h-11 w-full min-w-0 rounded-xl border border-white/15 bg-slate-900/80 px-3.5 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
+                    className="h-10 sm:h-11 w-full min-w-0 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
                   />
-                  <button
-                    type="submit"
-                    className={`flex h-10 sm:h-11 px-4 items-center justify-center rounded-xl border text-xs font-bold shadow-sm transition shrink-0 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
-                    aria-label="Search"
-                  >
-                    🔍
-                  </button>
                 </form>
               )}
 
-              {/* Far Right: Profile Pill */}
+              {/* Far Right: Profile Pill (constrained with portrait truncation) */}
               {savedProfileName && !showFirstStartModal && (
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={handleToggleProfileMenu}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border border-white/15 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
+                    className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border border-white/15 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
                   >
                     <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
                       <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
                     </div>
-                    <span className="truncate max-w-[110px] sm:max-w-none">
-                      Hi, <strong className="text-white">{savedProfileName}</strong>{" "}
+                    <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-none">
+                      <span className="hidden sm:inline">Hi, </span><strong className="text-white">{savedProfileName}</strong>{" "}
                       {isAdmin
                         ? "(Admin)"
                         : isTrialActive
                         ? `(${trialDaysRemaining}d)`
                         : ""}
                     </span>
-                    <span className="text-[10px] ml-1 text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
+                    <span className="text-[10px] ml-0.5 text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
                   </button>
                   {isTrialActive && (
                     <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold animate-pulse">
