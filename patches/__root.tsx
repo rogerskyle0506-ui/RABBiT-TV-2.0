@@ -913,12 +913,12 @@ function RootComponent() {
             </div>
             <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
-            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 gap-2 sm:gap-4">
-              {/* Left group: Longer, Wider Rabbit TV Logo (Text removed) */}
+            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-2 sm:px-6 py-2 gap-1.5 sm:gap-4">
+              {/* Left group: Compact Rabbit Logo */}
               <div className="flex items-center shrink-0">
                 <Link
                   to="/"
-                  className={`flex items-center gap-2.5 w-[140px] sm:w-[190px] h-11 sm:h-12 px-3.5 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-base font-black tracking-wider text-white focus:outline-none group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  className={`flex items-center gap-2.5 w-[110px] sm:w-[150px] md:w-[180px] h-10 sm:h-12 px-2.5 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-base font-black tracking-wider text-white focus:outline-none group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
                   style={{
                     backgroundImage: `url(${RABBIT_LOGO_URL})`,
                     backgroundSize: "cover",
@@ -934,11 +934,11 @@ function RootComponent() {
               {!showFirstStartModal && (
                 <form
                   onSubmit={handleHeaderSearchSubmit}
-                  className="flex items-center gap-1.5 flex-1 min-w-0 mx-2 sm:mx-4"
+                  className="flex items-center gap-1 flex-1 min-w-[70px] sm:min-w-[150px] mx-1 sm:mx-3"
                 >
                   <button
                     type="submit"
-                    className={`flex h-10 sm:h-11 px-3 sm:px-4 items-center justify-center rounded-xl border text-xs font-bold shadow-sm transition shrink-0 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
+                    className={`flex h-9 sm:h-11 px-2.5 sm:px-3.5 items-center justify-center rounded-xl border text-xs font-bold shadow-sm transition shrink-0 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
                     aria-label="Search"
                   >
                     🔍
@@ -948,23 +948,23 @@ function RootComponent() {
                     value={headerSearchInput}
                     onChange={(e) => setHeaderSearchInput(e.target.value)}
                     placeholder="Search movies, TV shows..."
-                    className="h-10 sm:h-11 w-full min-w-0 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
+                    className="h-9 sm:h-11 w-full min-w-0 rounded-xl border border-white/15 bg-slate-900/80 px-2.5 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
                   />
                 </form>
               )}
 
               {/* Far Right: Profile Pill (constrained with portrait truncation) */}
               {savedProfileName && !showFirstStartModal && (
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
                     onClick={handleToggleProfileMenu}
-                    className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border border-white/15 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
+                    className={`flex items-center gap-1 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border border-white/15 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
                   >
-                    <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
                       <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
                     </div>
-                    <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-none">
+                    <span className="truncate max-w-[70px] sm:max-w-[110px] md:max-w-none text-[11px] sm:text-xs">
                       <span className="hidden sm:inline">Hi, </span><strong className="text-white">{savedProfileName}</strong>{" "}
                       {isAdmin
                         ? "(Admin)"
@@ -972,7 +972,7 @@ function RootComponent() {
                         ? `(${trialDaysRemaining}d)`
                         : ""}
                     </span>
-                    <span className="text-[10px] ml-0.5 text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
+                    <span className="text-[9px] sm:text-[10px] ml-0.5 text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
                   </button>
                   {isTrialActive && (
                     <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold animate-pulse">
