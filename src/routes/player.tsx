@@ -242,7 +242,6 @@ export function PlayerPage() {
   // Estimated Time of Completion Clock Logic
   useEffect(() => {
     if (!mediaDetails) return;
-    // Runtime lookup: movies have runtime, tv shows use typical episode runtime or default to 45m
     const runtimeMinutes =
       mediaType === "movie"
         ? mediaDetails.runtime || 120
@@ -495,27 +494,62 @@ export function PlayerPage() {
       <AppWallpaper backdropUrl={backdropUrl} />
 
       <div className="relative z-10 flex flex-col gap-6">
-        <div className="w-[80vw] mx-auto flex items-center justify-between">
-          <Link
-            className={`inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
-            to="/"
-          >
-            ← Back to Home
-          </Link>
+        {/* Top Navigation Pill Bars Style */}
+        <div className="w-[80vw] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          {/* Back to Home Pill */}
+          <div className="relative flex items-center justify-center py-1.5 px-3 overflow-hidden rounded-2xl shadow-xl w-full sm:w-auto">
+            <div
+              className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
+              style={{
+                width: "114%",
+                height: "380%",
+                backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                backgroundSize: "112% 380%",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center center",
+              }}
+            />
+            <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
+            <div className="relative z-10 py-1">
+              <Link
+                className={`inline-flex items-center gap-2 text-xs sm:text-sm font-bold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-3 py-1`}
+                to="/"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
 
-          <button
-            type="button"
-            onClick={handleReturnToDetails}
-            className={`inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1 cursor-pointer`}
-          >
-            ← Back to Details
-          </button>
+          {/* Return to Details Pill (Dynamic text based on media type) */}
+          <div className="relative flex items-center justify-center py-1.5 px-3 overflow-hidden rounded-2xl shadow-xl w-full sm:w-auto">
+            <div
+              className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
+              style={{
+                width: "114%",
+                height: "380%",
+                backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                backgroundSize: "112% 380%",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center center",
+              }}
+            />
+            <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
+            <div className="relative z-10 py-1">
+              <button
+                type="button"
+                onClick={handleReturnToDetails}
+                className={`inline-flex items-center gap-2 text-xs sm:text-sm font-bold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-3 py-1 cursor-pointer`}
+              >
+                ← Return to {inferredMediaType === "tv" ? "TV details" : "movie details"}
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* TV Season & Episode Controls */}
+        {/* TV Season & Episode Controls with High Z-Index to stay in front */}
         {inferredMediaType === "tv" && (
           <div
-            className={`w-[80vw] mx-auto flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}
+            className={`w-[80vw] mx-auto flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur relative z-30`}
           >
             <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
               <div className="relative" ref={seasonRef}>
@@ -534,7 +568,7 @@ export function PlayerPage() {
                 </button>
                 {isSeasonOpen && (
                   <div
-                    className={`absolute left-0 mt-2 z-50 max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                    className={`absolute left-0 mt-2 z-[999] max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
                   >
                     {mediaDetails?.seasons
                       ?.filter((s: any) => s.season_number > 0)
@@ -578,7 +612,7 @@ export function PlayerPage() {
                 </button>
                 {isEpisodeOpen && (
                   <div
-                    className={`absolute left-0 mt-2 z-50 max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                    className={`absolute left-0 mt-2 z-[999] max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
                   >
                     {seasonEpisodes.length > 0 ? (
                       seasonEpisodes.map((ep: any) => (
@@ -638,7 +672,7 @@ export function PlayerPage() {
         )}
 
         {/* Direct Player Container — 80% Viewport Width & Untouched Iframe */}
-        <div className="video-player-container relative w-[80vw] mx-auto aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
+        <div className="video-player-container relative w-[80vw] mx-auto aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10 z-10">
           <iframe
             key={`stable-player-${mediaId}-${season}-${episode}`}
             src={embedUrl}
@@ -649,72 +683,68 @@ export function PlayerPage() {
         </div>
 
         {/* ==========================================================
-           Separate Wrapper 1: Rating, Year, Genre & Est. Completion Clock
+           Combined Title, Metadata & Est. Finish Time Pill Box (50% Transparency, Centered)
            ========================================================== */}
-        <div className={`w-[80vw] mx-auto rounded-xl border ${getCardBackground(appTheme)} px-5 py-3 backdrop-blur shadow-md flex flex-wrap items-center justify-between gap-4`}>
-          <div className="flex items-center flex-wrap gap-4 text-sm font-semibold">
-            {rating !== "N/A" && (
-              <span className="flex items-center gap-1.5 text-yellow-300 font-bold">
-                ⭐ {rating}
-              </span>
-            )}
-            {releaseYear && (
-              <span className="text-slate-300 bg-white/5 px-2.5 py-0.5 rounded-md border border-white/10">
-                {releaseYear}
-              </span>
-            )}
-            <span className={`uppercase tracking-wider ${activeTheme.text} text-xs font-extrabold`}>
-              {genres}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-300 bg-black/30 px-3 py-1.5 rounded-lg border border-white/10">
-            <span>⏱️ Est. Finish Time:</span>
-            <span className="font-bold text-white">{estimatedCompletion}</span>
-          </div>
-        </div>
-
-        {/* ==========================================================
-           Separate Wrapper 2: Media Title
-           ========================================================== */}
-        <div className={`w-[80vw] mx-auto rounded-2xl border ${getCardBackground(appTheme)} px-6 py-4 backdrop-blur shadow-xl`}>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            {title} {inferredMediaType === "tv" && `(S${season} E${episode})`}
-          </h1>
-        </div>
-
-        {/* ==========================================================
-           Separate Wrapper 3: Media Description / Overview
-           ========================================================== */}
-        <div className={`w-[80vw] mx-auto rounded-2xl border ${getCardBackground(appTheme)} p-5 backdrop-blur shadow-xl`}>
-          <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-2">Overview</h3>
-          <p className="text-xs sm:text-sm leading-relaxed text-slate-300">
-            {overview}
-          </p>
-        </div>
-
-        {/* Pill bar wrapper for Return Button */}
-        <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-xs mx-auto overflow-hidden rounded-2xl shadow-xl">
+        <div className="relative w-[80vw] mx-auto overflow-hidden rounded-2xl shadow-xl border border-white/15 p-6 flex flex-col items-center justify-center text-center space-y-3">
           <div
-            className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
+            className="absolute inset-0 pointer-events-none z-0"
             style={{
-              width: "114%",
-              height: "380%",
               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-              backgroundSize: "112% 380%",
+              backgroundSize: "113% 380%",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
             }}
           />
-          <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-          <div className="relative z-10 py-1">
-            <button
-              type="button"
-              onClick={handleReturnToDetails}
-              className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-black/60 hover:bg-black px-4 py-2 text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-            >
-              <span>✕</span> Return to movie details
-            </button>
+          <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
+
+          <div className="relative z-10 flex flex-col items-center justify-center space-y-2.5 w-full">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+              {title} {inferredMediaType === "tv" && `(S${season} E${episode})`}
+            </h1>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm font-semibold">
+              {rating !== "N/A" && (
+                <span className="flex items-center gap-1.5 text-yellow-300 font-bold drop-shadow">
+                  ⭐ {rating}
+                </span>
+              )}
+              {releaseYear && (
+                <span className="text-slate-200 bg-black/40 px-2.5 py-0.5 rounded-md border border-white/15">
+                  {releaseYear}
+                </span>
+              )}
+              <span className={`uppercase tracking-wider ${activeTheme.text} font-extrabold drop-shadow`}>
+                {genres}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-xs font-medium text-slate-200 bg-black/40 px-3 py-1.5 rounded-lg border border-white/15 shadow">
+              <span>⏱️ Est. Finish Time:</span>
+              <span className="font-bold text-white">{estimatedCompletion}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ==========================================================
+           Media Description / Overview Pill Box (50% Transparency, Centered)
+           ========================================================== */}
+        <div className="relative w-[80vw] mx-auto overflow-hidden rounded-2xl shadow-xl border border-white/15 p-6 flex flex-col items-center justify-center text-center space-y-2">
+          <div
+            className="absolute inset-0 pointer-events-none z-0"
+            style={{
+              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+              backgroundSize: "113% 380%",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center center",
+            }}
+          />
+          <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
+
+          <div className="relative z-10 flex flex-col items-center justify-center space-y-2 w-full max-w-3xl">
+            <h3 className="text-xs uppercase tracking-widest text-slate-300 font-bold">Overview</h3>
+            <p className="text-xs sm:text-sm leading-relaxed text-slate-200 text-center">
+              {overview}
+            </p>
           </div>
         </div>
 
