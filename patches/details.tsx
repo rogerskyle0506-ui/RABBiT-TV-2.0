@@ -12,6 +12,7 @@ import { bgAudio } from "@/lib/background-audio";
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 const RABBIT_HEADER_PILL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
+const RABBIT_PANEL_ALT = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
 
 export const Route = createFileRoute("/details")({
   component: DetailsPage,
@@ -58,6 +59,10 @@ export function DetailsPage() {
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [showScrollReminder, setShowScrollReminder] = useState(false);
 
+  // Cover Art Flip & Trailer State
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [trailerKey, setTrailerKey] = useState<string | null>(null);
+
   // Cast Scroll Ref
   const castScrollRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +77,8 @@ export function DetailsPage() {
     setMediaDetails(null);
     setRecommendations([]);
     setLoading(true);
+    setIsFlipped(false);
+    setTrailerKey(null);
   }, [mediaId, urlType]);
 
   const scrollCast = (direction: "left" | "right") => {
@@ -154,6 +161,37 @@ export function DetailsPage() {
       if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
     };
   }, []);
+
+  // Fetch Trailer from TMDB API
+  useEffect(() => {
+    let active = true;
+    async function fetchTrailer() {
+      if (!mediaId) return;
+      try {
+        const apiKey = import.meta.env.VITE_TMDB_API_KEY as string;
+        const res = await fetch(
+          `https://api.themoviedb.org/3/${mediaType}/${mediaId}/videos?api_key=${apiKey}&language=en-US`
+        );
+        const data = await res.json();
+        if (!active) return;
+        const videos = data.results || [];
+        const trailer =
+          videos.find((v: any) => v.type === "Trailer" && v.site === "YouTube") ||
+          videos.find((v: any) => v.site === "YouTube") ||
+          videos[0];
+
+        if (trailer && trailer.key) {
+          setTrailerKey(trailer.key);
+        }
+      } catch (err) {
+        console.error("Failed to fetch trailer from TMDB", err);
+      }
+    }
+    fetchTrailer();
+    return () => {
+      active = false;
+    };
+  }, [mediaId, mediaType]);
 
   useEffect(() => {
     async function fetchSeasonEpisodes() {
@@ -706,13 +744,92 @@ export function DetailsPage() {
 
         <div className="mx-auto flex max-w-5xl flex-col gap-8">
           <div className="flex flex-col gap-8 md:flex-row md:items-start">
-            <div className="relative h-[450px] w-[300px] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start shrink-0">
-              <img
-                src={poster}
-                alt={title}
-                className="h-full w-full object-cover"
-              />
-              {mediaStatusBadge}
+            {/* 3D Spin / Flip Cover Art → Trailer Reveal Component */}
+            <div
+              className="relative h-[450px] w-[300px] cursor-pointer shrink-0 select-none self-center md:self-start"
+              style={{ perspective: "1000px" }}
+              onClick={() => !isFlipped && setIsFlipped(true)}
+            >
+              <div
+                className="relative h-full w-full rounded-2xl shadow-2xl shadow-black/40 transition-transform duration-700"
+                style={{
+                  transformStyle: "preserve-3d",
+                  transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                }}
+              >
+                {/* Front: Cover Art */}
+                <div
+                  className="absolute inset-0 h-full w-full rounded-2xl overflow-hidden border border-white/10 bg-black"
+                  style={{ backfaceVisibility: "hidden" }}
+                >
+                  <img
+                    src={poster}
+                    alt={title}
+                    className="h-full w-full object-cover"
+                  />
+                  {mediaStatusBadge}
+                  <div className="absolute inset-0 bg-black/30 hover:bg-black/10 transition flex items-center justify-center group">
+                    <div className="bg-black/70 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20 text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition shadow-xl flex items-center gap-2">
+                      <span>▶ Play Trailer</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Back: Trailer Player inside Themed Rabbit Alternate Panel Background Wrapper with 50% Transparency */}
+                <div
+                  className={`absolute inset-0 h-full w-full rounded-2xl overflow-hidden flex flex-col border ${activeTheme.border} shadow-2xl`}
+                  style={{
+                    backfaceVisibility: "hidden",
+                    transform: "rotateY(180deg)",
+                  }}
+                >
+                  {/* Rabbit Alternate Panel Background with 50% Transparency & Theme Respect */}
+                  <div
+                    className="absolute inset-0 pointer-events-none z-0"
+                    style={{
+                      backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      opacity: 0.5,
+                    }}
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(appTheme)} opacity-90 z-0`} />
+
+                  {/* Header / Close bar */}
+                  <div className="relative z-10 flex items-center justify-between p-3 border-b border-white/15 bg-black/50 backdrop-blur-md">
+                    <span className="text-xs font-bold text-white truncate max-w-[200px]">
+                      Trailer: {title}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsFlipped(false);
+                      }}
+                      className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center text-xs font-bold border border-white/25 transition cursor-pointer shadow-md"
+                      title="Close Trailer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Trailer Player Container */}
+                  <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center bg-black/60">
+                    {trailerKey ? (
+                      <iframe
+                        src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&controls=1&modestbranding=1`}
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <div className="text-xs text-slate-300 p-4 text-center">
+                        Loading official trailer from TMDB...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-col justify-center gap-4 flex-1">
