@@ -13,6 +13,7 @@ const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 const RABBIT_HEADER_PILL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
 const RABBIT_PANEL_ALT = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
+const BUTTON_BG_IMAGE = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Make_these_buttons_play_report_broken_My_Favs_Save_for_Later.jpg";
 
 export const Route = createFileRoute("/details")({
   component: DetailsPage,
@@ -1061,55 +1062,89 @@ export function DetailsPage() {
                 </div>
               )}
 
-              <div className="mt-4 flex flex-wrap items-center gap-3">
+              {/* Custom Image-Based Buttons with Transparent Background & Clean Styling */}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Play Button */}
                 <button
                   type="button"
                   onClick={handlePlay}
-                  className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105 cursor-pointer`}
+                  className="relative group overflow-hidden rounded-2xl p-0.5 border border-white/25 shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer text-left"
                 >
-                  ▶ Play{" "}
-                  {inferredMediaType === "tv"
-                    ? `S${season}:E${episode}`
-                    : "Movie"}
+                  <div
+                    className="absolute inset-0 bg-cover bg-center pointer-events-none transition duration-300 group-hover:scale-105"
+                    style={{ backgroundImage: `url(${BUTTON_BG_IMAGE})`, opacity: 0.88, backgroundBlendMode: 'luminosity' }}
+                  />
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
+                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
+                    <span className="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-pink-300 to-red-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                      ▶ Play {inferredMediaType === "tv" ? `S${season}:E${episode}` : "Movie"}
+                    </span>
+                  </div>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={toggleMyList}
-                  className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} cursor-pointer ${
-                    inMyList
-                      ? `${activeTheme.border} bg-white/10 ${activeTheme.text}`
-                      : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
-                  }`}
-                >
-                  {inMyList ? "✓ In My List" : "🔖 + Save to My List"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={toggleFavorites}
-                  className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer ${
-                    inFavorites
-                      ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
-                      : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
-                  }`}
-                >
-                  {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
-                </button>
-
+                {/* Report Broken Button */}
                 <button
                   type="button"
                   onClick={handleReportBroken}
-                  className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer"
+                  className="relative group overflow-hidden rounded-2xl p-0.5 border border-red-500/40 shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer text-left"
                   title="Report link as broken and hide globally"
                 >
-                  ⚠️ Report Broken
+                  <div
+                    className="absolute inset-0 bg-cover bg-center pointer-events-none transition duration-300 group-hover:scale-105"
+                    style={{ backgroundImage: `url(${BUTTON_BG_IMAGE})`, opacity: 0.88 }}
+                  />
+                  <div className="absolute inset-0 bg-black/45 group-hover:bg-black/30 transition pointer-events-none" />
+                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
+                    <span className="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-rose-300 to-red-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                      ⚠️ Report Broken
+                    </span>
+                  </div>
+                </button>
+
+                {/* My Favs Button */}
+                <button
+                  type="button"
+                  onClick={toggleFavorites}
+                  className={`relative group overflow-hidden rounded-2xl p-0.5 border shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer text-left ${
+                    inFavorites ? "border-amber-400 shadow-amber-500/30" : "border-white/25"
+                  }`}
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center pointer-events-none transition duration-300 group-hover:scale-105"
+                    style={{ backgroundImage: `url(${BUTTON_BG_IMAGE})`, opacity: 0.88 }}
+                  />
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
+                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
+                    <span className="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                      {inFavorites ? "★ In Favorites" : "⭐ My Favs"}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Save for Later Button */}
+                <button
+                  type="button"
+                  onClick={toggleMyList}
+                  className={`relative group overflow-hidden rounded-2xl p-0.5 border shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} cursor-pointer text-left ${
+                    inMyList ? `${activeTheme.border} shadow-indigo-500/30` : "border-white/25"
+                  }`}
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center pointer-events-none transition duration-300 group-hover:scale-105"
+                    style={{ backgroundImage: `url(${BUTTON_BG_IMAGE})`, opacity: 0.88 }}
+                  />
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
+                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
+                    <span className="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-200 to-indigo-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                      {inMyList ? "✓ Saved" : "Save for Later"}
+                    </span>
+                  </div>
                 </button>
               </div>
 
               {actionFeedback && (
                 <p
-                  className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}
+                  className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in mt-2`}
                 >
                   {actionFeedback}
                 </p>
