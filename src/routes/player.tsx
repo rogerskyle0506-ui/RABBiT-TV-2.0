@@ -501,8 +501,8 @@ export function PlayerPage() {
             <div
               className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
               style={{
-                width: "114%",
-                height: "380%",
+                width: "108%",
+                height: 280%",
                 backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                 backgroundSize: "112% 380%",
                 backgroundRepeat: "no-repeat",
@@ -525,10 +525,10 @@ export function PlayerPage() {
             <div
               className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
               style={{
-                width: "114%",
-                height: "350%",
+                width: "105%",
+                height: "300%",
                 backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                backgroundSize: "112% 380%",
+                backgroundSize: "100% 330%",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center center",
               }}
@@ -698,18 +698,18 @@ export function PlayerPage() {
           <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
 
           <div className="relative z-10 flex flex-col items-center justify-center space-y-2.5 w-full">
-            <h1 className="text-2xl sm:text-2xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+            <h1 className="text-2xl sm:text-1xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
               {title} {inferredMediaType === "tv" && `(S${season} E${episode})`}
             </h1>
 
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm font-semibold">
               {rating !== "N/A" && (
-                <span className="flex items-center gap-1.5 text-yellow-300 font-bold drop-shadow">
+                <span className="flex items-center gap-1.5 text-yellow-220 font-bold drop-shadow">
                   ⭐ {rating}
                 </span>
               )}
               {releaseYear && (
-                <span className="text-slate-200 bg-black/40 px-2.5 py-0.5 rounded-md border border-white/15">
+                <span className="text-slate-150 bg-black/40 px-2.5 py-0.5 rounded-md border border-white/15">
                   {releaseYear}
                 </span>
               )}
@@ -718,7 +718,7 @@ export function PlayerPage() {
               </span>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-xs font-medium text-slate-200 bg-black/40 px-3 py-1.5 rounded-lg border border-white/15 shadow">
+            <div className="flex items-center justify-center gap-2 text-xs font-medium text-slate-150 bg-black/40 px-3 py-1.5 rounded-lg border border-white/15 shadow">
               <span>⏱️ Est. Finish Time:</span>
               <span className="font-bold text-white">{estimatedCompletion}</span>
             </div>
@@ -741,8 +741,8 @@ export function PlayerPage() {
           <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
 
           <div className="relative z-10 flex flex-col items-center justify-center space-y-2 w-full max-w-3xl">
-            <h3 className="text-xs uppercase tracking-widest text-slate-200 font-bold">Overview</h3>
-            <p className="text-xs sm:text-sm leading-relaxed text-slate-100 text-center">
+            <h3 className="text-xs uppercase tracking-widest text-slate-250 font-bold">Overview</h3>
+            <p className="text-xs sm:text-sm leading-relaxed text-slate-80 text-center">
               {overview}
             </p>
           </div>
@@ -756,9 +756,9 @@ export function PlayerPage() {
                 className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
                 style={{
                   width: "111%",
-                  height: "350%",
+                  height: "300%",
                   backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "112% 380%",
+                  backgroundSize: "112% 340%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
                 }}
