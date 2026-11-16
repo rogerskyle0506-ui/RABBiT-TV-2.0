@@ -49,7 +49,6 @@ export function PlayerPage() {
   const [seasonEpisodes, setSeasonEpisodes] = useState<any[]>([]);
   const [autoPlayNext, setAutoPlayNext] = useState(true);
 
-  // Player Load Timestamp for Completion Clock Logic
   const [playerLoadTime] = useState<number>(() => Date.now());
   const [estimatedCompletion, setEstimatedCompletion] = useState<string>("--:--");
 
@@ -59,7 +58,6 @@ export function PlayerPage() {
   const seasonRef = useRef<HTMLDivElement>(null);
   const episodeRef = useRef<HTMLDivElement>(null);
 
-  // Shut off background radio on player load and episode/season changes
   useEffect(() => {
     bgAudio.pause();
   }, [mediaId, season, episode]);
@@ -150,7 +148,6 @@ export function PlayerPage() {
           }
         }
 
-        // External IDs requested to get precise IMDb ID
         let res = await fetch(
           `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits,external_ids`
         );
@@ -202,7 +199,6 @@ export function PlayerPage() {
           setMediaDetails(null);
         }
 
-        // Fetch Recommendations (relaxed fallback if empty)
         let recRes = await fetch(
           `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
         );
@@ -239,7 +235,6 @@ export function PlayerPage() {
     };
   }, [mediaId, urlType]);
 
-  // Estimated Time of Completion Clock Logic
   useEffect(() => {
     if (!mediaDetails) return;
     const runtimeMinutes =
@@ -253,7 +248,6 @@ export function PlayerPage() {
     setEstimatedCompletion(formattedTime);
   }, [mediaDetails, playerLoadTime, mediaType, episode]);
 
-  // Keep watch progress synced when switching episodes/seasons
   useEffect(() => {
     if (!mediaDetails || !mediaId) return;
     const resolvedType: "tv" | "movie" =
@@ -455,7 +449,6 @@ export function PlayerPage() {
   const genres =
     mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
 
-  // IMDb ID Resolution
   const imdbId =
     mediaDetails?.external_ids?.imdb_id ||
     mediaDetails?.imdb_id ||
@@ -464,7 +457,6 @@ export function PlayerPage() {
     ? `https://www.imdb.com/title/${imdbId}/`
     : `https://www.imdb.com/find?q=${encodeURIComponent(title)}`;
 
-  // EXACT vidsrc URL rules preserved verbatim
   const embedUrl =
     inferredMediaType === "tv"
       ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
@@ -494,15 +486,13 @@ export function PlayerPage() {
       <AppWallpaper backdropUrl={backdropUrl} />
 
       <div className="relative z-10 flex flex-col gap-6">
-        {/* Top Navigation Pill Bars Style */}
         <div className="w-[80vw] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          {/* Back to Home Pill */}
           <div className="relative flex items-center justify-center py-1.5 px-3 overflow-hidden rounded-2xl shadow-xl w-full sm:w-auto">
             <div
               className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
               style={{
                 width: "108%",
-                height: 280%",
+                height: "280%",
                 backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                 backgroundSize: "112% 380%",
                 backgroundRepeat: "no-repeat",
@@ -520,7 +510,6 @@ export function PlayerPage() {
             </div>
           </div>
 
-          {/* Return to Details Pill (Dynamic text based on media type) */}
           <div className="relative flex items-center justify-center py-1.5 px-3 overflow-hidden rounded-2xl shadow-xl w-full sm:w-auto">
             <div
               className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
@@ -546,7 +535,6 @@ export function PlayerPage() {
           </div>
         </div>
 
-        {/* TV Season & Episode Controls with High Z-Index to stay in front */}
         {inferredMediaType === "tv" && (
           <div
             className={`w-[80vw] mx-auto flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur relative z-30`}
@@ -671,7 +659,6 @@ export function PlayerPage() {
           </div>
         )}
 
-        {/* Direct Player Container — 80% Viewport Width & Untouched Iframe */}
         <div className="video-player-container relative w-[80vw] mx-auto aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10 z-10">
           <iframe
             key={`stable-player-${mediaId}-${season}-${episode}`}
@@ -682,10 +669,8 @@ export function PlayerPage() {
           ></iframe>
         </div>
 
-        {/* ==========================================================
-           Combined Title, Metadata & Est. Finish Time Pill Box (50% Transparency, Centered)
-           ========================================================== */}
-        <div className="relative w-[80vw] mx-auto overflow-hidden rounded-2xl shadow-xl border border-white/15 p-6 flex flex-col items-center justify-center text-center space-y-3">
+        {/* Title & Metadata Pill Box */}
+        <div className="relative w-[80vw] mx-auto overflow-hidden rounded-2xl shadow-xl border border-white/15 p-4 flex flex-col items-center justify-center text-center space-y-2">
           <div
             className="absolute inset-0 pointer-events-none z-0"
             style={{
@@ -697,38 +682,35 @@ export function PlayerPage() {
           />
           <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
 
-          <div className="relative z-10 flex flex-col items-center justify-center space-y-2.5 w-full">
-            <h1 className="text-2xl sm:text-1xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+          <div className="relative z-10 flex flex-col items-center justify-center space-y-1.5 w-full">
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
               {title} {inferredMediaType === "tv" && `(S${season} E${episode})`}
             </h1>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm font-semibold">
+            <div className="flex flex-wrap items-center justify-center gap-2.5 text-xs font-semibold">
               {rating !== "N/A" && (
-                <span className="flex items-center gap-1.5 text-yellow-220 font-bold drop-shadow">
+                <span className="flex items-center gap-1 text-yellow-300 font-bold drop-shadow">
                   ⭐ {rating}
                 </span>
               )}
               {releaseYear && (
-                <span className="text-slate-150 bg-black/40 px-2.5 py-0.5 rounded-md border border-white/15">
+                <span className="text-slate-300 bg-black/40 px-2 py-0.5 rounded-md border border-white/15">
                   {releaseYear}
                 </span>
               )}
               <span className={`uppercase tracking-wider ${activeTheme.text} font-extrabold drop-shadow`}>
                 {genres}
               </span>
-            </div>
-
-            <div className="flex items-center justify-center gap-2 text-xs font-medium text-slate-150 bg-black/40 px-3 py-1.5 rounded-lg border border-white/15 shadow">
-              <span>⏱️ Est. Finish Time:</span>
-              <span className="font-bold text-white">{estimatedCompletion}</span>
+              <span className="flex items-center gap-1.5 text-slate-300 bg-black/40 px-2 py-0.5 rounded-md border border-white/15">
+                <span>⏱️ Finish:</span>
+                <span className="font-bold text-white">{estimatedCompletion}</span>
+              </span>
             </div>
           </div>
         </div>
 
-        {/* ==========================================================
-           Media Description / Overview Pill Box (50% Transparency, Centered)
-           ========================================================== */}
-        <div className="relative w-[80vw] mx-auto overflow-hidden rounded-2xl shadow-xl border border-white/15 p-6 flex flex-col items-center justify-center text-center space-y-2">
+        {/* Overview Pill Box (Slightly larger font) */}
+        <div className="relative w-[80vw] mx-auto overflow-hidden rounded-2xl shadow-xl border border-white/15 p-5 flex flex-col items-center justify-center text-center space-y-1.5">
           <div
             className="absolute inset-0 pointer-events-none z-0"
             style={{
@@ -740,15 +722,14 @@ export function PlayerPage() {
           />
           <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
 
-          <div className="relative z-10 flex flex-col items-center justify-center space-y-2 w-full max-w-3xl">
-            <h3 className="text-xs uppercase tracking-widest text-slate-250 font-bold">Overview</h3>
-            <p className="text-xs sm:text-sm leading-relaxed text-slate-80 text-center">
+          <div className="relative z-10 flex flex-col items-center justify-center space-y-1.5 w-full max-w-3xl">
+            <h3 className="text-[10px] uppercase tracking-widest text-slate-300 font-bold">Overview</h3>
+            <p className="text-sm sm:text-base leading-relaxed text-slate-200 text-center">
               {overview}
             </p>
           </div>
         </div>
 
-        {/* Similar Recommendations Section (Up to 10 items) */}
         {mappedRecommendations.length > 0 && (
           <div className="w-[80vw] mx-auto mt-8 pt-4 border-t border-white/10 space-y-4">
             <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-sm mx-auto overflow-hidden rounded-2xl shadow-xl">
@@ -778,9 +759,6 @@ export function PlayerPage() {
           </div>
         )}
 
-        {/* ==========================================================
-           IMDb Hotlink at the Very Bottom of the Page
-           ========================================================== */}
         <div className="w-[80vw] mx-auto mt-8 pb-8 text-center border-t border-white/10 pt-6">
           <a
             href={imdbLink}
