@@ -526,7 +526,7 @@ export function PlayerPage() {
               className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
               style={{
                 width: "114%",
-                height: "380%",
+                height: "350%",
                 backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                 backgroundSize: "112% 380%",
                 backgroundRepeat: "no-repeat",
@@ -698,7 +698,7 @@ export function PlayerPage() {
           <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
 
           <div className="relative z-10 flex flex-col items-center justify-center space-y-2.5 w-full">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+            <h1 className="text-2xl sm:text-2xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
               {title} {inferredMediaType === "tv" && `(S${season} E${episode})`}
             </h1>
 
@@ -741,8 +741,8 @@ export function PlayerPage() {
           <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
 
           <div className="relative z-10 flex flex-col items-center justify-center space-y-2 w-full max-w-3xl">
-            <h3 className="text-xs uppercase tracking-widest text-slate-300 font-bold">Overview</h3>
-            <p className="text-xs sm:text-sm leading-relaxed text-slate-200 text-center">
+            <h3 className="text-xs uppercase tracking-widest text-slate-200 font-bold">Overview</h3>
+            <p className="text-xs sm:text-sm leading-relaxed text-slate-100 text-center">
               {overview}
             </p>
           </div>
@@ -755,8 +755,8 @@ export function PlayerPage() {
               <div
                 className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
                 style={{
-                  width: "114%",
-                  height: "380%",
+                  width: "111%",
+                  height: "350%",
                   backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                   backgroundSize: "112% 380%",
                   backgroundRepeat: "no-repeat",
@@ -766,7 +766,7 @@ export function PlayerPage() {
               <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
               <div className="relative z-10 py-1">
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span>✨ Similar Recommendations</span>
+                  <span>✨ Similar Recommended Titles</span>
                 </h2>
               </div>
             </div>
