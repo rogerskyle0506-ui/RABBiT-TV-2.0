@@ -182,10 +182,100 @@ export function handleExternalUrlIntent(
 }
 
 /**
+ * Determines if an element or any of its parents is related to the VIDSRC iframe or its container.
+ * ABSOLUTE PROHIBITION COMPLIANCE: Never touch or affect vidsrc or its container.
+ */
+function isVidsrcRelated(element: Element | null): boolean {
+  if (!element) return false;
+  let current: Element | null = element;
+  while (current) {
+    if (current.tagName === "IFRAME") {
+      const src = (current as HTMLIFrameElement).src || "";
+      const id = current.id || "";
+      const className = typeof current.className === "string" ? current.className : "";
+      if (
+        src.toLowerCase().includes("vidsrc") ||
+        id.toLowerCase().includes("vidsrc") ||
+        className.toLowerCase().includes("vidsrc")
+      ) {
+        return true;
+      }
+    }
+    const id = current.id || "";
+    const className = typeof current.className === "string" ? current.className : "";
+    if (
+      id.toLowerCase().includes("vidsrc") ||
+      className.toLowerCase().includes("vidsrc") ||
+      current.querySelector('iframe[src*="vidsrc"]')
+    ) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
+}
+
+/**
+ * Injects industrial-strength CSS rules to neutralize ad overlays and floating elements
+ * while completely omitting any selector that targets vidsrc elements or containers.
+ */
+function injectAggressiveAdblockStyles(): HTMLStyleElement | null {
+  if (typeof document === "undefined") return null;
+
+  const styleId = "rab-industrial-adblock-styles";
+  let styleEl = document.getElementById(styleId) as HTMLStyleElement;
+  if (!styleEl) {
+    styleEl = document.createElement("style");
+    styleEl.id = styleId;
+    document.head.appendChild(styleEl);
+  }
+
+  styleEl.textContent = `
+    /* Industrial Ad Neutralization Styles (2025-2026 Standards) */
+    div[class*="banner" i]:not([class*="vidsrc" i]),
+    div[class*="popup" i]:not([class*="vidsrc" i]),
+    div[class*="overlay" i]:not([class*="vidsrc" i]),
+    div[class*="advert" i]:not([class*="vidsrc" i]),
+    div[class*="sponsored" i]:not([class*="vidsrc" i]),
+    div[id*="banner" i]:not([id*="vidsrc" i]),
+    div[id*="popup" i]:not([id*="vidsrc" i]),
+    div[id*="overlay" i]:not([id*="vidsrc" i]),
+    div[id*="ads-" i]:not([id*="vidsrc" i]),
+    div[id*="-ads" i]:not([id*="vidsrc" i]),
+    aside:not([class*="vidsrc" i]):not([id*="vidsrc" i]),
+    ins.adsbygoogle,
+    iframe[src*="doubleclick.net"],
+    iframe[src*="googlesyndication.com"],
+    iframe[src*="popads.net"],
+    iframe[src*="adcash.com"],
+    iframe[src*="juicyads.com"],
+    iframe[src*="exoclick.com"],
+    iframe[src*="propellerads.com"],
+    iframe[src*="monetag.com"],
+    iframe[src*="adsterra.com"] {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      z-index: -99999 !important;
+      width: 0 !important;
+      height: 0 !important;
+      max-height: 0 !important;
+      max-width: 0 !important;
+      overflow: hidden !important;
+    }
+  `;
+  return styleEl;
+}
+
+/**
  * Self-contained ad-blocking interceptor suite with enhanced overlay and popup neutralization.
  */
 export function initAdBlockerGlobalInterceptors(): () => void {
   if (typeof window === "undefined") return () => {};
+
+  // Inject high-performance CSS protection rules
+  const injectedStyle = injectAggressiveAdblockStyles();
 
   // 1. Block window.open
   const originalOpen = window.open;
@@ -207,6 +297,11 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     const target = event.target as HTMLElement | null;
     if (!target) return;
 
+    // ABSOLUTE PROHIBITION: Never interfere with vidsrc iframe or its container
+    if (isVidsrcRelated(target)) {
+      return;
+    }
+
     // Check if clicking an anchor tag
     const anchor = target.closest("a");
     if (anchor && anchor.href) {
@@ -221,7 +316,7 @@ export function initAdBlockerGlobalInterceptors(): () => void {
 
     // Neutralize transparent/invisible overlays injected directly over the page/player
     const currentPath = window.location.pathname;
-    if (currentPath.includes("/details")) {
+    if (currentPath.includes("/details") || currentPath.includes("/player") || currentPath.includes("/")) {
       const style = window.getComputedStyle(target);
       const isTransparentOrFixed =
         (style.position === "fixed" || style.position === "absolute") &&
@@ -234,13 +329,18 @@ export function initAdBlockerGlobalInterceptors(): () => void {
         target.tagName.toLowerCase() !== "button" &&
         !target.closest("iframe") &&
         !target.closest("nav") &&
-        !target.closest("header")
+        !target.closest("header") &&
+        !isVidsrcRelated(target)
       ) {
         console.warn("[AdBlocker] Neutralized suspicious overlay element click:", target);
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        target.remove();
+        try {
+          target.remove();
+        } catch {
+          target.style.display = "none";
+        }
       }
     }
   };
@@ -308,23 +408,53 @@ export function initAdBlockerGlobalInterceptors(): () => void {
       );
     }
 
-    const currentPath = window.location.pathname;
-    if (currentPath.includes("/details")) {
-      for (const mutation of mutations) {
-        for (const node of Array.from(mutation.addedNodes)) {
-          if (node instanceof HTMLElement) {
-            const tagName = node.tagName.toLowerCase();
-            const style = window.getComputedStyle(node);
-            
-            const isFullOverlay =
-              (style.position === "fixed" || style.position === "absolute") &&
-              (parseInt(style.zIndex, 10) > 100 || style.zIndex === "auto") &&
-              (style.opacity === "0" || style.backgroundColor === "rgba(0, 0, 0, 0)") &&
-              tagName !== "iframe";
+    for (const mutation of mutations) {
+      for (const node of Array.from(mutation.addedNodes)) {
+        if (node instanceof HTMLElement) {
+          // ABSOLUTE PROHIBITION: Never touch vidsrc iframe or container
+          if (isVidsrcRelated(node)) {
+            continue;
+          }
 
-            if (isFullOverlay) {
-              console.warn("[AdBlocker] Stripped injected ad overlay element:", node);
+          const tagName = node.tagName.toLowerCase();
+          const className = typeof node.className === "string" ? node.className.toLowerCase() : "";
+          const id = (node.id || "").toLowerCase();
+
+          // High-confidence ad indicator checks
+          const matchesAdPattern =
+            className.includes("popunder") ||
+            className.includes("popup-ad") ||
+            className.includes("overlay-ad") ||
+            className.includes("ad-banner") ||
+            id.includes("popunder") ||
+            id.includes("overlay-ad");
+
+          if (matchesAdPattern && tagName !== "iframe") {
+            console.warn("[AdBlocker] Stripped injected ad container via MutationObserver:", node);
+            try {
               node.remove();
+            } catch {
+              node.style.display = "none";
+            }
+            continue;
+          }
+
+          // Check for injected suspicious full overlays
+          const style = window.getComputedStyle(node);
+          const isFullOverlay =
+            (style.position === "fixed" || style.position === "absolute") &&
+            (parseInt(style.zIndex, 10) > 100 || style.zIndex === "auto") &&
+            (style.opacity === "0" || style.backgroundColor === "rgba(0, 0, 0, 0)") &&
+            tagName !== "iframe" &&
+            !node.querySelector("video") &&
+            !node.querySelector("canvas");
+
+          if (isFullOverlay) {
+            console.warn("[AdBlocker] Stripped injected ad overlay element:", node);
+            try {
+              node.remove();
+            } catch {
+              node.style.display = "none";
             }
           }
         }
@@ -332,11 +462,31 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     }
   });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
+  if (document.body) {
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  }
+
+  // 7. Periodic sweep interval to catch self-healing or delayed malicious nodes
+  const cleanupInterval = setInterval(() => {
+    if (typeof document === "undefined") return;
+    const suspiciousElements = document.querySelectorAll(
+      'div[class*="popunder" i], div[class*="overlay-ad" i], div[id*="popunder" i]'
+    );
+    suspiciousElements.forEach((el) => {
+      if (!isVidsrcRelated(el)) {
+        console.warn("[AdBlocker] Periodic sweep neutralized ad element:", el);
+        try {
+          el.remove();
+        } catch {
+          (el as HTMLElement).style.display = "none";
+        }
+      }
+    });
+  }, 3000);
 
   // Cleanup function
   return () => {
@@ -346,6 +496,9 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     XMLHttpRequest.prototype.open = originalXhrOpen;
     document.createElement = originalCreateElement;
     observer.disconnect();
+    clearInterval(cleanupInterval);
+    if (injectedStyle && injectedStyle.parentNode) {
+      injectedStyle.parentNode.removeChild(injectedStyle);
+    }
   };
 }
-
