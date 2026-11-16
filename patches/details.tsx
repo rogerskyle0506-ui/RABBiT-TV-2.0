@@ -1,5 +1,5 @@
 // src/routes/details.tsx
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/settings";
 import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/details")({
 
 export function DetailsPage() {
   const search = Route.useSearch();
+  const navigate = useNavigate();
 
   const rawId = String(search.id || "").trim();
   const inferredType: "tv" | "movie" | null = rawId.toLowerCase().startsWith("tv-")
@@ -38,7 +39,6 @@ export function DetailsPage() {
   const [mediaType, setMediaType] = useState<"movie" | "tv">(urlType);
   const [mediaDetails, setMediaDetails] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [appTheme, setAppTheme] = useState<AppTheme>("violet");
@@ -51,7 +51,6 @@ export function DetailsPage() {
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
   const [seasonEpisodes, setSeasonEpisodes] = useState<any[]>([]);
-  const [autoPlayNext, setAutoPlayNext] = useState(true);
 
   const [isSeasonOpen, setIsSeasonOpen] = useState(false);
   const [isEpisodeOpen, setIsEpisodeOpen] = useState(false);
@@ -68,7 +67,6 @@ export function DetailsPage() {
 
   useEffect(() => {
     setMediaType(urlType);
-    setIsPlaying(false);
     setSeason(1);
     setEpisode(1);
     setMediaDetails(null);
@@ -99,7 +97,7 @@ export function DetailsPage() {
       window.removeEventListener("scroll", checkVerticalScroll);
       window.removeEventListener("resize", checkVerticalScroll);
     };
-  }, [recommendations, loading, isPlaying]);
+  }, [recommendations, loading]);
 
   useEffect(() => {
     let inactivityTimer: NodeJS.Timeout;
@@ -199,6 +197,12 @@ export function DetailsPage() {
         return "bg-[#160404]/90 border-red-500/20";
       case "midnight":
         return "bg-[#03091e]/90 border-blue-500/20";
+      case "emerald":
+        return "bg-[#031b13]/90 border-emerald-500/20";
+      case "amber":
+        return "bg-[#221507]/90 border-amber-500/20";
+      case "cyan":
+        return "bg-[#031d20]/90 border-cyan-500/20";
       case "violet":
       default:
         return "bg-[#090e1f]/90 border-violet-500/20";
@@ -225,6 +229,33 @@ export function DetailsPage() {
           ring: "focus:ring-blue-400",
           shadow: "shadow-blue-600/30",
         };
+      case "emerald":
+        return {
+          text: "text-emerald-400",
+          bg: "bg-emerald-600",
+          hoverBg: "hover:bg-emerald-500",
+          border: "border-emerald-500",
+          ring: "focus:ring-emerald-400",
+          shadow: "shadow-emerald-600/30",
+        };
+      case "amber":
+        return {
+          text: "text-amber-400",
+          bg: "bg-amber-600",
+          hoverBg: "hover:bg-amber-500",
+          border: "border-amber-500",
+          ring: "focus:ring-amber-400",
+          shadow: "shadow-amber-600/30",
+        };
+      case "cyan":
+        return {
+          text: "text-cyan-400",
+          bg: "bg-cyan-600",
+          hoverBg: "hover:bg-cyan-500",
+          border: "border-cyan-500",
+          ring: "focus:ring-cyan-400",
+          shadow: "shadow-cyan-600/30",
+        };
       case "violet":
       default:
         return {
@@ -244,6 +275,12 @@ export function DetailsPage() {
         return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
       case "midnight":
         return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
+      case "emerald":
+        return "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]";
+      case "amber":
+        return "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]";
+      case "cyan":
+        return "text-cyan-400 drop-shadow-[0_0_8px_rgba(103,232,249,0.8)]";
       case "violet":
       default:
         return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
@@ -504,7 +541,6 @@ export function DetailsPage() {
     if (!mediaDetails || !mediaId) return;
 
     bgAudio.pause();
-    setIsPlaying(true);
 
     try {
       saveWatchProgress({
@@ -522,6 +558,16 @@ export function DetailsPage() {
     } catch (err) {
       console.error("Could not save to watch history", err);
     }
+
+    navigate({
+      to: "/player",
+      search: {
+        id: mediaId,
+        type: inferredMediaType,
+        season: inferredMediaType === "tv" ? season : 1,
+        episode: inferredMediaType === "tv" ? episode : 1,
+      },
+    });
   };
 
   const toggleMyList = () => {
@@ -637,11 +683,6 @@ export function DetailsPage() {
   const budget = mediaDetails?.budget && mediaDetails.budget > 0 ? `$${mediaDetails.budget.toLocaleString()}` : "N/A";
   const productionCompanies = mediaDetails?.production_companies?.map((c: any) => c.name).join(", ") || "N/A";
 
-  const embedUrl =
-    inferredMediaType === "tv"
-      ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
-      : `https://vidsrc.to/embed/movie/${mediaId}`;
-
   const currentSeasonObj = mediaDetails?.seasons?.find(
     (s: any) => s.season_number === season
   );
@@ -663,33 +704,75 @@ export function DetailsPage() {
           ← Back to Home
         </Link>
 
-        {isPlaying ? (
-          <div className="mx-auto flex max-w-5xl flex-col gap-6">
-            {inferredMediaType === "tv" && (
-              <div
-                className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur`}
+        <div className="mx-auto flex max-w-5xl flex-col gap-8">
+          <div className="flex flex-col gap-8 md:flex-row md:items-start">
+            <div className="relative h-[450px] w-[300px] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start shrink-0">
+              <img
+                src={poster}
+                alt={title}
+                className="h-full w-full object-cover"
+              />
+              {mediaStatusBadge}
+            </div>
+
+            <div className="flex flex-col justify-center gap-4 flex-1">
+              <span
+                className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
               >
-                <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
+                {genres}
+              </span>
+
+              <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+                {title}
+              </h1>
+
+              <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
+                {rating !== "N/A" && (
+                  <span className="flex items-center gap-1 font-bold text-yellow-300">
+                    ⭐ {rating}
+                  </span>
+                )}
+                {releaseYear && <span>{releaseYear}</span>}
+                {originalLanguageName && (
+                  <span className="font-medium text-slate-200">
+                    {originalLanguageName}
+                  </span>
+                )}
+                <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
+                  {inferredMediaType}
+                </span>
+              </div>
+
+              <p className="max-w-2xl text-base leading-relaxed text-slate-300">
+                {overview}
+              </p>
+
+              {inferredMediaType === "tv" && mediaDetails?.seasons && (
+                <div
+                  className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
+                >
                   <div className="relative" ref={seasonRef}>
-                    <span className="block text-xs text-slate-400 mb-1">Season</span>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      Select Season
+                    </label>
                     <button
                       type="button"
                       onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                      className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                     >
                       <span>
                         {currentSeasonObj
-                          ? currentSeasonObj.name
+                          ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
                           : `Season ${season}`}
                       </span>
                       <span>▾</span>
                     </button>
                     {isSeasonOpen && (
                       <div
-                        className={`absolute left-0 mt-2 z-50 max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
                       >
-                        {mediaDetails?.seasons
-                          ?.filter((s: any) => s.season_number > 0)
+                        {mediaDetails.seasons
+                          .filter((s: any) => s.season_number > 0)
                           .map((s: any) => (
                             <button
                               key={s.id}
@@ -705,7 +788,7 @@ export function DetailsPage() {
                                   : "text-slate-200 hover:bg-white/10"
                               }`}
                             >
-                              {s.name} ({s.episode_count} Eps)
+                              {s.name} ({s.episode_count} Episodes)
                             </button>
                           ))}
                       </div>
@@ -713,13 +796,13 @@ export function DetailsPage() {
                   </div>
 
                   <div className="relative" ref={episodeRef}>
-                    <span className="block text-xs text-slate-400 mb-1">
-                      Episode
-                    </span>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      Select Episode
+                    </label>
                     <button
                       type="button"
                       onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                      className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                      className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                     >
                       <span>
                         {currentEpisodeObj
@@ -730,7 +813,7 @@ export function DetailsPage() {
                     </button>
                     {isEpisodeOpen && (
                       <div
-                        className={`absolute left-0 mt-2 z-50 max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                        className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
                       >
                         {seasonEpisodes.length > 0 ? (
                           seasonEpisodes.map((ep: any) => (
@@ -759,428 +842,175 @@ export function DetailsPage() {
                     )}
                   </div>
                 </div>
+              )}
 
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setEpisode((prev) => Math.max(1, prev - 1))}
-                    disabled={episode <= 1}
-                    className={`rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:opacity-40 focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                  >
-                    ◀ Previous
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEpisode((prev) => prev + 1)}
-                    className={`rounded-xl ${activeTheme.bg} px-4 py-2 text-xs font-semibold text-white shadow transition ${activeTheme.hoverBg} focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                  >
-                    Next Episode ▶
-                  </button>
-                  <label className="ml-2 flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={autoPlayNext}
-                      onChange={(e) => setAutoPlayNext(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-violet-600 focus:ring-violet-500 focus:outline-none"
-                    />
-                    Autoplay Next
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* Direct Player Container */}
-            <div className="relative w-full aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10">
-              <iframe
-                key={`stable-player-${mediaId}-${season}-${episode}`}
-                src={embedUrl}
-                className="h-full w-full border-0"
-                allowFullScreen
-                allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
-              ></iframe>
-            </div>
-
-            {/* Media Plot Details / Title Information Box on Player View */}
-            <div className={`rounded-2xl border ${getCardBackground(appTheme)} p-5 backdrop-blur shadow-xl space-y-2`}>
-              <div className="flex items-center flex-wrap gap-2">
-                <h2 className="text-xl font-black text-white">{title}</h2>
-                {releaseYear && (
-                  <span className="text-xs text-slate-400 font-semibold">{releaseYear}</span>
-                )}
-                {rating !== "N/A" && (
-                  <span className="text-xs text-yellow-300 font-bold">⭐ {rating}</span>
-                )}
-              </div>
-              <p className="text-xs sm:text-sm leading-relaxed text-slate-300">
-                {overview}
-              </p>
-            </div>
-
-            {/* Pill bar wrapper for Return Button (Compact sizing with 6-point buffer and 114% width & 380% background scaling) */}
-            <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-xs mx-auto overflow-hidden rounded-2xl shadow-xl">
-              <div
-                className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
-                style={{
-                  width: "114%",
-                  height: "380%",
-                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "112% 380%",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center center",
-                }}
-              />
-              <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-              <div className="relative z-10 py-1">
+              <div className="mt-4 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsPlaying(false)}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-black/60 hover:bg-black px-4 py-2 text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  onClick={handlePlay}
+                  className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105 cursor-pointer`}
                 >
-                  <span>✕</span> Return to movie details
+                  ▶ Play{" "}
+                  {inferredMediaType === "tv"
+                    ? `S${season}:E${episode}`
+                    : "Movie"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleMyList}
+                  className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} cursor-pointer ${
+                    inMyList
+                      ? `${activeTheme.border} bg-white/10 ${activeTheme.text}`
+                      : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                  }`}
+                >
+                  {inMyList ? "✓ In My List" : "🔖 + Save to My List"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleFavorites}
+                  className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer ${
+                    inFavorites
+                      ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
+                      : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                  }`}
+                >
+                  {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleReportBroken}
+                  className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer"
+                  title="Report link as broken and hide globally"
+                >
+                  ⚠️ Report Broken
                 </button>
               </div>
-            </div>
 
-            {/* Recommended Movies Section on the Player View */}
-            {mappedRecommendations.length > 0 && (
-              <div className="mt-8 pt-4 border-t border-white/10 space-y-4">
-                {/* Pill bar wrapper for Recommended Movies header on Player View */}
-                <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-sm mx-auto overflow-hidden rounded-2xl shadow-xl">
-                  <div
-                    className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
-                    style={{
-                      width: "114%",
-                      height: "380%",
-                      backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                      backgroundSize: "112% 380%",
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "center center",
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-                  <div className="relative z-10 py-1">
-                    <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                      <span>✨ Recommended Movies</span>
-                    </h2>
-                  </div>
-                </div>
-                <div className={gridColsClass}>
-                  {mappedRecommendations.slice(0, 5).map((item) => (
-                    <MediaCard item={item} key={item.id} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="mx-auto flex max-w-5xl flex-col gap-8">
-            <div className="flex flex-col gap-8 md:flex-row md:items-start">
-              <div className="relative h-[450px] w-[300px] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 self-center md:self-start shrink-0">
-                <img
-                  src={poster}
-                  alt={title}
-                  className="h-full w-full object-cover"
-                />
-                {mediaStatusBadge}
-              </div>
-
-              <div className="flex flex-col justify-center gap-4 flex-1">
-                <span
-                  className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
+              {actionFeedback && (
+                <p
+                  className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}
                 >
-                  {genres}
-                </span>
-
-                <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
-                  {title}
-                </h1>
-
-                <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
-                  {rating !== "N/A" && (
-                    <span className="flex items-center gap-1 font-bold text-yellow-300">
-                      ⭐ {rating}
-                    </span>
-                  )}
-                  {releaseYear && <span>{releaseYear}</span>}
-                  {originalLanguageName && (
-                    <span className="font-medium text-slate-200">
-                      {originalLanguageName}
-                    </span>
-                  )}
-                  <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
-                    {inferredMediaType}
-                  </span>
-                </div>
-
-                <p className="max-w-2xl text-base leading-relaxed text-slate-300">
-                  {overview}
+                  {actionFeedback}
                 </p>
-
-                {inferredMediaType === "tv" && mediaDetails?.seasons && (
-                  <div
-                    className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
-                  >
-                    <div className="relative" ref={seasonRef}>
-                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                        Select Season
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                        className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                      >
-                        <span>
-                          {currentSeasonObj
-                            ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
-                            : `Season ${season}`}
-                        </span>
-                        <span>▾</span>
-                      </button>
-                      {isSeasonOpen && (
-                        <div
-                          className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
-                        >
-                          {mediaDetails.seasons
-                            .filter((s: any) => s.season_number > 0)
-                            .map((s: any) => (
-                              <button
-                                key={s.id}
-                                type="button"
-                                onClick={() => {
-                                  setSeason(s.season_number);
-                                  setEpisode(1);
-                                  setIsSeasonOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                                  season === s.season_number
-                                    ? `${activeTheme.bg} text-white font-bold`
-                                    : "text-slate-200 hover:bg-white/10"
-                                }`}
-                              >
-                                {s.name} ({s.episode_count} Episodes)
-                              </button>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="relative" ref={episodeRef}>
-                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                        Select Episode
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                        className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                      >
-                        <span>
-                          {currentEpisodeObj
-                            ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
-                            : `Episode ${episode}`}
-                        </span>
-                        <span>▾</span>
-                      </button>
-                      {isEpisodeOpen && (
-                        <div
-                          className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
-                        >
-                          {seasonEpisodes.length > 0 ? (
-                            seasonEpisodes.map((ep: any) => (
-                              <button
-                                key={ep.id}
-                                type="button"
-                                onClick={() => {
-                                  setEpisode(ep.episode_number);
-                                  setIsEpisodeOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                                  episode === ep.episode_number
-                                    ? `${activeTheme.bg} text-white font-bold`
-                                    : "text-slate-200 hover:bg-white/10"
-                                }`}
-                              >
-                                Ep {ep.episode_number}: {ep.name}
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-3 py-2 text-sm text-slate-400">
-                              Loading episodes...
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handlePlay}
-                    className={`flex items-center gap-2 rounded-full ${activeTheme.bg} px-8 py-4 text-lg font-bold text-white shadow-lg ${activeTheme.shadow} transition ${activeTheme.hoverBg} active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} focus:scale-105 cursor-pointer`}
-                  >
-                    ▶ Play{" "}
-                    {inferredMediaType === "tv"
-                      ? `S${season}:E${episode}`
-                      : "Movie"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={toggleMyList}
-                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 ${activeTheme.ring} cursor-pointer ${
-                      inMyList
-                        ? `${activeTheme.border} bg-white/10 ${activeTheme.text}`
-                        : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
-                    }`}
-                  >
-                    {inMyList ? "✓ In My List" : "🔖 + Save to My List"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={toggleFavorites}
-                    className={`flex items-center gap-2 rounded-full border px-6 py-4 text-sm font-bold transition focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer ${
-                      inFavorites
-                        ? "border-amber-500 bg-amber-950/80 text-amber-300 shadow-lg shadow-amber-500/20"
-                        : "border-white/20 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
-                    }`}
-                  >
-                    {inFavorites ? "★ In Favorites" : "⭐ Add Favorite"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleReportBroken}
-                    className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/50 px-6 py-4 text-sm font-bold text-red-300 transition hover:bg-red-900/80 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer"
-                    title="Report link as broken and hide globally"
-                  >
-                    ⚠️ Report Broken
-                  </button>
-                </div>
-
-                {actionFeedback && (
-                  <p
-                    className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in`}
-                  >
-                    {actionFeedback}
-                  </p>
-                )}
-              </div>
+              )}
             </div>
-
-            {/* Cast Section */}
-            {castList.length > 0 && (
-              <div className={`mt-6 pt-4 pb-4 px-4 rounded-2xl border ${getCardBackground(appTheme)} backdrop-blur shadow-xl space-y-3`}>
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
-                    Cast
-                  </h2>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => scrollCast("left")}
-                      className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black border border-white/20 flex items-center justify-center text-xs font-bold text-white shadow transition cursor-pointer"
-                      aria-label="Scroll left"
-                    >
-                      ◀
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => scrollCast("right")}
-                      className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black border border-white/20 flex items-center justify-center text-xs font-bold text-white shadow transition cursor-pointer"
-                      aria-label="Scroll right"
-                    >
-                      ▶
-                    </button>
-                  </div>
-                </div>
-                <div ref={castScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-none scroll-smooth">
-                  {castList.slice(0, 15).map((actor: any) => (
-                    <div
-                      key={actor.id}
-                      className="flex flex-col items-center text-center shrink-0 w-20"
-                    >
-                      <div className="w-14 h-14 rounded-full overflow-hidden mb-1.5 border border-white/10 bg-black">
-                        <img
-                          src={
-                            actor.profile_path
-                              ? `https://image.tmdb.org/t/p/w200${actor.profile_path}`
-                              : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
-                          }
-                          alt={actor.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <h3 className="text-[10px] font-bold text-white truncate w-full">
-                        {actor.name}
-                      </h3>
-                      <p className="text-[9px] text-slate-400 truncate w-full">
-                        {actor.character}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Budget, Production, & Language Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-              <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
-                <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
-                  Budget
-                </span>
-                <span className="text-sm font-bold text-white">{budget}</span>
-              </div>
-              <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
-                <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
-                  Production
-                </span>
-                <span className="text-sm font-bold text-white truncate block" title={productionCompanies}>
-                  {productionCompanies}
-                </span>
-              </div>
-              <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
-                <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
-                  Language
-                </span>
-                <span className="text-sm font-bold text-white">
-                  {originalLanguageName || "English"}
-                </span>
-              </div>
-            </div>
-
-            {mappedRecommendations.length > 0 && (
-              <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
-                {/* Pill bar wrapper for Similar Recommendations header on Details View */}
-                <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-sm mx-auto overflow-hidden rounded-2xl shadow-xl">
-                  <div
-                    className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
-                    style={{
-                      width: "100",
-                      height: "100",
-                      backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                      backgroundSize: "113% 380%",
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "center center",
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-                  <div className="relative z-10 py-1">
-                    <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                      <span>✨ Similar Recommendations</span>
-                    </h2>
-                  </div>
-                </div>
-                <div className={gridColsClass}>
-                  {mappedRecommendations.slice(0, 5).map((item) => (
-                    <MediaCard item={item} key={item.id} />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
-        )}
+
+          {/* Cast Section */}
+          {castList.length > 0 && (
+            <div className={`mt-6 pt-4 pb-4 px-4 rounded-2xl border ${getCardBackground(appTheme)} backdrop-blur shadow-xl space-y-3`}>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                  Cast
+                </h2>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => scrollCast("left")}
+                    className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black border border-white/20 flex items-center justify-center text-xs font-bold text-white shadow transition cursor-pointer"
+                    aria-label="Scroll left"
+                  >
+                    ◀
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollCast("right")}
+                    className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black border border-white/20 flex items-center justify-center text-xs font-bold text-white shadow transition cursor-pointer"
+                    aria-label="Scroll right"
+                  >
+                    ▶
+                  </button>
+                </div>
+              </div>
+              <div ref={castScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-none scroll-smooth">
+                {castList.slice(0, 15).map((actor: any) => (
+                  <div
+                    key={actor.id}
+                    className="flex flex-col items-center text-center shrink-0 w-20"
+                  >
+                    <div className="w-14 h-14 rounded-full overflow-hidden mb-1.5 border border-white/10 bg-black">
+                      <img
+                        src={
+                          actor.profile_path
+                            ? `https://image.tmdb.org/t/p/w200${actor.profile_path}`
+                            : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+                        }
+                        alt={actor.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h3 className="text-[10px] font-bold text-white truncate w-full">
+                      {actor.name}
+                    </h3>
+                    <p className="text-[9px] text-slate-400 truncate w-full">
+                      {actor.character}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Budget, Production, & Language Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
+              <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
+                Budget
+              </span>
+              <span className="text-sm font-bold text-white">{budget}</span>
+            </div>
+            <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
+              <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
+                Production
+              </span>
+              <span className="text-sm font-bold text-white truncate block" title={productionCompanies}>
+                {productionCompanies}
+              </span>
+            </div>
+            <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
+              <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
+                Language
+              </span>
+              <span className="text-sm font-bold text-white">
+                {originalLanguageName || "English"}
+              </span>
+            </div>
+          </div>
+
+          {mappedRecommendations.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+              {/* Pill bar wrapper for Similar Recommendations header on Details View */}
+              <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-sm mx-auto overflow-hidden rounded-2xl shadow-xl">
+                <div
+                  className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
+                  style={{
+                    width: "100",
+                    height: "100",
+                    backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                    backgroundSize: "113% 380%",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center center",
+                  }}
+                />
+                <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
+                <div className="relative z-10 py-1">
+                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>✨ Similar Recommendations</span>
+                  </h2>
+                </div>
+              </div>
+              <div className={gridColsClass}>
+                {mappedRecommendations.slice(0, 5).map((item) => (
+                  <MediaCard item={item} key={item.id} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {canScrollDown && showScrollReminder && (
           <div
