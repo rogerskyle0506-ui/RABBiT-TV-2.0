@@ -61,7 +61,19 @@ export function DetailsPage() {
 
   // Cover Art Flip & Trailer State
   const [isFlipped, setIsFlipped] = useState(false);
+  const [flipCompleted, setFlipCompleted] = useState(false);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [trailerSourceUrl, setTrailerSourceUrl] = useState<string | null>(null);
+  const [trailerLoading, setTrailerLoading] = useState(false);
+  const [trailerError, setTrailerError] = useState<string | null>(null);
+  const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
+  const [trailerProgress, setTrailerProgress] = useState(0);
+  const [trailerDuration, setTrailerDuration] = useState(0);
+  const [isTrailerMuted, setIsTrailerMuted] = useState(false);
+
+  const wasAudioPlayingRef = useRef<boolean>(false);
+  const trailerVideoRef = useRef<HTMLVideoElement | null>(null);
+  const flipTimerRef = useRef<number | null>(null);
 
   // Cast Scroll Ref
   const castScrollRef = useRef<HTMLDivElement>(null);
@@ -78,8 +90,66 @@ export function DetailsPage() {
     setRecommendations([]);
     setLoading(true);
     setIsFlipped(false);
+    setFlipCompleted(false);
     setTrailerKey(null);
+    setTrailerSourceUrl(null);
+    setTrailerLoading(false);
+    setTrailerError(null);
+    setIsPlayingTrailer(false);
   }, [mediaId, urlType]);
+
+  // Manage background audio mute/resume during trailer playback
+  useEffect(() => {
+    if (isFlipped) {
+      const audioEl = (bgAudio as any)?.audio || (bgAudio as any)?.element;
+      const currentlyPlaying =
+        typeof (bgAudio as any)?.isPlaying === "function"
+          ? (bgAudio as any).isPlaying()
+          : Boolean((bgAudio as any)?.playing || (audioEl && !audioEl.paused));
+
+      if (currentlyPlaying) {
+        wasAudioPlayingRef.current = true;
+      }
+
+      if (typeof (bgAudio as any)?.mute === "function") {
+        (bgAudio as any).mute();
+      } else if (typeof (bgAudio as any)?.setMuted === "function") {
+        (bgAudio as any).setMuted(true);
+      } else {
+        bgAudio.pause();
+      }
+    } else {
+      if (flipTimerRef.current) {
+        clearTimeout(flipTimerRef.current);
+        flipTimerRef.current = null;
+      }
+      setFlipCompleted(false);
+      setIsPlayingTrailer(false);
+      if (trailerVideoRef.current) {
+        trailerVideoRef.current.pause();
+        trailerVideoRef.current.currentTime = 0;
+      }
+      if (typeof (bgAudio as any)?.unmute === "function") {
+        (bgAudio as any).unmute();
+      } else if (typeof (bgAudio as any)?.setMuted === "function") {
+        (bgAudio as any).setMuted(false);
+      }
+      if (wasAudioPlayingRef.current && typeof (bgAudio as any)?.play === "function") {
+        try {
+          (bgAudio as any).play();
+        } catch {
+          // Ignore autoplay restriction if any
+        }
+        wasAudioPlayingRef.current = false;
+      }
+    }
+  }, [isFlipped]);
+
+  useEffect(() => {
+    return () => {
+      if (flipTimerRef.current) clearTimeout(flipTimerRef.current);
+    };
+  }, []);
 
   const scrollCast = (direction: "left" | "right") => {
     if (castScrollRef.current) {
@@ -162,11 +232,15 @@ export function DetailsPage() {
     };
   }, []);
 
-  // Fetch Trailer from TMDB API
+  // Fetch Official Trailer from TMDB API & Resolve Direct Stream for Custom Player
   useEffect(() => {
     let active = true;
     async function fetchTrailer() {
       if (!mediaId) return;
+      setTrailerLoading(true);
+      setTrailerError(null);
+      setTrailerSourceUrl(null);
+      setTrailerKey(null);
       try {
         const apiKey = import.meta.env.VITE_TMDB_API_KEY as string;
         const res = await fetch(
@@ -174,17 +248,103 @@ export function DetailsPage() {
         );
         const data = await res.json();
         if (!active) return;
-        const videos = data.results || [];
-        const trailer =
-          videos.find((v: any) => v.type === "Trailer" && v.site === "YouTube") ||
-          videos.find((v: any) => v.site === "YouTube") ||
+        const videos = Array.isArray(data?.results) ? data.results : [];
+
+        // Prefer official trailers, then any trailer, then teaser/clip
+        const officialTrailer =
+          videos.find(
+            (v: any) =>
+              v.type === "Trailer" &&
+              v.official === true &&
+              /official/i.test(v.name || "")
+          ) ||
+          videos.find((v: any) => v.type === "Trailer" && v.official === true) ||
+          videos.find((v: any) => v.type === "Trailer") ||
+          videos.find((v: any) => v.type === "Teaser") ||
           videos[0];
 
-        if (trailer && trailer.key) {
-          setTrailerKey(trailer.key);
+        if (!officialTrailer || !officialTrailer.key) {
+          setTrailerError("No official trailer available for this title.");
+          setTrailerLoading(false);
+          return;
+        }
+
+        setTrailerKey(officialTrailer.key);
+
+        // If TMDB returned a direct video URL
+        if (
+          typeof officialTrailer.key === "string" &&
+          /^https?:\/\/.+\.(mp4|webm|m3u8)(\?.*)?$/i.test(officialTrailer.key)
+        ) {
+          setTrailerSourceUrl(officialTrailer.key);
+          setTrailerLoading(false);
+          return;
+        }
+
+        // Resolve direct playable MP4/WebM stream via public Piped / Invidious APIs so custom <video> player plays natively without YouTube embed
+        const videoId = officialTrailer.key;
+        const resolvers = [
+          async () => {
+            const r = await fetch(`https://pipedapi.kavin.rocks/streams/${videoId}`);
+            if (!r.ok) return null;
+            const d = await r.json();
+            const streams = d?.videoStreams || [];
+            const combined =
+              streams.find((s: any) => !s.videoOnly && s.url) ||
+              d?.hls ||
+              null;
+            return typeof combined === "string" ? combined : combined?.url || null;
+          },
+          async () => {
+            const r = await fetch(`https://pipedapi.tokhmi.xyz/streams/${videoId}`);
+            if (!r.ok) return null;
+            const d = await r.json();
+            const streams = d?.videoStreams || [];
+            const combined =
+              streams.find((s: any) => !s.videoOnly && s.url) ||
+              d?.hls ||
+              null;
+            return typeof combined === "string" ? combined : combined?.url || null;
+          },
+          async () => {
+            const r = await fetch(`https://inv.nadeko.net/api/v1/videos/${videoId}`);
+            if (!r.ok) return null;
+            const d = await r.json();
+            const formatStreams = d?.formatStreams || [];
+            const best =
+              formatStreams.find((f: any) => f.container === "mp4" && f.url) ||
+              formatStreams[0];
+            return best?.url || null;
+          },
+        ];
+
+        let resolvedUrl: string | null = null;
+        for (const attempt of resolvers) {
+          if (!active) return;
+          try {
+            const url = await attempt();
+            if (url) {
+              resolvedUrl = url;
+              break;
+            }
+          } catch {
+            // Try next resolver
+          }
+        }
+
+        if (!active) return;
+        if (resolvedUrl) {
+          setTrailerSourceUrl(resolvedUrl);
+        } else {
+          setTrailerError("Trailer stream unavailable in direct player.");
         }
       } catch (err) {
         console.error("Failed to fetch trailer from TMDB", err);
+        if (active) {
+          setTrailerError("Unable to load trailer from TMDB.");
+        }
+      } finally {
+        if (active) setTrailerLoading(false);
       }
     }
     fetchTrailer();
@@ -192,6 +352,23 @@ export function DetailsPage() {
       active = false;
     };
   }, [mediaId, mediaType]);
+
+  // Start custom player playback ONLY after user has clicked cover art AND flip animation completes
+  useEffect(() => {
+    if (isFlipped && flipCompleted && trailerSourceUrl && trailerVideoRef.current) {
+      const videoEl = trailerVideoRef.current;
+      videoEl.currentTime = 0;
+      videoEl.muted = isTrailerMuted;
+      const playPromise = videoEl.play();
+      if (playPromise && typeof playPromise.then === "function") {
+        playPromise
+          .then(() => setIsPlayingTrailer(true))
+          .catch(() => setIsPlayingTrailer(false));
+      } else {
+        setIsPlayingTrailer(true);
+      }
+    }
+  }, [isFlipped, flipCompleted, trailerSourceUrl]);
 
   useEffect(() => {
     async function fetchSeasonEpisodes() {
@@ -244,6 +421,24 @@ export function DetailsPage() {
       case "violet":
       default:
         return "bg-[#090e1f]/90 border-violet-500/20";
+    }
+  };
+
+  const getSmokeWrapperStyle = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "bg-gradient-to-b from-[#160303]/45 via-[#110202]/55 to-[#0a0101]/60 border-red-500/15 shadow-[0_8px_32px_rgba(69,10,10,0.28)]";
+      case "midnight":
+        return "bg-gradient-to-b from-[#03081a]/45 via-[#020614]/55 to-[#01040e]/60 border-blue-500/15 shadow-[0_8px_32px_rgba(23,37,84,0.28)]";
+      case "emerald":
+        return "bg-gradient-to-b from-[#02140e]/45 via-[#020f0a]/55 to-[#010a07]/60 border-emerald-500/15 shadow-[0_8px_32px_rgba(6,78,59,0.28)]";
+      case "amber":
+        return "bg-gradient-to-b from-[#170e04]/45 via-[#120b03]/55 to-[#0c0702]/60 border-amber-500/15 shadow-[0_8px_32px_rgba(120,53,15,0.28)]";
+      case "cyan":
+        return "bg-gradient-to-b from-[#021417]/45 via-[#020f12]/55 to-[#010a0c]/60 border-cyan-500/15 shadow-[0_8px_32px_rgba(22,78,99,0.28)]";
+      case "violet":
+      default:
+        return "bg-gradient-to-b from-[#080b19]/45 via-[#060814]/55 to-[#04050e]/60 border-violet-500/15 shadow-[0_8px_32px_rgba(46,16,101,0.28)]";
     }
   };
 
@@ -684,6 +879,51 @@ export function DetailsPage() {
     }, 2500);
   };
 
+  const handleCoverClick = () => {
+    if (isFlipped) return;
+    setFlipCompleted(false);
+    setIsFlipped(true);
+    if (flipTimerRef.current) clearTimeout(flipTimerRef.current);
+    flipTimerRef.current = window.setTimeout(() => {
+      setFlipCompleted(true);
+    }, 720);
+  };
+
+  const handleCloseTrailer = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsFlipped(false);
+  };
+
+  const toggleCustomTrailerPlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const videoEl = trailerVideoRef.current;
+    if (!videoEl) return;
+    if (videoEl.paused) {
+      videoEl.play();
+      setIsPlayingTrailer(true);
+    } else {
+      videoEl.pause();
+      setIsPlayingTrailer(false);
+    }
+  };
+
+  const toggleCustomTrailerMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const videoEl = trailerVideoRef.current;
+    if (!videoEl) return;
+    videoEl.muted = !videoEl.muted;
+    setIsTrailerMuted(videoEl.muted);
+  };
+
+  const handleSeekTrailer = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    const videoEl = trailerVideoRef.current;
+    if (!videoEl) return;
+    const nextTime = Number(e.target.value);
+    videoEl.currentTime = nextTime;
+    setTrailerProgress(nextTime);
+  };
+
   if (loading) {
     return (
       <div
@@ -732,6 +972,34 @@ export function DetailsPage() {
     <div
       className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative`}
     >
+      <style>{`
+        @keyframes heartbeatSlow {
+          0%, 100% {
+            opacity: 0.42;
+            transform: scale(0.97);
+          }
+          18% {
+            opacity: 1;
+            transform: scale(1.04);
+          }
+          34% {
+            opacity: 0.65;
+            transform: scale(0.99);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.03);
+          }
+          75% {
+            opacity: 0.5;
+            transform: scale(0.98);
+          }
+        }
+        .animate-heartbeat-slow {
+          animation: heartbeatSlow 3.4s ease-in-out infinite;
+        }
+      `}</style>
+
       <AppWallpaper backdropUrl={backdropUrl} />
 
       <div className="relative z-10">
@@ -744,20 +1012,20 @@ export function DetailsPage() {
 
         <div className="mx-auto flex max-w-5xl flex-col gap-8">
           <div className="flex flex-col gap-8 md:flex-row md:items-start">
-            {/* 3D Spin / Flip Cover Art → Trailer Reveal Component */}
+            {/* 3D Spin / Flip Cover Art → Custom Trailer Player Reveal Component */}
             <div
               className="relative h-[450px] w-[300px] cursor-pointer shrink-0 select-none self-center md:self-start"
-              style={{ perspective: "1000px" }}
-              onClick={() => !isFlipped && setIsFlipped(true)}
+              style={{ perspective: "1200px" }}
+              onClick={handleCoverClick}
             >
               <div
-                className="relative h-full w-full rounded-2xl shadow-2xl shadow-black/40 transition-transform duration-700"
+                className="relative h-full w-full rounded-2xl shadow-2xl shadow-black/40 transition-transform duration-700 ease-out"
                 style={{
                   transformStyle: "preserve-3d",
                   transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
                 }}
               >
-                {/* Front: Cover Art */}
+                {/* Front: Cover Art with Heartbeat Click-to-Flip Overlay */}
                 <div
                   className="absolute inset-0 h-full w-full rounded-2xl overflow-hidden border border-white/10 bg-black"
                   style={{ backfaceVisibility: "hidden" }}
@@ -768,14 +1036,23 @@ export function DetailsPage() {
                     className="h-full w-full object-cover"
                   />
                   {mediaStatusBadge}
-                  <div className="absolute inset-0 bg-black/30 hover:bg-black/10 transition flex items-center justify-center group">
-                    <div className="bg-black/70 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20 text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition shadow-xl flex items-center gap-2">
-                      <span>▶ Play Trailer</span>
+
+                  {/* Click-to-flip overlay with themed heartbeat text & soft smoke-like darker wrapper */}
+                  <div className="absolute inset-x-0 bottom-4 z-20 flex justify-center px-3 pointer-events-none">
+                    <div
+                      className={`rounded-2xl border backdrop-blur-md px-4 py-2 ${getSmokeWrapperStyle(appTheme)}`}
+                    >
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-xs font-extrabold tracking-wide uppercase animate-heartbeat-slow ${activeTheme.text} drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]`}
+                      >
+                        <span>▶</span>
+                        <span>Click to flip for Trailer</span>
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Back: Trailer Player inside Themed Rabbit Alternate Panel Background Wrapper with 50% Transparency */}
+                {/* Back: Custom Trailer Player inside 50% Transparent Rabbit Alternate Panel Wrapper */}
                 <div
                   className={`absolute inset-0 h-full w-full rounded-2xl overflow-hidden flex flex-col border ${activeTheme.border} shadow-2xl`}
                   style={{
@@ -783,7 +1060,7 @@ export function DetailsPage() {
                     transform: "rotateY(180deg)",
                   }}
                 >
-                  {/* Rabbit Alternate Panel Background with 50% Transparency & Theme Respect */}
+                  {/* Rabbit Alternate Panel Background Wrapper with 50% transparency & theme respect */}
                   <div
                     className="absolute inset-0 pointer-events-none z-0"
                     style={{
@@ -793,38 +1070,119 @@ export function DetailsPage() {
                       opacity: 0.5,
                     }}
                   />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(appTheme)} opacity-90 z-0`} />
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(appTheme)} opacity-50 pointer-events-none z-0`}
+                  />
 
                   {/* Header / Close bar */}
-                  <div className="relative z-10 flex items-center justify-between p-3 border-b border-white/15 bg-black/50 backdrop-blur-md">
-                    <span className="text-xs font-bold text-white truncate max-w-[200px]">
-                      Trailer: {title}
+                  <div className="relative z-10 flex items-center justify-between p-3 border-b border-white/15 bg-black/55 backdrop-blur-md">
+                    <span className={`text-xs font-bold truncate max-w-[205px] ${activeTheme.text}`}>
+                      Official Trailer • {title}
                     </span>
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsFlipped(false);
-                      }}
-                      className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center text-xs font-bold border border-white/25 transition cursor-pointer shadow-md"
-                      title="Close Trailer"
+                      onClick={handleCloseTrailer}
+                      className={`w-7 h-7 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center text-xs font-bold border ${activeTheme.border}/50 transition cursor-pointer shadow-md`}
+                      title="Close Trailer & Return to Cover"
+                      aria-label="Close Trailer"
                     >
                       ✕
                     </button>
                   </div>
 
-                  {/* Trailer Player Container */}
-                  <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center bg-black/60">
-                    {trailerKey ? (
-                      <iframe
-                        src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&controls=1&modestbranding=1`}
-                        className="w-full h-full border-0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
+                  {/* Custom Video Player Container (No YouTube Embed) */}
+                  <div className="relative z-10 flex-1 w-full h-full flex flex-col justify-between bg-black/65">
+                    {trailerLoading ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-4 text-center gap-2">
+                        <div className={`w-7 h-7 rounded-full border-2 border-t-transparent ${activeTheme.border} animate-spin`} />
+                        <span className="text-xs font-semibold text-slate-200">
+                          Fetching official TMDB trailer...
+                        </span>
+                      </div>
+                    ) : trailerSourceUrl ? (
+                      <div className="relative flex-1 w-full h-full flex flex-col">
+                        <video
+                          ref={trailerVideoRef}
+                          src={trailerSourceUrl}
+                          poster={backdropUrl || poster}
+                          playsInline
+                          preload="metadata"
+                          onClick={toggleCustomTrailerPlay}
+                          onTimeUpdate={(e) =>
+                            setTrailerProgress(e.currentTarget.currentTime)
+                          }
+                          onLoadedMetadata={(e) =>
+                            setTrailerDuration(e.currentTarget.duration || 0)
+                          }
+                          onPlay={() => setIsPlayingTrailer(true)}
+                          onPause={() => setIsPlayingTrailer(false)}
+                          onEnded={() => {
+                            setIsPlayingTrailer(false);
+                            setIsFlipped(false);
+                          }}
+                          onError={() =>
+                            setTrailerError("Unable to play trailer video stream.")
+                          }
+                          className="w-full h-full object-contain bg-black cursor-pointer"
+                        />
+
+                        {/* Custom Player Controls Bar */}
+                        <div
+                          className="relative z-20 flex flex-col gap-1.5 px-3 py-2 bg-black/80 backdrop-blur-md border-t border-white/10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="range"
+                            min={0}
+                            max={trailerDuration || 100}
+                            step={0.1}
+                            value={trailerProgress}
+                            onChange={handleSeekTrailer}
+                            className="w-full h-1 accent-white cursor-pointer"
+                            aria-label="Trailer timeline"
+                          />
+                          <div className="flex items-center justify-between text-xs text-white">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={toggleCustomTrailerPlay}
+                                className={`px-2.5 py-1 rounded-md ${activeTheme.bg} ${activeTheme.hoverBg} font-bold text-[11px] text-white cursor-pointer`}
+                              >
+                                {isPlayingTrailer ? "❚❚ Pause" : "▶ Play"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={toggleCustomTrailerMute}
+                                className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-white cursor-pointer"
+                              >
+                                {isTrailerMuted ? "🔇 Unmute" : "🔊 Mute"}
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleCloseTrailer}
+                              className="text-[11px] font-semibold text-slate-300 hover:text-white underline cursor-pointer"
+                            >
+                              Flip Back
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="text-xs text-slate-300 p-4 text-center">
-                        Loading official trailer from TMDB...
+                      <div className="flex-1 flex flex-col items-center justify-center p-5 text-center gap-3">
+                        <p className="text-xs font-semibold text-slate-200">
+                          {trailerError ||
+                            (trailerKey
+                              ? "Direct stream unavailable for this trailer."
+                              : "No official trailer found on TMDB.")}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleCloseTrailer}
+                          className={`rounded-full ${activeTheme.bg} ${activeTheme.hoverBg} px-4 py-1.5 text-xs font-bold text-white shadow cursor-pointer`}
+                        >
+                          Return to Cover Art
+                        </button>
                       </div>
                     )}
                   </div>
@@ -832,7 +1190,10 @@ export function DetailsPage() {
               </div>
             </div>
 
-            <div className="flex flex-col justify-center gap-4 flex-1">
+            {/* Media Details Section with Barely Visible Darker Smoke-Like Themed Wrapper */}
+            <div
+              className={`flex flex-col justify-center gap-4 flex-1 rounded-2xl border p-5 md:p-6 backdrop-blur-md transition-colors duration-300 ${getSmokeWrapperStyle(appTheme)}`}
+            >
               <span
                 className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
               >
