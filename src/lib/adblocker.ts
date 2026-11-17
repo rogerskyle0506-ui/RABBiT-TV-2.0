@@ -74,10 +74,76 @@ const SCAM_TEXT_PATTERNS = [
 ];
 
 /**
+ * uBlock Origin & Upstream Filter List URLs (Raw plain-text lists)
+ */
+const UBLOCK_ORIGIN_FILTER_URLS = [
+  "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt",      // uBlock filters (Core general)
+  "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/privacy.txt",      // uBlock privacy
+  "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/badware.txt",      // uBlock badware/malware
+  "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/unbreak.txt",      // uBlock unbreak (site fix rules)
+  "https://easylist.to/easylist/easylist.txt",                                             // EasyList
+  "https://easylist.to/easylist/easyprivacy.txt",                                           // EasyPrivacy
+  "https://urlhaus.abuse.ch/downloads/text/"                                               // URLhaus malware blocklist
+];
+
+// Set storing dynamic rules parsed from uBlock Origin & EasyList files
+let dynamicBlockRules: Set<string> = new Set();
+let listsLoaded = false;
+
+/**
+ * Asynchronously fetches and parses official uBlock Origin and EasyList filter list repositories.
+ */
+export async function updateUBlockLists(): Promise<void> {
+  if (listsLoaded || typeof window === "undefined") return;
+
+  try {
+    for (const url of UBLOCK_ORIGIN_FILTER_URLS) {
+      const response = await fetch(url);
+      if (!response.ok) continue;
+      const text = await response.text();
+      
+      const lines = text.split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim();
+        // Ignore empty lines, comment lines, metadata headers, and cosmetic formatting lines
+        if (trimmed && !trimmed.startsWith("!") && !trimmed.startsWith("[")) {
+          // Extract pattern or domain tokens safely
+          let rule = trimmed;
+          if (rule.startsWith("||")) {
+            rule = rule.substring(2);
+          }
+          if (rule.includes("^")) {
+            rule = rule.split("^")[0];
+          }
+          if (rule.length > 3) {
+            dynamicBlockRules.add(rule.toLowerCase());
+          }
+        }
+      }
+    }
+    listsLoaded = true;
+    console.log(`[uBlock Origin Integration] Successfully loaded ${dynamicBlockRules.size} rules from uBO & upstream lists.`);
+  } catch (error) {
+    console.error("[uBlock Origin Integration] Failed to update lists:", error);
+  }
+}
+
+/**
  * Robust check – prefers host matching, falls back carefully.
  */
 function isAdUrl(urlStr: string): boolean {
   if (!urlStr) return false;
+
+  const lowerUrl = urlStr.toLowerCase();
+
+  // 1. Check dynamic rules fetched from uBlock Origin and EasyList sources
+  if (dynamicBlockRules.size > 0) {
+    for (const rule of dynamicBlockRules) {
+      if (lowerUrl.includes(rule)) {
+        return true;
+      }
+    }
+  }
 
   try {
     const url = new URL(
@@ -86,12 +152,12 @@ function isAdUrl(urlStr: string): boolean {
     );
     const host = url.hostname.toLowerCase();
 
-    // 1. Exact / subdomain host match
+    // 2. Exact / subdomain host match against static AD_DOMAINS
     if (AD_DOMAINS.some((domain) => host === domain || host.endsWith("." + domain))) {
       return true;
     }
 
-    // 2. Keyword match only on the host (safer than path matching)
+    // 3. Keyword match only on the host (safer than path matching)
     if (AD_HOST_KEYWORDS.some((kw) => host.includes(kw))) {
       return true;
     }
@@ -99,10 +165,9 @@ function isAdUrl(urlStr: string): boolean {
     return false;
   } catch {
     // Very defensive fallback
-    const lower = urlStr.toLowerCase();
     return (
-      AD_DOMAINS.some((d) => lower.includes(d)) ||
-      AD_HOST_KEYWORDS.some((kw) => lower.includes(kw))
+      AD_DOMAINS.some((d) => lowerUrl.includes(d)) ||
+      AD_HOST_KEYWORDS.some((kw) => lowerUrl.includes(kw))
     );
   }
 }
@@ -269,10 +334,14 @@ function injectAggressiveAdblockStyles(): HTMLStyleElement | null {
 }
 
 /**
- * Self-contained ad-blocking interceptor suite with enhanced overlay and popup neutralization.
+ * Self-contained ad-blocking interceptor suite with enhanced overlay and popup neutralization,
+ * integrated with uBlock Origin and EasyList filter list feeds.
  */
 export function initAdBlockerGlobalInterceptors(): () => void {
   if (typeof window === "undefined") return () => {};
+
+  // Kick off asynchronous fetch of uBlock Origin & EasyList block lists
+  updateUBlockLists();
 
   // Inject high-performance CSS protection rules
   const injectedStyle = injectAggressiveAdblockStyles();
