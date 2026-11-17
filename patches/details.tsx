@@ -1100,7 +1100,7 @@ export function DetailsPage() {
                   <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
                   </div>
                 </button>
-
+               
                 {/* My Favs Button */}
                 <button
                   type="button"
@@ -1114,7 +1114,10 @@ export function DetailsPage() {
                     style={{ backgroundImage: `url(${MYFAV})`, opacity: 0.68 }}
                   />
                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
-                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2"
+                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
+                    <span className="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-orange-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                      {inFavorites ? "★ Favorited" : "Add to Favorites"}
+                    </span>
                   </div>
                 </button>
 
