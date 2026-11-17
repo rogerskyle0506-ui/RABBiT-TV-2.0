@@ -823,23 +823,29 @@ export function DetailsPage() {
       <AppWallpaper backdropUrl={backdropUrl} />
 
       <div className="relative z-10">
-        {/* Back to Home Button in Top Left (Reduced by ~50% in width without cutting off image) */}
-        <Link
-          to="/"
-          className="mb-6 inline-block w-20 sm:w-24 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
-        >
-          <img
-            src={BACK_TO_HOME}
-            alt="Back to Home"
-            className="w-full h-full object-contain opacity-90 hover:opacity-100 transition duration-300"
-          />
-        </Link>
+        {/* Back to Home Button in Top Left with matching 40% transparency and radial edge blending */}
+        <div className="mb-2">
+          <Link
+            to="/"
+            className="inline-block w-20 sm:w-24 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
+          >
+            <img
+              src={BACK_TO_HOME}
+              alt="Back to Home"
+              className="w-full h-full object-contain opacity-[0.40] hover:opacity-100 transition duration-300"
+              style={{
+                maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)",
+                WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)",
+              }}
+            />
+          </Link>
+        </div>
 
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-8 text-center">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 text-center">
           
           {/* 3D Spin / Flip Cover Art → Trailer Reveal Component (Full width minus 10px, responsive height for portrait/landscape) */}
           <div
-            className="relative w-[calc(100vw-10px)] max-w-full left-1/2 -translate-x-1/2 h-[480px] sm:h-[600px] cursor-pointer select-none my-2"
+            className="relative w-[calc(100vw-10px)] max-w-full left-1/2 -translate-x-1/2 h-[480px] sm:h-[600px] cursor-pointer select-none my-1"
             style={{ perspective: "1200px" }}
             onClick={() => !isFlipped && setIsFlipped(true)}
           >
