@@ -1065,18 +1065,18 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* Transparent Action Buttons (100% width/height PNG styling, no overlays, no shadows, no borders, 50% transparency) */}
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
+            {/* Fashionable 2x2 Action Button Grid with Vibrant Opacity and Full Focus Ring Fill */}
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-lg mx-auto">
               {/* Play Button */}
               <button
                 type="button"
                 onClick={handlePlay}
-                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer w-full aspect-[3/1]"
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 rounded-xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1]"
               >
                 <img
                   src={PLAY}
                   alt="Play"
-                  className="w-full h-full object-contain opacity-50 group-hover:opacity-100 transition duration-300"
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-xl"
                 />
               </button>
 
@@ -1084,13 +1084,13 @@ export function DetailsPage() {
               <button
                 type="button"
                 onClick={handleReportBroken}
-                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer w-full aspect-[3/1]"
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 rounded-xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1]"
                 title="Report link as broken and hide globally"
               >
                 <img
                   src={REPORTBROKEN}
                   alt="Report Broken"
-                  className="w-full h-full object-contain opacity-50 group-hover:opacity-100 transition duration-300"
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-xl"
                 />
               </button>
              
@@ -1098,12 +1098,12 @@ export function DetailsPage() {
               <button
                 type="button"
                 onClick={toggleFavorites}
-                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer w-full aspect-[3/1]"
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-amber-400 rounded-xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1]"
               >
                 <img
                   src={MYFAV}
                   alt="Favorites"
-                  className="w-full h-full object-contain opacity-50 group-hover:opacity-100 transition duration-300"
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-xl"
                 />
               </button>
 
@@ -1111,12 +1111,12 @@ export function DetailsPage() {
               <button
                 type="button"
                 onClick={toggleMyList}
-                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-indigo-400 cursor-pointer w-full aspect-[3/1]"
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1]"
               >
                 <img
                   src={SAVEFORLATER}
                   alt="Save for Later"
-                  className="w-full h-full object-contain opacity-50 group-hover:opacity-100 transition duration-300"
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-xl"
                 />
               </button>
             </div>
