@@ -823,10 +823,10 @@ export function DetailsPage() {
       <AppWallpaper backdropUrl={backdropUrl} />
 
       <div className="relative z-10">
-        {/* Back to Home Button in Top Left */}
+        {/* Back to Home Button in Top Left (Reduced by ~50% in width without cutting off image) */}
         <Link
           to="/"
-          className="mb-6 inline-block w-36 sm:w-44 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
+          className="mb-6 inline-block w-20 sm:w-24 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
         >
           <img
             src={BACK_TO_HOME}
@@ -862,7 +862,7 @@ export function DetailsPage() {
                 />
                 {mediaStatusBadge}
 
-                {/* Click For Trailer Button in Bottom Right Corner with 75% transparency & full edge blending */}
+                {/* Click For Trailer Button in Bottom Right Corner with increased transparency (55%) and radial gradient edge blending */}
                 <div className="absolute bottom-3 right-3 z-20 pointer-events-auto">
                   <button
                     type="button"
@@ -875,10 +875,10 @@ export function DetailsPage() {
                     <img
                       src={CLICK_FOR_TRAILER}
                       alt="Click for Trailer"
-                      className="w-full h-full object-contain opacity-75 hover:opacity-100 transition duration-300"
+                      className="w-full h-full object-contain opacity-[0.55] hover:opacity-100 transition duration-300"
                       style={{
-                        maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 95%)",
-                        WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 95%)",
+                        maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 88%)",
+                        WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 88%)",
                       }}
                     />
                   </button>
