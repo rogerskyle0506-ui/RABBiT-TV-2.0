@@ -8,27 +8,8 @@ import type { MediaItem } from "@/lib/tmdb-scraper";
 import { saveWatchProgress } from "@/lib/watch-history";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { bgAudio } from "@/lib/background-audio";
-import { useEffect } from "react";
 import { initAdBlockerGlobalInterceptors } from "@/lib/adblocker";
 
-export default function PlayerPage() {
-  useEffect(() => {
-    // Activate adblocker interceptors, DOM watchers, and cleanup rules when the player page loads
-    const cleanup = initAdBlockerGlobalInterceptors();
-
-    // Tear down/remove the interceptors when navigating away from the player page
-    return () => {
-      cleanup();
-    };
-  }, []);
-
-  return (
-    <div className="player-page-container">
-      {/* Your video player or iframe component goes here */}
-    </div>
-  );
-}
-  
 const RABBIT_HEADER_PILL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
 
 export const Route = createFileRoute("/player")({
@@ -42,6 +23,16 @@ export const Route = createFileRoute("/player")({
 });
 
 export function PlayerPage() {
+  useEffect(() => {
+    // Activate adblocker interceptors, DOM watchers, and cleanup rules when the player page loads
+    const cleanup = initAdBlockerGlobalInterceptors();
+
+    // Tear down/remove the interceptors when navigating away from the player page
+    return () => {
+      cleanup();
+    };
+  }, []);
+
   const search = Route.useSearch();
   const navigate = useNavigate();
 
