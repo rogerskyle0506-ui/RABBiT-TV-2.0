@@ -828,324 +828,311 @@ export function DetailsPage() {
           ← Back to Home
         </Link>
 
-        <div className="mx-auto flex max-w-5xl flex-col gap-8">
-          <div className="flex flex-col gap-8 md:flex-row md:items-start">
-            {/* 3D Spin / Flip Cover Art → Trailer Reveal Component */}
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-8 text-center">
+          
+          {/* 3D Spin / Flip Cover Art → Trailer Reveal Component (Centered on top) */}
+          <div
+            className="relative h-[450px] w-[300px] cursor-pointer select-none"
+            style={{ perspective: "1200px" }}
+            onClick={() => !isFlipped && setIsFlipped(true)}
+          >
             <div
-              className="relative h-[450px] w-[300px] cursor-pointer shrink-0 select-none self-center md:self-start"
-              style={{ perspective: "1200px" }}
-              onClick={() => !isFlipped && setIsFlipped(true)}
+              className="relative h-full w-full rounded-2xl shadow-2xl shadow-black/40 transition-transform duration-700 ease-out"
+              style={{
+                transformStyle: "preserve-3d",
+                transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+              }}
             >
+              {/* Front: Cover Art with Heartbeat Click-to-Flip Overlay */}
               <div
-                className="relative h-full w-full rounded-2xl shadow-2xl shadow-black/40 transition-transform duration-700 ease-out"
+                className="absolute inset-0 h-full w-full rounded-2xl overflow-hidden border border-white/10 bg-black"
+                style={{ backfaceVisibility: "hidden" }}
+              >
+                <img
+                  src={poster}
+                  alt={title}
+                  className="h-full w-full object-cover"
+                />
+                {mediaStatusBadge}
+
+                {/* Click-to-flip overlay with themed heartbeat text & soft smoke-like darker wrapper */}
+                <div className="absolute inset-x-0 bottom-4 z-20 flex justify-center px-3 pointer-events-none">
+                  <div
+                    className={`rounded-2xl border backdrop-blur-md px-4 py-2 ${getSmokeWrapperStyle(appTheme)}`}
+                  >
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-xs font-extrabold tracking-wide uppercase animate-heartbeat-slow ${activeTheme.text} drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]`}
+                    >
+                      <span>▶</span>
+                      <span>Click for Trailer</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Back: Trailer Player inside 50% Transparent Rabbit Alternate Panel Wrapper */}
+              <div
+                className={`absolute inset-0 h-full w-full rounded-2xl overflow-hidden flex flex-col border ${activeTheme.border} shadow-2xl`}
                 style={{
-                  transformStyle: "preserve-3d",
-                  transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                  backfaceVisibility: "hidden",
+                  transform: "rotateY(180deg)",
                 }}
               >
-                {/* Front: Cover Art with Heartbeat Click-to-Flip Overlay */}
+                {/* Rabbit Alternate Panel Background Wrapper with 50% transparency & theme respect */}
                 <div
-                  className="absolute inset-0 h-full w-full rounded-2xl overflow-hidden border border-white/10 bg-black"
-                  style={{ backfaceVisibility: "hidden" }}
-                >
-                  <img
-                    src={poster}
-                    alt={title}
-                    className="h-full w-full object-cover"
-                  />
-                  {mediaStatusBadge}
+                  className="absolute inset-0 pointer-events-none z-0"
+                  style={{
+                    backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    opacity: 0.5,
+                  }}
+                />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(appTheme)} opacity-50 pointer-events-none z-0`}
+                />
 
-                  {/* Click-to-flip overlay with themed heartbeat text & soft smoke-like darker wrapper */}
-                  <div className="absolute inset-x-0 bottom-4 z-20 flex justify-center px-3 pointer-events-none">
-                    <div
-                      className={`rounded-2xl border backdrop-blur-md px-4 py-2 ${getSmokeWrapperStyle(appTheme)}`}
-                    >
-                      <span
-                        className={`inline-flex items-center gap-1.5 text-xs font-extrabold tracking-wide uppercase animate-heartbeat-slow ${activeTheme.text} drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]`}
-                      >
-                        <span>▶</span>
-                        <span>Click for Trailer</span>
+                {/* Header / Close bar */}
+                <div className="relative z-10 flex items-center justify-between p-3 border-b border-white/15 bg-black/55 backdrop-blur-md">
+                  <span className={`text-xs font-bold truncate max-w-[205px] ${activeTheme.text}`}>
+                    Official Trailer • {title}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFlipped(false);
+                    }}
+                    className={`w-7 h-7 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center text-xs font-bold border ${activeTheme.border}/50 transition cursor-pointer shadow-md`}
+                    title="Close Trailer & Return to Cover"
+                    aria-label="Close Trailer"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Trailer Player Container (Embedded Player Wrapper) */}
+                <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center bg-black/65">
+                  {trailerKey ? (
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=0&controls=1&modestbranding=1`}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-4 text-center gap-2">
+                      <div className={`w-6 h-6 rounded-full border-2 border-t-transparent ${activeTheme.border} animate-spin`} />
+                      <span className="text-xs text-slate-300">
+                        Loading official trailer from TMDB...
                       </span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Back: Trailer Player inside 50% Transparent Rabbit Alternate Panel Wrapper */}
-                <div
-                  className={`absolute inset-0 h-full w-full rounded-2xl overflow-hidden flex flex-col border ${activeTheme.border} shadow-2xl`}
-                  style={{
-                    backfaceVisibility: "hidden",
-                    transform: "rotateY(180deg)",
-                  }}
-                >
-                  {/* Rabbit Alternate Panel Background Wrapper with 50% transparency & theme respect */}
-                  <div
-                    className="absolute inset-0 pointer-events-none z-0"
-                    style={{
-                      backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      opacity: 0.5,
-                    }}
-                  />
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(appTheme)} opacity-50 pointer-events-none z-0`}
-                  />
-
-                  {/* Header / Close bar */}
-                  <div className="relative z-10 flex items-center justify-between p-3 border-b border-white/15 bg-black/55 backdrop-blur-md">
-                    <span className={`text-xs font-bold truncate max-w-[205px] ${activeTheme.text}`}>
-                      Official Trailer • {title}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsFlipped(false);
-                      }}
-                      className={`w-7 h-7 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center text-xs font-bold border ${activeTheme.border}/50 transition cursor-pointer shadow-md`}
-                      title="Close Trailer & Return to Cover"
-                      aria-label="Close Trailer"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  {/* Trailer Player Container (Embedded Player Wrapper) */}
-                  <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center bg-black/65">
-                    {trailerKey ? (
-                      <iframe
-                        src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=0&controls=1&modestbranding=1`}
-                        className="w-100% h-100% border-0"
-                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center p-4 text-center gap-2">
-                        <div className={`w-6 h-6 rounded-full border-2 border-t-transparent ${activeTheme.border} animate-spin`} />
-                        <span className="text-xs text-slate-300">
-                          Loading official trailer from TMDB...
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Media Details Section with Barely Visible Darker Smoke-Like Themed Wrapper */}
-            <div
-              className={`flex flex-col justify-center gap-4 flex-1 rounded-2xl border p-5 md:p-6 backdrop-blur-md transition-colors duration-300 ${getSmokeWrapperStyle(appTheme)}`}
+          {/* Media Details Section (Placed directly below the cover art) */}
+          <div
+            className={`flex flex-col items-center justify-center gap-4 w-full rounded-2xl border p-6 md:p-8 backdrop-blur-md transition-colors duration-300 ${getSmokeWrapperStyle(appTheme)}`}
+          >
+            <span
+              className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
             >
-              <span
-                className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
-              >
-                {genres}
-              </span>
+              {genres}
+            </span>
 
-              <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
-                {title}
-              </h1>
+            <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+              {title}
+            </h1>
 
-              <div className="flex items-center flex-wrap gap-3 text-sm text-slate-300">
-                {rating !== "N/A" && (
-                  <span className="flex items-center gap-1 font-bold text-yellow-300">
-                    ⭐ {rating}
-                  </span>
-                )}
-                {releaseYear && <span>{releaseYear}</span>}
-                {originalLanguageName && (
-                  <span className="font-medium text-slate-200">
-                    {originalLanguageName}
-                  </span>
-                )}
-                <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
-                  {inferredMediaType}
+            <div className="flex items-center justify-center flex-wrap gap-3 text-sm text-slate-300">
+              {rating !== "N/A" && (
+                <span className="flex items-center gap-1 font-bold text-yellow-300">
+                  ⭐ {rating}
                 </span>
-              </div>
-
-              <p className="max-w-2xl text-base leading-relaxed text-slate-300">
-                {overview}
-              </p>
-
-              {inferredMediaType === "tv" && mediaDetails?.seasons && (
-                <div
-                  className={`flex flex-wrap items-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
-                >
-                  <div className="relative" ref={seasonRef}>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                      Select Season
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                      className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                    >
-                      <span>
-                        {currentSeasonObj
-                          ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
-                          : `Season ${season}`}
-                      </span>
-                      <span>▾</span>
-                    </button>
-                    {isSeasonOpen && (
-                      <div
-                        className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
-                      >
-                        {mediaDetails.seasons
-                          .filter((s: any) => s.season_number > 0)
-                          .map((s: any) => (
-                            <button
-                              key={s.id}
-                              type="button"
-                              onClick={() => {
-                                setSeason(s.season_number);
-                                setEpisode(1);
-                                setIsSeasonOpen(false);
-                              }}
-                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                                season === s.season_number
-                                  ? `${activeTheme.bg} text-white font-bold`
-                                  : "text-slate-200 hover:bg-white/10"
-                              }`}
-                            >
-                              {s.name} ({s.episode_count} Episodes)
-                            </button>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="relative" ref={episodeRef}>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                      Select Episode
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                      className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
-                    >
-                      <span>
-                        {currentEpisodeObj
-                          ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
-                          : `Episode ${episode}`}
-                      </span>
-                      <span>▾</span>
-                    </button>
-                    {isEpisodeOpen && (
-                      <div
-                        className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
-                      >
-                        {seasonEpisodes.length > 0 ? (
-                          seasonEpisodes.map((ep: any) => (
-                            <button
-                              key={ep.id}
-                              type="button"
-                              onClick={() => {
-                                setEpisode(ep.episode_number);
-                                setIsEpisodeOpen(false);
-                              }}
-                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
-                                episode === ep.episode_number
-                                  ? `${activeTheme.bg} text-white font-bold`
-                                  : "text-slate-200 hover:bg-white/10"
-                              }`}
-                            >
-                              Ep {ep.episode_number}: {ep.name}
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-3 py-2 text-sm text-slate-400">
-                            Loading episodes...
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
               )}
-
-              {/* Custom Image-Based Buttons with Transparent Background & Clean Styling */}
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Play Button */}
-                <button
-                  type="button"
-                  onClick={handlePlay}
-                  className="relative group overflow-hidden rounded-2xl p-0.5 border border-none transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer text-left"
-                >
-                  <div
-                    className="absolute inset-0 bg-cover bg-center pointer-events-none transition duration-300 group-hover:scale-105"
-                    style={{ backgroundImage: `url(${PLAY})`, opacity: 0.88, backgroundBlendMode: 'luminosity' }}
-                  />
-                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
-                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
-                  </div>
-                </button>
-
-                {/* Report Broken Button */}
-                <button
-                  type="button"
-                  onClick={handleReportBroken}
-                  className="relative group overflow-hidden rounded-2xl p-0.5 border border-none transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer text-left"
-                  title="Report link as broken and hide globally"
-                >
-                  <div
-                    className="absolute inset-0 bg-cover bg-center pointer-events-none transition duration-300 group-hover:scale-105"
-                    style={{ backgroundImage: `url(${REPORTBROKEN})`, opacity: 0.88 }}
-                  />
-                  <div className="absolute inset-0 bg-black/45 group-hover:bg-black/30 transition pointer-events-none" />
-                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
-                  </div>
-                </button>
-               
-                {/* My Favs Button */}
-                <button
-                  type="button"
-                  onClick={toggleFavorites}
-                  className={`relative group overflow-hidden rounded-2xl p-0.5 border transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer text-left ${
-                    inFavorites ? "border-amber-400 shadow-amber-500/30" : "border-none"
-                  }`}
-                >
-                  <div
-                    className="absolute inset-0 bg-cover bg-center pointer-events-none transition duration-300 group-hover:scale-105"
-                    style={{ backgroundImage: `url(${MYFAV})`, opacity: 0.68 }}
-                  />
-                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
-                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
-                  </div>
-                </button>
-
-                {/* Save for Later Button */}
-                <button
-                  type="button"
-                  onClick={toggleMyList}
-                  className={`relative group overflow-hidden rounded-2xl p-0.5 border transition transform active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} cursor-pointer text-left ${
-                    inMyList ? `${activeTheme.border} shadow-indigo-500/30` : "border-none"
-                  }`}
-                >
-                  <div
-                    className="absolute inset-0 bg-cover bg-center pointer-events-none transition duration-300 group-hover:scale-105"
-                    style={{ backgroundImage: `url(${SAVEFORLATER})`, opacity: 0.68 }}
-                  />
-                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
-                  <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
-                  </div>
-                </button>
-              </div>
-
-              {actionFeedback && (
-                <p
-                  className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in mt-2`}
-                >
-                  {actionFeedback}
-                </p>
+              {releaseYear && <span>{releaseYear}</span>}
+              {originalLanguageName && (
+                <span className="font-medium text-slate-200">
+                  {originalLanguageName}
+                </span>
               )}
+              <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
+                {inferredMediaType}
+              </span>
             </div>
+
+            <p className="max-w-2xl text-base leading-relaxed text-slate-300">
+              {overview}
+            </p>
+
+            {inferredMediaType === "tv" && mediaDetails?.seasons && (
+              <div
+                className={`flex flex-wrap items-center justify-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
+              >
+                <div className="relative" ref={seasonRef}>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                    Select Season
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsSeasonOpen(!isSeasonOpen)}
+                    className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  >
+                    <span>
+                      {currentSeasonObj
+                        ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
+                        : `Season ${season}`}
+                    </span>
+                    <span>▾</span>
+                  </button>
+                  {isSeasonOpen && (
+                    <div
+                      className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                    >
+                      {mediaDetails.seasons
+                        .filter((s: any) => s.season_number > 0)
+                        .map((s: any) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => {
+                              setSeason(s.season_number);
+                              setEpisode(1);
+                              setIsSeasonOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                              season === s.season_number
+                                ? `${activeTheme.bg} text-white font-bold`
+                                : "text-slate-200 hover:bg-white/10"
+                            }`}
+                          >
+                            {s.name} ({s.episode_count} Episodes)
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative" ref={episodeRef}>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                    Select Episode
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
+                    className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  >
+                    <span>
+                      {currentEpisodeObj
+                        ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
+                        : `Episode ${episode}`}
+                    </span>
+                    <span>▾</span>
+                  </button>
+                  {isEpisodeOpen && (
+                    <div
+                      className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                    >
+                      {seasonEpisodes.length > 0 ? (
+                        seasonEpisodes.map((ep: any) => (
+                          <button
+                            key={ep.id}
+                            type="button"
+                            onClick={() => {
+                              setEpisode(ep.episode_number);
+                              setIsEpisodeOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                              episode === ep.episode_number
+                                ? `${activeTheme.bg} text-white font-bold`
+                                : "text-slate-200 hover:bg-white/10"
+                            }`}
+                          >
+                            Ep {ep.episode_number}: {ep.name}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-slate-400">
+                          Loading episodes...
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Transparent Action Buttons (100% width/height PNG styling, no overlays, no shadows, no borders, 50% transparency) */}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
+              {/* Play Button */}
+              <button
+                type="button"
+                onClick={handlePlay}
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer w-full aspect-[3/1]"
+              >
+                <img
+                  src={PLAY}
+                  alt="Play"
+                  className="w-full h-full object-contain opacity-50 group-hover:opacity-100 transition duration-300"
+                />
+              </button>
+
+              {/* Report Broken Button */}
+              <button
+                type="button"
+                onClick={handleReportBroken}
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer w-full aspect-[3/1]"
+                title="Report link as broken and hide globally"
+              >
+                <img
+                  src={REPORTBROKEN}
+                  alt="Report Broken"
+                  className="w-full h-full object-contain opacity-50 group-hover:opacity-100 transition duration-300"
+                />
+              </button>
+             
+              {/* My Favs Button */}
+              <button
+                type="button"
+                onClick={toggleFavorites}
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer w-full aspect-[3/1]"
+              >
+                <img
+                  src={MYFAV}
+                  alt="Favorites"
+                  className="w-full h-full object-contain opacity-50 group-hover:opacity-100 transition duration-300"
+                />
+              </button>
+
+              {/* Save for Later Button */}
+              <button
+                type="button"
+                onClick={toggleMyList}
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-indigo-400 cursor-pointer w-full aspect-[3/1]"
+              >
+                <img
+                  src={SAVEFORLATER}
+                  alt="Save for Later"
+                  className="w-full h-full object-contain opacity-50 group-hover:opacity-100 transition duration-300"
+                />
+              </button>
+            </div>
+
+            {actionFeedback && (
+              <p
+                className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in mt-2`}
+              >
+                {actionFeedback}
+              </p>
+            )}
           </div>
 
           {/* Cast Section */}
           {castList.length > 0 && (
-            <div className={`mt-6 pt-4 pb-4 px-4 rounded-2xl border ${getCardBackground(appTheme)} backdrop-blur shadow-xl space-y-3`}>
+            <div className={`mt-6 pt-4 pb-4 px-4 w-full rounded-2xl border ${getCardBackground(appTheme)} backdrop-blur shadow-xl space-y-3`}>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
                   Cast
@@ -1199,7 +1186,7 @@ export function DetailsPage() {
           )}
 
           {/* Budget, Production, & Language Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 w-full">
             <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
               <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
                 Budget
@@ -1225,14 +1212,14 @@ export function DetailsPage() {
           </div>
 
           {mappedRecommendations.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+            <div className="mt-8 pt-6 border-t border-white/10 space-y-4 w-full">
               {/* Pill bar wrapper for Similar Recommendations header on Details View */}
               <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-sm mx-auto overflow-hidden rounded-2xl shadow-xl">
                 <div
                   className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
                   style={{
-                    width: "100",
-                    height: "100",
+                    width: "111%",
+                    height: "300%",
                     backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                     backgroundSize: "113% 380%",
                     backgroundRepeat: "no-repeat",
