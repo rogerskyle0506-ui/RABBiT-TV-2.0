@@ -1071,7 +1071,7 @@ export function DetailsPage() {
                 <button
                   type="button"
                   onClick={handlePlay}
-                  className="relative group overflow-hidden rounded-2xl p-0.5 border border-white/25 shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer text-left"
+                  className="relative group overflow-hidden rounded-2xl p-0.5 border border-none transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer text-left"
                 >
                   <div
                     className="absolute inset-0 bg-cover bg-center pointer-events-none transition duration-300 group-hover:scale-105"
@@ -1079,9 +1079,6 @@ export function DetailsPage() {
                   />
                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
                   <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
-                    <span className="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-pink-300 to-red-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                       {inferredMediaType === "tv" ? `S${season}:E${episode}` : "Movie"}
-                    </span>
                   </div>
                 </button>
 
@@ -1089,7 +1086,7 @@ export function DetailsPage() {
                 <button
                   type="button"
                   onClick={handleReportBroken}
-                  className="relative group overflow-hidden rounded-2xl p-0.5 border border-red-500/40 shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer text-left"
+                  className="relative group overflow-hidden rounded-2xl p-0.5 border border-none transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-red-500 cursor-pointer text-left"
                   title="Report link as broken and hide globally"
                 >
                   <div
@@ -1105,8 +1102,8 @@ export function DetailsPage() {
                 <button
                   type="button"
                   onClick={toggleFavorites}
-                  className={`relative group overflow-hidden rounded-2xl p-0.5 border shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer text-left ${
-                    inFavorites ? "border-amber-400 shadow-amber-500/30" : "border-white/25"
+                  className={`relative group overflow-hidden rounded-2xl p-0.5 border transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-amber-400 cursor-pointer text-left ${
+                    inFavorites ? "border-amber-400 shadow-amber-500/30" : "border-none"
                   }`}
                 >
                   <div
@@ -1115,9 +1112,6 @@ export function DetailsPage() {
                   />
                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
                   <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
-                    <span className="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-orange-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                      {inFavorites ? "★ Favorited" : "Add to Favorites"}
-                    </span>
                   </div>
                 </button>
 
@@ -1125,8 +1119,8 @@ export function DetailsPage() {
                 <button
                   type="button"
                   onClick={toggleMyList}
-                  className={`relative group overflow-hidden rounded-2xl p-0.5 border shadow-xl transition transform active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} cursor-pointer text-left ${
-                    inMyList ? `${activeTheme.border} shadow-indigo-500/30` : "border-white/25"
+                  className={`relative group overflow-hidden rounded-2xl p-0.5 border transition transform active:scale-95 focus:outline-none focus:ring-4 ${activeTheme.ring} cursor-pointer text-left ${
+                    inMyList ? `${activeTheme.border} shadow-indigo-500/30` : "border-none"
                   }`}
                 >
                   <div
@@ -1135,9 +1129,6 @@ export function DetailsPage() {
                   />
                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition pointer-events-none" />
                   <div className="relative z-10 flex items-center justify-center py-3.5 px-6 gap-2">
-                    <span className="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-200 to-indigo-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                      {inMyList ? "✓ Saved" : "Save for Later"}
-                    </span>
                   </div>
                 </button>
               </div>
