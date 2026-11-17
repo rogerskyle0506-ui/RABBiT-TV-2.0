@@ -17,6 +17,8 @@ const PLAY = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/
 const MYFAV = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/MyFav.png";
 const SAVEFORLATER = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/SaveForLater.png";
 const REPORTBROKEN = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/ReportBroken.png";
+const BACK_TO_HOME = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/BackToHome.png";
+const CLICK_FOR_TRAILER = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/ClickForTrailer.png";
 
 export const Route = createFileRoute("/details")({
   component: DetailsPage,
@@ -821,11 +823,16 @@ export function DetailsPage() {
       <AppWallpaper backdropUrl={backdropUrl} />
 
       <div className="relative z-10">
+        {/* Back to Home Button in Top Left */}
         <Link
-          className={`mb-6 inline-flex items-center gap-2 text-sm font-semibold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-2 py-1`}
           to="/"
+          className="mb-6 inline-block w-36 sm:w-44 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
         >
-          ← Back to Home
+          <img
+            src={BACK_TO_HOME}
+            alt="Back to Home"
+            className="w-full h-full object-contain opacity-90 hover:opacity-100 transition duration-300"
+          />
         </Link>
 
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-8 text-center">
@@ -843,7 +850,7 @@ export function DetailsPage() {
                 transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
               }}
             >
-              {/* Front: Cover Art with Heartbeat Click-to-Flip Overlay */}
+              {/* Front: Cover Art with ClickForTrailer Button in Bottom Right */}
               <div
                 className="absolute inset-0 h-full w-full rounded-2xl overflow-hidden border border-white/10 bg-black"
                 style={{ backfaceVisibility: "hidden" }}
@@ -855,18 +862,26 @@ export function DetailsPage() {
                 />
                 {mediaStatusBadge}
 
-                {/* Click-to-flip overlay with themed heartbeat text & soft smoke-like darker wrapper */}
-                <div className="absolute inset-x-0 bottom-4 z-20 flex justify-center px-3 pointer-events-none">
-                  <div
-                    className={`rounded-2xl border backdrop-blur-md px-4 py-2 ${getSmokeWrapperStyle(appTheme)}`}
+                {/* Click For Trailer Button in Bottom Right Corner with 75% transparency & full edge blending */}
+                <div className="absolute bottom-3 right-3 z-20 pointer-events-auto">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFlipped(true);
+                    }}
+                    className="w-32 sm:w-36 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
                   >
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-xs font-extrabold tracking-wide uppercase animate-heartbeat-slow ${activeTheme.text} drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]`}
-                    >
-                      <span>▶</span>
-                      <span>Click for Trailer</span>
-                    </span>
-                  </div>
+                    <img
+                      src={CLICK_FOR_TRAILER}
+                      alt="Click for Trailer"
+                      className="w-full h-full object-contain opacity-75 hover:opacity-100 transition duration-300"
+                      style={{
+                        maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 95%)",
+                        WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 95%)",
+                      }}
+                    />
+                  </button>
                 </div>
               </div>
 
@@ -911,13 +926,13 @@ export function DetailsPage() {
                   </button>
                 </div>
 
-                {/* Trailer Player Container (Embedded Player Wrapper) */}
+                {/* Trailer Player Container (Embedded Player Wrapper with autoplay=1) */}
                 <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center bg-black/65">
-                  {trailerKey ? (
+                  {trailerKey && isFlipped ? (
                     <iframe
-                      src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=0&controls=1&modestbranding=1`}
+                      src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&controls=1&modestbranding=1`}
                       className="w-full h-full border-0"
-                      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
                   ) : (
