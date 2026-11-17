@@ -837,9 +837,9 @@ export function DetailsPage() {
 
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-8 text-center">
           
-          {/* 3D Spin / Flip Cover Art → Trailer Reveal Component (Centered on top) */}
+          {/* 3D Spin / Flip Cover Art → Trailer Reveal Component (Full width minus 10px, responsive height for portrait/landscape) */}
           <div
-            className="relative h-[450px] w-[300px] cursor-pointer select-none"
+            className="relative w-[calc(100vw-10px)] max-w-full left-1/2 -translate-x-1/2 h-[480px] sm:h-[600px] cursor-pointer select-none my-2"
             style={{ perspective: "1200px" }}
             onClick={() => !isFlipped && setIsFlipped(true)}
           >
@@ -862,23 +862,23 @@ export function DetailsPage() {
                 />
                 {mediaStatusBadge}
 
-                {/* Click For Trailer Button in Bottom Right Corner with increased transparency (55%) and radial gradient edge blending */}
-                <div className="absolute bottom-3 right-3 z-20 pointer-events-auto">
+                {/* Click For Trailer Button in Bottom Right Corner with higher transparency (40%) and smooth radial gradient edge blending */}
+                <div className="absolute bottom-4 right-4 z-20 pointer-events-auto">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsFlipped(true);
                     }}
-                    className="w-32 sm:w-36 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
+                    className="w-32 sm:w-38 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
                   >
                     <img
                       src={CLICK_FOR_TRAILER}
                       alt="Click for Trailer"
-                      className="w-full h-full object-contain opacity-[0.55] hover:opacity-100 transition duration-300"
+                      className="w-full h-full object-contain opacity-[0.40] hover:opacity-100 transition duration-300"
                       style={{
-                        maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 88%)",
-                        WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 88%)",
+                        maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)",
+                        WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)",
                       }}
                     />
                   </button>
