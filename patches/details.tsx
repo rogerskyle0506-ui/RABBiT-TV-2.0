@@ -256,54 +256,54 @@ export function DetailsPage() {
   const getPageBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-gradient-to-br from-zinc-950/80 via-red-950/40 to-black/90";
+        return "bg-gradient-to-br from-zinc-950/85 via-red-950/45 to-black/90";
       case "midnight":
-        return "bg-gradient-to-br from-slate-950/80 via-blue-950/40 to-slate-950/90";
+        return "bg-gradient-to-br from-slate-950/85 via-blue-950/45 to-slate-950/95";
       case "emerald":
-        return "bg-gradient-to-br from-slate-950/80 via-emerald-950/40 to-slate-950/90";
+        return "bg-gradient-to-br from-slate-950/85 via-emerald-950/45 to-slate-950/95";
       case "amber":
-        return "bg-gradient-to-br from-stone-950/80 via-yellow-950/40 to-neutral-950/90";
+        return "bg-gradient-to-br from-stone-950/85 via-yellow-950/45 to-neutral-950/95";
       case "cyan":
-        return "bg-gradient-to-br from-slate-950/80 via-cyan-950/40 to-slate-950/90";
+        return "bg-gradient-to-br from-slate-950/85 via-cyan-950/45 to-slate-950/95";
       case "violet":
       default:
-        return "bg-gradient-to-br from-slate-950/80 via-purple-950/40 to-slate-950/90";
+        return "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/95";
     }
   };
 
   const getCardBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-zinc-900/90 border-red-500/25";
+        return "bg-zinc-950/90 border-red-500/25";
       case "midnight":
-        return "bg-slate-900/90 border-blue-500/25";
+        return "bg-slate-950/90 border-blue-500/25";
       case "emerald":
-        return "bg-slate-900/90 border-emerald-500/25";
+        return "bg-slate-950/90 border-emerald-500/25";
       case "amber":
-        return "bg-stone-900/90 border-amber-500/25";
+        return "bg-stone-950/90 border-amber-500/25";
       case "cyan":
-        return "bg-slate-900/90 border-cyan-500/25";
+        return "bg-slate-950/90 border-cyan-500/25";
       case "violet":
       default:
-        return "bg-slate-900/90 border-violet-500/25";
+        return "bg-slate-950/90 border-violet-500/25";
     }
   };
 
   const getSmokeWrapperStyle = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-slate-950/80 border-red-500/20 shadow-[0_12px_40px_rgba(239,68,68,0.18)]";
+        return "bg-slate-950/90 border-red-500/25 shadow-[0_16px_50px_rgba(239,68,68,0.22)]";
       case "midnight":
-        return "bg-slate-950/80 border-blue-500/20 shadow-[0_12px_40px_rgba(59,130,246,0.18)]";
+        return "bg-slate-950/90 border-blue-500/25 shadow-[0_16px_50px_rgba(59,130,246,0.22)]";
       case "emerald":
-        return "bg-slate-950/80 border-emerald-500/20 shadow-[0_12px_40px_rgba(16,185,129,0.18)]";
+        return "bg-slate-950/90 border-emerald-500/25 shadow-[0_16px_50px_rgba(16,185,129,0.22)]";
       case "amber":
-        return "bg-stone-950/80 border-amber-500/20 shadow-[0_12px_40px_rgba(245,158,11,0.18)]";
+        return "bg-stone-950/90 border-amber-500/25 shadow-[0_16px_50px_rgba(245,158,11,0.22)]";
       case "cyan":
-        return "bg-slate-950/80 border-cyan-500/20 shadow-[0_12px_40px_rgba(6,182,212,0.18)]";
+        return "bg-slate-950/90 border-cyan-500/25 shadow-[0_16px_50px_rgba(6,182,212,0.22)]";
       case "violet":
       default:
-        return "bg-slate-950/80 border-violet-500/20 shadow-[0_12px_40px_rgba(139,92,246,0.18)]";
+        return "bg-slate-950/90 border-violet-500/25 shadow-[0_16px_50px_rgba(139,92,246,0.22)]";
     }
   };
 
@@ -312,63 +312,87 @@ export function DetailsPage() {
       case "red":
         return {
           text: "text-red-400",
+          textLight: "text-red-200",
           bg: "bg-red-600",
           hoverBg: "hover:bg-red-500",
           border: "border-red-500",
+          borderHover: "group-hover:border-red-500/80",
           ring: "focus:ring-red-400",
           shadow: "shadow-red-600/30",
-          accentBar: "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]",
+          accentBar: "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.95)]",
+          badge: "text-red-300 border-red-500/30 bg-red-950/70",
+          ambient: "from-red-600/10 via-transparent to-transparent",
         };
       case "midnight":
         return {
           text: "text-sky-300",
+          textLight: "text-sky-100",
           bg: "bg-blue-600",
           hoverBg: "hover:bg-blue-500",
           border: "border-blue-500",
+          borderHover: "group-hover:border-blue-400/80",
           ring: "focus:ring-blue-400",
           shadow: "shadow-blue-600/30",
-          accentBar: "bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.9)]",
+          accentBar: "bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.95)]",
+          badge: "text-sky-300 border-blue-500/30 bg-blue-950/70",
+          ambient: "from-blue-600/10 via-transparent to-transparent",
         };
       case "emerald":
         return {
           text: "text-emerald-300",
+          textLight: "text-emerald-100",
           bg: "bg-emerald-600",
           hoverBg: "hover:bg-emerald-500",
           border: "border-emerald-500",
+          borderHover: "group-hover:border-emerald-400/80",
           ring: "focus:ring-emerald-400",
           shadow: "shadow-emerald-600/30",
-          accentBar: "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]",
+          accentBar: "bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]",
+          badge: "text-emerald-300 border-emerald-500/30 bg-emerald-950/70",
+          ambient: "from-emerald-600/10 via-transparent to-transparent",
         };
       case "amber":
         return {
           text: "text-amber-300",
+          textLight: "text-amber-100",
           bg: "bg-amber-600",
           hoverBg: "hover:bg-amber-500",
           border: "border-amber-500",
+          borderHover: "group-hover:border-amber-400/80",
           ring: "focus:ring-amber-400",
           shadow: "shadow-amber-600/30",
-          accentBar: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)]",
+          accentBar: "bg-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.95)]",
+          badge: "text-amber-300 border-amber-500/30 bg-amber-950/70",
+          ambient: "from-amber-600/10 via-transparent to-transparent",
         };
       case "cyan":
         return {
           text: "text-cyan-300",
+          textLight: "text-cyan-100",
           bg: "bg-cyan-600",
           hoverBg: "hover:bg-cyan-500",
           border: "border-cyan-500",
+          borderHover: "group-hover:border-cyan-400/80",
           ring: "focus:ring-cyan-400",
           shadow: "shadow-cyan-600/30",
-          accentBar: "bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)]",
+          accentBar: "bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]",
+          badge: "text-cyan-300 border-cyan-500/30 bg-cyan-950/70",
+          ambient: "from-cyan-600/10 via-transparent to-transparent",
         };
       case "violet":
       default:
         return {
           text: "text-violet-300",
+          textLight: "text-violet-100",
           bg: "bg-violet-600",
           hoverBg: "hover:bg-violet-500",
           border: "border-violet-500",
+          borderHover: "group-hover:border-violet-400/80",
           ring: "focus:ring-violet-400",
           shadow: "shadow-violet-600/30",
-          accentBar: "bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.9)]",
+          accentBar: "bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]",
+          badge: "text-violet-300 border-violet-500/30 bg-purple-950/70",
+          ambient: "from-violet-600/10 via-transparent to-transparent",
         };
     }
   };
@@ -401,7 +425,7 @@ export function DetailsPage() {
 
     if (isTitleBroken(cleanId) || isTitleBroken(prefId)) {
       return (
-        <span className="absolute top-3 left-3 z-20 rounded-lg bg-red-600/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white border border-red-400/40 shadow-lg">
+        <span className="absolute top-4 left-4 z-20 rounded-xl bg-red-600/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white border border-red-400/40 shadow-lg">
           ⚠️ Reported Broken
         </span>
       );
@@ -409,7 +433,7 @@ export function DetailsPage() {
 
     if (isTitleDisliked(cleanId) || isTitleDisliked(prefId)) {
       return (
-        <span className="absolute top-3 left-3 z-20 rounded-lg bg-zinc-800/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 border border-zinc-600/40 shadow-lg">
+        <span className="absolute top-4 left-4 z-20 rounded-xl bg-zinc-800/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 border border-zinc-600/40 shadow-lg">
           👎 Disliked
         </span>
       );
@@ -427,14 +451,14 @@ export function DetailsPage() {
       if (match) {
         if (match.confirmedCompleted || (match.progressPercent ?? 0) >= 100) {
           return (
-            <span className="absolute top-3 left-3 z-20 rounded-lg bg-emerald-600/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white border border-emerald-400/40 shadow-lg">
+            <span className="absolute top-4 left-4 z-20 rounded-xl bg-emerald-600/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white border border-emerald-400/40 shadow-lg">
               ✓ Completed
             </span>
           );
         }
         if ((match.progressPercent ?? 0) > 0) {
           return (
-            <span className="absolute top-3 left-3 z-20 rounded-lg bg-cyan-600/90 backdrop-blur-md px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white border border-cyan-400/40 shadow-lg">
+            <span className="absolute top-4 left-4 z-20 rounded-xl bg-cyan-600/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white border border-cyan-400/40 shadow-lg animate-pulse">
               ⏳ In Progress ({match.progressPercent}%)
             </span>
           );
@@ -800,48 +824,43 @@ export function DetailsPage() {
     >
       <style>{`
         @keyframes heartbeatSlow {
-          0%, 100% {
-            opacity: 0.42;
-            transform: scale(0.97);
-          }
-          18% {
-            opacity: 1;
-            transform: scale(1.04);
-          }
-          34% {
-            opacity: 0.65;
-            transform: scale(0.99);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.03);
-          }
-          75% {
-            opacity: 0.5;
-            transform: scale(0.98);
-          }
+          0%, 100% { opacity: 0.42; transform: scale(0.97); }
+          18% { opacity: 1; transform: scale(1.04); }
+          34% { opacity: 0.65; transform: scale(0.99); }
+          50% { opacity: 1; transform: scale(1.03); }
+          75% { opacity: 0.5; transform: scale(0.98); }
         }
         .animate-heartbeat-slow {
           animation: heartbeatSlow 3.4s ease-in-out infinite;
         }
+        @keyframes ambientPulse {
+          0%, 100% { opacity: 0.15; filter: blur(40px) saturate(1.2); }
+          50% { opacity: 0.28; filter: blur(55px) saturate(1.6); }
+        }
+        .animate-ambient-pulse {
+          animation: ambientPulse 8s ease-in-out infinite;
+        }
       `}</style>
 
+      {/* Layered cinematic glass overlays for Ambient backdrop depths */}
       <AppWallpaper backdropUrl={backdropUrl} />
+      <div className={`absolute inset-x-0 -top-12 h-[34rem] bg-gradient-to-b ${activeTheme.ambient} animate-ambient-pulse z-0 pointer-events-none rounded-t-3xl`} />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/15 pointer-events-none z-0" />
 
       <div className="relative z-10 max-w-5xl mx-auto">
         {/* Back to Home Button in Top Left with matching radial edge blending */}
-        <div className="mb-2">
+        <div className="mb-4">
           <Link
             to="/"
-            className="inline-block w-20 sm:w-24 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
+            className="inline-flex items-center gap-1.5 focus:outline-none focus:ring-4 focus:ring-indigo-500 rounded-2xl overflow-hidden cursor-pointer bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md px-3 py-1.5 border border-white/10 hover:border-white/20 shadow-md transition duration-300 transform active:scale-95 group"
           >
             <img
               src={BACK_TO_HOME}
               alt="Back to Home"
-              className="w-full h-full object-contain opacity-[0.40] hover:opacity-100 transition duration-300"
+              className="w-16 sm:w-20 object-contain opacity-60 group-hover:opacity-100 transition duration-300"
               style={{
-                maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)",
-                WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)",
+                maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 90%)",
+                WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 90%)",
               }}
             />
           </Link>
@@ -851,12 +870,12 @@ export function DetailsPage() {
           
           {/* 3D Spin / Flip Cover Art → Trailer Reveal Component */}
           <div
-            className="relative w-[calc(100vw-16px)] sm:w-[420px] md:w-[460px] h-[480px] sm:h-[620px] cursor-pointer select-none my-1"
-            style={{ perspective: "1200px" }}
+            className="relative w-[calc(100vw-24px)] sm:w-[420px] md:w-[460px] h-[480px] sm:h-[620px] cursor-pointer select-none my-1"
+            style={{ perspective: "1500px" }}
             onClick={() => !isFlipped && setIsFlipped(true)}
           >
             <div
-              className="relative h-full w-full rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.85)] transition-transform duration-700 ease-out"
+              className={`relative h-full w-full rounded-3xl transition-all duration-700 ease-out hover:shadow-[0_20px_50px_rgba(0,0,0,0.95)]`}
               style={{
                 transformStyle: "preserve-3d",
                 transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
@@ -864,7 +883,7 @@ export function DetailsPage() {
             >
               {/* Front: Cover Art with ClickForTrailer Button in Bottom Right */}
               <div
-                className="absolute inset-0 h-full w-full rounded-3xl overflow-hidden border border-white/15 bg-black"
+                className="absolute inset-0 h-full w-full rounded-3xl overflow-hidden border border-white/15 bg-black shadow-2xl"
                 style={{ backfaceVisibility: "hidden" }}
               >
                 <img
@@ -872,25 +891,26 @@ export function DetailsPage() {
                   alt={title}
                   className="h-full w-full object-cover"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/10 pointer-events-none" />
                 {mediaStatusBadge}
 
-                {/* Click For Trailer Button in Bottom Right Corner */}
-                <div className="absolute bottom-4 right-4 z-20 pointer-events-auto">
+                {/* Click For Trailer Button in Bottom Right Corner with pulsing and glowing edge outline */}
+                <div className="absolute bottom-4 right-4 z-20 pointer-events-auto transition-transform hover:scale-105 active:scale-95 duration-200">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsFlipped(true);
                     }}
-                    className="w-32 sm:w-38 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-transparent border-0 p-0 shadow-none"
+                    className="w-32 sm:w-38 focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer bg-black/35 hover:bg-black/45 border border-white/10 hover:border-white/20 backdrop-blur-md px-1.5 py-1 shadow-2xl animate-heartbeat-slow"
                   >
                     <img
                       src={CLICK_FOR_TRAILER}
                       alt="Click for Trailer"
-                      className="w-full h-full object-contain opacity-[0.40] hover:opacity-100 transition duration-300"
+                      className="w-full h-full object-contain opacity-75 hover:opacity-100 transition duration-300"
                       style={{
-                        maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)",
-                        WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 80%)",
+                        maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 90%)",
+                        WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 90%)",
                       }}
                     />
                   </button>
@@ -899,7 +919,7 @@ export function DetailsPage() {
 
               {/* Back: Trailer Player inside Transparent Rabbit Alternate Panel Wrapper */}
               <div
-                className={`absolute inset-0 h-full w-full rounded-3xl overflow-hidden flex flex-col border ${activeTheme.border} shadow-2xl`}
+                className={`absolute inset-0 h-full w-full rounded-3xl overflow-hidden flex flex-col border ${activeTheme.border}/40 bg-black/90 shadow-2xl`}
                 style={{
                   backfaceVisibility: "hidden",
                   transform: "rotateY(180deg)",
@@ -911,16 +931,16 @@ export function DetailsPage() {
                     backgroundImage: `url(${RABBIT_PANEL_ALT})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
-                    opacity: 0.5,
+                    opacity: 0.35,
                   }}
                 />
                 <div
-                  className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(appTheme)} opacity-50 pointer-events-none z-0`}
+                  className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(appTheme)} opacity-40 pointer-events-none z-0`}
                 />
 
                 {/* Header / Close bar */}
-                <div className="relative z-10 flex items-center justify-between p-3.5 border-b border-white/15 bg-black/65 backdrop-blur-md">
-                  <span className={`text-xs font-bold truncate max-w-[220px] ${activeTheme.text}`}>
+                <div className="relative z-10 flex items-center justify-between p-3.5 border-b border-white/10 bg-black/75 backdrop-blur-md">
+                  <span className={`text-xs font-bold truncate max-w-[200px] sm:max-w-[280px] ${activeTheme.text}`}>
                     Official Trailer • {title}
                   </span>
                   <button
@@ -929,7 +949,7 @@ export function DetailsPage() {
                       e.stopPropagation();
                       setIsFlipped(false);
                     }}
-                    className={`w-7 h-7 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center text-xs font-bold border ${activeTheme.border}/50 transition cursor-pointer shadow-md`}
+                    className={`w-7 h-7 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center text-xs font-bold border ${activeTheme.border}/50 hover:scale-105 active:scale-95 transition cursor-pointer shadow-md`}
                     title="Close Trailer & Return to Cover"
                     aria-label="Close Trailer"
                   >
@@ -938,18 +958,18 @@ export function DetailsPage() {
                 </div>
 
                 {/* Trailer Player Container */}
-                <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center bg-black/85">
+                <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center bg-black/95">
                   {trailerKey && isFlipped ? (
                     <iframe
-                      src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&controls=1&modestbranding=1`}
+                      src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&controls=1&modestbranding=1&rel=0`}
                       className="w-full h-full border-0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-4 text-center gap-2">
-                      <div className={`w-6 h-6 rounded-full border-2 border-t-transparent ${activeTheme.border} animate-spin`} />
-                      <span className="text-xs text-slate-300">
+                      <div className={`w-8 h-8 rounded-full border-2 border-t-transparent ${activeTheme.border} animate-spin`} />
+                      <span className="text-xs text-slate-400">
                         Loading official trailer from TMDB...
                       </span>
                     </div>
@@ -961,53 +981,57 @@ export function DetailsPage() {
 
           {/* Media Details Section */}
           <div
-            className={`flex flex-col items-center justify-center gap-4 w-full rounded-3xl border p-6 md:p-8 backdrop-blur-2xl transition-colors duration-300 ${getSmokeWrapperStyle(appTheme)}`}
+            className={`flex flex-col items-center justify-center gap-5 w-full rounded-3xl border p-6 md:p-8 backdrop-blur-2xl transition-colors duration-300 ${getSmokeWrapperStyle(appTheme)}`}
           >
             <span
-              className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
+              className={`w-fit rounded-full border px-3.5 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.badge}`}
             >
               {genres}
             </span>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
               {title}
             </h1>
 
-            <div className="flex items-center justify-center flex-wrap gap-3 text-sm text-slate-300">
+            <div className="flex items-center justify-center flex-wrap gap-2.5 text-xs font-bold text-slate-300">
               {rating !== "N/A" && (
-                <span className="flex items-center gap-1 font-bold text-yellow-300">
+                <span className="flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-400/30 px-3 py-1.5 text-amber-300">
                   ⭐ {rating}
                 </span>
               )}
-              {releaseYear && <span>{releaseYear}</span>}
+              {releaseYear && (
+                <span className="rounded-full bg-white/[0.05] border border-white/10 px-3 py-1.5">
+                  {releaseYear}
+                </span>
+              )}
               {originalLanguageName && (
-                <span className="font-medium text-slate-200">
+                <span className="rounded-full bg-white/[0.05] border border-white/10 px-3 py-1.5">
                   {originalLanguageName}
                 </span>
               )}
-              <span className="uppercase rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 border border-white/10">
+              <span className="uppercase rounded-full bg-slate-950/80 border border-white/10 px-3 py-1.5">
                 {inferredMediaType}
               </span>
             </div>
 
-            <p className="max-w-2xl text-sm sm:text-base leading-relaxed text-slate-300">
+            <p className="max-w-2xl text-sm sm:text-base leading-relaxed text-slate-300 font-medium">
               {overview}
             </p>
 
             {inferredMediaType === "tv" && mediaDetails?.seasons && (
               <div
-                className={`flex flex-wrap items-center justify-center gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur my-2`}
+                className={`flex flex-wrap items-center justify-center gap-4 rounded-3xl border ${getCardBackground(appTheme)} p-4.5 backdrop-blur-md shadow-xl my-2 w-full max-w-xl`}
               >
-                <div className="relative" ref={seasonRef}>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                <div className="relative flex-1 min-w-[200px]" ref={seasonRef}>
+                  <label className="block text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 pl-1.5">
                     Select Season
                   </label>
                   <button
                     type="button"
                     onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                    className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                    className={`flex items-center justify-between w-full gap-6 rounded-2xl border border-white/15 bg-black/60 px-4.5 py-3 text-sm font-bold text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring} transition`}
                   >
-                    <span>
+                    <span className="truncate">
                       {currentSeasonObj
                         ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
                         : `Season ${season}`}
@@ -1016,7 +1040,7 @@ export function DetailsPage() {
                   </button>
                   {isSeasonOpen && (
                     <div
-                      className={`absolute left-0 mt-2 z-50 max-h-65 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                      className={`absolute left-0 right-0 mt-2 z-50 max-h-60 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-xl p-1 w-full box-border`}
                     >
                       {mediaDetails.seasons
                         .filter((s: any) => s.season_number > 0)
@@ -1029,9 +1053,9 @@ export function DetailsPage() {
                               setEpisode(1);
                               setIsSeasonOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                            className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition ${
                               season === s.season_number
-                                ? `${activeTheme.bg} text-white font-bold`
+                                ? `${activeTheme.bg} text-white font-black`
                                 : "text-slate-200 hover:bg-white/10"
                             }`}
                           >
@@ -1042,16 +1066,16 @@ export function DetailsPage() {
                   )}
                 </div>
 
-                <div className="relative" ref={episodeRef}>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                <div className="relative flex-1 min-w-[200px]" ref={episodeRef}>
+                  <label className="block text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 pl-1.5">
                     Select Episode
                   </label>
                   <button
                     type="button"
                     onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                    className={`flex items-center justify-between gap-6 rounded-xl border border-white/20 ${getCardBackground(appTheme)} px-4 py-2.5 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                    className={`flex items-center justify-between w-full gap-6 rounded-2xl border border-white/15 bg-black/60 px-4.5 py-3 text-sm font-bold text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring} transition`}
                   >
-                    <span>
+                    <span className="truncate">
                       {currentEpisodeObj
                         ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
                         : `Episode ${episode}`}
@@ -1060,7 +1084,7 @@ export function DetailsPage() {
                   </button>
                   {isEpisodeOpen && (
                     <div
-                      className={`absolute left-0 mt-2 z-50 max-h-65 w-80 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
+                      className={`absolute left-0 right-0 mt-2 z-50 max-h-60 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-xl p-1 w-full box-border`}
                     >
                       {seasonEpisodes.length > 0 ? (
                         seasonEpisodes.map((ep: any) => (
@@ -1071,9 +1095,9 @@ export function DetailsPage() {
                               setEpisode(ep.episode_number);
                               setIsEpisodeOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                            className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition ${
                               episode === ep.episode_number
-                                ? `${activeTheme.bg} text-white font-bold`
+                                ? `${activeTheme.bg} text-white font-black`
                                 : "text-slate-200 hover:bg-white/10"
                             }`}
                           >
@@ -1081,7 +1105,7 @@ export function DetailsPage() {
                           </button>
                         ))
                       ) : (
-                        <div className="px-3 py-2 text-sm text-slate-400">
+                        <div className="px-3.5 py-2.5 text-xs text-slate-400 font-bold">
                           Loading episodes...
                         </div>
                       )}
@@ -1092,60 +1116,64 @@ export function DetailsPage() {
             )}
 
             {/* Action Buttons Grid */}
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-lg mx-auto">
+            <div className="mt-2 grid grid-cols-2 gap-3.5 sm:gap-4 w-full max-w-lg mx-auto">
               <button
                 type="button"
                 onClick={handlePlay}
-                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 rounded-xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1]"
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 rounded-2xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1] transform hover:-translate-y-1 hover:shadow-xl hover:shadow-red-500/10 active:translate-y-0.5 duration-300"
               >
+                <div className="absolute inset-0 bg-red-600/5 hover:bg-red-600/0 z-0 rounded-2xl" />
                 <img
                   src={PLAY}
                   alt="Play"
-                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-xl"
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-2xl relative z-10"
                 />
               </button>
 
               <button
                 type="button"
                 onClick={handleReportBroken}
-                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 rounded-xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1]"
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-red-500 rounded-2xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1] transform hover:-translate-y-1 hover:shadow-xl active:translate-y-0.5 duration-300"
                 title="Report link as broken and hide globally"
               >
+                <div className="absolute inset-0 bg-white/5 hover:bg-white/0 z-0 rounded-2xl" />
                 <img
                   src={REPORTBROKEN}
                   alt="Report Broken"
-                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-xl"
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-2xl relative z-10"
                 />
               </button>
              
               <button
                 type="button"
                 onClick={toggleFavorites}
-                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-amber-400 rounded-xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1]"
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-amber-400 rounded-2xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1] transform hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/10 active:translate-y-0.5 duration-300"
               >
+                <div className="absolute inset-0 bg-amber-600/5 hover:bg-amber-600/0 z-0 rounded-2xl" />
                 <img
                   src={MYFAV}
                   alt="Favorites"
-                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-xl"
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-2xl relative z-10"
                 />
               </button>
 
               <button
                 type="button"
                 onClick={toggleMyList}
-                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1]"
+                className="relative group p-0 bg-transparent border-0 shadow-none focus:outline-none focus:ring-4 focus:ring-indigo-400 rounded-2xl overflow-hidden cursor-pointer aspect-[21/9] sm:aspect-[3/1] transform hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 active:translate-y-0.5 duration-300"
               >
+                <div className="absolute inset-0 bg-indigo-600/5 hover:bg-indigo-600/0 z-0 rounded-2xl" />
                 <img
                   src={SAVEFORLATER}
                   alt="Save for Later"
-                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-xl"
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-300 rounded-2xl relative z-10"
                 />
               </button>
             </div>
 
             {actionFeedback && (
               <p
-                className={`text-xs font-semibold ${activeTheme.text} transition animate-fade-in mt-2`}
+                className={`text-xs font-bold ${activeTheme.text} transition animate-fade-in mt-1.5`}
               >
                 {actionFeedback}
               </p>
@@ -1154,16 +1182,16 @@ export function DetailsPage() {
 
           {/* Cast Section */}
           {castList.length > 0 && (
-            <div className={`mt-6 pt-4 pb-4 px-4 w-full rounded-2xl border ${getCardBackground(appTheme)} backdrop-blur shadow-xl space-y-3`}>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
-                  Cast
+            <div className={`mt-4 pt-4.5 pb-4 px-4.5 w-full rounded-3xl border ${getCardBackground(appTheme)} bg-slate-950/50 backdrop-blur shadow-2xl space-y-3`}>
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-200">
+                  Cast & Crew
                 </h2>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => scrollCast("left")}
-                    className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black border border-white/20 flex items-center justify-center text-xs font-bold text-white shadow transition cursor-pointer"
+                    className="w-7 h-7 rounded-lg bg-black/60 hover:bg-black border border-white/10 flex items-center justify-center text-xs font-bold text-white shadow-md transition cursor-pointer"
                     aria-label="Scroll left"
                   >
                     ◀
@@ -1171,20 +1199,20 @@ export function DetailsPage() {
                   <button
                     type="button"
                     onClick={() => scrollCast("right")}
-                    className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black border border-white/20 flex items-center justify-center text-xs font-bold text-white shadow transition cursor-pointer"
+                    className="w-7 h-7 rounded-lg bg-black/60 hover:bg-black border border-white/10 flex items-center justify-center text-xs font-bold text-white shadow-md transition cursor-pointer"
                     aria-label="Scroll right"
                   >
                     ▶
                   </button>
                 </div>
               </div>
-              <div ref={castScrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-none scroll-smooth">
+              <div ref={castScrollRef} className="flex gap-4 overflow-x-auto pb-1.5 scrollbar-none scroll-smooth w-full">
                 {castList.slice(0, 15).map((actor: any) => (
                   <div
                     key={actor.id}
-                    className="flex flex-col items-center text-center shrink-0 w-20"
+                    className="flex flex-col items-center text-center shrink-0 w-22"
                   >
-                    <div className="w-14 h-14 rounded-full overflow-hidden mb-1.5 border border-white/10 bg-black">
+                    <div className="w-15 h-15 rounded-full overflow-hidden mb-2 border-2 border-white/10 hover:border-white/25 shadow-md bg-black transition duration-200">
                       <img
                         src={
                           actor.profile_path
@@ -1193,12 +1221,13 @@ export function DetailsPage() {
                         }
                         alt={actor.name}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     </div>
-                    <h3 className="text-[10px] font-bold text-white truncate w-full">
+                    <h3 className="text-[10px] font-extrabold text-white truncate w-full px-0.5">
                       {actor.name}
                     </h3>
-                    <p className="text-[9px] text-slate-400 truncate w-full">
+                    <p className="text-[9px] text-slate-400 font-semibold truncate w-full px-0.5">
                       {actor.character}
                     </p>
                   </div>
@@ -1208,26 +1237,26 @@ export function DetailsPage() {
           )}
 
           {/* Budget, Production, & Language Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 w-full">
-            <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
-              <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-3 w-full">
+            <div className={`rounded-2xl border ${getCardBackground(appTheme)} bg-slate-950/40 p-4 backdrop-blur shadow-lg text-left sm:text-center group ${activeTheme.borderHover} transition duration-300`}>
+              <span className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-1">
                 Budget
               </span>
-              <span className="text-sm font-bold text-white">{budget}</span>
+              <span className="text-sm sm:text-base font-black text-white">{budget}</span>
             </div>
-            <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
-              <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
+            <div className={`rounded-2xl border ${getCardBackground(appTheme)} bg-slate-950/40 p-4 backdrop-blur shadow-lg text-left sm:text-center group ${activeTheme.borderHover} transition duration-300`}>
+              <span className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-1">
                 Production
               </span>
-              <span className="text-sm font-bold text-white truncate block" title={productionCompanies}>
+              <span className="text-sm sm:text-base font-black text-white truncate block" title={productionCompanies}>
                 {productionCompanies}
               </span>
             </div>
-            <div className={`rounded-xl border ${getCardBackground(appTheme)} p-3 backdrop-blur shadow-lg`}>
-              <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
+            <div className={`rounded-2xl border ${getCardBackground(appTheme)} bg-slate-950/40 p-4 backdrop-blur shadow-lg text-left sm:text-center group ${activeTheme.borderHover} transition duration-300`}>
+              <span className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-1">
                 Language
               </span>
-              <span className="text-sm font-bold text-white">
+              <span className="text-sm sm:text-base font-black text-white">
                 {originalLanguageName || "English"}
               </span>
             </div>
@@ -1235,13 +1264,17 @@ export function DetailsPage() {
 
           {mappedRecommendations.length > 0 && (
             <div className="mt-8 pt-6 border-t border-white/10 space-y-4 w-full">
-              <div className="mb-4 flex items-center justify-between px-1">
+              {/* Premium header block with Neon Accent Marker */}
+              <div className="mb-4 flex items-center justify-between px-1 text-left w-full">
                 <div className="flex items-center gap-2.5">
                   <span className={`w-1.5 h-6 rounded-full ${activeTheme.accentBar}`} />
                   <h3 className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
                     <span>✨ Similar Recommended Titles</span>
                   </h3>
                 </div>
+                <span className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 ${activeTheme.text}`}>
+                  {mappedRecommendations.length} matches found
+                </span>
               </div>
               <div className={gridColsClass}>
                 {mappedRecommendations.slice(0, 10).map((item) => (
@@ -1269,12 +1302,12 @@ export function DetailsPage() {
                 animation: flashTwice 8s ease-in-out forwards;
               }
             `}</style>
-            <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
+            <div className="flex flex-col items-center gap-0.5 bg-black/35 backdrop-blur-md px-4.5 py-2 rounded-xl border border-white/10 shadow-2xl">
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white">
                 More Content Details
               </span>
               <span
-                className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}
+                className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)}`}
               >
                 ⌄
               </span>
