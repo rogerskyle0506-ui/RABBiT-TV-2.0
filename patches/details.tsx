@@ -256,54 +256,54 @@ export function DetailsPage() {
   const getPageBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80";
+        return "bg-gradient-to-br from-zinc-950/80 via-red-950/40 to-black/90";
       case "midnight":
-        return "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80";
+        return "bg-gradient-to-br from-slate-950/80 via-blue-950/40 to-slate-950/90";
       case "emerald":
-        return "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80";
+        return "bg-gradient-to-br from-slate-950/80 via-emerald-950/40 to-slate-950/90";
       case "amber":
-        return "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80";
+        return "bg-gradient-to-br from-stone-950/80 via-yellow-950/40 to-neutral-950/90";
       case "cyan":
-        return "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80";
+        return "bg-gradient-to-br from-slate-950/80 via-cyan-950/40 to-slate-950/90";
       case "violet":
       default:
-        return "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80";
+        return "bg-gradient-to-br from-slate-950/80 via-purple-950/40 to-slate-950/90";
     }
   };
 
   const getCardBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-[#160404]/90 border-red-500/20";
+        return "bg-zinc-900/90 border-red-500/25";
       case "midnight":
-        return "bg-[#03091e]/90 border-blue-500/20";
+        return "bg-slate-900/90 border-blue-500/25";
       case "emerald":
-        return "bg-[#031b13]/90 border-emerald-500/20";
+        return "bg-slate-900/90 border-emerald-500/25";
       case "amber":
-        return "bg-[#221507]/90 border-amber-500/20";
+        return "bg-stone-900/90 border-amber-500/25";
       case "cyan":
-        return "bg-[#031d20]/90 border-cyan-500/20";
+        return "bg-slate-900/90 border-cyan-500/25";
       case "violet":
       default:
-        return "bg-[#090e1f]/90 border-violet-500/20";
+        return "bg-slate-900/90 border-violet-500/25";
     }
   };
 
   const getSmokeWrapperStyle = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-gradient-to-b from-[#160303]/45 via-[#110202]/55 to-[#0a0101]/60 border-red-500/15 shadow-[0_8px_32px_rgba(69,10,10,0.28)]";
+        return "bg-slate-950/80 border-red-500/20 shadow-[0_12px_40px_rgba(239,68,68,0.18)]";
       case "midnight":
-        return "bg-gradient-to-b from-[#03081a]/45 via-[#020614]/55 to-[#01040e]/60 border-blue-500/15 shadow-[0_8px_32px_rgba(23,37,84,0.28)]";
+        return "bg-slate-950/80 border-blue-500/20 shadow-[0_12px_40px_rgba(59,130,246,0.18)]";
       case "emerald":
-        return "bg-gradient-to-b from-[#02140e]/45 via-[#020f0a]/55 to-[#010a07]/60 border-emerald-500/15 shadow-[0_8px_32px_rgba(6,78,59,0.28)]";
+        return "bg-slate-950/80 border-emerald-500/20 shadow-[0_12px_40px_rgba(16,185,129,0.18)]";
       case "amber":
-        return "bg-gradient-to-b from-[#170e04]/45 via-[#120b03]/55 to-[#0c0702]/60 border-amber-500/15 shadow-[0_8px_32px_rgba(120,53,15,0.28)]";
+        return "bg-stone-950/80 border-amber-500/20 shadow-[0_12px_40px_rgba(245,158,11,0.18)]";
       case "cyan":
-        return "bg-gradient-to-b from-[#021417]/45 via-[#020f12]/55 to-[#010a0c]/60 border-cyan-500/15 shadow-[0_8px_32px_rgba(22,78,99,0.28)]";
+        return "bg-slate-950/80 border-cyan-500/20 shadow-[0_12px_40px_rgba(6,182,212,0.18)]";
       case "violet":
       default:
-        return "bg-gradient-to-b from-[#080b19]/45 via-[#060814]/55 to-[#04050e]/60 border-violet-500/15 shadow-[0_8px_32px_rgba(46,16,101,0.28)]";
+        return "bg-slate-950/80 border-violet-500/20 shadow-[0_12px_40px_rgba(139,92,246,0.18)]";
     }
   };
 
@@ -317,52 +317,58 @@ export function DetailsPage() {
           border: "border-red-500",
           ring: "focus:ring-red-400",
           shadow: "shadow-red-600/30",
+          accentBar: "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]",
         };
       case "midnight":
         return {
-          text: "text-blue-400",
+          text: "text-sky-300",
           bg: "bg-blue-600",
           hoverBg: "hover:bg-blue-500",
           border: "border-blue-500",
           ring: "focus:ring-blue-400",
           shadow: "shadow-blue-600/30",
+          accentBar: "bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.9)]",
         };
       case "emerald":
         return {
-          text: "text-emerald-400",
+          text: "text-emerald-300",
           bg: "bg-emerald-600",
           hoverBg: "hover:bg-emerald-500",
           border: "border-emerald-500",
           ring: "focus:ring-emerald-400",
           shadow: "shadow-emerald-600/30",
+          accentBar: "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]",
         };
       case "amber":
         return {
-          text: "text-amber-400",
+          text: "text-amber-300",
           bg: "bg-amber-600",
           hoverBg: "hover:bg-amber-500",
           border: "border-amber-500",
           ring: "focus:ring-amber-400",
           shadow: "shadow-amber-600/30",
+          accentBar: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)]",
         };
       case "cyan":
         return {
-          text: "text-cyan-400",
+          text: "text-cyan-300",
           bg: "bg-cyan-600",
           hoverBg: "hover:bg-cyan-500",
           border: "border-cyan-500",
           ring: "focus:ring-cyan-400",
           shadow: "shadow-cyan-600/30",
+          accentBar: "bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)]",
         };
       case "violet":
       default:
         return {
-          text: "text-violet-400",
+          text: "text-violet-300",
           bg: "bg-violet-600",
           hoverBg: "hover:bg-violet-500",
           border: "border-violet-500",
           ring: "focus:ring-violet-400",
           shadow: "shadow-violet-600/30",
+          accentBar: "bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.9)]",
         };
     }
   };
@@ -374,11 +380,11 @@ export function DetailsPage() {
       case "midnight":
         return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
       case "emerald":
-        return "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]";
+        return "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]";
       case "amber":
-        return "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]";
+        return "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.8)]";
       case "cyan":
-        return "text-cyan-400 drop-shadow-[0_0_8px_rgba(103,232,249,0.8)]";
+        return "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.8)]";
       case "violet":
       default:
         return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
@@ -579,12 +585,12 @@ export function DetailsPage() {
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
-      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 justify-items-center";
+      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 sm:gap-4 justify-items-center";
     }
     if (cardSize === "medium") {
-      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 justify-items-center";
     }
-    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 justify-items-center";
   }, [cardSize]);
 
   const mappedRecommendations: MediaItem[] = useMemo(() => {
@@ -790,7 +796,7 @@ export function DetailsPage() {
 
   return (
     <div
-      className={`min-h-screen w-full ${getPageBackground(appTheme)} p-6 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative`}
+      className={`min-h-screen w-full ${getPageBackground(appTheme)} p-4 sm:p-8 text-white md:p-12 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative rounded-3xl`}
     >
       <style>{`
         @keyframes heartbeatSlow {
@@ -822,8 +828,8 @@ export function DetailsPage() {
 
       <AppWallpaper backdropUrl={backdropUrl} />
 
-      <div className="relative z-10">
-        {/* Back to Home Button in Top Left with matching 40% transparency and radial edge blending */}
+      <div className="relative z-10 max-w-5xl mx-auto">
+        {/* Back to Home Button in Top Left with matching radial edge blending */}
         <div className="mb-2">
           <Link
             to="/"
@@ -841,16 +847,16 @@ export function DetailsPage() {
           </Link>
         </div>
 
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 text-center">
+        <div className="mx-auto flex flex-col items-center gap-6 text-center">
           
-          {/* 3D Spin / Flip Cover Art → Trailer Reveal Component (Full width minus 10px, responsive height for portrait/landscape) */}
+          {/* 3D Spin / Flip Cover Art → Trailer Reveal Component */}
           <div
-            className="relative w-[calc(100vw-10px)] max-w-full left-1/2 -translate-x-1/2 h-[480px] sm:h-[600px] cursor-pointer select-none my-1"
+            className="relative w-[calc(100vw-16px)] sm:w-[420px] md:w-[460px] h-[480px] sm:h-[620px] cursor-pointer select-none my-1"
             style={{ perspective: "1200px" }}
             onClick={() => !isFlipped && setIsFlipped(true)}
           >
             <div
-              className="relative h-full w-full rounded-2xl shadow-2xl shadow-black/40 transition-transform duration-700 ease-out"
+              className="relative h-full w-full rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.85)] transition-transform duration-700 ease-out"
               style={{
                 transformStyle: "preserve-3d",
                 transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
@@ -858,7 +864,7 @@ export function DetailsPage() {
             >
               {/* Front: Cover Art with ClickForTrailer Button in Bottom Right */}
               <div
-                className="absolute inset-0 h-full w-full rounded-2xl overflow-hidden border border-white/10 bg-black"
+                className="absolute inset-0 h-full w-full rounded-3xl overflow-hidden border border-white/15 bg-black"
                 style={{ backfaceVisibility: "hidden" }}
               >
                 <img
@@ -868,7 +874,7 @@ export function DetailsPage() {
                 />
                 {mediaStatusBadge}
 
-                {/* Click For Trailer Button in Bottom Right Corner with higher transparency (40%) and smooth radial gradient edge blending */}
+                {/* Click For Trailer Button in Bottom Right Corner */}
                 <div className="absolute bottom-4 right-4 z-20 pointer-events-auto">
                   <button
                     type="button"
@@ -891,15 +897,14 @@ export function DetailsPage() {
                 </div>
               </div>
 
-              {/* Back: Trailer Player inside 50% Transparent Rabbit Alternate Panel Wrapper */}
+              {/* Back: Trailer Player inside Transparent Rabbit Alternate Panel Wrapper */}
               <div
-                className={`absolute inset-0 h-full w-full rounded-2xl overflow-hidden flex flex-col border ${activeTheme.border} shadow-2xl`}
+                className={`absolute inset-0 h-full w-full rounded-3xl overflow-hidden flex flex-col border ${activeTheme.border} shadow-2xl`}
                 style={{
                   backfaceVisibility: "hidden",
                   transform: "rotateY(180deg)",
                 }}
               >
-                {/* Rabbit Alternate Panel Background Wrapper with 50% transparency & theme respect */}
                 <div
                   className="absolute inset-0 pointer-events-none z-0"
                   style={{
@@ -914,8 +919,8 @@ export function DetailsPage() {
                 />
 
                 {/* Header / Close bar */}
-                <div className="relative z-10 flex items-center justify-between p-3 border-b border-white/15 bg-black/55 backdrop-blur-md">
-                  <span className={`text-xs font-bold truncate max-w-[205px] ${activeTheme.text}`}>
+                <div className="relative z-10 flex items-center justify-between p-3.5 border-b border-white/15 bg-black/65 backdrop-blur-md">
+                  <span className={`text-xs font-bold truncate max-w-[220px] ${activeTheme.text}`}>
                     Official Trailer • {title}
                   </span>
                   <button
@@ -932,8 +937,8 @@ export function DetailsPage() {
                   </button>
                 </div>
 
-                {/* Trailer Player Container (Embedded Player Wrapper with autoplay=1) */}
-                <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center bg-black/65">
+                {/* Trailer Player Container */}
+                <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center bg-black/85">
                   {trailerKey && isFlipped ? (
                     <iframe
                       src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&controls=1&modestbranding=1`}
@@ -954,17 +959,17 @@ export function DetailsPage() {
             </div>
           </div>
 
-          {/* Media Details Section (Placed directly below the cover art) */}
+          {/* Media Details Section */}
           <div
-            className={`flex flex-col items-center justify-center gap-4 w-full rounded-2xl border p-6 md:p-8 backdrop-blur-md transition-colors duration-300 ${getSmokeWrapperStyle(appTheme)}`}
+            className={`flex flex-col items-center justify-center gap-4 w-full rounded-3xl border p-6 md:p-8 backdrop-blur-2xl transition-colors duration-300 ${getSmokeWrapperStyle(appTheme)}`}
           >
             <span
-              className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
+              className={`w-fit rounded-full border ${activeTheme.border}/30 bg-white/5 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider ${activeTheme.text}`}
             >
               {genres}
             </span>
 
-            <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white">
               {title}
             </h1>
 
@@ -985,7 +990,7 @@ export function DetailsPage() {
               </span>
             </div>
 
-            <p className="max-w-2xl text-base leading-relaxed text-slate-300">
+            <p className="max-w-2xl text-sm sm:text-base leading-relaxed text-slate-300">
               {overview}
             </p>
 
@@ -1086,9 +1091,8 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* Fashionable 2x2 Action Button Grid with Vibrant Opacity and Full Focus Ring Fill */}
+            {/* Action Buttons Grid */}
             <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-lg mx-auto">
-              {/* Play Button */}
               <button
                 type="button"
                 onClick={handlePlay}
@@ -1101,7 +1105,6 @@ export function DetailsPage() {
                 />
               </button>
 
-              {/* Report Broken Button */}
               <button
                 type="button"
                 onClick={handleReportBroken}
@@ -1115,7 +1118,6 @@ export function DetailsPage() {
                 />
               </button>
              
-              {/* My Favs Button */}
               <button
                 type="button"
                 onClick={toggleFavorites}
@@ -1128,7 +1130,6 @@ export function DetailsPage() {
                 />
               </button>
 
-              {/* Save for Later Button */}
               <button
                 type="button"
                 onClick={toggleMyList}
@@ -1234,29 +1235,17 @@ export function DetailsPage() {
 
           {mappedRecommendations.length > 0 && (
             <div className="mt-8 pt-6 border-t border-white/10 space-y-4 w-full">
-              {/* Pill bar wrapper for Similar Recommendations header on Details View */}
-              <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-sm mx-auto overflow-hidden rounded-2xl shadow-xl">
-                <div
-                  className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
-                  style={{
-                    width: "111%",
-                    height: "300%",
-                    backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                    backgroundSize: "113% 380%",
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center center",
-                  }}
-                />
-                <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-                <div className="relative z-10 py-1">
-                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>✨ Similar Recommendations</span>
-                  </h2>
+              <div className="mb-4 flex items-center justify-between px-1">
+                <div className="flex items-center gap-2.5">
+                  <span className={`w-1.5 h-6 rounded-full ${activeTheme.accentBar}`} />
+                  <h3 className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
+                    <span>✨ Similar Recommended Titles</span>
+                  </h3>
                 </div>
               </div>
               <div className={gridColsClass}>
-                {mappedRecommendations.slice(0, 5).map((item) => (
-                  <MediaCard item={item} key={item.id} />
+                {mappedRecommendations.slice(0, 10).map((item) => (
+                  <MediaCard item={item} cardSize={cardSize} appTheme={appTheme} key={item.id} />
                 ))}
               </div>
             </div>
