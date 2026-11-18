@@ -1,5 +1,5 @@
 // src/components/ActivationModal.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   CardSize,
   StreamQuality,
@@ -13,46 +13,199 @@ import {
 } from "@/lib/settings";
 import { sendPermanentActivationAlert } from "@/lib/report";
 
-// ——— Private GitHub Gist Key Verification & Management ———
-const GIST_ID = (import.meta as any).env?.VITE_GIST_ID as string || "";
-const GITHUB_TOKEN = (import.meta as any).env?.VITE_GH_PAT as string || "";
+// ——— Private GitHub Gist Key Verification & Fleet Policy Management ———
+const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
+const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
 const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
 
-async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey: string): Promise<boolean> {
-  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return false;
+const ADMIN_NAME = "Rabbit";
+const ADMIN_BIRTH_YEAR = 1988;
+const TRIAL_CODE = "9654";
+const AGE_LOCK_KEY = "rabtv_age_passcode";
+const RAM_MODE_STORAGE_KEY = "rabtv_ram_mode";
+const AUTH_LOCKOUT_KEY = "rabtv_activation_lockout_until";
+
+const BANNER_IMAGE_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/HeaderFamily.jpg";
+const RABBIT_HEADER_PILL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
+const RABBIT_PANEL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
+const RABBIT_DIVIDER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
+
+function getExpectedAdminAge(): number {
+  return new Date().getFullYear() - ADMIN_BIRTH_YEAR;
+}
+
+function isAdminCredentials(name: string, age: number): boolean {
+  return (
+    name.trim().toLowerCase() === ADMIN_NAME.toLowerCase() &&
+    age === getExpectedAdminAge()
+  );
+}
+
+/**
+ * Checks remote `admin_config.json` on Gist to see if 7-day trials are currently allowed.
+ * Defaults to true if `admin_config.json` does not exist yet.
+ */
+async function checkRemoteTrialAllowed(): Promise<{
+  allowed: boolean;
+  reason?: string;
+}> {
+  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return { allowed: true };
   try {
     const res = await fetch(GIST_API_URL, {
       headers: {
         Authorization: `Bearer ${GITHUB_TOKEN}`,
         Accept: "application/vnd.github+json",
-        "User-Agent": "RabbitTV-App"
-      }
+        "User-Agent": "RabbitTV-App",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return { allowed: true };
+    const gistData = await res.json();
+    const rawConfig = gistData.files?.["admin_config.json"]?.content;
+    if (!rawConfig) return { allowed: true };
+
+    const parsed = JSON.parse(rawConfig);
+    if (parsed && parsed.allowTrials === false) {
+      return {
+        allowed: false,
+        reason:
+          "⚠️ 7-Day Free Trials are currently paused by the administrator. Please request a full activation code below.",
+      };
+    }
+    return { allowed: true };
+  } catch {
+    return { allowed: true };
+  }
+}
+
+/**
+ * Verifies and consumes a single-use unlock key from `keys.json` on Gist.
+ * Also validates owner name & age binding if the key was generated for a specific user.
+ */
+async function verifyUnlockCodeWithGitHub(
+  name: string,
+  age: number,
+  securityKey: string
+): Promise<{ valid: boolean; errorMsg?: string }> {
+  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
+    return {
+      valid: false,
+      errorMsg: "⚠️ Verification service unavailable. Check connection.",
+    };
+  }
+  const cleanKey = String(securityKey || "").trim();
+  if (!cleanKey) {
+    return { valid: false, errorMsg: "⚠️ Please enter an unlock code." };
+  }
+
+  try {
+    const res = await fetch(GIST_API_URL, {
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "RabbitTV-App",
+      },
+      cache: "no-store",
     });
 
-    if (!res.ok) return false;
-    const gistData = await res.json();
-    const rawContent = gistData.files?.["keys.json"]?.content;
-    if (!rawContent) return false;
-
-    let keysList = JSON.parse(rawContent);
-
-    if (!Array.isArray(keysList)) return false;
-
-    let matchedIndex = -1;
-    let isObjectFormat = typeof keysList[0] === "object" && keysList[0] !== null;
-
-    if (isObjectFormat) {
-      matchedIndex = keysList.findIndex((item: any) => item.key === String(securityKey) && item.active === true);
-    } else {
-      matchedIndex = keysList.findIndex((item: any) => String(item) === String(securityKey));
+    if (!res.ok) {
+      return {
+        valid: false,
+        errorMsg: "⚠️ Could not reach verification server. Try again.",
+      };
     }
 
-    if (matchedIndex === -1) return false;
+    const gistData = await res.json();
+    const rawContent = gistData.files?.["keys.json"]?.content;
+    if (!rawContent) {
+      return { valid: false, errorMsg: "⚠️ Invalid Passcode." };
+    }
+
+    const keysList = JSON.parse(rawContent);
+    if (!Array.isArray(keysList)) {
+      return { valid: false, errorMsg: "⚠️ Invalid Passcode." };
+    }
+
+    const matchedIndex = keysList.findIndex((item: any) => {
+      if (typeof item === "object" && item !== null) {
+        return String(item.key).trim() === cleanKey && item.active === true;
+      }
+      return String(item).trim() === cleanKey;
+    });
+
+    if (matchedIndex === -1) {
+      // Check if the key exists but was already claimed
+      const alreadyUsed = keysList.some(
+        (item: any) =>
+          typeof item === "object" &&
+          item !== null &&
+          String(item.key).trim() === cleanKey &&
+          item.active === false
+      );
+      if (alreadyUsed) {
+        return {
+          valid: false,
+          errorMsg:
+            "⚠️ This unlock key has already been redeemed and cannot be reused.",
+        };
+      }
+      return {
+        valid: false,
+        errorMsg: "⚠️ Invalid Passcode for this name and age.",
+      };
+    }
+
+    const matchedItem = keysList[matchedIndex];
+
+    // If the key has a specific owner assigned (e.g., "John (35)"), validate name & age match
+    if (
+      typeof matchedItem === "object" &&
+      matchedItem !== null &&
+      typeof matchedItem.owner === "string"
+    ) {
+      const ownerStr = matchedItem.owner.trim();
+      const isGenericOwner =
+        !ownerStr ||
+        ownerStr === "Legacy" ||
+        ownerStr === "Unassigned" ||
+        ownerStr === "Admin Recycled";
+
+      if (!isGenericOwner) {
+        const ownerMatch = ownerStr.match(/^(.*?)\s*\((\d+)\)$/);
+        if (ownerMatch) {
+          const expectedName = ownerMatch[1].trim().toLowerCase();
+          const expectedAge = parseInt(ownerMatch[2], 10);
+          const enteredNameLower = name.trim().toLowerCase();
+
+          const nameMatches =
+            expectedName === enteredNameLower ||
+            expectedName.includes(enteredNameLower) ||
+            enteredNameLower.includes(expectedName);
+          const ageMatches = !isNaN(expectedAge) && expectedAge === age;
+
+          if (!nameMatches || !ageMatches) {
+            return {
+              valid: false,
+              errorMsg:
+                "⚠️ This key is registered to a different Name or Age. Please enter the exact Name and Age given to Rabbit.",
+            };
+          }
+        }
+      }
+    }
 
     // Single-use enforcement: Mark key as inactive upon use
-    if (isObjectFormat) {
-      keysList[matchedIndex].active = false;
-      keysList[matchedIndex].usedBy = `${name} (Age: ${age})`;
+    if (typeof matchedItem === "object" && matchedItem !== null) {
+      keysList[matchedIndex] = {
+        ...matchedItem,
+        active: false,
+        usedBy: `${name} (Age: ${age})`,
+        claimedAt: new Date().toISOString(),
+      };
     } else {
       keysList.splice(matchedIndex, 1);
     }
@@ -64,39 +217,26 @@ async function verifyUnlockCodeWithGitHub(name: string, age: number, securityKey
         Authorization: `Bearer ${GITHUB_TOKEN}`,
         Accept: "application/vnd.github+json",
         "Content-Type": "application/json",
-        "User-Agent": "RabbitTV-App"
+        "User-Agent": "RabbitTV-App",
       },
       body: JSON.stringify({
         files: {
           "keys.json": {
-            content: updatedContent
-          }
-        }
-      })
+            content: updatedContent,
+          },
+        },
+      }),
     });
 
-    return true;
+    return { valid: true };
   } catch (error) {
-    console.error('Failed to verify and consume key with Gist:', error);
-    return false;
+    console.error("Failed to verify and consume key with Gist:", error);
+    return {
+      valid: false,
+      errorMsg: "⚠️ Network error while verifying key. Please try again.",
+    };
   }
 }
-
-const ADMIN_NAME = "Rabbit";
-const ADMIN_BIRTH_YEAR = 1988;
-
-function getExpectedAdminAge(): number {
-  return new Date().getFullYear() - ADMIN_BIRTH_YEAR;
-}
-
-function isAdminCredentials(name: string, age: number): boolean {
-  return name.trim() === ADMIN_NAME && age === getExpectedAdminAge();
-}
-
-const TRIAL_CODE = "9654";
-const AGE_LOCK_KEY = "rabtv_age_passcode";
-
-const BANNER_IMAGE_URL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/HeaderFamily.jpg";
 
 interface ActivationModalProps {
   isOpen: boolean;
@@ -138,16 +278,87 @@ export function ActivationModal({
   const [passcodeErrorMsg, setPasscodeErrorMsg] = useState(
     "⚠️ Invalid Passcode. Please try again."
   );
+  const [nameErrorNotice, setNameErrorNotice] = useState(false);
   const [ageErrorNotice, setAgeErrorNotice] = useState(false);
   const [ageLockError, setAgeLockError] = useState(false);
   const [ageLockInput, setAgeLockInput] = useState("");
+  const [showPinDigits, setShowPinDigits] = useState(false);
   const [userAgeInput, setUserAgeInput] = useState("");
   const [profileNameInput, setProfileNameInput] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Brute-force protection states
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      return Number(sessionStorage.getItem(AUTH_LOCKOUT_KEY) || 0);
+    }
+    return 0;
+  });
+  const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
+
+  // Hardware RAM Mode optimization for 1-2GB Streaming Sticks
+  const [ramMode, setRamMode] = useState<"low" | "high">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(RAM_MODE_STORAGE_KEY);
+      if (saved === "low" || saved === "high") return saved;
+    }
+    return "low";
+  });
+
+  // Countdown ticker when brute-force lockout is active
+  useEffect(() => {
+    if (!lockoutUntil || Date.now() >= lockoutUntil) {
+      setLockoutSecondsLeft(0);
+      return;
+    }
+    const updateRemaining = () => {
+      const rem = Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
+      setLockoutSecondsLeft(rem);
+      if (rem <= 0 && typeof window !== "undefined") {
+        sessionStorage.removeItem(AUTH_LOCKOUT_KEY);
+      }
+    };
+    updateRemaining();
+    const interval = window.setInterval(updateRemaining, 1000);
+    return () => window.clearInterval(interval);
+  }, [lockoutUntil]);
 
   if (!isOpen) return null;
 
+  const handleRamModeSelect = (mode: "low" | "high") => {
+    setRamMode(mode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(RAM_MODE_STORAGE_KEY, mode);
+      document.documentElement.setAttribute("data-ram-mode", mode);
+    }
+  };
+
   const saveAgeLockCode = (code: string) => {
     localStorage.setItem(AGE_LOCK_KEY, code);
+  };
+
+  const registerFailedAttempt = (msg: string) => {
+    const nextCount = failedAttempts + 1;
+    setFailedAttempts(nextCount);
+    setPasscodeError(true);
+    setAgeErrorNotice(false);
+    setAgeLockError(false);
+    setNameErrorNotice(false);
+    setPasscodeInput("");
+
+    if (nextCount >= 4) {
+      const until = Date.now() + 30000;
+      setLockoutUntil(until);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(AUTH_LOCKOUT_KEY, String(until));
+      }
+      setPasscodeErrorMsg(
+        "🚨 Too many failed attempts. Security cooldown active for 30 seconds."
+      );
+    } else {
+      setPasscodeErrorMsg(msg);
+    }
   };
 
   const completePermanentLogin = (
@@ -159,9 +370,11 @@ export function ActivationModal({
     localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
     localStorage.setItem("rabtv_access_status", "permanent");
     localStorage.removeItem("rabtv_trial_start_timestamp");
+    localStorage.setItem(RAM_MODE_STORAGE_KEY, ramMode);
 
-    // CRITICAL: Stamp session verification so session knows it's authorized
+    // Stamp session verification so session knows it's authorized
     sessionStorage.setItem("rabtv_session_verified", "true");
+    sessionStorage.removeItem(AUTH_LOCKOUT_KEY);
 
     saveAgeLockCode(ageLockCode);
 
@@ -189,6 +402,7 @@ export function ActivationModal({
     setPasscodeError(false);
     setAgeErrorNotice(false);
     setAgeLockError(false);
+    setNameErrorNotice(false);
     window.dispatchEvent(new Event("rabtv_settings_updated"));
     onAuthorized();
   };
@@ -196,28 +410,48 @@ export function ActivationModal({
   const handleFirstTimeAuthorize = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (lockoutSecondsLeft > 0) {
+      setPasscodeError(true);
+      setPasscodeErrorMsg(
+        `⏳ Security cooldown active. Please wait ${lockoutSecondsLeft}s before trying again.`
+      );
+      return;
+    }
+
+    const cleanName = profileNameInput.trim();
+    if (!cleanName || cleanName.length < 2) {
+      setNameErrorNotice(true);
+      setAgeErrorNotice(false);
+      setAgeLockError(false);
+      setPasscodeError(false);
+      return;
+    }
+
     const trimmedAge = userAgeInput.trim();
-    if (!trimmedAge || isNaN(parseInt(trimmedAge, 10))) {
+    const parsedAge = parseInt(trimmedAge, 10);
+    if (!trimmedAge || isNaN(parsedAge) || parsedAge < 1 || parsedAge > 120) {
       setAgeErrorNotice(true);
+      setNameErrorNotice(false);
       setPasscodeError(false);
       setAgeLockError(false);
       return;
     }
 
+    // Support 4 to 6 digit PINs (fixes Fire TV Stick 5-digit PIN requirement)
     const ageLock = ageLockInput.trim();
-    if (!/^\d{4}$/.test(ageLock)) {
+    if (!/^\d{4,6}$/.test(ageLock)) {
       setAgeLockError(true);
+      setNameErrorNotice(false);
       setAgeErrorNotice(false);
       setPasscodeError(false);
       return;
     }
 
-    const parsedAge = parseInt(trimmedAge, 10);
-    const finalName = profileNameInput.trim() || "Friend";
     const enteredCode = passcodeInput.trim();
 
-    if (isAdminCredentials(finalName, parsedAge)) {
-      completePermanentLogin(finalName, parsedAge, ageLock, {
+    // 1. Admin Direct Authentication
+    if (isAdminCredentials(cleanName, parsedAge)) {
+      completePermanentLogin(ADMIN_NAME, parsedAge, ageLock, {
         admin: true,
         forceTheme: "red",
         forceSize: "small",
@@ -225,278 +459,396 @@ export function ActivationModal({
       return;
     }
 
-    if (enteredCode === TRIAL_CODE) {
-      const trialAlreadyUsed =
-        localStorage.getItem("rabtv_trial_used_flag") === "true";
-      if (trialAlreadyUsed) {
-        setPasscodeError(true);
-        setPasscodeErrorMsg(
-          "⚠️ Trial code has already been used on this device and cannot be redeemed again."
-        );
-        setAgeErrorNotice(false);
-        setAgeLockError(false);
-        setPasscodeInput("");
+    setIsVerifying(true);
+    try {
+      // 2. 7-Day Free Trial Flow (`9654`)
+      if (enteredCode === TRIAL_CODE) {
+        const trialAlreadyUsed =
+          localStorage.getItem("rabtv_trial_used_flag") === "true";
+        if (trialAlreadyUsed) {
+          registerFailedAttempt(
+            "⚠️ Trial code has already been used on this device and cannot be redeemed again."
+          );
+          return;
+        }
+
+        const remoteTrialCheck = await checkRemoteTrialAllowed();
+        if (!remoteTrialCheck.allowed) {
+          registerFailedAttempt(
+            remoteTrialCheck.reason ||
+              "⚠️ Free trials are currently unavailable."
+          );
+          return;
+        }
+
+        localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
+        localStorage.setItem("rabtv_access_status", "trial");
+        localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));
+        localStorage.setItem("rabtv_trial_used_flag", "true");
+        localStorage.setItem(RAM_MODE_STORAGE_KEY, ramMode);
+        localStorage.removeItem("rabtv_is_admin");
+
+        sessionStorage.setItem("rabtv_session_verified", "true");
+        sessionStorage.removeItem(AUTH_LOCKOUT_KEY);
+
+        saveAgeLockCode(ageLock);
+        saveCardSize(cardSize);
+        saveStreamQuality(streamQuality);
+        saveTheme(appTheme);
+        setHelpfulMouse(helpfulMouse);
+        saveUserAge(parsedAge);
+        localStorage.setItem("rabtv_profile_name", cleanName);
+
+        window.dispatchEvent(new Event("rabtv_settings_updated"));
+        onAuthorized();
         return;
       }
 
-      localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
-      localStorage.setItem("rabtv_access_status", "trial");
-      localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));
-      localStorage.setItem("rabtv_trial_used_flag", "true");
-      localStorage.removeItem("rabtv_is_admin");
+      // 3. Permanent Single-Use Gist Key Flow
+      const verification = await verifyUnlockCodeWithGitHub(
+        cleanName,
+        parsedAge,
+        enteredCode
+      );
+      if (verification.valid) {
+        completePermanentLogin(cleanName, parsedAge, ageLock);
+        return;
+      }
 
-      // CRITICAL: Stamp session verification for trial as well
-      sessionStorage.setItem("rabtv_session_verified", "true");
-
-      saveAgeLockCode(ageLock);
-      saveCardSize(cardSize);
-      saveStreamQuality(streamQuality);
-      saveTheme(appTheme);
-      setHelpfulMouse(helpfulMouse);
-      saveUserAge(parsedAge);
-      localStorage.setItem("rabtv_profile_name", finalName);
-
-      window.dispatchEvent(new Event("rabtv_settings_updated"));
-      onAuthorized();
-      return;
+      registerFailedAttempt(
+        verification.errorMsg || "⚠️ Invalid Passcode for this name and age."
+      );
+    } finally {
+      setIsVerifying(false);
     }
-
-    const isValidGitHubCode = await verifyUnlockCodeWithGitHub(finalName, parsedAge, enteredCode);
-    if (isValidGitHubCode) {
-      completePermanentLogin(finalName, parsedAge, ageLock);
-      return;
-    }
-
-    setPasscodeError(true);
-    setPasscodeErrorMsg(
-      "⚠️ Invalid Passcode for this name and age."
-    );
-    setAgeErrorNotice(false);
-    setAgeLockError(false);
-    setPasscodeInput("");
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-6 backdrop-blur-xl overflow-y-auto">
+    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-5 backdrop-blur-xl overflow-y-auto">
       <form
         onSubmit={handleFirstTimeAuthorize}
-        className={`relative w-full max-w-xl my-auto rounded-3xl border text-white shadow-2xl ${getCardBackground(appTheme)} backdrop-blur-2xl max-h-[92vh] overflow-hidden`}
+        className={`relative w-full max-w-xl my-auto rounded-[32px] border border-white/20 text-white shadow-[0_25px_80px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] ${getCardBackground(
+          appTheme
+        )} backdrop-blur-2xl max-h-[94dvh] overflow-hidden flex flex-col`}
       >
-        {/* Banner Image Background with Overlay */}
+        {/* Layered Splash Banner + Crystal Neon Frame Background */}
         <div className="absolute inset-0 pointer-events-none z-0">
           <img
             src={BANNER_IMAGE_URL}
             alt="Splash Banner"
-            className="w-full h-full object-cover opacity-20 filter blur-xs scale-105"
+            className="w-full h-full object-cover opacity-20 filter blur-[2px] scale-105"
           />
-          <div className="absolute inset-0 bg-slate-950/85" />
+          <div className="absolute inset-0 bg-slate-950/80" />
+          <div
+            className="absolute inset-0 opacity-75 mix-blend-lighten"
+            style={{
+              backgroundImage: `url(${RABBIT_PANEL})`,
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+            }}
+          />
         </div>
 
-        <div className="relative z-10 p-5 sm:p-8 space-y-4 sm:space-y-5 max-h-[92vh] overflow-y-auto">
+        <div className="relative z-10 p-5 sm:p-7 space-y-4 overflow-y-auto scrollbar-none max-h-[94dvh]">
+          {/* Header Identity */}
           <div className="text-center space-y-2">
-            <div className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden border border-white/20 shadow-lg bg-black">
+            <div className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden border-2 border-cyan-400/50 shadow-[0_0_25px_rgba(56,189,248,0.35)] bg-black">
               <img
                 src={headerIconUrl}
                 alt="RABBiT TV Logo"
-                className="h-full w-full object-fill"
+                className="h-full w-full object-cover"
               />
             </div>
-            <h2
-              className={`text-xl sm:text-2xl font-bold ${getPrimaryAccentColor(appTheme)}`}
-            >
-              Welcome to RABBiT TV
-            </h2>
+
+            <div className="relative inline-flex items-center justify-center px-6 py-1.5 rounded-2xl overflow-hidden">
+              <div
+                className="absolute inset-0 pointer-events-none opacity-85"
+                style={{
+                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                  backgroundSize: "115% 360%",
+                  backgroundPosition: "center center",
+                }}
+              />
+              <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px]" />
+              <h2
+                className={`relative z-10 text-xl sm:text-2xl font-black tracking-wide drop-shadow ${getPrimaryAccentColor(
+                  appTheme
+                )}`}
+              >
+                Welcome to RABBiT TV
+              </h2>
+            </div>
+
+            <p className="text-xs sm:text-sm font-medium text-slate-200 max-w-md mx-auto">
+              Top movies, trending series, and 280+ live TV channels—zero ads,
+              zero recurring subscriptions.
+            </p>
           </div>
 
-          <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed text-slate-300 text-center">
-            <p className="font-medium text-white">
-              Get ready for top movies, trending series, and live TV—all tuned and ready to stream.
-            </p>
+          {/* Soft-Launch & Trial Notice Banner */}
+          <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-500/15 via-black/60 to-amber-500/15 p-3 text-xs text-amber-200 shadow-inner space-y-1 text-center backdrop-blur-md">
             <p>
-              Since we are currently in soft launch, you might run into a few minor bumps. You can easily report any bugs directly to us so we can keep improving your experience.
+              <strong>⏳ Free 7-Day Trial:</strong> Enter{" "}
+              <strong className="text-white font-mono bg-black/60 px-1.5 py-0.5 rounded border border-amber-400/40">
+                9654
+              </strong>{" "}
+              below for a one-time 7-day trial on this device, or enter your
+              lifetime unlock key.
             </p>
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
-              <strong>⏳ Trial:</strong> Enter <strong>`9654`</strong>{" "}
-              for a free 7-day trial (one-time per device). Need an activation key to get started? Check the contact details below to grab yours.
+          </div>
+
+          {/* 1. Name & Age Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-white/15 pt-3.5">
+            <div className="sm:col-span-2 space-y-1">
+              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                Your Name{" "}
+                <span className="text-cyan-300 font-normal lowercase">
+                  (For key verification)
+                </span>
+              </label>
+              <input
+                type="text"
+                maxLength={25}
+                value={profileNameInput}
+                onChange={(e) => {
+                  setProfileNameInput(e.target.value);
+                  if (nameErrorNotice) setNameErrorNotice(false);
+                }}
+                placeholder="Enter Name"
+                className="w-full rounded-xl border border-white/15 bg-black/70 px-3.5 py-2.5 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+              />
+              {nameErrorNotice && (
+                <p className="text-[11px] font-bold text-red-400">
+                  ⚠️ Please enter your name (at least 2 characters).
+                </p>
+              )}
             </div>
-            <p className="text-xs text-slate-300 font-semibold">
-              Sit back, pick a channel or show, and enjoy!
-            </p>
-          </div>
 
-          <div className="space-y-1.5 border-t border-white/10 pt-3">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-              What&apos;s your name?{" "}
-              <span className="text-slate-400 font-normal lowercase">
-                (Used for your unlock verification)
-              </span>
-            </label>
-            <input
-              type="text"
-              maxLength={25}
-              value={profileNameInput}
-              onChange={(e) => {
-                const val = e.target.value;
-                setProfileNameInput(val);
-                localStorage.setItem(
-                  "rabtv_profile_name",
-                  val.trim()
-                );
-              }}
-              placeholder="Enter Name"
-              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2.5 text-center text-sm sm:text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
-            />
-          </div>
-
-          <div className="space-y-1.5 border-t border-white/10 pt-3">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-              How old are you?
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={120}
-              value={userAgeInput}
-              onChange={(e) => setUserAgeInput(e.target.value)}
-              placeholder="Enter Age"
-              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2.5 text-center text-sm sm:text-base font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
-            />
-            {ageErrorNotice && (
-              <p className="text-xs font-semibold text-red-400 text-center">
-                ⚠️ Please enter your age.
-              </p>
-            )}
-          </div>
-
-          {/* Mandatory 4-digit age lock */}
-          <div className="space-y-1.5 border-t border-white/10 pt-3">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-              Create Age-Lock Code{" "}
-              <span className="text-red-400">*</span>
-            </label>
-            <p className="text-[11px] text-slate-300 text-center">
-              Choose a 4-digit PIN parents can use later to change the
-              age setting. Required.
-            </p>
-            <input
-              type="password"
-              inputMode="numeric"
-              maxLength={4}
-              value={ageLockInput}
-              onChange={(e) =>
-                setAgeLockInput(
-                  e.target.value.replace(/\D/g, "").slice(0, 4)
-                )
-              }
-              placeholder="••••"
-              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-2 text-center text-lg font-bold tracking-[0.4em] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
-            />
-            {ageLockError && (
-              <p className="text-xs font-semibold text-red-400 text-center">
-                ⚠️ Enter a 4-digit age-lock code (numbers only).
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2 border-t border-white/10 pt-3">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-              Select Startup Theme:
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {allThemesList.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => onThemeChange(t.id)}
-                  className={`rounded-xl border py-2 px-1 text-[11px] sm:text-xs font-bold transition focus:outline-none ${
-                    appTheme === t.id
-                      ? `border-white/30 ${getPrimaryBgColor(t.id)} text-white shadow-lg`
-                      : "border-white/10 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2 border-t border-white/10 pt-3">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-              Select Display Size:
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(["small", "medium", "large"] as CardSize[]).map(
-                (size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => onSizeChange(size)}
-                    className={`rounded-xl border py-2 px-1 text-[11px] sm:text-xs font-bold transition focus:outline-none ${
-                      cardSize === size
-                        ? `border-white/30 ${getPrimaryBgColor(appTheme)} text-white shadow-lg`
-                        : "border-white/10 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
-                    }`}
-                  >
-                    {size === "small"
-                      ? "Small (25%)"
-                      : size === "medium"
-                      ? "Medium (60%)"
-                      : "Large (100%)"}
-                  </button>
-                )
+            <div className="sm:col-span-1 space-y-1">
+              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                Your Age <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={120}
+                value={userAgeInput}
+                onChange={(e) => {
+                  setUserAgeInput(e.target.value);
+                  if (ageErrorNotice) setAgeErrorNotice(false);
+                }}
+                placeholder="Age"
+                className="w-full rounded-xl border border-white/15 bg-black/70 px-3.5 py-2.5 text-center text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+              />
+              {ageErrorNotice && (
+                <p className="text-[11px] font-bold text-red-400">
+                  ⚠️ Enter age (1–120).
+                </p>
               )}
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-white/10 pt-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                XL Mouse Pointer
+          {/* 2. Mandatory 4 to 6 Digit Age-Lock PIN (Fire TV Stick Ready) */}
+          <div className="space-y-1.5 border-t border-white/15 pt-3.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                Create Age-Lock PIN (4 to 6 Digits){" "}
+                <span className="text-red-400">*</span>
               </label>
-              <p className="text-[11px] text-slate-300">
-                Enlarges cursor 3x for projector/TV use.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onMouseToggle(!helpfulMouse)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                helpfulMouse ? "bg-violet-600" : "bg-slate-700"
-              }`}
-            >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  helpfulMouse ? "translate-x-6" : "translate-x-1"
+                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                  /^\d{4,6}$/.test(ageLockInput)
+                    ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-300"
+                    : "bg-white/5 border-white/15 text-cyan-300"
                 }`}
+              >
+                {ageLockInput.length}/6 Digits • Fire Stick Ready
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-300">
+              Choose a <strong>4, 5, or 6 digit PIN</strong> for parental age
+              locks and profile updates.
+            </p>
+
+            <div className="relative flex items-center">
+              <input
+                type={showPinDigits ? "text" : "password"}
+                inputMode="numeric"
+                maxLength={6}
+                value={ageLockInput}
+                onChange={(e) => {
+                  setAgeLockInput(
+                    e.target.value.replace(/\D/g, "").slice(0, 6)
+                  );
+                  if (ageLockError) setAgeLockError(false);
+                }}
+                placeholder="••••••"
+                className="w-full rounded-xl border border-white/15 bg-black/70 pl-10 pr-12 py-2.5 text-center text-lg font-black tracking-[0.35em] text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
               />
-            </button>
+              <button
+                type="button"
+                onClick={() => setShowPinDigits((prev) => !prev)}
+                className="absolute right-2.5 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-bold text-slate-200 transition cursor-pointer"
+                title={showPinDigits ? "Hide PIN" : "Show PIN"}
+              >
+                {showPinDigits ? "Hide" : "Show"}
+              </button>
+            </div>
+
+            {ageLockError && (
+              <p className="text-xs font-bold text-red-400 text-center">
+                ⚠️ Please enter a 4 to 6 digit numeric PIN code (numbers only).
+              </p>
+            )}
           </div>
 
-          <div className="space-y-2.5 border-t border-white/10 pt-3">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-              Unlock Code or Trial (`9654`):
+          {/* 3. Startup Theme & Display Size */}
+          <div className="space-y-3 border-t border-white/15 pt-3.5">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                Select Neon Console Theme:
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {allThemesList.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => onThemeChange(t.id)}
+                    className={`rounded-xl border py-2 px-1.5 text-[11px] sm:text-xs font-bold transition-all cursor-pointer hover:scale-[1.03] focus:scale-[1.03] focus:outline-none ${
+                      appTheme === t.id
+                        ? `border-white/40 ${getPrimaryBgColor(
+                            t.id
+                          )} text-white shadow-lg`
+                        : "border-white/10 bg-black/55 text-slate-300 hover:bg-white/10"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                Select Poster Grid Size:
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["small", "medium", "large"] as CardSize[]).map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => onSizeChange(size)}
+                    className={`rounded-xl border py-2 px-1.5 text-[11px] sm:text-xs font-bold transition-all cursor-pointer hover:scale-[1.03] focus:scale-[1.03] focus:outline-none ${
+                      cardSize === size
+                        ? `border-white/40 ${getPrimaryBgColor(
+                            appTheme
+                          )} text-white shadow-lg`
+                        : "border-white/10 bg-black/55 text-slate-300 hover:bg-white/10"
+                    }`}
+                  >
+                    {size === "small"
+                      ? "Small (TV/Grid)"
+                      : size === "medium"
+                        ? "Medium (Balanced)"
+                        : "Large (Cinema)"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Hardware Optimization & XL TV Mouse Pointer */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 border-t border-white/15 pt-3.5">
+            {/* Hardware RAM Profile */}
+            <div className="flex items-center justify-between rounded-xl bg-black/55 border border-white/10 px-3 py-2.5">
+              <div className="pr-2">
+                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-cyan-300">
+                  📟 Low RAM Stick Mode
+                </span>
+                <span className="block text-[10px] text-slate-300">
+                  Anti-crash buffer cap for 1–2GB sticks.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  handleRamModeSelect(ramMode === "low" ? "high" : "low")
+                }
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                  ramMode === "low" ? "bg-emerald-600" : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    ramMode === "low" ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* XL Mouse Pointer */}
+            <div className="flex items-center justify-between rounded-xl bg-black/55 border border-white/10 px-3 py-2.5">
+              <div className="pr-2">
+                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                  🖱️ XL Mouse Pointer
+                </span>
+                <span className="block text-[10px] text-slate-300">
+                  Enlarges cursor 3x for TVs/projectors.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onMouseToggle(!helpfulMouse)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                  helpfulMouse ? "bg-violet-600" : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    helpfulMouse ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* 5. Unlock Code or Trial (`9654`) */}
+          <div className="space-y-2.5 border-t border-white/15 pt-3.5">
+            <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+              Lifetime Unlock Key or Trial Code (`9654`):
             </label>
             <input
               type="text"
-              maxLength={16}
+              maxLength={20}
+              disabled={isVerifying || lockoutSecondsLeft > 0}
               value={passcodeInput}
-              onChange={(e) => setPasscodeInput(e.target.value)}
-              placeholder="Unlock code or 9654"
-              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-3 text-center text-base sm:text-lg font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
+              onChange={(e) => {
+                setPasscodeInput(e.target.value);
+                if (passcodeError) setPasscodeError(false);
+              }}
+              placeholder="Enter Unlock Key or 9654"
+              className="w-full rounded-xl border border-cyan-400/35 bg-black/80 px-4 py-3 text-center text-base sm:text-lg font-black tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50 transition"
             />
+
             {passcodeError && (
-              <div className="space-y-1 text-center">
-                <p className="text-xs font-semibold text-red-400">
+              <div className="rounded-xl bg-red-950/60 border border-red-500/40 p-2.5 space-y-1 text-center">
+                <p className="text-xs font-bold text-red-300">
                   {passcodeErrorMsg}
                 </p>
-                <p className="text-[11px] text-slate-300">
+                <p className="text-[11px] text-slate-200">
                   Need help? Message{" "}
                   <button
                     type="button"
-                    onClick={(e) => handleOpenExternal("https://wa.me/?text=Hi%20Rabbit,%20I%20need%20help%20with%20my%20passcode%20on%20RABBiT%20TV", e)}
+                    onClick={(e) =>
+                      handleOpenExternal(
+                        "https://wa.me/?text=Hi%20Rabbit,%20I%20need%20help%20with%20my%20passcode%20on%20RABBiT%20TV",
+                        e
+                      )
+                    }
                     className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
                   >
-                    WhatsApp contact (@RabbitProductions)
+                    WhatsApp (@RabbitProductions)
                   </button>{" "}
                   or text{" "}
                   <button
@@ -505,19 +857,27 @@ export function ActivationModal({
                     className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
                   >
                     (705) 809-3865
-                  </button>.
+                  </button>
+                  .
                 </p>
               </div>
             )}
 
-            {/* Contact Me info */}
-            <div className="rounded-xl border border-white/10 bg-black/40 p-2.5 text-center text-xs text-slate-300 space-y-1 backdrop-blur-md">
-              <p className="font-semibold text-white">Need an activation code or support?</p>
+            {/* Direct Contact Support Card */}
+            <div className="rounded-xl border border-white/10 bg-black/50 p-2.5 text-center text-xs text-slate-300 space-y-1 backdrop-blur-md">
+              <p className="font-bold text-white">
+                Need an activation code or support?
+              </p>
               <p className="text-[11px] text-slate-300">
                 Message me on WhatsApp (
                 <button
                   type="button"
-                  onClick={(e) => handleOpenExternal("https://wa.me/?text=Hi%20Rabbit,%20I%20need%20an%20activation%20code%20for%20RABBiT%20TV", e)}
+                  onClick={(e) =>
+                    handleOpenExternal(
+                      "https://wa.me/?text=Hi%20Rabbit,%20I%20need%20an%20activation%20code%20for%20RABBiT%20TV",
+                      e
+                    )
+                  }
                   className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
                 >
                   @RabbitProductions
@@ -529,16 +889,32 @@ export function ActivationModal({
                   className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
                 >
                   (705) 809-3865
-                </button>.
+                </button>
+                .
               </p>
             </div>
 
             <button
               type="submit"
-              className={`w-full rounded-xl ${getPrimaryBgColor(appTheme)} py-3.5 text-sm sm:text-base font-bold text-white shadow-lg transition active:scale-95 focus:outline-none`}
+              disabled={isVerifying || lockoutSecondsLeft > 0}
+              className={`w-full rounded-2xl ${getPrimaryBgColor(
+                appTheme
+              )} py-3.5 text-sm sm:text-base font-black tracking-wide text-white shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-cyan-400 cursor-pointer`}
             >
-              Enter RABBiT TV
+              {lockoutSecondsLeft > 0
+                ? `⏳ Security Cooldown (${lockoutSecondsLeft}s)`
+                : isVerifying
+                  ? "⚡ Verifying Credentials..."
+                  : "🚀 Enter RABBiT TV"}
             </button>
+
+            <div className="pt-1 text-center">
+              <img
+                src={RABBIT_DIVIDER}
+                alt=""
+                className="w-1/2 mx-auto h-1.5 object-contain opacity-75"
+              />
+            </div>
           </div>
         </div>
       </form>
