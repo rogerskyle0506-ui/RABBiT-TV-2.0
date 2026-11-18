@@ -61,7 +61,7 @@ export const Route = createFileRoute("/search")({
 function SearchPage() {
   const navigate = useNavigate();
   const searchParams = Route.useSearch();
-  
+
   const [queryInput, setQueryInput] = useState(searchParams.q || "");
   const [mediaType, setMediaType] = useState<"all" | "movie" | "tv">("all");
   const [selectedGenre, setSelectedGenre] = useState<string>("All");
@@ -160,7 +160,7 @@ function SearchPage() {
           }
         } else {
           endpoint = mediaType === "tv" ? "discover/tv" : "discover/movie";
-          
+
           if (selectedGenre !== "All" && genreMap[selectedGenre]) {
             urlParams.set("with_genres", genreMap[selectedGenre].toString());
           }
@@ -245,22 +245,75 @@ function SearchPage() {
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
-      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 justify-items-center";
+      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 sm:gap-4 justify-items-center";
     }
     if (cardSize === "medium") {
-      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 justify-items-center";
     }
-    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 justify-items-center";
   }, [cardSize]);
 
-  const themeStyles = {
-    violet: { bg: "bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-950", accent: "text-violet-300", border: "border-violet-500/30", btn: "bg-violet-600 hover:bg-violet-500" },
-    red: { bg: "bg-gradient-to-br from-zinc-950 via-red-950/40 to-black", accent: "text-red-400", border: "border-red-500/30", btn: "bg-red-600 hover:bg-red-500" },
-    midnight: { bg: "bg-gradient-to-br from-slate-950 via-blue-950/40 to-slate-950", accent: "text-sky-300", border: "border-sky-500/30", btn: "bg-blue-600 hover:bg-blue-500" },
-    emerald: { bg: "bg-gradient-to-br from-slate-950 via-emerald-950/40 to-slate-950", accent: "text-emerald-300", border: "border-emerald-500/30", btn: "bg-emerald-600 hover:bg-emerald-500" },
-    amber: { bg: "bg-gradient-to-br from-stone-950 via-yellow-950/40 to-neutral-950", accent: "text-amber-300", border: "border-amber-500/30", btn: "bg-amber-600 hover:bg-amber-500" },
-    cyan: { bg: "bg-gradient-to-br from-slate-950 via-cyan-950/40 to-slate-950", accent: "text-cyan-300", border: "border-cyan-500/30", btn: "bg-cyan-600 hover:bg-cyan-500" },
-  }[appTheme] || { bg: "bg-slate-950", accent: "text-violet-300", border: "border-violet-500/30", btn: "bg-violet-600" };
+  const getThemeTokens = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return {
+          bg: "bg-gradient-to-br from-zinc-950/85 via-red-950/40 to-black/95",
+          accentText: "text-red-400",
+          accentBar: "bg-red-500 shadow-[0_0_14px_rgba(239,68,68,0.95)]",
+          borderGlow: "border-red-500/25 shadow-[0_16px_50px_rgba(239,68,68,0.22)]",
+          btn: "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
+          ambient: "from-red-600/15 via-transparent to-transparent",
+        };
+      case "midnight":
+        return {
+          bg: "bg-gradient-to-br from-slate-950/85 via-blue-950/40 to-slate-950/95",
+          accentText: "text-sky-300",
+          accentBar: "bg-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.95)]",
+          borderGlow: "border-blue-500/25 shadow-[0_16px_50px_rgba(59,130,246,0.22)]",
+          btn: "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
+          ambient: "from-blue-600/15 via-transparent to-transparent",
+        };
+      case "emerald":
+        return {
+          bg: "bg-gradient-to-br from-slate-950/85 via-emerald-950/40 to-slate-950/95",
+          accentText: "text-emerald-300",
+          accentBar: "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.95)]",
+          borderGlow: "border-emerald-500/25 shadow-[0_16px_50px_rgba(16,185,129,0.22)]",
+          btn: "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
+          ambient: "from-emerald-600/15 via-transparent to-transparent",
+        };
+      case "amber":
+        return {
+          bg: "bg-gradient-to-br from-stone-950/85 via-yellow-950/40 to-neutral-950/95",
+          accentText: "text-amber-300",
+          accentBar: "bg-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.95)]",
+          borderGlow: "border-amber-500/25 shadow-[0_16px_50px_rgba(245,158,11,0.22)]",
+          btn: "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
+          ambient: "from-amber-600/15 via-transparent to-transparent",
+        };
+      case "cyan":
+        return {
+          bg: "bg-gradient-to-br from-slate-950/85 via-cyan-950/40 to-slate-950/95",
+          accentText: "text-cyan-300",
+          accentBar: "bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.95)]",
+          borderGlow: "border-cyan-500/25 shadow-[0_16px_50px_rgba(6,182,212,0.22)]",
+          btn: "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
+          ambient: "from-cyan-600/15 via-transparent to-transparent",
+        };
+      case "violet":
+      default:
+        return {
+          bg: "bg-gradient-to-br from-slate-950/85 via-purple-950/40 to-slate-950/95",
+          accentText: "text-violet-300",
+          accentBar: "bg-violet-500 shadow-[0_0_14px_rgba(139,92,246,0.95)]",
+          borderGlow: "border-violet-500/25 shadow-[0_16px_50px_rgba(139,92,246,0.22)]",
+          btn: "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
+          ambient: "from-violet-600/15 via-transparent to-transparent",
+        };
+    }
+  };
+
+  const themeTokens = getThemeTokens(appTheme);
 
   const getThemeArrowColor = (theme: AppTheme) => {
     switch (theme) {
@@ -290,12 +343,25 @@ function SearchPage() {
     return [{ id: "All", label: "All" }, ...Object.keys(genreMap).map((g) => ({ id: g, label: g }))];
   }, []);
 
+  const yearOptions = useMemo(() => {
+    const years = [{ value: "", label: "✨ Any Year" }];
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear; y >= 1950; y--) {
+      years.push({ value: y.toString(), label: y.toString() });
+    }
+    return years;
+  }, []);
+
   return (
-    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 px-4 py-6 pb-12 flex flex-col items-center relative`}>
+    <main className={`min-h-screen ${themeTokens.bg} text-slate-100 px-4 py-6 pb-12 flex flex-col items-center relative rounded-3xl`}>
       <AppWallpaper />
+      <div
+        className={`absolute inset-x-0 -top-12 h-96 bg-gradient-to-b ${themeTokens.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
+      />
+
       <div className="mx-auto max-w-7xl w-full space-y-6 relative z-10">
-        
-        <div className={`rounded-2xl border ${themeStyles.border} bg-black/40 backdrop-blur-md p-4 sm:p-6 shadow-xl`}>
+        {/* High-End Glass Filter Control Deck */}
+        <div className={`rounded-3xl border bg-slate-950/85 backdrop-blur-2xl p-5 sm:p-7 shadow-2xl ${themeTokens.borderGlow}`}>
           <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3 items-center">
             <div className="relative flex-1 w-full">
               <input
@@ -303,80 +369,87 @@ function SearchPage() {
                 value={queryInput}
                 onChange={(e) => setQueryInput(e.target.value)}
                 placeholder="Optional keyword (e.g. Matrix) or leave blank for pure filters..."
-                className="w-full rounded-xl border border-white/10 bg-slate-900/90 px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white/30"
+                className="w-full rounded-2xl border border-white/15 bg-black/70 px-4 py-3.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-purple-500/40 shadow-inner"
               />
             </div>
             <button
               type="submit"
-              className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs text-white shadow-lg transition ${themeStyles.btn}`}
+              className={`w-full sm:w-auto px-7 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider text-white shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer ${themeTokens.btn}`}
             >
-              APPLY FILTERS
+              Apply Filters
             </button>
           </form>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 pt-4 border-t border-white/10">
-            <div className="flex rounded-xl bg-slate-900 border border-white/10 p-1">
+          {/* Filter Dropdowns Grid */}
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4 border-t border-white/10">
+            {/* Media Type Tabs */}
+            <div className="flex rounded-xl bg-black/60 border border-white/15 p-1">
               {(["all", "movie", "tv"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setMediaType(t)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition ${mediaType === t ? `${themeStyles.btn} text-white` : "text-slate-400 hover:text-white"}`}
+                  className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer ${
+                    mediaType === t ? `${getPrimaryBgColor(appTheme)} text-white shadow-md` : "text-slate-400 hover:text-white"
+                  }`}
                 >
-                  {t === "all" ? "All Media" : t === "movie" ? "Movies" : "TV Shows"}
+                  {t === "all" ? "All" : t === "movie" ? "Movies" : "TV"}
                 </button>
               ))}
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5">
-              <span className="text-xs text-slate-400 font-semibold">Language:</span>
+            {/* Language Selector Dropdown */}
+            <div className="flex flex-col bg-black/60 border border-white/15 rounded-xl px-3 py-1.5 justify-center">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Language</span>
               <select
                 value={selectedLangIndex}
                 onChange={(e) => setSelectedLangIndex(Number(e.target.value))}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-1"
               >
                 {languageFilters.map((lf, idx) => (
-                  <option key={lf.label} value={idx} className="bg-slate-900">
+                  <option key={lf.label} value={idx} className="bg-slate-950 text-white p-2">
                     {lf.label}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5">
-              <span className="text-xs text-slate-400 font-semibold">Year:</span>
-              <input
-                type="number"
-                min={1900}
-                max={2030}
+            {/* Year Selector Dropdown */}
+            <div className="flex flex-col bg-black/60 border border-white/15 rounded-xl px-3 py-1.5 justify-center">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Release Year</span>
+              <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                placeholder="Any (e.g. 2016)"
-                className="w-24 bg-transparent text-xs font-bold text-white focus:outline-none placeholder-slate-500"
-              />
-              {selectedYear && (
-                <button type="button" onClick={() => setSelectedYear("")} className="text-xs text-slate-400 hover:text-white">✕</button>
-              )}
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-1"
+              >
+                {yearOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-slate-950 text-white p-2">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5">
-              <span className="text-xs text-slate-400 font-semibold">Min Rating:</span>
+            {/* Min Rating Selector Dropdown */}
+            <div className="flex flex-col bg-black/60 border border-white/15 rounded-xl px-3 py-1.5 justify-center">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Minimum Rating</span>
               <select
                 value={minRating}
                 onChange={(e) => setMinRating(Number(e.target.value))}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-1"
               >
-                <option value={0} className="bg-slate-900">Any Rating</option>
-                <option value={6} className="bg-slate-900">⭐ 6.0 & Above</option>
-                <option value={7} className="bg-slate-900">⭐ 7.0 & Above</option>
-                <option value={8} className="bg-slate-900">⭐ 8.0 & Above</option>
-                <option value={9} className="bg-slate-900">⭐ 9.0 & Above</option>
+                <option value={0} className="bg-slate-950 text-white">⭐ Any Rating</option>
+                <option value={6} className="bg-slate-950 text-white">⭐ 6.0 & Above</option>
+                <option value={7} className="bg-slate-950 text-white">⭐ 7.0 & Above</option>
+                <option value={8} className="bg-slate-950 text-white">⭐ 8.0 & Above</option>
+                <option value={9} className="bg-slate-950 text-white">⭐ 9.0 & Above</option>
               </select>
             </div>
           </div>
 
-          <div className="mt-4 space-y-1">
-            <span className="text-xs text-slate-400 font-semibold block px-1">Genre:</span>
+          {/* Genre Pill Bar */}
+          <div className="mt-4 space-y-1.5">
+            <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider block px-1">Genre:</span>
             <div className="flex justify-center w-full">
               <div className="w-full max-w-4xl flex justify-center">
                 <ScrollPillBar
@@ -391,19 +464,25 @@ function SearchPage() {
           </div>
         </div>
 
+        {/* Results Header */}
         <div className="flex items-center justify-between px-1 w-full">
-          <h2 className="text-lg font-bold text-white">
-            {searchParams.q ? `Search Results for "${searchParams.q}"` : "Filtered Catalog Results"}
-          </h2>
-          <span className={`text-xs font-semibold ${themeStyles.accent}`}>
+          <div className="flex items-center gap-2.5">
+            <span className={`w-1.5 h-6 rounded-full ${themeTokens.accentBar}`} />
+            <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
+              {searchParams.q ? `Search Results for "${searchParams.q}"` : "Filtered Catalog Results"}
+            </h2>
+          </div>
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.05] border border-white/10 ${themeTokens.accentText}`}>
             {filteredResults.length} titles found
           </span>
         </div>
 
         {loading ? (
-          <div className="py-20 text-center text-slate-400">Loading titles matching your filters...</div>
+          <div className="py-20 text-center text-slate-400 font-bold animate-pulse">
+            Loading titles matching your filters...
+          </div>
         ) : error ? (
-          <div className="py-20 text-center text-red-400">Error: {error}</div>
+          <div className="py-20 text-center text-red-400 font-bold">Error: {error}</div>
         ) : filteredResults.length > 0 ? (
           <div className={`${gridColsClass} w-full`}>
             {filteredResults.map((item) => (
@@ -411,13 +490,15 @@ function SearchPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-12 text-center text-slate-400">
-            No titles found matching that exact combination of filters. Try relaxing your language, year, or rating filters!
+          <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-12 text-center text-slate-400 backdrop-blur-xl shadow-xl space-y-2">
+            <div className="text-3xl mb-2">🔍</div>
+            <p className="text-base font-bold text-white">No titles found matching that exact combination of filters.</p>
+            <p className="text-xs text-slate-400">Try relaxing your language, year, or rating filters!</p>
           </div>
         )}
 
         {canScrollDown && showScrollReminder && (
-          <div 
+          <div
             className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
             onAnimationEnd={() => setShowScrollReminder(false)}
           >
@@ -433,17 +514,16 @@ function SearchPage() {
                 animation: flashTwice 8s ease-in-out forwards;
               }
             `}</style>
-            <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
+            <div className="flex flex-col items-center gap-0.5 bg-black/35 backdrop-blur-md px-4.5 py-2 rounded-xl border border-white/10 shadow-2xl">
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white">
                 More Content Below
               </span>
-              <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
+              <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)}`}>
                 ⌄
               </span>
             </div>
           </div>
         )}
-
       </div>
     </main>
   );
