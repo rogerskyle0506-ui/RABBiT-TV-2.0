@@ -65,7 +65,6 @@ const RABBIT_LOGO_URL =
 
 // Background assets for the side menu depth and styling
 const RABBIT_HEADER_PILL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
-const RABBIT_MENU_STRIP  = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-menu-strip.jpg";
 const RABBIT_PANEL       = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
 const RABBIT_PANEL_ALT   = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
 const RABBIT_DIVIDER     = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
@@ -248,6 +247,7 @@ function RootComponent() {
 
   const handleHeaderSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!headerSearchInput.trim()) return;
     navigate({ to: "/search", search: { q: headerSearchInput.trim() } });
     setHeaderSearchInput("");
   };
@@ -918,23 +918,23 @@ function RootComponent() {
         <AppWallpaper />
         <Screensaver />
         <AuthProvider>
-          <header className={`sticky top-0 z-40 border transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)} ${getThemeGlowClass(appTheme)}`}>
-            {/* Header background container using new logo / menu strip with brightened overlay and zero white bars */}
-            <div className="absolute inset-0 pointer-events-none opacity-40">
+          <header className={`sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(appTheme)} ${getThemeGlowClass(appTheme)}`}>
+            {/* Streamlined Cinema Glass Header Background */}
+            <div className="absolute inset-0 pointer-events-none opacity-25">
               <img
                 src={RABBITHEADERWALL}
-                alt="Header Background Logo"
+                alt=""
                 className="w-full h-full object-cover object-center"
               />
             </div>
-            <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/60 pointer-events-none" />
 
-            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-2 sm:px-6 py-2 gap-1.5 sm:gap-4">
-              {/* Left group: Compact Rabbit Logo */}
+            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 sm:px-6 py-2.5 gap-2 sm:gap-4">
+              {/* Left group: Crisp Non-Pulsing Neon Rabbit Logo */}
               <div className="flex items-center shrink-0">
                 <Link
                   to="/"
-                  className={`flex items-center gap-2.5 w-[110px] sm:w-[150px] md:w-[180px] h-10 sm:h-12 px-2.5 rounded-2xl bg-black/50 backdrop-blur-md border text-sm sm:text-base font-black tracking-wider text-white focus:outline-none group transition-all animate-pulse ${getThemeGlowClass(appTheme)}`}
+                  className={`flex items-center gap-2 w-[110px] sm:w-[150px] md:w-[170px] h-10 sm:h-11 px-2.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/25 text-white focus:outline-none transition-all ${getThemeGlowClass(appTheme)}`}
                   style={{
                     backgroundImage: `url(${RABBIT_LOGO_URL})`,
                     backgroundSize: "cover",
@@ -942,56 +942,48 @@ function RootComponent() {
                     backgroundPosition: "center center",
                   }}
                 >
-                  <div className="absolute inset-0 bg-black/30 rounded-2xl pointer-events-none" />
+                  <div className="absolute inset-0 bg-black/25 rounded-xl pointer-events-none" />
                 </Link>
               </div>
 
-              {/* Center / Flexible Search Bar with Search Button on Left */}
+              {/* Unified Prime / Netflix Search Bar with Icon Inside */}
               {!showFirstStartModal && (
                 <form
                   onSubmit={handleHeaderSearchSubmit}
-                  className="flex items-center gap-1 flex-1 min-w-[70px] sm:min-w-[150px] mx-1 sm:mx-3"
+                  className="relative flex items-center flex-1 max-w-xl mx-2"
                 >
-                  <button
-                    type="submit"
-                    className={`flex h-9 sm:h-11 px-2.5 sm:px-3.5 items-center justify-center rounded-xl border text-xs font-bold shadow-sm transition shrink-0 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
-                    aria-label="Search"
-                  >
+                  <span className="absolute left-3.5 z-10 text-slate-400 text-xs sm:text-sm pointer-events-none">
                     🔍
-                  </button>
+                  </span>
                   <input
                     type="text"
                     value={headerSearchInput}
                     onChange={(e) => setHeaderSearchInput(e.target.value)}
                     placeholder="Search movies, TV shows..."
-                    className="h-9 sm:h-11 w-full min-w-0 rounded-xl border border-white/15 bg-slate-900/80 px-2.5 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 backdrop-blur-md shadow-inner"
+                    className="h-10 sm:h-11 w-full rounded-xl border border-white/15 bg-black/60 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 backdrop-blur-xl shadow-inner transition-all"
                   />
                 </form>
               )}
 
-              {/* Far Right: Profile Pill (constrained with portrait truncation) */}
+              {/* Far Right: Profile Pill */}
               {savedProfileName && !showFirstStartModal && (
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={handleToggleProfileMenu}
-                    className={`flex items-center gap-1 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-white shadow-md transition cursor-pointer group relative overflow-hidden border border-white/15 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition cursor-pointer group relative overflow-hidden border border-white/20 ${activeHeader.btnBg} ${getThemeGlowClass(appTheme)}`}
                   >
-                    <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
+                    <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
                       <img src={HEADER_ICON_URL} alt="Avatar" className="w-full h-full object-cover" />
                     </div>
-                    <span className="truncate max-w-[70px] sm:max-w-[110px] md:max-w-none text-[11px] sm:text-xs">
-                      <span className="hidden sm:inline">Hi, </span><strong className="text-white">{savedProfileName}</strong>{" "}
-                      {isAdmin
-                        ? "(Admin)"
-                        : isTrialActive
-                        ? `(${trialDaysRemaining}d)`
-                        : ""}
+                    <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-none text-xs">
+                      <strong className="text-white">{savedProfileName}</strong>{" "}
+                      {isAdmin ? "(Admin)" : isTrialActive ? `(${trialDaysRemaining}d)` : ""}
                     </span>
-                    <span className="text-[9px] sm:text-[10px] ml-0.5 text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
+                    <span className="text-[10px] text-slate-300 group-hover:translate-x-0.5 transition-transform">☰</span>
                   </button>
                   {isTrialActive && (
-                    <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold animate-pulse">
+                    <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
                       <span>⏳ {trialDaysRemaining}d</span>
                     </div>
                   )}
@@ -1003,15 +995,15 @@ function RootComponent() {
           {/* CONSOLE-GRADE LEFT SIDE BLADE SIDEBAR */}
           {showProfileMenu && !showFirstStartModal && (
             <div className="fixed inset-0 z-50 flex pt-[60px] sm:pt-[65px] pointer-events-none">
-              {/* Transparent Backdrop without blur/black overlay */}
+              {/* Backdrop with smooth cinema glass blur */}
               <div
-                className="fixed inset-0 bg-transparent pointer-events-auto"
+                className="fixed inset-0 bg-black/60 backdrop-blur-md pointer-events-auto transition-opacity duration-300"
                 onClick={handleCloseAll}
               />
 
               {/* Side Blade Drawer Content with 100% 100% background sizing and strict boundary containment */}
               <div
-                className="relative mx-3 my-2 w-[420px] max-w-[95vw] h-[calc(100dvh-75px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-95 overflow-hidden pt-12 pb-12 px-6 rounded-3xl border border-white/10 pointer-events-auto box-border"
+                className="relative mx-3 my-2 w-[420px] max-w-[95vw] h-[calc(100dvh-75px)] shadow-2xl flex flex-col z-10 transition-transform duration-300 animate-slide-right opacity-95 overflow-hidden pt-12 pb-12 px-6 rounded-3xl border border-white/15 pointer-events-auto box-border backdrop-blur-xl"
                 style={{
                   backgroundImage: `url(${RABBIT_PANEL})`,
                   backgroundSize: "100% 100%",
@@ -1028,7 +1020,7 @@ function RootComponent() {
                   ▲
                 </button>
 
-                {/* Scrollable Container with Strict Containment to prevent exceeding bottom glow bar */}
+                {/* Scrollable Container with Strict Containment */}
                 <div
                   ref={sidebarContentRef}
                   className="flex-1 overflow-y-auto px-2 pt-10 pb-10 w-full scrollbar-none relative z-10 box-border overflow-x-hidden max-h-[calc(100dvh-150px)]"
@@ -1060,7 +1052,7 @@ function RootComponent() {
                       </button>
                     </div>
 
-                    {/* ACCORDION SECTIONS WITH STRICT CONTAINER BOUNDS & 100% 100% BG */}
+                    {/* ACCORDION SECTIONS */}
                     <div className="space-y-3 w-full box-border">
 
                       {/* 1. GLOBAL FEED SELECTOR ACCORDION */}
@@ -1345,8 +1337,8 @@ function RootComponent() {
                               backgroundRepeat: "no-repeat",
                             }}
                           >
-                            <div className="relative z-10 space-y-3 w-95% box-border">
-                              <div className="w-95% box-border">
+                            <div className="relative z-10 space-y-3 w-full box-border">
+                              <div className="w-full box-border">
                                 <p className="text-[11px] text-slate-300 mb-1 font-semibold">Playback Controls:</p>
                                 <div className="grid grid-cols-2 gap-2 w-full box-border">
                                   <button
@@ -1855,7 +1847,7 @@ function RootComponent() {
                       )}
                     </div>
 
-                    {/* Sidebar Footer with Divider Asset */}
+                    {/* Sidebar Footer */}
                     <div className="mt-6 pt-4 border-t border-white/10 text-center w-full box-border">
                       <img
                         src={RABBIT_DIVIDER}
