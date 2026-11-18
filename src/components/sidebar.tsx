@@ -12,17 +12,17 @@ import {
   AppTheme,
   HistoryScale,
   DISCLAIMER_ACCEPTED_KEY,
-  saveCardSize,
   saveStreamQuality,
-  saveTheme,
-  setHelpfulMouse,
   getSavedUserAge,
   saveUserAge,
-  setHistoryOverscale,
-  setLargeButtons,
 } from "@/lib/settings";
 
 const AGE_LOCK_KEY = "rabtv_age_passcode";
+const RAM_MODE_STORAGE_KEY = "rabtv_ram_mode";
+const AUTOPLAY_NEXT_STORAGE_KEY = "rabtv_autoplay_next";
+const HEARTBEAT_DEFAULT_MIGRATED_KEY = "rabtv_heartbeat_default_v1";
+
+export type RamMode = "low" | "high";
 
 export const globalFeedOptions = [
   "All (Default)",
@@ -38,8 +38,43 @@ export const globalFeedOptions = [
 
 export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 
+// Original Neon Rabbit Console Assets
+const RABBIT_HEADER_PILL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
+const RABBIT_PANEL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
+const RABBIT_PANEL_ALT =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
+
+/**
+ * Finds "Heartbeat Radio" inside the "2000s" category of RADIO_STATIONS.
+ */
+export function getDefaultHeartbeatStationUrl(): string {
+  // 1. Direct lookup in "2000s"
+  const stations2000s =
+    RADIO_STATIONS["2000s"] ||
+    RADIO_STATIONS["2000's"] ||
+    RADIO_STATIONS["00s"] ||
+    [];
+  const exactHeartbeat = stations2000s.find((s) =>
+    s.name.toLowerCase().includes("heartbeat")
+  );
+  if (exactHeartbeat?.url) return exactHeartbeat.url;
+  if (stations2000s[0]?.url) return stations2000s[0].url;
+
+  // 2. Fallback scan across all categories for Heartbeat Radio or 2000s
+  for (const [category, list] of Object.entries(RADIO_STATIONS)) {
+    const match = list.find((s) => s.name.toLowerCase().includes("heartbeat"));
+    if (match?.url) return match.url;
+    if (category.toLowerCase().includes("2000") && list[0]?.url) {
+      return list[0].url;
+    }
+  }
+
+  return RADIO_STATIONS["80s"]?.[0]?.url || "";
+}
 
 export interface SidebarProps {
   isOpen: boolean;
@@ -75,6 +110,15 @@ export interface SidebarProps {
   getPrimaryBgColor: (theme: AppTheme) => string;
   getPrimaryAccentColor: (theme: AppTheme) => string;
 }
+
+type ConsolidatedSection =
+  | "feedAndHistory"
+  | "themesAndScale"
+  | "audio"
+  | "profileAndAccessibility"
+  | "hardwareAndStream"
+  | "screensaverAndBackup"
+  | null;
 
 export function Sidebar({
   isOpen,
@@ -113,26 +157,18 @@ export function Sidebar({
   const sidebarContentRef = useRef<HTMLDivElement>(null);
   const lastScrollYRef = useRef<number>(0);
 
-  const [activeSidebarSection, setActiveSidebarSection] = useState<
-    | "theme"
-    | "scale"
-    | "audio"
-    | "screensaver"
-    | "pin"
-    | "backup"
-    | "accessibility"
-    | "globalFeed"
-    | "history"
-    | null
-  >(null);
+  const [activeSection, setActiveSection] =
+    useState<ConsolidatedSection>(null);
 
-  const [screensaverTimeoutMs, setScreensaverTimeoutMs] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rabtv_screensaver_timeout_ms");
-      return saved ? Number(saved) : 2.5 * 60 * 60 * 1000;
+  const [screensaverTimeoutMs, setScreensaverTimeoutMs] = useState<number>(
+    () => {
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("rabtv_screensaver_timeout_ms");
+        return saved ? Number(saved) : 2.5 * 60 * 60 * 1000;
+      }
+      return 2.5 * 60 * 60 * 1000;
     }
-    return 2.5 * 60 * 60 * 1000;
-  });
+  );
 
   const [bgMusicVolume, setBgMusicVolume] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -143,15 +179,71 @@ export function Sidebar({
   });
 
   const [currentStationUrl, setCurrentStationUrl] = useState<string>(() => {
+    const heartbeatUrl = getDefaultHeartbeatStationUrl();
     if (typeof window !== "undefined") {
+      const migrated = localStorage.getItem(HEARTBEAT_DEFAULT_MIGRATED_KEY);
       const saved = localStorage.getItem("rabtv_radio_url");
+      if (!migrated && heartbeatUrl) {
+        localStorage.setItem(HEARTBEAT_DEFAULT_MIGRATED_KEY, "true");
+        localStorage.setItem("rabtv_radio_url", heartbeatUrl);
+        return heartbeatUrl;
+      }
       if (saved) return saved;
     }
-    return RADIO_STATIONS["80s"]?.[0]?.url || "";
+    return heartbeatUrl;
   });
 
-  const [selectedGlobalFeed, setSelectedGlobalFeed] = useState<GlobalFeedOption>(
-    () => {
+  // Ensure Heartbeat Radio (2000s) is applied to bgAudio on initial app boot
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const heartbeatUrl = getDefaultHeartbeatStationUrl();
+    const migrated = localStorage.getItem(HEARTBEAT_DEFAULT_MIGRATED_KEY);
+    const saved = localStorage.getItem("rabtv_radio_url");
+
+    if ((!migrated || !saved) && heartbeatUrl) {
+      localStorage.setItem(HEARTBEAT_DEFAULT_MIGRATED_KEY, "true");
+      localStorage.setItem("rabtv_radio_url", heartbeatUrl);
+      bgAudio.setStation(heartbeatUrl);
+      setCurrentStationUrl(heartbeatUrl);
+    }
+  }, []);
+
+  // Hardware RAM Mode State ("low" for 1-2GB streaming sticks, "high" for 4GB+ devices)
+  const [ramMode, setRamModeState] = useState<RamMode>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(RAM_MODE_STORAGE_KEY) as RamMode | null;
+      if (saved === "low" || saved === "high") return saved;
+      const devMem = (navigator as any).deviceMemory;
+      if (typeof devMem === "number" && devMem <= 2) return "low";
+    }
+    return "low";
+  });
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-ram-mode", ramMode);
+    }
+  }, [ramMode]);
+
+  const [activeStreamQuality, setActiveStreamQuality] =
+    useState<StreamQuality>(streamQuality);
+
+  useEffect(() => {
+    setActiveStreamQuality(streamQuality);
+  }, [streamQuality]);
+
+  const [autoPlayNext, setAutoPlayNextState] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(AUTOPLAY_NEXT_STORAGE_KEY);
+      return saved !== null ? saved === "true" : true;
+    }
+    return true;
+  });
+
+  const [cacheClearMsg, setCacheClearMsg] = useState<string | null>(null);
+
+  const [selectedGlobalFeed, setSelectedGlobalFeed] =
+    useState<GlobalFeedOption>(() => {
       if (typeof window !== "undefined") {
         return (
           (localStorage.getItem("rabtv_global_feed") as GlobalFeedOption) ||
@@ -159,8 +251,7 @@ export function Sidebar({
         );
       }
       return "All (Default)";
-    }
-  );
+    });
 
   const [unifiedAgeCodeInput, setUnifiedAgeCodeInput] = useState<string>("");
   const [newPasscode, setNewPasscode] = useState<string>("");
@@ -176,26 +267,29 @@ export function Sidebar({
     isError: boolean;
   } | null>(null);
 
-  const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">(() => {
-    if (typeof window !== "undefined") {
-      return (
-        (localStorage.getItem("rabtv_update_channel") as "stable" | "nightly") ||
-        "stable"
-      );
+  const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">(
+    () => {
+      if (typeof window !== "undefined") {
+        return (
+          (localStorage.getItem("rabtv_update_channel") as
+            | "stable"
+            | "nightly") || "stable"
+        );
+      }
+      return "stable";
     }
-    return "stable";
-  });
+  );
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
 
-  // Record scroll position when opened and close if main window scrolls significantly
+  // Close sidebar if main window scrolls significantly
   useEffect(() => {
     if (!isOpen || typeof window === "undefined") return;
     lastScrollYRef.current = window.scrollY;
 
     const handleWindowScroll = () => {
       if (Math.abs(window.scrollY - lastScrollYRef.current) > 60) {
-        setActiveSidebarSection(null);
+        setActiveSection(null);
         onClose();
       }
     };
@@ -204,7 +298,7 @@ export function Sidebar({
     return () => window.removeEventListener("scroll", handleWindowScroll);
   }, [isOpen, onClose]);
 
-  // D-pad / Arrow Key navigation handler for sidebar menu items
+  // D-pad / Arrow Key navigation handler with smooth scroll-into-view
   useEffect(() => {
     if (!isOpen) return;
 
@@ -212,9 +306,11 @@ export function Sidebar({
       if (!sidebarContentRef.current) return;
       const focusables = Array.from(
         sidebarContentRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button, [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])'
         )
-      ).filter((el) => !el.hasAttribute("disabled") && el.offsetParent !== null);
+      ).filter(
+        (el) => !el.hasAttribute("disabled") && el.offsetParent !== null
+      );
 
       if (focusables.length === 0) return;
 
@@ -241,7 +337,7 @@ export function Sidebar({
           block: "nearest",
         });
       } else if (e.key === "Escape") {
-        setActiveSidebarSection(null);
+        setActiveSection(null);
         onClose();
       }
     };
@@ -253,14 +349,14 @@ export function Sidebar({
   if (!isOpen) return null;
 
   const handleCloseSidebar = () => {
-    setActiveSidebarSection(null);
+    setActiveSection(null);
     onClose();
   };
 
   const handleScrollSidebar = (direction: "up" | "down") => {
     if (sidebarContentRef.current) {
       sidebarContentRef.current.scrollBy({
-        top: direction === "down" ? 180 : -180,
+        top: direction === "down" ? 200 : -200,
         behavior: "smooth",
       });
     }
@@ -282,8 +378,65 @@ export function Sidebar({
   const handleStationSelect = (url: string) => {
     bgAudio.setStation(url);
     setCurrentStationUrl(url);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rabtv_radio_url", url);
+    }
     if (bgMusicState === "playing") {
       bgAudio.play();
+    }
+  };
+
+  const handleRamModeChange = (mode: RamMode) => {
+    setRamModeState(mode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(RAM_MODE_STORAGE_KEY, mode);
+      document.documentElement.setAttribute("data-ram-mode", mode);
+      window.dispatchEvent(
+        new CustomEvent("rabtv_ram_mode_updated", { detail: mode })
+      );
+      window.dispatchEvent(new Event("rabtv_settings_updated"));
+    }
+  };
+
+  const handleStreamQualitySelect = (quality: StreamQuality) => {
+    saveStreamQuality(quality);
+    setActiveStreamQuality(quality);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("rabtv_settings_updated"));
+    }
+  };
+
+  const handleAutoPlayNextToggle = (enabled: boolean) => {
+    setAutoPlayNextState(enabled);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(AUTOPLAY_NEXT_STORAGE_KEY, String(enabled));
+      window.dispatchEvent(new Event("rabtv_settings_updated"));
+    }
+  };
+
+  const handlePurgeVolatileCaches = () => {
+    if (typeof window === "undefined") return;
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (
+          key &&
+          (key.startsWith("rabtv_cache_") ||
+            key.startsWith("rabtv_fast_live_health") ||
+            key.startsWith("rabtv_ublock_cached"))
+        ) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+      setCacheClearMsg(
+        `✓ Purged ${keysToRemove.length} cached stream & metadata buffers!`
+      );
+      setTimeout(() => setCacheClearMsg(null), 3500);
+    } catch {
+      setCacheClearMsg("✓ Stream memory buffers refreshed!");
+      setTimeout(() => setCacheClearMsg(null), 3000);
     }
   };
 
@@ -305,7 +458,9 @@ export function Sidebar({
   };
 
   const getAgeLockCode = () =>
-    typeof window !== "undefined" ? localStorage.getItem(AGE_LOCK_KEY) || "" : "";
+    typeof window !== "undefined"
+      ? localStorage.getItem(AGE_LOCK_KEY) || ""
+      : "";
 
   const handleUnifiedProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -383,8 +538,11 @@ export function Sidebar({
     const age = getSavedUserAge() || parseInt(userAgeInput, 10) || 0;
 
     const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
-    const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
-    const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
+    const GITHUB_TOKEN =
+      ((import.meta as any).env?.VITE_GH_PAT as string) || "";
+    const GIST_API_URL = GIST_ID
+      ? `https://api.github.com/gists/${GIST_ID}`
+      : "";
 
     let isValidGitHubCode = false;
     if (GIST_ID && GITHUB_TOKEN && GIST_API_URL) {
@@ -471,11 +629,13 @@ export function Sidebar({
   const handleSaveBackup = () => {
     const backupData = {
       cardSize,
-      streamQuality,
+      streamQuality: activeStreamQuality,
       appTheme,
       helpfulMouse,
       historyOverscale,
       largeButtons,
+      ramMode,
+      autoPlayNext,
       userAge: getSavedUserAge(),
       profileName: savedProfileName,
       myList:
@@ -509,7 +669,7 @@ export function Sidebar({
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.cardSize) onSizeChange(data.cardSize);
-        if (data.streamQuality) saveStreamQuality(data.streamQuality);
+        if (data.streamQuality) handleStreamQualitySelect(data.streamQuality);
         if (data.appTheme) onThemeChange(data.appTheme);
         if (typeof data.helpfulMouse === "boolean")
           onMouseToggle(data.helpfulMouse);
@@ -517,6 +677,10 @@ export function Sidebar({
           onHistoryOverscaleChange(data.historyOverscale);
         if (typeof data.largeButtons === "boolean")
           onLargeButtonsToggle(data.largeButtons);
+        if (data.ramMode === "low" || data.ramMode === "high")
+          handleRamModeChange(data.ramMode);
+        if (typeof data.autoPlayNext === "boolean")
+          handleAutoPlayNextToggle(data.autoPlayNext);
         if (data.userAge) saveUserAge(data.userAge);
         if (data.profileName && typeof window !== "undefined") {
           localStorage.setItem("rabtv_profile_name", data.profileName);
@@ -544,118 +708,149 @@ export function Sidebar({
     reader.readAsText(file);
   };
 
-  const getThemeTokens = (theme: AppTheme) => {
+  const getSubtlePillBg = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return {
-          drawerBorder:
-            "border-red-500/30 shadow-[0_20px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(239,68,68,0.2)]",
-          activeAccordion:
-            "bg-gradient-to-r from-red-950/80 via-zinc-900/90 to-black border-red-400/50 text-white shadow-[0_0_18px_rgba(239,68,68,0.25)]",
-          subtleBtn:
-            "bg-red-950/35 border border-red-500/25 text-red-200 hover:bg-red-900/50",
-          laserLine: "from-transparent via-red-500 to-amber-400",
-        };
+        return "bg-red-950/45 border border-red-500/30 text-red-100 hover:bg-red-900/65";
       case "midnight":
-        return {
-          drawerBorder:
-            "border-sky-500/30 shadow-[0_20px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(56,189,248,0.2)]",
-          activeAccordion:
-            "bg-gradient-to-r from-blue-950/80 via-slate-900/90 to-black border-sky-400/50 text-white shadow-[0_0_18px_rgba(56,189,248,0.25)]",
-          subtleBtn:
-            "bg-blue-950/35 border border-blue-500/25 text-sky-200 hover:bg-blue-900/50",
-          laserLine: "from-transparent via-sky-400 to-blue-500",
-        };
+        return "bg-blue-950/45 border border-blue-500/30 text-blue-100 hover:bg-blue-900/65";
       case "emerald":
-        return {
-          drawerBorder:
-            "border-emerald-500/30 shadow-[0_20px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(16,185,129,0.2)]",
-          activeAccordion:
-            "bg-gradient-to-r from-emerald-950/80 via-slate-900/90 to-black border-emerald-400/50 text-white shadow-[0_0_18px_rgba(16,185,129,0.25)]",
-          subtleBtn:
-            "bg-emerald-950/35 border border-emerald-500/25 text-emerald-200 hover:bg-emerald-900/50",
-          laserLine: "from-transparent via-emerald-400 to-cyan-400",
-        };
+        return "bg-emerald-950/45 border border-emerald-500/30 text-emerald-100 hover:bg-emerald-900/65";
       case "amber":
-        return {
-          drawerBorder:
-            "border-amber-500/30 shadow-[0_20px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(245,158,11,0.2)]",
-          activeAccordion:
-            "bg-gradient-to-r from-amber-950/80 via-stone-900/90 to-black border-amber-400/50 text-white shadow-[0_0_18px_rgba(245,158,11,0.25)]",
-          subtleBtn:
-            "bg-yellow-950/35 border border-amber-500/25 text-amber-200 hover:bg-yellow-900/50",
-          laserLine: "from-transparent via-amber-400 to-orange-500",
-        };
+        return "bg-yellow-950/45 border border-amber-500/30 text-amber-100 hover:bg-yellow-900/65";
       case "cyan":
-        return {
-          drawerBorder:
-            "border-cyan-500/30 shadow-[0_20px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(34,211,238,0.2)]",
-          activeAccordion:
-            "bg-gradient-to-r from-cyan-950/80 via-slate-900/90 to-black border-cyan-400/50 text-white shadow-[0_0_18px_rgba(34,211,238,0.25)]",
-          subtleBtn:
-            "bg-cyan-950/35 border border-cyan-500/25 text-cyan-200 hover:bg-cyan-900/50",
-          laserLine: "from-transparent via-cyan-400 to-sky-500",
-        };
+        return "bg-cyan-950/45 border border-cyan-500/30 text-cyan-100 hover:bg-cyan-900/65";
       case "violet":
       default:
-        return {
-          drawerBorder:
-            "border-purple-500/35 shadow-[0_20px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(168,85,247,0.25)]",
-          activeAccordion:
-            "bg-gradient-to-r from-purple-950/80 via-slate-900/90 to-black border-purple-400/50 text-white shadow-[0_0_18px_rgba(168,85,247,0.25)]",
-          subtleBtn:
-            "bg-purple-950/35 border border-violet-500/25 text-purple-200 hover:bg-purple-900/50",
-          laserLine: "from-transparent via-pink-500 to-cyan-400",
-        };
+        return "bg-purple-950/45 border border-violet-500/30 text-purple-100 hover:bg-purple-900/65";
     }
   };
 
-  const tokens = getThemeTokens(appTheme);
-
-  const toggleSection = (
-    section:
-      | "theme"
-      | "scale"
-      | "audio"
-      | "screensaver"
-      | "pin"
-      | "backup"
-      | "accessibility"
-      | "globalFeed"
-      | "history"
-  ) => {
-    setActiveSidebarSection((prev) => (prev === section ? null : section));
+  const toggleSection = (section: ConsolidatedSection) => {
+    setActiveSection((prev) => (prev === section ? null : section));
   };
 
-  const getAccordionBtnClass = (isActive: boolean) =>
-    `w-full flex items-center justify-between px-4 py-3.5 text-left text-xs font-extrabold rounded-2xl border transition-all duration-200 cursor-pointer ${
-      isActive
-        ? tokens.activeAccordion
-        : "bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-slate-200 hover:text-white"
-    }`;
+  // Find active station name for the radio badge
+  let activeStationName = "Heartbeat Radio";
+  for (const stations of Object.values(RADIO_STATIONS)) {
+    const match = stations.find(
+      (s) =>
+        s.url === currentStationUrl ||
+        (!currentStationUrl && bgAudio.getCurrentStation().url === s.url)
+    );
+    if (match) {
+      activeStationName = match.name;
+      break;
+    }
+  }
+
+  /**
+   * Renders a Crystal Neon Accordion Header using the signature RABBIT_HEADER_PILL
+   * with 3D mouse hover & D-pad focus pop-out physics.
+   */
+  const renderCrystalAccordionButton = (
+    sectionId: ConsolidatedSection,
+    icon: string,
+    title: string,
+    subtitleBadge?: string
+  ) => {
+    const isActive = activeSection === sectionId;
+    return (
+      <button
+        type="button"
+        onClick={() => toggleSection(sectionId)}
+        className={`crystal-menu-pill w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-extrabold text-white relative overflow-hidden rounded-2xl cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.04] focus:scale-[1.05] hover:-translate-y-0.5 focus:-translate-y-0.5 active:scale-[0.98] focus:outline-none ${
+          isActive
+            ? "ring-2 ring-cyan-400/90 shadow-[0_0_28px_rgba(56,189,248,0.45),0_0_20px_rgba(239,68,68,0.35)] scale-[1.02]"
+            : "hover:shadow-[0_10px_28px_rgba(56,189,248,0.3),0_0_18px_rgba(239,68,68,0.25)] focus:ring-2 focus:ring-cyan-400"
+        }`}
+        style={{
+          WebkitMaskImage:
+            "linear-gradient(to right, rgba(0,0,0,0.12) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 90%, rgba(0,0,0,0.12) 100%)",
+          maskImage:
+            "linear-gradient(to right, rgba(0,0,0,0.12) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 90%, rgba(0,0,0,0.12) 100%)",
+        }}
+      >
+        {/* Signature Neon Pill Artwork with Crystal Glass Transparency */}
+        <div
+          className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden z-0 opacity-85"
+          style={{
+            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+            backgroundSize: "113% 380%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center center",
+          }}
+        >
+          <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[4px] w-full h-full" />
+        </div>
+
+        <span className="relative z-10 flex items-center gap-2.5 truncate pr-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+          <span className="text-sm shrink-0">{icon}</span>
+          <span className="truncate">{title}</span>
+        </span>
+
+        <div className="relative z-10 flex items-center gap-2 shrink-0">
+          {subtitleBadge && (
+            <span className="rounded-full bg-black/55 border border-white/15 px-2 py-0.5 text-[9px] font-bold text-cyan-300 backdrop-blur-md">
+              {subtitleBadge}
+            </span>
+          )}
+          <span
+            className={`text-[10px] text-amber-300 transform transition-transform duration-200 ${
+              isActive ? "rotate-180" : ""
+            }`}
+          >
+            ▼
+          </span>
+        </div>
+      </button>
+    );
+  };
 
   return (
-    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex pt-[60px] sm:pt-[65px] pointer-events-none">
-      {/* Frosted Cinema Glass Backdrop */}
+    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex justify-end items-start pt-[56px] sm:pt-[64px] pr-2 sm:pr-4 pointer-events-none">
+      <style>{`
+        @keyframes crystalBladeSwipeIn {
+          0% {
+            opacity: 0;
+            transform: translate3d(40px, -18px, 0) scale(0.94);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+        .animate-crystal-blade-in {
+          animation: crystalBladeSwipeIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          transform-origin: top right;
+        }
+      `}</style>
+
+      {/* Light Transparent Backdrop so Background Media/Catalog Stays Visible */}
       <div
-        className="fixed inset-0 bg-black/65 backdrop-blur-md pointer-events-auto transition-opacity duration-300"
+        className="fixed inset-0 bg-black/25 backdrop-blur-[2px] pointer-events-auto transition-opacity duration-300"
         onClick={handleCloseSidebar}
       />
 
-      {/* High-End Glass Side Blade Drawer */}
-      <div
-        className={`relative mx-3 my-2 w-[410px] max-w-[94vw] h-[calc(100dvh-76px)] bg-slate-950/95 backdrop-blur-2xl flex flex-col z-10 transition-transform duration-300 pt-10 pb-10 px-4 sm:px-5 rounded-3xl border pointer-events-auto box-border overflow-hidden ${tokens.drawerBorder}`}
-      >
-        {/* Top Ambient Neon Laser Line */}
+      {/* Crystal Neon Console Blade Drawer (Restored RABBIT_PANEL with Glass Transparency) */}
+      <div className="relative my-1.5 w-[420px] max-w-[95vw] h-[calc(100dvh-74px)] rounded-[30px] border border-white/20 shadow-[0_25px_70px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-11 pb-11 px-5 pointer-events-auto box-border backdrop-blur-2xl bg-slate-950/50">
+        {/* Translucent RABBIT_PANEL Neon Outer Frame Layer */}
         <div
-          className={`absolute inset-x-8 top-0 h-[2px] bg-gradient-to-r ${tokens.laserLine} opacity-85`}
+          className="absolute inset-0 pointer-events-none z-0 opacity-80 mix-blend-lighten"
+          style={{
+            backgroundImage: `url(${RABBIT_PANEL})`,
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+          }}
         />
+        {/* Subtle Glass Specular Tint */}
+        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/[0.06] via-slate-950/40 to-red-500/[0.06] pointer-events-none z-0" />
 
         {/* Scroll Up Arrow Button */}
         <button
           type="button"
           onClick={() => handleScrollSidebar("up")}
-          className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 w-16 h-6 bg-slate-900/90 hover:bg-slate-800 border border-white/15 rounded-full flex items-center justify-center text-amber-300 text-[10px] font-bold shadow-md transition cursor-pointer"
+          className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/75 hover:bg-black border border-cyan-400/35 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-[0_0_12px_rgba(56,189,248,0.4)] transition hover:scale-110 cursor-pointer"
           title="Scroll Up"
         >
           ▲
@@ -664,13 +859,19 @@ export function Sidebar({
         {/* Scrollable Inner Container */}
         <div
           ref={sidebarContentRef}
-          className="flex-1 overflow-y-auto px-1 pt-3 pb-6 w-full scrollbar-none relative z-10 box-border overflow-x-hidden"
+          className="flex-1 overflow-y-auto px-2.5 pt-4 pb-6 w-full scrollbar-none relative z-10 box-border overflow-x-hidden"
+          style={{
+            maskImage:
+              "linear-gradient(to bottom, transparent 0%, black 3%, black 97%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, transparent 0%, black 3%, black 97%, transparent 100%)",
+          }}
         >
-          <div className="flex flex-col w-full box-border space-y-4">
-            {/* Profile Identity Header Card */}
-            <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] border border-white/10 p-3.5 w-full box-border">
+          <div className="relative z-10 flex flex-col w-full box-border space-y-3 pb-4">
+            {/* Crystal Profile Header Bar */}
+            <div className="flex items-center justify-between rounded-2xl bg-black/45 backdrop-blur-xl border border-white/15 px-3.5 py-2.5 shadow-lg w-full box-border">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/25 bg-slate-900 shadow-md shrink-0 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl overflow-hidden border border-cyan-400/40 bg-slate-900 shadow-[0_0_15px_rgba(56,189,248,0.3)] shrink-0 flex items-center justify-center">
                   <img
                     src={headerIconUrl}
                     alt="Avatar"
@@ -685,270 +886,237 @@ export function Sidebar({
                   >
                     {savedProfileName || "User Profile"}
                   </h3>
-                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>System Online</span>
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Online</span>
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
+                      {ramMode === "low" ? "1-2GB Stick" : "High RAM"}
+                    </span>
+                  </div>
                 </div>
               </div>
+
               <button
                 type="button"
                 onClick={handleCloseSidebar}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-red-600/80 border border-white/10 hover:border-red-400 text-xs font-bold text-slate-200 hover:text-white transition shrink-0 cursor-pointer"
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-red-600/80 border border-white/15 hover:border-red-400 text-xs font-bold text-slate-100 hover:text-white transition hover:scale-105 active:scale-95 shrink-0 cursor-pointer"
               >
                 ✕ Close
               </button>
             </div>
 
-            {/* ACCORDION MENU SECTIONS */}
-            <div className="space-y-2.5 w-full box-border">
-              {/* 1. GLOBAL FEED SELECTOR */}
+            {/* CONSOLIDATED CRYSTAL NEON ACCORDIONS */}
+            <div className="space-y-2.5 w-full box-border pt-1">
+              {/* 1. GLOBAL FEED & WATCH HISTORY */}
               <div className="w-full box-border">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("globalFeed")}
-                  className={getAccordionBtnClass(
-                    activeSidebarSection === "globalFeed"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>🌐</span>
-                    <span>Global Feed Selector</span>
-                  </span>
-                  <span
-                    className={`text-[10px] transform transition-transform ${
-                      activeSidebarSection === "globalFeed" ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {activeSidebarSection === "globalFeed" && (
-                  <div className="w-full p-4 rounded-2xl mt-2 bg-black/60 border border-white/10 space-y-2.5 box-border">
-                    <p className="text-[11px] text-slate-300 font-bold">
-                      Select Region Feed:
-                    </p>
-                    <select
-                      value={selectedGlobalFeed}
-                      onChange={(e) =>
-                        handleGlobalFeedChange(
-                          e.target.value as GlobalFeedOption
-                        )
-                      }
-                      className="h-10 w-full rounded-xl border border-white/15 bg-slate-900 px-3 text-xs font-bold text-white focus:outline-none cursor-pointer"
-                    >
-                      {globalFeedOptions.map((opt) => (
-                        <option
-                          key={opt}
-                          value={opt}
-                          className="bg-slate-950 text-white"
-                        >
-                          🌐 {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                {renderCrystalAccordionButton(
+                  "feedAndHistory",
+                  "🌐",
+                  "Global Feed & Watch History",
+                  selectedGlobalFeed === "All (Default)"
+                    ? "Global"
+                    : selectedGlobalFeed
                 )}
-              </div>
 
-              {/* 2. WATCH HISTORY */}
-              <div className="w-full box-border">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("history")}
-                  className={getAccordionBtnClass(
-                    activeSidebarSection === "history"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>🕒</span>
-                    <span>Watch History & Activity</span>
-                  </span>
-                  <span
-                    className={`text-[10px] transform transition-transform ${
-                      activeSidebarSection === "history" ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {activeSidebarSection === "history" && (
-                  <div className="w-full p-4 rounded-2xl mt-2 bg-black/60 border border-white/10 space-y-2.5 box-border">
-                    <p className="text-[11px] text-slate-300 font-medium">
-                      Manage in-progress titles, completed shows & catalog
-                      filters:
-                    </p>
-                    <Link
-                      to="/watch-history"
-                      onClick={handleCloseSidebar}
-                      className={`flex h-10 w-full items-center justify-center rounded-xl px-3 text-xs font-extrabold shadow-md transition ${getPrimaryBgColor(
-                        appTheme
-                      )}`}
-                    >
-                      🕒 Open Watch History
-                    </Link>
-                  </div>
-                )}
-              </div>
-
-              {/* 3. APP THEMES & STYLING */}
-              <div className="w-full box-border">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("theme")}
-                  className={getAccordionBtnClass(
-                    activeSidebarSection === "theme"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>🎨</span>
-                    <span>App Themes & Styling</span>
-                  </span>
-                  <span
-                    className={`text-[10px] transform transition-transform ${
-                      activeSidebarSection === "theme" ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {activeSidebarSection === "theme" && (
-                  <div className="w-full p-4 rounded-2xl mt-2 bg-black/60 border border-white/10 box-border">
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                      {allThemesList.map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => onThemeChange(t.id)}
-                          className={`rounded-xl p-2.5 text-xs font-bold transition text-left w-full cursor-pointer ${
-                            appTheme === t.id
-                              ? `${getPrimaryBgColor(t.id)} text-white shadow-md`
-                              : tokens.subtleBtn
-                          }`}
+                {activeSection === "feedAndHistory" && (
+                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
+                    <div
+                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
+                      style={{
+                        backgroundImage: `url(${RABBIT_PANEL})`,
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    />
+                    <div className="relative z-10 space-y-3 w-full box-border">
+                      <div>
+                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                          Select Region / Language Catalog Feed:
+                        </p>
+                        <select
+                          value={selectedGlobalFeed}
+                          onChange={(e) =>
+                            handleGlobalFeedChange(
+                              e.target.value as GlobalFeedOption
+                            )
+                          }
+                          className="h-10 w-full rounded-xl border border-cyan-400/30 bg-black/70 px-3 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer"
                         >
-                          {t.label}
-                        </button>
-                      ))}
+                          {globalFeedOptions.map((opt) => (
+                            <option
+                              key={opt}
+                              value={opt}
+                              className="bg-slate-950 text-white"
+                            >
+                              🌐 {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="pt-2.5 border-t border-white/10">
+                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                          Activity & Playback Timeline:
+                        </p>
+                        <Link
+                          to="/watch-history"
+                          onClick={handleCloseSidebar}
+                          className={`flex h-10 w-full items-center justify-center gap-2 rounded-xl px-3 text-xs font-extrabold shadow-lg transition hover:scale-[1.03] active:scale-95 ${getPrimaryBgColor(
+                            appTheme
+                          )}`}
+                        >
+                          <span>🕒 Open Watch History & Activity</span>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* 4. OVER SCALE & GRID SIZING */}
+              {/* 2. THEMES, SCALE & GRID SIZE (Collapsed Together!) */}
               <div className="w-full box-border">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("scale")}
-                  className={getAccordionBtnClass(
-                    activeSidebarSection === "scale"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>📐</span>
-                    <span>Over Scale & Grid Size</span>
-                  </span>
-                  <span
-                    className={`text-[10px] transform transition-transform ${
-                      activeSidebarSection === "scale" ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {activeSidebarSection === "scale" && (
-                  <div className="w-full p-4 rounded-2xl mt-2 bg-black/60 border border-white/10 space-y-3.5 box-border">
-                    <div>
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                        Catalog Card Size:
-                      </p>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {(["small", "medium", "large"] as CardSize[]).map(
-                          (size) => (
+                {renderCrystalAccordionButton(
+                  "themesAndScale",
+                  "🎨",
+                  "Themes, Scale & Grid Size",
+                  `${appTheme.toUpperCase()} • ${cardSize.toUpperCase()}`
+                )}
+
+                {activeSection === "themesAndScale" && (
+                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
+                    <div
+                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
+                      style={{
+                        backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    />
+                    <div className="relative z-10 space-y-3.5 w-full box-border">
+                      {/* App Themes */}
+                      <div>
+                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                          Neon App Theme:
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 w-full">
+                          {allThemesList.map((t) => (
                             <button
-                              key={size}
+                              key={t.id}
                               type="button"
-                              onClick={() => onSizeChange(size)}
-                              className={`rounded-xl py-2 text-xs font-bold capitalize transition cursor-pointer ${
-                                cardSize === size
+                              onClick={() => onThemeChange(t.id)}
+                              className={`rounded-xl p-2 text-xs font-bold transition-all text-left w-full cursor-pointer hover:scale-[1.04] focus:scale-[1.04] ${
+                                appTheme === t.id
+                                  ? `${getPrimaryBgColor(
+                                      t.id
+                                    )} text-white shadow-md ring-1 ring-white/40`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Catalog Card Size */}
+                      <div className="pt-2.5 border-t border-white/10">
+                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                          Catalog Poster Grid Size:
+                        </p>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(["small", "medium", "large"] as CardSize[]).map(
+                            (size) => (
+                              <button
+                                key={size}
+                                type="button"
+                                onClick={() => onSizeChange(size)}
+                                className={`rounded-xl py-2 text-xs font-bold capitalize transition-all cursor-pointer hover:scale-105 ${
+                                  cardSize === size
+                                    ? `${getPrimaryBgColor(
+                                        appTheme
+                                      )} text-white shadow-md`
+                                    : getSubtlePillBg(appTheme)
+                                }`}
+                              >
+                                {size}
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      {/* History Page Overscale */}
+                      <div className="pt-2.5 border-t border-white/10">
+                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                          Watch History Overscale:
+                        </p>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {(
+                            ["off", "20%", "50%", "80%"] as HistoryScale[]
+                          ).map((scale) => (
+                            <button
+                              key={scale}
+                              type="button"
+                              onClick={() => onHistoryOverscaleChange(scale)}
+                              className={`rounded-xl py-1.5 text-xs font-bold capitalize transition-all cursor-pointer hover:scale-105 ${
+                                historyOverscale === scale
                                   ? `${getPrimaryBgColor(
                                       appTheme
                                     )} text-white shadow-md`
-                                  : tokens.subtleBtn
+                                  : getSubtlePillBg(appTheme)
                               }`}
                             >
-                              {size}
+                              {scale === "off" ? "Off" : `+${scale}`}
                             </button>
-                          )
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                        History Page Overscale:
-                      </p>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {(
-                          ["off", "20%", "50%", "80%"] as HistoryScale[]
-                        ).map((scale) => (
-                          <button
-                            key={scale}
-                            type="button"
-                            onClick={() => onHistoryOverscaleChange(scale)}
-                            className={`rounded-xl py-1.5 text-xs font-bold capitalize transition cursor-pointer ${
-                              historyOverscale === scale
-                                ? `${getPrimaryBgColor(
-                                    appTheme
-                                  )} text-white shadow-md`
-                                : tokens.subtleBtn
-                            }`}
-                          >
-                            {scale === "off" ? "Off" : `+${scale}`}
-                          </button>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* 5. BACKGROUND LOBBY RADIO */}
+              {/* 3. BACKGROUND LOBBY RADIO (Defaulted to Heartbeat Radio in 2000s!) */}
               <div className="w-full box-border">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("audio")}
-                  className={getAccordionBtnClass(
-                    activeSidebarSection === "audio"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>🎵</span>
-                    <span>Background Lobby Radio</span>
-                  </span>
-                  <span
-                    className={`text-[10px] transform transition-transform ${
-                      activeSidebarSection === "audio" ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {activeSidebarSection === "audio" && (
-                  <div className="w-full p-4 rounded-2xl mt-2 bg-black/60 border border-white/10 space-y-3.5 box-border">
-                    <div>
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                        Playback Controls:
-                      </p>
+                {renderCrystalAccordionButton(
+                  "audio",
+                  "🎵",
+                  "Background Lobby Radio",
+                  bgMusicState === "playing" ? "ON" : "MUTED"
+                )}
+
+                {activeSection === "audio" && (
+                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3">
+                    <div
+                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
+                      style={{
+                        backgroundImage: `url(${RABBIT_PANEL})`,
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    />
+                    <div className="relative z-10 space-y-3 w-full box-border">
+                      <div className="flex items-center justify-between rounded-xl bg-black/55 border border-white/10 px-3 py-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Tuned Station:
+                        </span>
+                        <span className="text-xs font-extrabold text-amber-300 truncate max-w-[180px]">
+                          📻 {activeStationName}
+                        </span>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={() => onBackgroundAudioToggle("playing")}
-                          className={`rounded-xl py-2 text-xs font-bold transition cursor-pointer ${
+                          className={`rounded-xl py-2 text-xs font-bold transition-all cursor-pointer hover:scale-105 ${
                             bgMusicState === "playing"
                               ? `${getPrimaryBgColor(
                                   appTheme
                                 )} text-white shadow-md`
-                              : tokens.subtleBtn
+                              : getSubtlePillBg(appTheme)
                           }`}
                         >
                           🎵 Radio ON
@@ -956,117 +1124,471 @@ export function Sidebar({
                         <button
                           type="button"
                           onClick={() => onBackgroundAudioToggle("muted")}
-                          className={`rounded-xl py-2 text-xs font-bold transition cursor-pointer ${
+                          className={`rounded-xl py-2 text-xs font-bold transition-all cursor-pointer hover:scale-105 ${
                             bgMusicState === "muted"
                               ? `${getPrimaryBgColor(
                                   appTheme
                                 )} text-white shadow-md`
-                              : tokens.subtleBtn
+                              : getSubtlePillBg(appTheme)
                           }`}
                         >
                           🔇 Radio Off
                         </button>
                       </div>
-                    </div>
 
-                    <div className="pt-2.5 border-t border-white/10 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[11px] text-slate-300 font-bold">
-                          Music Volume:
-                        </p>
-                        <span className="text-[11px] font-bold text-amber-300">
-                          {Math.round(bgMusicVolume * 100)}%
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value={bgMusicVolume}
-                        onChange={(e) =>
-                          handleVolumeChange(parseFloat(e.target.value))
-                        }
-                        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
-                      />
-                    </div>
-
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 mb-2 font-bold">
-                        Select Channel / Stream by Genre:
-                      </p>
-                      <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 scrollbar-none">
-                        {Object.entries(RADIO_STATIONS).map(
-                          ([category, stations]) => {
-                            const hasActiveStation = stations.some(
-                              (s) =>
-                                currentStationUrl === s.url ||
-                                (!currentStationUrl &&
-                                  bgAudio.getCurrentStation().url === s.url)
-                            );
-
-                            return (
-                              <details
-                                key={category}
-                                className="group rounded-xl bg-white/[0.04] border border-white/10 overflow-hidden"
-                              >
-                                <summary className="flex items-center justify-between px-3 py-2 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/5 transition">
-                                  <span className="flex items-center gap-2 truncate pr-2">
-                                    <span>📁 {category}</span>
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
-                                      {stations.length}
-                                    </span>
-                                  </span>
-                                  <div className="flex items-center gap-1.5 shrink-0">
-                                    {hasActiveStation && (
-                                      <span
-                                        className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
-                                        title="Active stream in this category"
-                                      />
-                                    )}
-                                    <span className="transform group-open:rotate-180 transition-transform text-[10px]">
-                                      ▼
-                                    </span>
-                                  </div>
-                                </summary>
-
-                                <div className="p-1.5 space-y-1 border-t border-white/10 bg-black/50">
-                                  {stations.map((station) => {
-                                    const isSelected =
-                                      currentStationUrl === station.url ||
-                                      (!currentStationUrl &&
-                                        bgAudio.getCurrentStation().url ===
-                                          station.url);
-                                    return (
-                                      <button
-                                        key={station.url}
-                                        type="button"
-                                        onClick={() =>
-                                          handleStationSelect(station.url)
-                                        }
-                                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
-                                          isSelected
-                                            ? `${getPrimaryBgColor(
-                                                appTheme
-                                              )} text-white shadow-md`
-                                            : tokens.subtleBtn
-                                        }`}
-                                      >
-                                        <span className="truncate pr-1">
-                                          🎵 {station.name}
-                                        </span>
-                                        {isSelected && (
-                                          <span className="text-[9px] shrink-0 font-bold bg-black/40 px-1.5 py-0.5 rounded">
-                                            ▶ LIVE
-                                          </span>
-                                        )}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </details>
-                            );
+                      {/* Volume Slider */}
+                      <div className="pt-2 border-t border-white/10 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] text-slate-300 font-bold">
+                            Music Volume:
+                          </p>
+                          <span className="text-[11px] font-bold text-amber-300">
+                            {Math.round(bgMusicVolume * 100)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={bgMusicVolume}
+                          onChange={(e) =>
+                            handleVolumeChange(parseFloat(e.target.value))
                           }
+                          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                        />
+                      </div>
+
+                      {/* Genre Folders (2000s auto-expanded if active) */}
+                      <div className="pt-2 border-t border-white/10">
+                        <p className="text-[11px] text-slate-300 mb-2 font-bold">
+                          Select Channel by Genre:
+                        </p>
+                        <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 scrollbar-none">
+                          {Object.entries(RADIO_STATIONS).map(
+                            ([category, stations]) => {
+                              const hasActiveStation = stations.some(
+                                (s) =>
+                                  currentStationUrl === s.url ||
+                                  (!currentStationUrl &&
+                                    bgAudio.getCurrentStation().url === s.url)
+                              );
+
+                              return (
+                                <details
+                                  key={category}
+                                  open={
+                                    hasActiveStation ||
+                                    category.toLowerCase().includes("2000")
+                                  }
+                                  className="group rounded-xl bg-black/50 border border-white/10 overflow-hidden"
+                                >
+                                  <summary className="flex items-center justify-between px-3 py-1.5 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/10 transition">
+                                    <span className="flex items-center gap-2 truncate pr-2">
+                                      <span>📁 {category}</span>
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
+                                        {stations.length}
+                                      </span>
+                                    </span>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      {hasActiveStation && (
+                                        <span
+                                          className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+                                          title="Active stream in this category"
+                                        />
+                                      )}
+                                      <span className="transform group-open:rotate-180 transition-transform text-[10px]">
+                                        ▼
+                                      </span>
+                                    </div>
+                                  </summary>
+
+                                  <div className="p-1.5 space-y-1 border-t border-white/10 bg-slate-950/65">
+                                    {stations.map((station) => {
+                                      const isSelected =
+                                        currentStationUrl === station.url ||
+                                        (!currentStationUrl &&
+                                          bgAudio.getCurrentStation().url ===
+                                            station.url);
+                                      return (
+                                        <button
+                                          key={station.url}
+                                          type="button"
+                                          onClick={() =>
+                                            handleStationSelect(station.url)
+                                          }
+                                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-between cursor-pointer hover:scale-[1.02] ${
+                                            isSelected
+                                              ? `${getPrimaryBgColor(
+                                                  appTheme
+                                                )} text-white shadow-md`
+                                              : getSubtlePillBg(appTheme)
+                                          }`}
+                                        >
+                                          <span className="truncate pr-1">
+                                            🎵 {station.name}
+                                          </span>
+                                          {isSelected && (
+                                            <span className="text-[9px] shrink-0 font-bold bg-black/50 px-1.5 py-0.5 rounded">
+                                              ▶ LIVE
+                                            </span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </details>
+                              );
+                            }
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. PROFILE, PIN & ACCESSIBILITY (Collapsed Together!) */}
+              <div className="w-full box-border">
+                {renderCrystalAccordionButton(
+                  "profileAndAccessibility",
+                  "🔒",
+                  "Profile, PIN & Accessibility"
+                )}
+
+                {activeSection === "profileAndAccessibility" && (
+                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
+                    <div
+                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
+                      style={{
+                        backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    />
+                    <div className="relative z-10 space-y-3.5 w-full box-border">
+                      {/* Accessibility Toggles */}
+                      <div className="space-y-2.5 pb-3 border-b border-white/15">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-300">
+                          ♿ TV & Accessibility Controls
+                        </p>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-white">
+                              XL Mouse Pointer (3x)
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              Enlarges cursor for TVs/projectors.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onMouseToggle(!helpfulMouse)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              helpfulMouse
+                                ? getPrimaryBgColor(appTheme).split(" ")[0]
+                                : "bg-slate-700"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                helpfulMouse ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <div>
+                            <p className="text-xs font-bold text-white">
+                              Enlarged Action Buttons
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              Bigger icons & buttons.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onLargeButtonsToggle(!largeButtons)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              largeButtons
+                                ? getPrimaryBgColor(appTheme).split(" ")[0]
+                                : "bg-slate-700"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                largeButtons ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Profile, Age & 4-Digit PIN Form */}
+                      <form
+                        onSubmit={handleUnifiedProfileUpdate}
+                        className="space-y-2.5"
+                      >
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-amber-300">
+                          🔐 Profile, Age & Parental PIN
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                              Name:
+                            </span>
+                            <input
+                              type="text"
+                              maxLength={25}
+                              value={profileNameInput}
+                              onChange={(e) =>
+                                setProfileNameInput(e.target.value)
+                              }
+                              className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                            />
+                          </div>
+                          <div>
+                            <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                              Age:
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={120}
+                              value={userAgeInput}
+                              onChange={(e) => setUserAgeInput(e.target.value)}
+                              className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                            Current 4-digit PIN (Required):
+                          </span>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            placeholder="••••"
+                            value={unifiedAgeCodeInput}
+                            onChange={(e) =>
+                              setUnifiedAgeCodeInput(
+                                e.target.value.replace(/\D/g, "").slice(0, 4)
+                              )
+                            }
+                            className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <div>
+                            <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                              New PIN (Opt):
+                            </span>
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={newPasscode}
+                              onChange={(e) =>
+                                setNewPasscode(
+                                  e.target.value.replace(/\D/g, "").slice(0, 4)
+                                )
+                              }
+                              className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                            />
+                          </div>
+                          <div>
+                            <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                              Confirm PIN:
+                            </span>
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={4}
+                              placeholder="••••"
+                              value={confirmNewPasscode}
+                              onChange={(e) =>
+                                setConfirmNewPasscode(
+                                  e.target.value.replace(/\D/g, "").slice(0, 4)
+                                )
+                              }
+                              className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          className={`w-full py-2.5 rounded-xl ${getPrimaryBgColor(
+                            appTheme
+                          )} text-xs font-extrabold shadow-lg transition hover:scale-[1.02] cursor-pointer`}
+                        >
+                          Save Profile & PIN Updates
+                        </button>
+
+                        {unifiedUpdateStatus && (
+                          <p
+                            className={`text-[11px] font-bold text-center ${
+                              unifiedUpdateStatus.isError
+                                ? "text-red-400"
+                                : "text-emerald-400"
+                            }`}
+                          >
+                            {unifiedUpdateStatus.text}
+                          </p>
+                        )}
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. HARDWARE RAM MODE & STREAM ENGINE (New Modern Streaming Hub!) */}
+              <div className="w-full box-border">
+                {renderCrystalAccordionButton(
+                  "hardwareAndStream",
+                  "⚡",
+                  "Hardware RAM & Stream Engine",
+                  ramMode === "low" ? "1-2GB Mode" : "4GB+ Turbo"
+                )}
+
+                {activeSection === "hardwareAndStream" && (
+                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
+                    <div
+                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
+                      style={{
+                        backgroundImage: `url(${RABBIT_PANEL})`,
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    />
+                    <div className="relative z-10 space-y-3.5 w-full box-border">
+                      {/* Low RAM vs High RAM Selector */}
+                      <div>
+                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                          Device Memory Allocation Profile:
+                        </p>
+                        <p className="text-[10px] text-slate-400 mb-2 leading-snug">
+                          Choose <strong className="text-cyan-300">Low RAM Stick</strong> for 1–2GB streaming sticks (Nero 8K / Fire Stick) to cap video buffers and prevent crashes.
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleRamModeChange("low")}
+                            className={`rounded-xl p-2.5 text-left transition-all cursor-pointer hover:scale-[1.03] ${
+                              ramMode === "low"
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md ring-1 ring-white/40`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            <span className="block text-xs font-extrabold">
+                              📟 Low RAM (1–2GB)
+                            </span>
+                            <span className="block text-[9px] opacity-85 mt-0.5">
+                              15MB buffer cap • Anti-crash
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRamModeChange("high")}
+                            className={`rounded-xl p-2.5 text-left transition-all cursor-pointer hover:scale-[1.03] ${
+                              ramMode === "high"
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md ring-1 ring-white/40`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            <span className="block text-xs font-extrabold">
+                              🚀 High RAM (4GB+)
+                            </span>
+                            <span className="block text-[9px] opacity-85 mt-0.5">
+                              Max pre-buffer • Full FX
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Default Stream Quality */}
+                      <div className="pt-2.5 border-t border-white/10">
+                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                          Preferred Stream Resolution:
+                        </p>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(["1080p", "720p", "480p"] as StreamQuality[]).map(
+                            (q) => (
+                              <button
+                                key={q}
+                                type="button"
+                                onClick={() => handleStreamQualitySelect(q)}
+                                className={`rounded-xl py-2 text-xs font-bold uppercase transition-all cursor-pointer hover:scale-105 ${
+                                  activeStreamQuality === q
+                                    ? `${getPrimaryBgColor(
+                                        appTheme
+                                      )} text-white shadow-md`
+                                    : getSubtlePillBg(appTheme)
+                                }`}
+                              >
+                                {q}
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Auto-Play Next Episode & Fast Cache Cleaner */}
+                      <div className="pt-2.5 border-t border-white/10 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-white">
+                              Auto-Play Next Episode
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              Seamless binge-watching for TV series.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleAutoPlayNextToggle(!autoPlayNext)
+                            }
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              autoPlayNext
+                                ? getPrimaryBgColor(appTheme).split(" ")[0]
+                                : "bg-slate-700"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                autoPlayNext ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handlePurgeVolatileCaches}
+                          className={`w-full py-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:scale-[1.02] ${getSubtlePillBg(
+                            appTheme
+                          )}`}
+                        >
+                          🧹 Purge Stream & Metadata Caches (Free RAM)
+                        </button>
+
+                        {cacheClearMsg && (
+                          <p className="text-[11px] font-bold text-emerald-400 text-center">
+                            {cacheClearMsg}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1074,323 +1596,91 @@ export function Sidebar({
                 )}
               </div>
 
-              {/* 6. SCREENSAVER TIMER */}
+              {/* 6. SCREENSAVER, BACKUP & DATA (Collapsed Together!) */}
               <div className="w-full box-border">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("screensaver")}
-                  className={getAccordionBtnClass(
-                    activeSidebarSection === "screensaver"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>💤</span>
-                    <span>Screensaver Timer</span>
-                  </span>
-                  <span
-                    className={`text-[10px] transform transition-transform ${
-                      activeSidebarSection === "screensaver" ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {activeSidebarSection === "screensaver" && (
-                  <div className="w-full p-4 rounded-2xl mt-2 bg-black/60 border border-white/10 space-y-2 box-border">
-                    <p className="text-[11px] text-slate-300 font-bold">
-                      Start Screensaver After:
-                    </p>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {TIMEOUT_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() =>
-                            handleScreensaverTimeoutChange(opt.value)
-                          }
-                          className={`rounded-xl py-2 px-2 text-xs font-bold transition truncate cursor-pointer ${
-                            screensaverTimeoutMs === opt.value
-                              ? `${getPrimaryBgColor(
-                                  appTheme
-                                )} text-white shadow-md`
-                              : tokens.subtleBtn
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                {renderCrystalAccordionButton(
+                  "screensaverAndBackup",
+                  "💤",
+                  "Screensaver, Backup & Data"
                 )}
-              </div>
 
-              {/* 7. PROFILE, AGE & PIN SETTINGS */}
-              <div className="w-full box-border">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("pin")}
-                  className={getAccordionBtnClass(
-                    activeSidebarSection === "pin"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>🔒</span>
-                    <span>Profile, Age & PIN Settings</span>
-                  </span>
-                  <span
-                    className={`text-[10px] transform transition-transform ${
-                      activeSidebarSection === "pin" ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {activeSidebarSection === "pin" && (
-                  <form
-                    onSubmit={handleUnifiedProfileUpdate}
-                    className="w-full p-4 rounded-2xl mt-2 bg-black/60 border border-white/10 space-y-3 box-border"
-                  >
-                    <div className="grid grid-cols-2 gap-2">
+                {activeSection === "screensaverAndBackup" && (
+                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
+                    <div
+                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
+                      style={{
+                        backgroundImage: `url(${RABBIT_PANEL_ALT})`,
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    />
+                    <div className="relative z-10 space-y-3.5 w-full box-border">
+                      {/* Screensaver Timeout */}
                       <div>
-                        <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                          Name:
-                        </span>
-                        <input
-                          type="text"
-                          maxLength={25}
-                          value={profileNameInput}
-                          onChange={(e) => setProfileNameInput(e.target.value)}
-                          className="w-full rounded-xl border border-white/15 bg-slate-900 px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                          Age:
-                        </span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={120}
-                          value={userAgeInput}
-                          onChange={(e) => setUserAgeInput(e.target.value)}
-                          className="w-full rounded-xl border border-white/15 bg-slate-900 px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                        Current 4-digit PIN (Required):
-                      </span>
-                      <input
-                        type="password"
-                        inputMode="numeric"
-                        maxLength={4}
-                        placeholder="••••"
-                        value={unifiedAgeCodeInput}
-                        onChange={(e) =>
-                          setUnifiedAgeCodeInput(
-                            e.target.value.replace(/\D/g, "").slice(0, 4)
-                          )
-                        }
-                        className="w-full rounded-xl border border-white/15 bg-slate-900 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10">
-                      <div>
-                        <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                          New PIN (Opt):
-                        </span>
-                        <input
-                          type="password"
-                          inputMode="numeric"
-                          maxLength={4}
-                          placeholder="••••"
-                          value={newPasscode}
-                          onChange={(e) =>
-                            setNewPasscode(
-                              e.target.value.replace(/\D/g, "").slice(0, 4)
-                            )
-                          }
-                          className="w-full rounded-xl border border-white/15 bg-slate-900 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
-                        />
-                      </div>
-                      <div>
-                        <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                          Confirm PIN:
-                        </span>
-                        <input
-                          type="password"
-                          inputMode="numeric"
-                          maxLength={4}
-                          placeholder="••••"
-                          value={confirmNewPasscode}
-                          onChange={(e) =>
-                            setConfirmNewPasscode(
-                              e.target.value.replace(/\D/g, "").slice(0, 4)
-                            )
-                          }
-                          className="w-full rounded-xl border border-white/15 bg-slate-900 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className={`w-full py-2.5 rounded-xl ${getPrimaryBgColor(
-                        appTheme
-                      )} text-xs font-extrabold shadow transition cursor-pointer`}
-                    >
-                      Save Profile & PIN Updates
-                    </button>
-
-                    {unifiedUpdateStatus && (
-                      <p
-                        className={`text-[11px] font-bold text-center ${
-                          unifiedUpdateStatus.isError
-                            ? "text-red-400"
-                            : "text-emerald-400"
-                        }`}
-                      >
-                        {unifiedUpdateStatus.text}
-                      </p>
-                    )}
-                  </form>
-                )}
-              </div>
-
-              {/* 8. BACKUP & PROFILE DATA */}
-              <div className="w-full box-border">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("backup")}
-                  className={getAccordionBtnClass(
-                    activeSidebarSection === "backup"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>💾</span>
-                    <span>Backup & Profile Data</span>
-                  </span>
-                  <span
-                    className={`text-[10px] transform transition-transform ${
-                      activeSidebarSection === "backup" ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {activeSidebarSection === "backup" && (
-                  <div className="w-full p-4 rounded-2xl mt-2 bg-black/60 border border-white/10 space-y-2.5 box-border">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleSaveBackup}
-                        className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold transition cursor-pointer ${tokens.subtleBtn}`}
-                      >
-                        💾 Export Backup
-                      </button>
-                      <label
-                        className={`flex-1 text-center cursor-pointer rounded-xl px-3 py-2 text-xs font-bold transition ${tokens.subtleBtn}`}
-                      >
-                        🔄 Restore
-                        <input
-                          type="file"
-                          accept=".json"
-                          onChange={handleRestoreBackup}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                    {backupStatus && (
-                      <span
-                        className={`text-xs ${getPrimaryAccentColor(
-                          appTheme
-                        )} font-bold block text-center`}
-                      >
-                        {backupStatus}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* 9. ACCESSIBILITY OPTIONS */}
-              <div className="w-full box-border">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("accessibility")}
-                  className={getAccordionBtnClass(
-                    activeSidebarSection === "accessibility"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>♿</span>
-                    <span>Accessibility Options</span>
-                  </span>
-                  <span
-                    className={`text-[10px] transform transition-transform ${
-                      activeSidebarSection === "accessibility"
-                        ? "rotate-180"
-                        : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-                {activeSidebarSection === "accessibility" && (
-                  <div className="w-full p-4 rounded-2xl mt-2 bg-black/60 border border-white/10 space-y-3 box-border">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-bold text-white">
-                          XL Mouse Pointer (3x)
+                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                          Start Screensaver After:
                         </p>
-                        <p className="text-[10px] text-slate-400">
-                          Enlarges cursor for TVs & projectors.
-                        </p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {TIMEOUT_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() =>
+                                handleScreensaverTimeoutChange(opt.value)
+                              }
+                              className={`rounded-xl py-2 px-2 text-xs font-bold transition-all truncate cursor-pointer hover:scale-105 ${
+                                screensaverTimeoutMs === opt.value
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow-md`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => onMouseToggle(!helpfulMouse)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                          helpfulMouse
-                            ? getPrimaryBgColor(appTheme).split(" ")[0]
-                            : "bg-slate-700"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            helpfulMouse ? "translate-x-6" : "translate-x-1"
-                          }`}
-                        />
-                      </button>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-2.5 border-t border-white/10">
-                      <div>
-                        <p className="text-xs font-bold text-white">
-                          Enlarged Action Buttons
+                      {/* Backup & Restore */}
+                      <div className="pt-2.5 border-t border-white/10 space-y-2">
+                        <p className="text-[11px] text-slate-300 font-bold">
+                          Profile & Watchlist Backup:
                         </p>
-                        <p className="text-[10px] text-slate-400">
-                          Bigger icons & controls.
-                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleSaveBackup}
+                            className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold transition-all cursor-pointer hover:scale-105 ${getSubtlePillBg(
+                              appTheme
+                            )}`}
+                          >
+                            💾 Export JSON
+                          </button>
+                          <label
+                            className={`flex-1 text-center cursor-pointer rounded-xl px-3 py-2 text-xs font-bold transition-all hover:scale-105 ${getSubtlePillBg(
+                              appTheme
+                            )}`}
+                          >
+                            🔄 Restore
+                            <input
+                              type="file"
+                              accept=".json"
+                              onChange={handleRestoreBackup}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                        {backupStatus && (
+                          <span
+                            className={`text-xs ${getPrimaryAccentColor(
+                              appTheme
+                            )} font-bold block text-center`}
+                          >
+                            {backupStatus}
+                          </span>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => onLargeButtonsToggle(!largeButtons)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                          largeButtons
-                            ? getPrimaryBgColor(appTheme).split(" ")[0]
-                            : "bg-slate-700"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            largeButtons ? "translate-x-6" : "translate-x-1"
-                          }`}
-                        />
-                      </button>
                     </div>
                   </div>
                 )}
@@ -1399,7 +1689,7 @@ export function Sidebar({
 
             {/* ADMIN PANEL (IF ADMIN) */}
             {isAdmin && (
-              <div className="pt-3 border-t border-white/10 w-full box-border">
+              <div className="pt-3 border-t border-white/15 w-full box-border">
                 <AdminPanel
                   appTheme={appTheme}
                   getPrimaryBgColor={getPrimaryBgColor}
@@ -1409,14 +1699,14 @@ export function Sidebar({
             )}
 
             {/* FEEDBACK & SUPPORT SECTION */}
-            <div className="pt-3 border-t border-white/10 space-y-2 w-full box-border">
-              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 px-1">
+            <div className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
+              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 px-1">
                 Feedback & Support
               </h4>
               <button
                 type="button"
                 onClick={onOpenBugModal}
-                className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${getPrimaryBgColor(
+                className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all hover:scale-[1.03] active:scale-95 cursor-pointer ${getPrimaryBgColor(
                   appTheme
                 )} text-white shadow-md`}
               >
@@ -1425,25 +1715,25 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onOpenBugFeedModal}
-                className="w-full py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-bold text-slate-200 transition flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-black/55 hover:bg-white/[0.12] border border-white/15 text-xs font-bold text-slate-200 transition-all hover:scale-[1.03] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
               >
                 📋 View Bug Reports Feed
               </button>
             </div>
 
             {/* UPDATE CHANNEL & ACTIONS */}
-            <div className="pt-3 border-t border-white/10 space-y-2 w-full box-border">
-              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 px-1">
+            <div className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
+              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 px-1">
                 Update Channel
               </h4>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => handleUpdateChannelChange("stable")}
-                  className={`py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  className={`py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 cursor-pointer ${
                     updateChannel === "stable"
                       ? `${getPrimaryBgColor(appTheme)} text-white`
-                      : "bg-white/[0.06] text-slate-300 hover:bg-white/[0.12] border border-white/10"
+                      : "bg-black/55 text-slate-300 hover:bg-white/[0.12] border border-white/15"
                   }`}
                 >
                   🛡️ Stable
@@ -1451,10 +1741,10 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={() => handleUpdateChannelChange("nightly")}
-                  className={`py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  className={`py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 cursor-pointer ${
                     updateChannel === "nightly"
                       ? `${getPrimaryBgColor(appTheme)} text-white`
-                      : "bg-white/[0.06] text-slate-300 hover:bg-white/[0.12] border border-white/10"
+                      : "bg-black/55 text-slate-300 hover:bg-white/[0.12] border border-white/15"
                   }`}
                 >
                   ⚡ Nightly
@@ -1463,7 +1753,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={() => void checkForAppUpdates(false)}
-                className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${getPrimaryBgColor(
+                className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all hover:scale-[1.03] active:scale-95 cursor-pointer ${getPrimaryBgColor(
                   appTheme
                 )} text-white shadow-md`}
               >
@@ -1472,17 +1762,17 @@ export function Sidebar({
             </div>
 
             {/* LICENSE STATUS */}
-            <div className="pt-3 border-t border-white/10 space-y-2 w-full box-border">
-              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 px-1">
+            <div className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
+              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 px-1">
                 License Status
               </h4>
               {isAdmin ? (
-                <p className="text-[11px] text-red-300 font-bold bg-red-500/10 border border-red-500/25 p-2.5 rounded-xl">
+                <p className="text-[11px] text-red-300 font-bold bg-red-500/15 border border-red-500/30 p-2.5 rounded-xl backdrop-blur-md">
                   🔐 Admin access active.
                 </p>
               ) : isTrialActive ? (
                 <div className="space-y-2">
-                  <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/25 p-2.5 rounded-xl leading-relaxed">
+                  <p className="text-[11px] text-amber-300 bg-amber-500/15 border border-amber-500/30 p-2.5 rounded-xl leading-relaxed backdrop-blur-md">
                     Trial:{" "}
                     <strong>
                       {trialDaysRemaining}{" "}
@@ -1499,20 +1789,20 @@ export function Sidebar({
                       placeholder="Unlock code"
                       value={unlockCodeInput}
                       onChange={(e) => setUnlockCodeInput(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                      className="w-full rounded-xl border border-white/15 bg-black/70 px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
                     />
                     <button
                       type="submit"
                       className={`w-full py-2 rounded-xl ${getPrimaryBgColor(
                         appTheme
-                      )} text-xs font-extrabold shadow transition cursor-pointer`}
+                      )} text-xs font-extrabold shadow transition-all hover:scale-[1.02] cursor-pointer`}
                     >
                       Upgrade to Full Unlock
                     </button>
                   </form>
                 </div>
               ) : (
-                <p className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/25 p-2.5 rounded-xl">
+                <p className="text-[11px] text-emerald-400 font-bold bg-emerald-500/15 border border-emerald-500/30 p-2.5 rounded-xl backdrop-blur-md">
                   ✅ Lifetime Access Unlocked.
                 </p>
               )}
@@ -1529,15 +1819,15 @@ export function Sidebar({
               )}
             </div>
 
-            {/* Sidebar Footer */}
-            <div className="pt-4 border-t border-white/10 text-center w-full">
+            {/* Sidebar Footer with Neon Divider */}
+            <div className="pt-4 border-t border-white/15 text-center w-full">
               <img
                 src={RABBIT_DIVIDER}
                 alt=""
-                className="w-2/3 mx-auto h-2 object-contain opacity-70 mb-2.5"
+                className="w-2/3 mx-auto h-2 object-contain opacity-80 mb-2.5"
               />
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold">
-                Console UI v2.5 • RABBiT TV
+              <span className="text-[9px] text-slate-400 uppercase tracking-widest font-extrabold">
+                Crystal Console UI v2.6 • RABBiT TV
               </span>
             </div>
           </div>
@@ -1547,16 +1837,11 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => handleScrollSidebar("down")}
-          className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 w-16 h-6 bg-slate-900/90 hover:bg-slate-800 border border-white/15 rounded-full flex items-center justify-center text-amber-300 text-[10px] font-bold shadow-md transition cursor-pointer"
+          className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/75 hover:bg-black border border-red-400/35 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-[0_0_12px_rgba(239,68,68,0.4)] transition hover:scale-110 cursor-pointer"
           title="Scroll Down"
         >
           ▼
         </button>
-
-        {/* Bottom Ambient Neon Laser Line */}
-        <div
-          className={`absolute inset-x-8 bottom-0 h-[2px] bg-gradient-to-r ${tokens.laserLine} opacity-85`}
-        />
       </div>
     </div>
   );
