@@ -1,7 +1,15 @@
 // src/routes/watch-history.tsx
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import React, { useState, useEffect, useRef } from "react";
-import { AppTheme, CardSize, HistoryScale, getSavedTheme, getSavedCardSize, getHistoryOverscale, getLargeButtons } from "@/lib/settings";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import {
+  AppTheme,
+  CardSize,
+  HistoryScale,
+  getSavedTheme,
+  getSavedCardSize,
+  getHistoryOverscale,
+  getLargeButtons,
+} from "@/lib/settings";
 import {
   getWatchHistory,
   markEpisodeCompleted,
@@ -23,12 +31,18 @@ export const Route = createFileRoute("/watch-history")({
 });
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+const BACK_TO_HOME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/BackToHome.png";
 
 function WatchHistoryComponent() {
   const [historyMap, setHistoryMap] = useState<Record<string, ShowWatchHistory>>({});
   const [recentLiveChannels, setRecentLiveChannels] = useState<RecentLiveChannel[]>([]);
   const [dislikedTitles, setDislikedTitles] = useState<DislikedTitle[]>([]);
-  const [verifyingTarget, setVerifyingTarget] = useState<{ showId: string; episodeId: string; title: string } | null>(null);
+  const [verifyingTarget, setVerifyingTarget] = useState<{
+    showId: string;
+    episodeId: string;
+    title: string;
+  } | null>(null);
   const [appTheme, setAppTheme] = useState<AppTheme>("violet");
   const [cardSize, setCardSize] = useState<CardSize>("large");
   const [historyOverscale, setHistoryOverscale] = useState<HistoryScale>("off");
@@ -92,15 +106,15 @@ function WatchHistoryComponent() {
     };
   }, [canScrollDown]);
 
-  const refreshData = () => {
-    setHistoryMap(getWatchHistory());
-    setRecentLiveChannels(getRecentLiveChannels());
-    setDislikedTitles(getDislikedTitles());
+  const refreshData = useCallback(() => {
+    setHistoryMap({ ...getWatchHistory() });
+    setRecentLiveChannels([...getRecentLiveChannels()]);
+    setDislikedTitles([...getDislikedTitles()]);
     setAppTheme(getSavedTheme());
     setCardSize(getSavedCardSize());
     setHistoryOverscale(getHistoryOverscale());
     setLargeButtons(getLargeButtons());
-  };
+  }, []);
 
   useEffect(() => {
     refreshData();
@@ -112,16 +126,19 @@ function WatchHistoryComponent() {
       window.removeEventListener("rabtv_disliked_updated", refreshData);
       window.removeEventListener("rabtv_settings_updated", refreshData as any);
     };
-  }, []);
+  }, [refreshData]);
 
-  const handleEyeballClick = (showId: string, episodeId: string, episodeTitle: string, isCompleted: boolean) => {
-    if (!isCompleted) {
-      setVerifyingTarget({ showId, episodeId, title: episodeTitle });
-    } else {
-      markEpisodeCompleted(showId, episodeId, false);
-      refreshData();
-    }
-  };
+  const handleEyeballClick = useCallback(
+    (showId: string, episodeId: string, episodeTitle: string, isCompleted: boolean) => {
+      if (!isCompleted) {
+        setVerifyingTarget({ showId, episodeId, title: episodeTitle });
+      } else {
+        markEpisodeCompleted(showId, episodeId, false);
+        refreshData();
+      }
+    },
+    [refreshData]
+  );
 
   const handleConfirmModal = (completed: boolean) => {
     if (verifyingTarget) {
@@ -134,36 +151,72 @@ function WatchHistoryComponent() {
   const getPageBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-gradient-to-br from-zinc-950 via-red-950/40 to-black";
+        return "bg-gradient-to-br from-zinc-950/85 via-red-950/40 to-black/95";
       case "midnight":
-        return "bg-gradient-to-br from-slate-950 via-blue-950/40 to-slate-950";
+        return "bg-gradient-to-br from-slate-950/85 via-blue-950/40 to-slate-950/95";
       case "emerald":
-        return "bg-gradient-to-br from-slate-950 via-emerald-950/40 to-slate-950";
+        return "bg-gradient-to-br from-slate-950/85 via-emerald-950/40 to-slate-950/95";
       case "amber":
-        return "bg-gradient-to-br from-stone-950 via-yellow-950/40 to-neutral-950";
+        return "bg-gradient-to-br from-stone-950/85 via-yellow-950/40 to-neutral-950/95";
       case "cyan":
-        return "bg-gradient-to-br from-slate-950 via-cyan-950/40 to-slate-950";
+        return "bg-gradient-to-br from-slate-950/85 via-cyan-950/40 to-slate-950/95";
       case "violet":
       default:
-        return "bg-gradient-to-br from-slate-950 via-purple-950/40 to-slate-950";
+        return "bg-gradient-to-br from-slate-950/85 via-purple-950/40 to-slate-950/95";
     }
   };
 
-  const getPrimaryAccentColor = (theme: AppTheme) => {
+  const getThemeTokens = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "text-red-400 border-red-500";
+        return {
+          accentText: "text-red-400",
+          accentBar: "bg-red-500 shadow-[0_0_14px_rgba(239,68,68,0.95)]",
+          badgeBg: "bg-red-950/70 border-red-500/30 text-red-300",
+          ambient: "from-red-600/12 via-transparent to-transparent",
+          glowBorder: "border-red-500/25 shadow-[0_12px_36px_rgba(239,68,68,0.15)]",
+        };
       case "midnight":
-        return "text-blue-400 border-blue-500";
+        return {
+          accentText: "text-sky-300",
+          accentBar: "bg-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.95)]",
+          badgeBg: "bg-blue-950/70 border-blue-500/30 text-sky-300",
+          ambient: "from-blue-600/12 via-transparent to-transparent",
+          glowBorder: "border-blue-500/25 shadow-[0_12px_36px_rgba(59,130,246,0.15)]",
+        };
       case "emerald":
-        return "text-emerald-300 border-emerald-500";
+        return {
+          accentText: "text-emerald-300",
+          accentBar: "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.95)]",
+          badgeBg: "bg-emerald-950/70 border-emerald-500/30 text-emerald-300",
+          ambient: "from-emerald-600/12 via-transparent to-transparent",
+          glowBorder: "border-emerald-500/25 shadow-[0_12px_36px_rgba(16,185,129,0.15)]",
+        };
       case "amber":
-        return "text-amber-300 border-amber-500";
+        return {
+          accentText: "text-amber-300",
+          accentBar: "bg-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.95)]",
+          badgeBg: "bg-amber-950/70 border-amber-500/30 text-amber-300",
+          ambient: "from-amber-600/12 via-transparent to-transparent",
+          glowBorder: "border-amber-500/25 shadow-[0_12px_36px_rgba(245,158,11,0.15)]",
+        };
       case "cyan":
-        return "text-cyan-300 border-cyan-500";
+        return {
+          accentText: "text-cyan-300",
+          accentBar: "bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.95)]",
+          badgeBg: "bg-cyan-950/70 border-cyan-500/30 text-cyan-300",
+          ambient: "from-cyan-600/12 via-transparent to-transparent",
+          glowBorder: "border-cyan-500/25 shadow-[0_12px_36px_rgba(6,182,212,0.15)]",
+        };
       case "violet":
       default:
-        return "text-violet-400 border-violet-500";
+        return {
+          accentText: "text-violet-300",
+          accentBar: "bg-violet-500 shadow-[0_0_14px_rgba(139,92,246,0.95)]",
+          badgeBg: "bg-purple-950/70 border-violet-500/30 text-violet-300",
+          ambient: "from-violet-600/12 via-transparent to-transparent",
+          glowBorder: "border-violet-500/25 shadow-[0_12px_36px_rgba(139,92,246,0.15)]",
+        };
     }
   };
 
@@ -197,7 +250,7 @@ function WatchHistoryComponent() {
           ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
           : reductionOffset >= 2
           ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
-          : "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8";
+          : "grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7";
       case "medium":
         return reductionOffset >= 2
           ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
@@ -210,51 +263,112 @@ function WatchHistoryComponent() {
     }
   };
 
-  const gridColsClass = getGridColsClass(cardSize, historyOverscale);
-  const allEntries = Object.values(historyMap);
+  const activeTokens = getThemeTokens(appTheme);
+  const gridColsClass = useMemo(
+    () => getGridColsClass(cardSize, historyOverscale),
+    [cardSize, historyOverscale]
+  );
 
-  const tvShows = allEntries.filter((item) => item.mediaType === "tv");
-  const movies = allEntries.filter((item) => item.mediaType === "movie");
+  const {
+    allEntries,
+    inProgressMovies,
+    completedMovies,
+    inProgressShows,
+    completedShows,
+  } = useMemo(() => {
+    const entries = Object.values(historyMap);
+    const shows = entries.filter((item) => item.mediaType === "tv");
+    const movs = entries.filter((item) => item.mediaType === "movie");
 
-  const inProgressMovies = movies.filter((m) => calculateSeriesProgress(m) < 100);
-  const completedMovies = movies.filter((m) => calculateSeriesProgress(m) === 100);
+    return {
+      allEntries: entries,
+      inProgressMovies: movs.filter((m) => calculateSeriesProgress(m) < 100),
+      completedMovies: movs.filter((m) => calculateSeriesProgress(m) === 100),
+      inProgressShows: shows.filter((s) => calculateSeriesProgress(s) < 100),
+      completedShows: shows.filter((s) => calculateSeriesProgress(s) === 100),
+    };
+  }, [historyMap]);
 
-  const inProgressShows = tvShows.filter((s) => calculateSeriesProgress(s) < 100);
-  const completedShows = tvShows.filter((s) => calculateSeriesProgress(s) === 100);
-
-  const iconBtnClass = largeButtons ? "h-7 w-7 text-sm" : "h-6 w-6 text-xs";
+  const iconBtnClass = largeButtons ? "h-7 w-7 text-xs" : "h-6 w-6 text-[11px]";
 
   return (
-    <div className={`min-h-screen w-full ${getPageBackground(appTheme)} p-4 md:p-12 text-white space-y-6 transition-colors duration-300 pb-20 overflow-x-hidden relative`}>
+    <div
+      className={`min-h-screen w-full ${getPageBackground(appTheme)} p-4 sm:p-6 md:p-10 text-white space-y-6 transition-colors duration-300 pb-20 overflow-x-hidden relative rounded-3xl`}
+    >
       <AppWallpaper />
-      <div className="relative z-10 space-y-6">
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
-          <h1 className="text-xl font-bold tracking-wide flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-red-950 via-red-900 to-black border border-red-500/30 shadow-lg text-lg">
-              🐰
+      <div
+        className={`absolute inset-x-0 -top-12 h-96 bg-gradient-to-b ${activeTokens.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
+      />
+
+      <div className="relative z-10 max-w-7xl mx-auto space-y-6">
+        {/* Top Navigation Row: Back to Home + Page Header */}
+        <div className="flex flex-col gap-3">
+          <div>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 focus:outline-none focus:ring-4 focus:ring-indigo-500 rounded-2xl overflow-hidden cursor-pointer bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md px-3 py-1.5 border border-white/10 hover:border-white/20 shadow-md transition duration-300 transform active:scale-95 group"
+            >
+              <img
+                src={BACK_TO_HOME}
+                alt="Back to Home"
+                className="w-16 sm:w-20 object-contain opacity-65 group-hover:opacity-100 transition duration-300"
+                style={{
+                  maskImage:
+                    "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 90%)",
+                  WebkitMaskImage:
+                    "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 90%)",
+                }}
+              />
+            </Link>
+          </div>
+
+          <div
+            className={`flex flex-wrap items-center justify-between gap-3 rounded-3xl border bg-slate-950/75 backdrop-blur-2xl px-5 py-4 ${activeTokens.glowBorder}`}
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-950 via-red-900 to-black border border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.3)] text-xl">
+                🐰
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  Watch History & Activity
+                </h1>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  Manage your playback progress, completed titles & catalog filters
+                </p>
+              </div>
             </div>
-            <span>Watch History & Activity</span>
-          </h1>
-          <span className="text-xs text-slate-400 font-semibold">
-            {allEntries.length + recentLiveChannels.length} Tracked Items
-          </span>
+
+            <span
+              className={`text-xs font-bold px-3.5 py-1.5 rounded-full border backdrop-blur-md ${activeTokens.badgeBg}`}
+            >
+              {allEntries.length + recentLiveChannels.length} Tracked Items
+            </span>
+          </div>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-black/50 px-3.5 py-3 shadow-md backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-300">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-bold text-violet-300">💡 Guide:</span>
-            <span className="flex items-center gap-1"><strong className="text-white">👁️</strong> Confirms you have watched it</span>
-            <span className="text-slate-600 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1"><strong className="text-white">👎</strong> Dislikes and removes from catalogs</span>
-            <span className="text-slate-600 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1"><strong className="text-white">✕</strong> Removes from watch history</span>
+        {/* High-End Glass Guide Legend Bar */}
+        <div className="rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3.5 shadow-xl backdrop-blur-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 text-xs text-slate-300">
+          <div className="flex items-center gap-2.5 sm:gap-4 flex-wrap">
+            <span className={`text-xs font-extrabold uppercase tracking-wider ${activeTokens.accentText}`}>
+              💡 Quick Guide:
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1">
+              <strong className="text-white">👁️</strong> Confirms you have watched it
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1">
+              <strong className="text-amber-300">👎</strong> Dislikes & removes from catalogs
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1">
+              <strong className="text-red-400">✕</strong> Removes from watch history
+            </span>
           </div>
-          <div className="text-violet-400 font-medium">
+          <div className={`font-semibold shrink-0 ${activeTokens.accentText}`}>
             ✨ Also check your{" "}
             <Link
               to="/"
               search={{ tab: "My List" }}
-              className="text-white underline hover:text-violet-300 transition font-bold"
+              className="text-white underline hover:opacity-80 transition font-extrabold"
             >
               My List
             </Link>{" "}
@@ -262,26 +376,40 @@ function WatchHistoryComponent() {
           </div>
         </div>
 
-        {allEntries.length === 0 && recentLiveChannels.length === 0 && dislikedTitles.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-black/40 p-8 text-center text-slate-400 backdrop-blur-md">
-            <p className="text-sm font-bold">No watch history recorded yet.</p>
-            <p className="text-xs mt-1">Start watching movies, shows, or live streams to automatically populate your history.</p>
+        {allEntries.length === 0 &&
+        recentLiveChannels.length === 0 &&
+        dislikedTitles.length === 0 ? (
+          <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-10 text-center text-slate-400 backdrop-blur-xl shadow-2xl space-y-2">
+            <div className="text-3xl mb-2">🎬</div>
+            <p className="text-base font-bold text-white">No watch history recorded yet.</p>
+            <p className="text-xs text-slate-400 max-w-md mx-auto">
+              Start watching movies, shows, or live streams to automatically populate your activity timeline.
+            </p>
           </div>
         ) : (
-          <div className="space-y-12">
+          <div className="space-y-10">
+            {/* 1. RECENTLY WATCHED LIVE TV */}
             {recentLiveChannels.length > 0 && (
               <section className="space-y-4">
-                <h2 className="text-sm font-bold text-slate-200 border-l-4 border-red-500 pl-3 uppercase tracking-wider flex items-center gap-2">
-                  <span>🔴 Recently Watched Live TV</span>
-                  <span className="text-[10px] text-red-400 font-bold lowercase">(Last {recentLiveChannels.length})</span>
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-2 items-start">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-1.5 h-6 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]" />
+                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase flex items-center gap-2">
+                      <span>🔴 Recently Watched Live TV</span>
+                    </h2>
+                  </div>
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-red-950/60 border border-red-500/30 text-red-300">
+                    Last {recentLiveChannels.length}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4 pt-1 items-start">
                   {recentLiveChannels.map((channel) => (
                     <div
                       key={channel.channelId}
-                      className="group relative rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/90 to-black p-3 shadow-xl hover:-translate-y-1 transition text-center flex flex-col items-center justify-between overflow-hidden"
+                      className="group relative rounded-2xl border border-white/10 hover:border-red-500/50 bg-slate-950/85 backdrop-blur-xl p-3 shadow-xl hover:-translate-y-1.5 transition-all duration-300 text-center flex flex-col items-center justify-between overflow-hidden"
                     >
-                      <div className="absolute top-1.5 right-1.5 z-10">
+                      <div className="absolute top-2 right-2 z-10">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -289,7 +417,7 @@ function WatchHistoryComponent() {
                             removeRecentLiveChannel(channel.channelId);
                             refreshData();
                           }}
-                          className={`flex items-center justify-center rounded-lg bg-red-950/90 text-red-300 backdrop-blur-md border border-red-500/30 transition hover:bg-red-600 hover:text-white focus:outline-none font-bold ${iconBtnClass}`}
+                          className={`flex items-center justify-center rounded-lg bg-black/80 text-red-300 backdrop-blur-md border border-red-500/30 transition hover:bg-red-600 hover:text-white focus:outline-none font-bold shadow-md ${iconBtnClass}`}
                           title="Remove from history"
                         >
                           ✕
@@ -298,26 +426,32 @@ function WatchHistoryComponent() {
 
                       <Link
                         to="/live-player"
-                        search={{ url: channel.streamUrl, title: channel.title, logo: channel.logo || "" }}
+                        search={{
+                          url: channel.streamUrl,
+                          title: channel.title,
+                          logo: channel.logo || "",
+                        }}
                         className="w-full flex flex-col items-center"
                       >
-                        <div className="w-full h-20 bg-black/50 rounded-xl mb-2 overflow-hidden flex items-center justify-center border border-white/10 p-2">
+                        <div className="w-full h-20 bg-black/60 rounded-xl mb-2.5 overflow-hidden flex items-center justify-center border border-white/10 p-2.5">
                           {channel.logo ? (
                             <img
                               src={channel.logo}
                               alt={channel.title}
-                              className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                               loading="lazy"
                             />
                           ) : (
-                            <span className="text-xs font-bold text-slate-400">LIVE</span>
+                            <span className="text-xs font-black text-red-400 tracking-widest">
+                              ● LIVE
+                            </span>
                           )}
                         </div>
-                        <span className="text-xs font-bold line-clamp-1 text-white group-hover:text-slate-200">
+                        <span className="text-xs font-bold line-clamp-1 text-white group-hover:text-red-200">
                           {channel.title}
                         </span>
-                        <span className="mt-2 w-full py-1 text-[10px] font-bold rounded-full bg-red-600/80 border border-red-400/30 text-white shadow">
-                          RESUME STREAM →
+                        <span className="mt-2.5 w-full py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-600/25 group-hover:brightness-110 transition">
+                          ▶ Resume Stream
                         </span>
                       </Link>
                     </div>
@@ -326,12 +460,24 @@ function WatchHistoryComponent() {
               </section>
             )}
 
+            {/* 2. MOVIES - IN PROGRESS */}
             {inProgressMovies.length > 0 && (
               <section className="space-y-4">
-                <h2 className={`text-sm font-bold text-slate-200 border-l-4 pl-3 uppercase tracking-wider ${getPrimaryAccentColor(appTheme)}`}>
-                  Movies - In Progress
-                </h2>
-                <div className={`grid ${gridColsClass} gap-x-6 gap-y-10 pt-2 items-start`}>
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-1.5 h-6 rounded-full ${activeTokens.accentBar}`} />
+                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                      Movies - In Progress
+                    </h2>
+                  </div>
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full border ${activeTokens.badgeBg}`}
+                  >
+                    {inProgressMovies.length}
+                  </span>
+                </div>
+
+                <div className={`grid ${gridColsClass} gap-3.5 sm:gap-5 pt-1 items-start`}>
                   {inProgressMovies.map((movie) => (
                     <MovieCard
                       key={movie.showId}
@@ -350,12 +496,22 @@ function WatchHistoryComponent() {
               </section>
             )}
 
+            {/* 3. TV SHOWS - IN PROGRESS */}
             {inProgressShows.length > 0 && (
               <section className="space-y-4">
-                <h2 className="text-sm font-bold text-slate-200 border-l-4 border-blue-500 pl-3 uppercase tracking-wider">
-                  TV Shows - In Progress
-                </h2>
-                <div className={`grid ${gridColsClass} gap-x-6 gap-y-10 pt-2 items-start`}>
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-1.5 h-6 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.9)]" />
+                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                      TV Shows - In Progress
+                    </h2>
+                  </div>
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-950/70 border border-blue-500/30 text-sky-300">
+                    {inProgressShows.length}
+                  </span>
+                </div>
+
+                <div className={`grid ${gridColsClass} gap-3.5 sm:gap-5 pt-1 items-start`}>
                   {inProgressShows.map((show) => (
                     <TvShowCard
                       key={show.showId}
@@ -374,12 +530,22 @@ function WatchHistoryComponent() {
               </section>
             )}
 
+            {/* 4. COMPLETED */}
             {(completedMovies.length > 0 || completedShows.length > 0) && (
               <section className="space-y-4">
-                <h2 className="text-sm font-bold text-slate-200 border-l-4 border-emerald-500 pl-3 uppercase tracking-wider">
-                  Completed
-                </h2>
-                <div className={`grid ${gridColsClass} gap-x-6 gap-y-10 pt-2 items-start`}>
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-1.5 h-6 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
+                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                      Completed
+                    </h2>
+                  </div>
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-500/30 text-emerald-300">
+                    {completedMovies.length + completedShows.length}
+                  </span>
+                </div>
+
+                <div className={`grid ${gridColsClass} gap-3.5 sm:gap-5 pt-1 items-start`}>
                   {completedMovies.map((movie) => (
                     <MovieCard
                       key={movie.showId}
@@ -412,37 +578,54 @@ function WatchHistoryComponent() {
               </section>
             )}
 
+            {/* 5. DISLIKED / REMOVED */}
             {dislikedTitles.length > 0 && (
               <section className="space-y-4">
-                <h2 className="text-sm font-bold text-slate-200 border-l-4 border-red-500 pl-3 uppercase tracking-wider">
-                  Disliked / Removed
-                </h2>
-                <div className={`grid ${gridColsClass} gap-4 pt-2 items-start`}>
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-1.5 h-6 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]" />
+                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                      Disliked / Removed
+                    </h2>
+                  </div>
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-red-950/60 border border-red-500/30 text-red-300">
+                    {dislikedTitles.length}
+                  </span>
+                </div>
+
+                <div className={`grid ${gridColsClass} gap-3.5 sm:gap-4 pt-1 items-start`}>
                   {dislikedTitles.map((item) => (
                     <div
                       key={item.id}
-                      className="group relative rounded-xl border border-red-500/20 bg-black/60 backdrop-blur-md overflow-hidden shadow-md flex flex-col justify-between p-3"
+                      className="group relative rounded-2xl border border-red-500/25 bg-slate-950/80 backdrop-blur-xl overflow-hidden shadow-lg flex flex-col justify-between p-3.5 hover:border-red-500/50 transition"
                     >
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-red-400 uppercase">{item.mediaType}</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-extrabold text-red-300 bg-red-950/70 border border-red-500/30 px-2 py-0.5 rounded-md uppercase">
+                            {item.mediaType || "Media"}
+                          </span>
                           <button
                             type="button"
                             onClick={() => {
                               removeDislikedTitle(item.id);
                               refreshData();
                             }}
-                            className={`text-slate-400 hover:text-white font-bold ${largeButtons ? "text-sm p-1" : "text-xs p-0.5"}`}
-                            title="Restore"
+                            className="inline-flex items-center gap-1 rounded-lg bg-white/10 hover:bg-emerald-600 text-slate-200 hover:text-white font-bold text-[10px] px-2 py-1 transition cursor-pointer"
+                            title="Restore to Catalog"
                           >
-                            ↺
+                            <span>↺ Restore</span>
                           </button>
                         </div>
-                        <h3 className="text-xs font-bold text-white truncate" title={item.title}>
+                        <h3
+                          className="text-xs font-bold text-white truncate pt-0.5"
+                          title={item.title}
+                        >
                           {item.title}
                         </h3>
                       </div>
-                      <span className="text-[9px] text-slate-500 pt-2">Excluded from catalog</span>
+                      <span className="text-[9px] text-slate-500 pt-2 font-medium">
+                        Excluded from catalog recommendations
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -452,7 +635,7 @@ function WatchHistoryComponent() {
         )}
 
         {canScrollDown && showScrollReminder && (
-          <div 
+          <div
             className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
             onAnimationEnd={() => setShowScrollReminder(false)}
           >
@@ -468,39 +651,47 @@ function WatchHistoryComponent() {
                 animation: flashTwice 8s ease-in-out forwards;
               }
             `}</style>
-            <div className="flex flex-col items-center gap-0.5 bg-black/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
+            <div className="flex flex-col items-center gap-0.5 bg-black/35 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
                 More History Below
               </span>
-              <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
+              <span
+                className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}
+              >
                 ⌄
               </span>
             </div>
           </div>
         )}
 
+        {/* VERIFY COMPLETION MODAL */}
         {verifyingTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl text-center">
-              <div className="text-3xl">👁️</div>
-              <h3 className="text-lg font-bold text-white">Verify Completion</h3>
-              <p className="text-xs text-slate-300">
-                Did you complete watching <strong className="text-violet-400">{verifyingTarget.title}</strong>?
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+            <div
+              className={`w-full max-w-sm space-y-4 rounded-3xl border bg-slate-950/95 p-6 shadow-2xl text-center ${activeTokens.glowBorder}`}
+            >
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-3xl shadow-inner">
+                👁️
+              </div>
+              <h3 className="text-lg font-black text-white">Verify Completion</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Did you finish watching{" "}
+                <strong className={activeTokens.accentText}>{verifyingTarget.title}</strong>?
               </p>
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <div className="grid grid-cols-2 gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => handleConfirmModal(true)}
-                  className="rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 text-xs font-bold text-white shadow-lg transition"
+                  className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 transition cursor-pointer"
                 >
-                  Yes (✓)
+                  Yes, Completed (✓)
                 </button>
                 <button
                   type="button"
                   onClick={() => handleConfirmModal(false)}
-                  className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 py-2.5 text-xs font-bold text-slate-300 transition"
+                  className="rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 py-2.5 text-xs font-bold text-slate-200 transition cursor-pointer"
                 >
-                  No (?)
+                  Not Yet (?)
                 </button>
               </div>
             </div>
@@ -523,47 +714,62 @@ const MovieCard = React.memo(function MovieCard({
   appTheme: AppTheme;
   historyOverscale: HistoryScale | boolean;
   largeButtons: boolean;
-  onEyeballClick: (showId: string, episodeId: string, episodeTitle: string, isCompleted: boolean) => void;
+  onEyeballClick: (
+    showId: string,
+    episodeId: string,
+    episodeTitle: string,
+    isCompleted: boolean
+  ) => void;
   onRemove: () => void;
 }) {
   const navigate = useNavigate();
-  const singleEp = Object.values(movie.episodes)[0] || { episodeId: `${movie.showId}-s1-e1`, title: movie.title, confirmedCompleted: false };
+  const singleEp = Object.values(movie.episodes)[0] || {
+    episodeId: `${movie.showId}-s1-e1`,
+    title: movie.title,
+    confirmedCompleted: false,
+  };
   const isCompleted = singleEp.confirmedCompleted;
 
   const getCardThemeStyles = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-gradient-to-b from-red-950/70 via-zinc-900 to-black border-red-500/30";
+        return "bg-zinc-950/90 border-white/10 hover:border-red-500/70 hover:shadow-[0_10px_28px_rgba(239,68,68,0.25)]";
       case "midnight":
-        return "bg-gradient-to-b from-blue-950/70 via-slate-900 to-slate-950 border-blue-500/30";
+        return "bg-slate-950/90 border-white/10 hover:border-blue-400/70 hover:shadow-[0_10px_28px_rgba(59,130,246,0.25)]";
       case "emerald":
-        return "bg-gradient-to-b from-emerald-950/70 via-slate-900 to-slate-950 border-emerald-500/30";
+        return "bg-slate-950/90 border-white/10 hover:border-emerald-400/70 hover:shadow-[0_10px_28px_rgba(16,185,129,0.25)]";
       case "amber":
-        return "bg-gradient-to-b from-yellow-950/70 via-stone-900 to-stone-950 border-amber-500/30";
+        return "bg-stone-950/90 border-white/10 hover:border-amber-400/70 hover:shadow-[0_10px_28px_rgba(245,158,11,0.25)]";
       case "cyan":
-        return "bg-gradient-to-b from-cyan-950/70 via-slate-900 to-slate-950 border-cyan-500/30";
+        return "bg-slate-950/90 border-white/10 hover:border-cyan-400/70 hover:shadow-[0_10px_28px_rgba(6,182,212,0.25)]";
       case "violet":
       default:
-        return "bg-gradient-to-b from-purple-950/70 via-slate-900 to-slate-950 border-violet-500/30";
+        return "bg-slate-950/90 border-white/10 hover:border-violet-400/70 hover:shadow-[0_10px_28px_rgba(139,92,246,0.25)]";
     }
   };
 
-  const btnClass = largeButtons ? "h-7 px-2 text-xs" : "h-6 px-1.5 text-[10px]";
-  const iconBtnClass = largeButtons ? "h-7 w-7 text-sm" : "h-6 w-6 text-xs";
+  const pillBtnClass = largeButtons
+    ? "h-7 px-2 text-[11px]"
+    : "h-6 px-1.5 text-[10px]";
+  const iconBtnClass = largeButtons ? "h-7 w-7 text-xs" : "h-6 w-6 text-[10px]";
 
   return (
     <div className="w-full">
       <div
-        onClick={() => navigate({ to: "/details", search: { id: movie.showId, type: "movie" } })}
-        className={`group relative rounded-xl border overflow-hidden shadow-xl flex flex-col justify-between transition hover:brightness-110 cursor-pointer ${getCardThemeStyles(appTheme)}`}
+        onClick={() =>
+          navigate({ to: "/details", search: { id: movie.showId, type: "movie" } })
+        }
+        className={`group relative rounded-2xl border overflow-hidden shadow-xl flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 cursor-pointer ${getCardThemeStyles(
+          appTheme
+        )}`}
       >
-        <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-950 shrink-0">
+        <div className="relative aspect-[2/3] w-full overflow-hidden bg-black shrink-0">
           {movie.posterPath ? (
             <img
               src={`${TMDB_IMAGE_BASE}${movie.posterPath}`}
               alt={movie.title}
               loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover object-center transition transform group-hover:scale-105"
+              className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center p-2 text-center text-slate-500 text-xs font-bold">
@@ -571,19 +777,51 @@ const MovieCard = React.memo(function MovieCard({
             </div>
           )}
 
-          <div className="absolute top-1.5 right-1.5 flex flex-wrap justify-end gap-1 max-w-[130px] sm:max-w-none z-10" onClick={(e) => e.stopPropagation()}>
+          {/* Top Gradient Scrim so top buttons are always legible */}
+          <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none" />
+
+          {/* Top-Left: Completion Toggle Pill (Separated so buttons never wrap over the poster) */}
+          <div
+            className="absolute top-2 left-2 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
-              onClick={() => onEyeballClick(movie.showId, singleEp.episodeId, movie.title, isCompleted)}
-              className={`flex items-center justify-center rounded-lg bg-slate-950/90 text-white backdrop-blur-md border border-white/20 transition hover:scale-110 focus:outline-none font-bold ${btnClass}`}
-              title="Toggle Status"
+              onClick={() =>
+                onEyeballClick(
+                  movie.showId,
+                  singleEp.episodeId,
+                  movie.title,
+                  isCompleted
+                )
+              }
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg backdrop-blur-md border transition hover:scale-105 focus:outline-none font-bold shadow-md ${pillBtnClass} ${
+                isCompleted
+                  ? "bg-emerald-950/90 text-emerald-300 border-emerald-400/40"
+                  : "bg-black/80 text-white border-white/20"
+              }`}
+              title="Toggle Watched Status"
             >
               {isCompleted ? "👁️ ✓" : "👁️ ?"}
             </button>
+          </div>
+
+          {/* Top-Right: Dislike & Remove Controls */}
+          <div
+            className="absolute top-2 right-2 flex items-center gap-1 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
-              onClick={() => dislikeTitle({ id: movie.showId, title: movie.title, mediaType: "movie", posterPath: movie.posterPath })}
-              className={`flex items-center justify-center rounded-lg bg-amber-950/90 text-amber-300 backdrop-blur-md border border-amber-500/30 transition hover:bg-amber-600 hover:text-white focus:outline-none font-bold ${iconBtnClass}`}
+              onClick={() =>
+                dislikeTitle({
+                  id: movie.showId,
+                  title: movie.title,
+                  mediaType: "movie",
+                  posterPath: movie.posterPath,
+                })
+              }
+              className={`flex items-center justify-center rounded-lg bg-black/80 text-amber-300 backdrop-blur-md border border-amber-500/30 transition hover:bg-amber-600 hover:text-white focus:outline-none font-bold shadow-md ${iconBtnClass}`}
               title="Dislike & Hide Globally"
             >
               👎
@@ -591,19 +829,34 @@ const MovieCard = React.memo(function MovieCard({
             <button
               type="button"
               onClick={onRemove}
-              className={`flex items-center justify-center rounded-lg bg-red-950/90 text-red-300 backdrop-blur-md border border-red-500/30 transition hover:bg-red-600 hover:text-white focus:outline-none font-bold ${iconBtnClass}`}
+              className={`flex items-center justify-center rounded-lg bg-black/80 text-red-300 backdrop-blur-md border border-red-500/30 transition hover:bg-red-600 hover:text-white focus:outline-none font-bold shadow-md ${iconBtnClass}`}
               title="Remove from history"
             >
               ✕
             </button>
           </div>
-        </div>
 
-        <div className="p-3 shrink-0">
-          <h3 className="text-xs font-bold truncate text-white" title={movie.title}>
-            {movie.title}
-          </h3>
-          <span className="text-[10px] text-slate-400 font-medium">Movie</span>
+          {/* Bottom Poster Gradient Overlay */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent pt-10 pb-2.5 px-3 z-10">
+            <h3
+              className="text-xs sm:text-sm font-bold truncate text-white drop-shadow"
+              title={movie.title}
+            >
+              {movie.title}
+            </h3>
+            <div className="flex items-center justify-between mt-0.5">
+              <span className="text-[10px] text-slate-300 font-semibold uppercase tracking-wider">
+                Movie
+              </span>
+              <span
+                className={`text-[10px] font-bold ${
+                  isCompleted ? "text-emerald-400" : "text-amber-300"
+                }`}
+              >
+                {isCompleted ? "Completed" : "In Progress"}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -622,7 +875,12 @@ const TvShowCard = React.memo(function TvShowCard({
   appTheme: AppTheme;
   historyOverscale: HistoryScale | boolean;
   largeButtons: boolean;
-  onEyeballClick: (showId: string, episodeId: string, episodeTitle: string, isCompleted: boolean) => void;
+  onEyeballClick: (
+    showId: string,
+    episodeId: string,
+    episodeTitle: string,
+    isCompleted: boolean
+  ) => void;
   onRemove: () => void;
 }) {
   const navigate = useNavigate();
@@ -632,36 +890,40 @@ const TvShowCard = React.memo(function TvShowCard({
   const getCardThemeStyles = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-gradient-to-b from-red-950/70 via-zinc-900 to-black border-red-500/30";
+        return "bg-zinc-950/90 border-white/10 hover:border-red-500/70 hover:shadow-[0_10px_28px_rgba(239,68,68,0.25)]";
       case "midnight":
-        return "bg-gradient-to-b from-blue-950/70 via-slate-900 to-slate-950 border-blue-500/30";
+        return "bg-slate-950/90 border-white/10 hover:border-blue-400/70 hover:shadow-[0_10px_28px_rgba(59,130,246,0.25)]";
       case "emerald":
-        return "bg-gradient-to-b from-emerald-950/70 via-slate-900 to-slate-950 border-emerald-500/30";
+        return "bg-slate-950/90 border-white/10 hover:border-emerald-400/70 hover:shadow-[0_10px_28px_rgba(16,185,129,0.25)]";
       case "amber":
-        return "bg-gradient-to-b from-yellow-950/70 via-stone-900 to-stone-950 border-amber-500/30";
+        return "bg-stone-950/90 border-white/10 hover:border-amber-400/70 hover:shadow-[0_10px_28px_rgba(245,158,11,0.25)]";
       case "cyan":
-        return "bg-gradient-to-b from-cyan-950/70 via-slate-900 to-slate-950 border-cyan-500/30";
+        return "bg-slate-950/90 border-white/10 hover:border-cyan-400/70 hover:shadow-[0_10px_28px_rgba(6,182,212,0.25)]";
       case "violet":
       default:
-        return "bg-gradient-to-b from-purple-950/70 via-slate-900 to-slate-950 border-violet-500/30";
+        return "bg-slate-950/90 border-white/10 hover:border-violet-400/70 hover:shadow-[0_10px_28px_rgba(139,92,246,0.25)]";
     }
   };
 
-  const iconBtnClass = largeButtons ? "h-7 w-7 text-sm" : "h-6 w-6 text-xs";
+  const iconBtnClass = largeButtons ? "h-7 w-7 text-xs" : "h-6 w-6 text-[10px]";
 
   return (
     <div className="w-full">
       <div
-        onClick={() => navigate({ to: "/details", search: { id: show.showId, type: "tv" } })}
-        className={`group relative rounded-xl border overflow-hidden shadow-xl flex flex-col justify-between transition hover:brightness-110 cursor-pointer ${getCardThemeStyles(appTheme)}`}
+        onClick={() =>
+          navigate({ to: "/details", search: { id: show.showId, type: "tv" } })
+        }
+        className={`group relative rounded-2xl border overflow-hidden shadow-xl flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 cursor-pointer ${getCardThemeStyles(
+          appTheme
+        )}`}
       >
-        <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-950 shrink-0">
+        <div className="relative aspect-[2/3] w-full overflow-hidden bg-black shrink-0">
           {show.posterPath ? (
             <img
               src={`${TMDB_IMAGE_BASE}${show.posterPath}`}
               alt={show.title}
               loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover object-center transition transform group-hover:scale-105"
+              className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center p-2 text-center text-slate-500 text-xs font-bold">
@@ -669,11 +931,31 @@ const TvShowCard = React.memo(function TvShowCard({
             </div>
           )}
 
-          <div className="absolute top-1.5 right-1.5 flex flex-wrap justify-end gap-1 max-w-[100px] sm:max-w-none z-10" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none" />
+
+          {/* Top-Left Series Badge */}
+          <div className="absolute top-2 left-2 z-10 pointer-events-none">
+            <span className="rounded-lg bg-black/80 backdrop-blur-md border border-white/15 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-sky-300">
+              Series
+            </span>
+          </div>
+
+          {/* Top-Right Dislike & Remove Controls */}
+          <div
+            className="absolute top-2 right-2 flex items-center gap-1 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
-              onClick={() => dislikeTitle({ id: show.showId, title: show.title, mediaType: "tv", posterPath: show.posterPath })}
-              className={`flex items-center justify-center rounded-lg bg-amber-950/90 text-amber-300 backdrop-blur-md border border-amber-500/30 transition hover:bg-amber-600 hover:text-white focus:outline-none font-bold ${iconBtnClass}`}
+              onClick={() =>
+                dislikeTitle({
+                  id: show.showId,
+                  title: show.title,
+                  mediaType: "tv",
+                  posterPath: show.posterPath,
+                })
+              }
+              className={`flex items-center justify-center rounded-lg bg-black/80 text-amber-300 backdrop-blur-md border border-amber-500/30 transition hover:bg-amber-600 hover:text-white focus:outline-none font-bold shadow-md ${iconBtnClass}`}
               title="Dislike & Hide Globally"
             >
               👎
@@ -681,41 +963,62 @@ const TvShowCard = React.memo(function TvShowCard({
             <button
               type="button"
               onClick={onRemove}
-              className={`flex items-center justify-center rounded-lg bg-red-950/90 text-red-300 backdrop-blur-md border border-red-500/30 transition hover:bg-red-600 hover:text-white focus:outline-none font-bold ${iconBtnClass}`}
+              className={`flex items-center justify-center rounded-lg bg-black/80 text-red-300 backdrop-blur-md border border-red-500/30 transition hover:bg-red-600 hover:text-white focus:outline-none font-bold shadow-md ${iconBtnClass}`}
               title="Remove from history"
             >
               ✕
             </button>
           </div>
+
+          {/* Title inside bottom poster gradient so the footer has room for episodes */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-10 pb-2 px-3 z-10">
+            <h3
+              className="text-xs sm:text-sm font-bold truncate text-white drop-shadow"
+              title={show.title}
+            >
+              {show.title}
+            </h3>
+          </div>
         </div>
 
-        <div className="p-3 space-y-2.5 shrink-0">
-          <h3 className="text-xs font-bold truncate text-white" title={show.title}>
-            {show.title}
-          </h3>
-
+        <div className="p-2.5 sm:p-3 space-y-2.5 bg-slate-950/95 border-t border-white/10 shrink-0">
           <div className="space-y-1">
-            <div className="flex justify-between text-[10px] font-bold text-slate-400">
-              <span>Series Progress</span>
-              <span>{progress}%</span>
+            <div className="flex items-center justify-between text-[10px] font-bold text-slate-300">
+              <span className="truncate">Progress</span>
+              <span className={progress === 100 ? "text-emerald-400" : "text-amber-300"}>
+                {progress}%
+              </span>
             </div>
             <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden border border-white/5">
               <div
                 className={`h-full transition-all duration-300 ${
-                  progress === 100 ? "bg-emerald-500" : "bg-amber-500"
+                  progress === 100
+                    ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
+                    : "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]"
                 }`}
                 style={{ width: `${progress}%` }}
               />
             </div>
           </div>
 
-          <div className="space-y-1 max-h-28 overflow-y-auto pr-0.5" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="space-y-1 max-h-28 overflow-y-auto scrollbar-none"
+            onClick={(e) => e.stopPropagation()}
+          >
             {episodesList.map((ep) => (
               <EpisodeRow
                 key={ep.episodeId}
                 episode={ep}
                 largeButtons={largeButtons}
-                onEyeballClick={() => onEyewayClickWrapper(show.showId, ep.episodeId, ep.title, ep.confirmedCompleted, onEyeballClick)}
+                onEyeballClick={() =>
+                  onEyewayClickWrapper(
+                    show.showId,
+                    ep.episodeId,
+                    ep.title,
+                    ep.confirmedCompleted,
+                    onEyeballClick
+                  )
+                }
               />
             ))}
           </div>
@@ -726,10 +1029,10 @@ const TvShowCard = React.memo(function TvShowCard({
 });
 
 function onEyewayClickWrapper(
-  showId: string, 
-  episodeId: string, 
-  title: string, 
-  isCompleted: boolean, 
+  showId: string,
+  episodeId: string,
+  title: string,
+  isCompleted: boolean,
   onEyeballClick: (sId: string, eId: string, t: string, comp: boolean) => void
 ) {
   onEyeballClick(showId, episodeId, title, isCompleted);
@@ -740,18 +1043,26 @@ const EpisodeRow = React.memo(function EpisodeRow({
   largeButtons,
   onEyeballClick,
 }: {
-  episode: { episodeId: string; seasonNumber: number; episodeNumber: number; title: string; confirmedCompleted: boolean };
+  episode: {
+    episodeId: string;
+    seasonNumber: number;
+    episodeNumber: number;
+    title: string;
+    confirmedCompleted: boolean;
+  };
   largeButtons: boolean;
   onEyeballClick: () => void;
 }) {
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
-  const rowBtnClass = largeButtons ? "h-7 px-2 text-xs" : "h-6 w-6 text-[10px]";
+  const rowBtnClass = largeButtons
+    ? "h-6 px-2 text-[10px]"
+    : "h-5 px-1.5 text-[9px]";
 
   return (
-    <div className="flex items-center justify-between rounded-md bg-slate-950/60 px-2 py-1.5 border border-white/5 text-[11px]">
-      <div className="truncate pr-1 text-slate-300">
-        <span className="font-semibold text-slate-400">S{episode.seasonNumber}E{episode.episodeNumber}</span>
-      </div>
+    <div className="flex items-center justify-between gap-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] px-2 py-1 border border-white/10 text-[11px] transition">
+      <span className="font-bold text-slate-200 whitespace-nowrap">
+        S{episode.seasonNumber}E{episode.episodeNumber}
+      </span>
 
       <div className="relative shrink-0">
         <button
@@ -761,15 +1072,19 @@ const EpisodeRow = React.memo(function EpisodeRow({
           onMouseLeave={() => setIsTooltipOpen(false)}
           onFocus={() => setIsTooltipOpen(true)}
           onBlur={() => setIsTooltipOpen(false)}
-          className={`flex items-center justify-center rounded-md bg-slate-900 text-white border border-white/20 transition hover:scale-110 focus:outline-none font-bold ${rowBtnClass}`}
+          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md border transition hover:scale-105 focus:outline-none font-bold cursor-pointer ${rowBtnClass} ${
+            episode.confirmedCompleted
+              ? "bg-emerald-950/90 text-emerald-300 border-emerald-400/40"
+              : "bg-black/80 text-white border-white/20"
+          }`}
           aria-label="Toggle Status"
         >
           {episode.confirmedCompleted ? "👁️ ✓" : "👁️ ?"}
         </button>
 
         {isTooltipOpen && (
-          <div className="absolute right-0 top-8 whitespace-nowrap rounded-lg bg-slate-950 px-2 py-1 text-[9px] font-bold text-white shadow-xl border border-white/20 z-20">
-            Status: {episode.confirmedCompleted ? "Completed" : "Unconfirmed Completion"}
+          <div className="absolute right-0 bottom-7 whitespace-nowrap rounded-lg bg-slate-950 px-2 py-1 text-[9px] font-bold text-white shadow-xl border border-white/20 z-20 pointer-events-none">
+            {episode.confirmedCompleted ? "Completed" : "Unconfirmed"}
           </div>
         )}
       </div>
