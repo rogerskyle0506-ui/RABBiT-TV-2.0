@@ -22,13 +22,79 @@ export const Route = createFileRoute("/player")({
   }),
 });
 
+/**
+ * Checks if a DOM node was rendered by React (via internal Fiber/Props keys)
+ * or is a core semantic layout container (<header>, <main>, <nav>, <footer>).
+ */
+function isReactOrCoreLayoutNode(node: Element): boolean {
+  const tag = node.tagName.toLowerCase();
+  if (
+    tag === "header" ||
+    tag === "main" ||
+    tag === "nav" ||
+    tag === "footer"
+  ) {
+    return true;
+  }
+  const keys = Object.keys(node);
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    if (
+      k.startsWith("__reactFiber$") ||
+      k.startsWith("__reactProps$") ||
+      k.startsWith("__reactContainer$") ||
+      k.startsWith("__reactInternalInstance$")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function PlayerPage() {
   useEffect(() => {
-    // Activate adblocker interceptors, DOM watchers, and cleanup rules when the player page loads
+    if (typeof document === "undefined") return;
+
+    // 1. Tag all legitimate React root elements (<header>, <main>, wallpaper, sideblade, modals)
+    // with "rabtv-vidsrc-protected" BEFORE starting the adblocker so its body-child sweeper
+    // never removes the root <header> or React portals.
+    const protectLegitimateAppDom = () => {
+      document
+        .querySelectorAll("header, main, nav, footer")
+        .forEach((el) => el.classList.add("rabtv-vidsrc-protected"));
+
+      if (document.body) {
+        Array.from(document.body.children).forEach((child) => {
+          if (isReactOrCoreLayoutNode(child)) {
+            child.classList.add("rabtv-vidsrc-protected");
+          }
+        });
+      }
+    };
+
+    protectLegitimateAppDom();
+
+    // 2. Register a pre-observer so if the user opens the Profile Side Blade or a Modal
+    // while on the player page, it is immediately tagged as protected before the adblocker inspects it.
+    const shieldObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.addedNodes)) {
+          if (node instanceof HTMLElement && isReactOrCoreLayoutNode(node)) {
+            node.classList.add("rabtv-vidsrc-protected");
+          }
+        }
+      }
+    });
+
+    if (document.body) {
+      shieldObserver.observe(document.body, { childList: true, subtree: false });
+    }
+
+    // 3. Activate adblocker interceptors, DOM watchers, and cleanup rules
     const cleanup = initAdBlockerGlobalInterceptors();
 
-    // Tear down/remove the interceptors when navigating away from the player page
     return () => {
+      shieldObserver.disconnect();
       cleanup();
     };
   }, []);
@@ -214,7 +280,7 @@ export function PlayerPage() {
           `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}/recommendations?api_key=${apiKey}&language=en-US&page=1`
         );
         let recData = await recRes.json();
-        
+
         if (!recData?.results || recData.results.length === 0) {
           const popularRes = await fetch(
             `https://api.themoviedb.org/3/${activeFetchType}/popular?api_key=${apiKey}&language=en-US&page=1`
@@ -255,7 +321,10 @@ export function PlayerPage() {
 
     const completionTimestamp = playerLoadTime + runtimeMinutes * 60 * 1000;
     const dateObj = new Date(completionTimestamp);
-    const formattedTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formattedTime = dateObj.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     setEstimatedCompletion(formattedTime);
   }, [mediaDetails, playerLoadTime, mediaType, episode]);
 
@@ -289,36 +358,36 @@ export function PlayerPage() {
   const getPageBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80";
+        return "bg-gradient-to-br from-zinc-950/85 via-red-950/45 to-black/95";
       case "midnight":
-        return "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80";
+        return "bg-gradient-to-br from-slate-950/85 via-blue-950/45 to-slate-950/95";
       case "emerald":
-        return "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80";
+        return "bg-gradient-to-br from-slate-950/85 via-emerald-950/45 to-slate-950/95";
       case "amber":
-        return "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80";
+        return "bg-gradient-to-br from-stone-950/85 via-yellow-950/45 to-neutral-950/95";
       case "cyan":
-        return "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80";
+        return "bg-gradient-to-br from-slate-950/85 via-cyan-950/45 to-slate-950/95";
       case "violet":
       default:
-        return "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80";
+        return "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/95";
     }
   };
 
   const getCardBackground = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-[#160404]/90 border-red-500/20";
+        return "bg-zinc-950/90 border-red-500/25";
       case "midnight":
-        return "bg-[#03091e]/90 border-blue-500/20";
+        return "bg-slate-950/90 border-blue-500/25";
       case "emerald":
-        return "bg-[#031b13]/90 border-emerald-500/20";
+        return "bg-slate-950/90 border-emerald-500/25";
       case "amber":
-        return "bg-[#221507]/90 border-amber-500/20";
+        return "bg-stone-950/90 border-amber-500/25";
       case "cyan":
-        return "bg-[#031d20]/90 border-cyan-500/20";
+        return "bg-slate-950/90 border-cyan-500/25";
       case "violet":
       default:
-        return "bg-[#090e1f]/90 border-violet-500/20";
+        return "bg-slate-950/90 border-violet-500/25";
     }
   };
 
@@ -332,52 +401,94 @@ export function PlayerPage() {
           border: "border-red-500",
           ring: "focus:ring-red-400",
           shadow: "shadow-red-600/30",
+          accentBar: "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.95)]",
+          badge: "text-red-200 border-red-500/30 bg-red-950/60",
+          ambient: "from-red-600/20 via-rose-600/5 to-transparent",
+          playerGlow: "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(239,68,68,0.22)]",
+          laserLine: "from-transparent via-red-500 to-amber-400",
+          nextBtn:
+            "bg-gradient-to-r from-red-500 via-rose-500 to-amber-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.45)]",
         };
       case "midnight":
         return {
-          text: "text-blue-400",
+          text: "text-sky-300",
           bg: "bg-blue-600",
           hoverBg: "hover:bg-blue-500",
           border: "border-blue-500",
           ring: "focus:ring-blue-400",
           shadow: "shadow-blue-600/30",
+          accentBar: "bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.95)]",
+          badge: "text-sky-200 border-blue-500/30 bg-blue-950/60",
+          ambient: "from-blue-600/20 via-sky-500/5 to-transparent",
+          playerGlow: "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(56,189,248,0.22)]",
+          laserLine: "from-transparent via-sky-400 to-blue-500",
+          nextBtn:
+            "bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 text-slate-950 shadow-[0_0_20px_rgba(56,189,248,0.45)]",
         };
       case "emerald":
         return {
-          text: "text-emerald-400",
+          text: "text-emerald-300",
           bg: "bg-emerald-600",
           hoverBg: "hover:bg-emerald-500",
           border: "border-emerald-500",
           ring: "focus:ring-emerald-400",
           shadow: "shadow-emerald-600/30",
+          accentBar: "bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]",
+          badge: "text-emerald-200 border-emerald-500/30 bg-emerald-950/60",
+          ambient: "from-emerald-600/20 via-teal-500/5 to-transparent",
+          playerGlow: "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(52,211,153,0.22)]",
+          laserLine: "from-transparent via-emerald-400 to-cyan-400",
+          nextBtn:
+            "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(52,211,153,0.45)]",
         };
       case "amber":
         return {
-          text: "text-amber-400",
+          text: "text-amber-300",
           bg: "bg-amber-600",
           hoverBg: "hover:bg-amber-500",
           border: "border-amber-500",
           ring: "focus:ring-amber-400",
           shadow: "shadow-amber-600/30",
+          accentBar: "bg-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.95)]",
+          badge: "text-amber-200 border-amber-500/30 bg-amber-950/60",
+          ambient: "from-amber-600/20 via-yellow-500/5 to-transparent",
+          playerGlow: "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(245,158,11,0.22)]",
+          laserLine: "from-transparent via-amber-400 to-orange-500",
+          nextBtn:
+            "bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.45)]",
         };
       case "cyan":
         return {
-          text: "text-cyan-400",
+          text: "text-cyan-300",
           bg: "bg-cyan-600",
           hoverBg: "hover:bg-cyan-500",
           border: "border-cyan-500",
           ring: "focus:ring-cyan-400",
           shadow: "shadow-cyan-600/30",
+          accentBar: "bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]",
+          badge: "text-cyan-200 border-cyan-500/30 bg-cyan-950/60",
+          ambient: "from-cyan-600/20 via-sky-500/5 to-transparent",
+          playerGlow: "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(34,211,238,0.22)]",
+          laserLine: "from-transparent via-cyan-400 to-sky-500",
+          nextBtn:
+            "bg-gradient-to-r from-cyan-400 via-teal-300 to-sky-400 text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.45)]",
         };
       case "violet":
       default:
         return {
-          text: "text-violet-400",
+          text: "text-violet-300",
           bg: "bg-violet-600",
           hoverBg: "hover:bg-violet-500",
           border: "border-violet-500",
           ring: "focus:ring-violet-400",
           shadow: "shadow-violet-600/30",
+          accentBar: "bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]",
+          badge: "text-slate-200 border-white/15 bg-white/[0.06]",
+          ambient: "from-violet-600/20 via-fuchsia-500/5 to-transparent",
+          playerGlow: "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(168,85,247,0.25)]",
+          laserLine: "from-transparent via-pink-500 to-cyan-400",
+          nextBtn:
+            "bg-gradient-to-r from-cyan-400 via-sky-400 to-purple-500 text-slate-950 shadow-[0_0_20px_rgba(56,189,248,0.45)]",
         };
     }
   };
@@ -393,12 +504,12 @@ export function PlayerPage() {
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
-      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 justify-items-center";
+      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 sm:gap-4 justify-items-center";
     }
     if (cardSize === "medium") {
-      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 justify-items-center";
     }
-    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center";
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 justify-items-center";
   }, [cardSize]);
 
   const mappedRecommendations: MediaItem[] = useMemo(() => {
@@ -433,11 +544,11 @@ export function PlayerPage() {
   if (loading) {
     return (
       <div
-        className={`flex min-h-screen items-center justify-center ${getPageBackground(appTheme)} text-white relative`}
+        className={`flex min-h-screen items-center justify-center ${getPageBackground(appTheme)} text-white relative rounded-3xl`}
       >
         <AppWallpaper />
         <p className={`text-xl font-medium animate-pulse ${activeTheme.text} relative z-10`}>
-          Loading player...
+          Loading cinema player...
         </p>
       </div>
     );
@@ -492,83 +603,71 @@ export function PlayerPage() {
 
   return (
     <div
-      className={`player-view-wrapper min-h-screen w-full ${getPageBackground(appTheme)} py-6 px-4 text-white md:py-10 overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative`}
+      className={`player-view-wrapper min-h-screen w-full ${getPageBackground(appTheme)} py-4 sm:py-6 px-3 sm:px-6 md:px-10 text-white overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative rounded-3xl`}
     >
       <AppWallpaper backdropUrl={backdropUrl} />
+      <div
+        className={`absolute inset-x-0 -top-10 h-[32rem] bg-gradient-to-b ${activeTheme.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
+      />
 
-      <div className="relative z-10 flex flex-col gap-6">
-        <div className="w-[80vw] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative flex items-center justify-center py-1.5 px-3 overflow-hidden rounded-2xl shadow-xl w-full sm:w-auto">
-            <div
-              className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
-              style={{
-                width: "108%",
-                height: "280%",
-                backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                backgroundSize: "112% 380%",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center center",
-              }}
-            />
-            <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-            <div className="relative z-10 py-1">
-              <Link
-                className={`inline-flex items-center gap-2 text-xs sm:text-sm font-bold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-3 py-1`}
-                to="/"
-              >
-                ← Back to Home
-              </Link>
-            </div>
-          </div>
+      <div className="relative z-10 max-w-6xl mx-auto flex flex-col gap-5">
+        {/* Top Navigation Row: Sleek Side-by-Side Neon Glass Capsule Pills */}
+        <div className="w-full flex flex-wrap items-center justify-between gap-2.5">
+          <Link
+            to="/"
+            className="group inline-flex items-center gap-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-3.5 pr-2 py-1.5 border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all duration-300 transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50"
+          >
+            <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
+              ‹
+            </span>
+            <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-100 group-hover:text-white">
+              Back to Home
+            </span>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600/50 via-pink-500/40 to-cyan-400/50 border border-purple-300/50 text-[11px] text-white shadow-[0_0_12px_rgba(217,70,239,0.7)]">
+              ⟲
+            </span>
+          </Link>
 
-          <div className="relative flex items-center justify-center py-1.5 px-3 overflow-hidden rounded-2xl shadow-xl w-full sm:w-auto">
-            <div
-              className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
-              style={{
-                width: "105%",
-                height: "300%",
-                backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                backgroundSize: "100% 330%",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center center",
-              }}
-            />
-            <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-            <div className="relative z-10 py-1">
-              <button
-                type="button"
-                onClick={handleReturnToDetails}
-                className={`inline-flex items-center gap-2 text-xs sm:text-sm font-bold ${activeTheme.text} transition hover:opacity-80 hover:underline focus:outline-none focus:ring-4 ${activeTheme.ring} focus:rounded-lg px-3 py-1 cursor-pointer`}
-              >
-                ← Return to {inferredMediaType === "tv" ? "TV details" : "movie details"}
-              </button>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={handleReturnToDetails}
+            className="group inline-flex items-center gap-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-3.5 pr-2 py-1.5 border border-white/15 hover:border-cyan-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(56,189,248,0.35)] transition-all duration-300 transform active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-cyan-500/50"
+          >
+            <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
+              ‹
+            </span>
+            <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-100 group-hover:text-white">
+              Return to {inferredMediaType === "tv" ? "TV Details" : "Movie Details"}
+            </span>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-cyan-500/50 to-blue-500/50 border border-cyan-300/50 text-[11px] font-bold text-white shadow-[0_0_12px_rgba(56,189,248,0.7)]">
+              ⓘ
+            </span>
+          </button>
         </div>
 
+        {/* TV Season & Episode Control Deck */}
         {inferredMediaType === "tv" && (
           <div
-            className={`w-[80vw] mx-auto flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur relative z-30`}
+            className={`w-full flex flex-wrap items-center justify-between gap-4 rounded-3xl border ${getCardBackground(appTheme)} bg-slate-950/85 p-4 sm:p-5 backdrop-blur-2xl shadow-2xl relative z-30`}
           >
-            <div className="flex flex-wrap items-center gap-4 text-sm font-semibold relative">
-              <div className="relative" ref={seasonRef}>
-                <span className="block text-xs text-slate-400 mb-1">Season</span>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm font-semibold relative flex-1 min-w-[260px]">
+              {/* Season Selector */}
+              <div className="relative flex-1 min-w-[140px]" ref={seasonRef}>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 pl-1">
+                  Season
+                </span>
                 <button
                   type="button"
                   onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                  className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  className={`flex items-center justify-between w-full gap-3 rounded-xl border border-white/15 bg-black/60 px-3.5 py-2.5 text-xs sm:text-sm text-white font-bold shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring} transition`}
                 >
-                  <span>
-                    {currentSeasonObj
-                      ? currentSeasonObj.name
-                      : `Season ${season}`}
+                  <span className="truncate">
+                    {currentSeasonObj ? currentSeasonObj.name : `Season ${season}`}
                   </span>
                   <span>▾</span>
                 </button>
                 {isSeasonOpen && (
-                  <div
-                    className={`absolute left-0 mt-2 z-[999] max-h-60 w-56 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
-                  >
+                  <div className="absolute left-0 right-0 mt-2 z-[999] max-h-60 min-w-[200px] overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-xl p-1">
                     {mediaDetails?.seasons
                       ?.filter((s: any) => s.season_number > 0)
                       .map((s: any) => (
@@ -580,9 +679,9 @@ export function PlayerPage() {
                             setEpisode(1);
                             setIsSeasonOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                          className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl transition ${
                             season === s.season_number
-                              ? `${activeTheme.bg} text-white font-bold`
+                              ? `${activeTheme.bg} text-white font-black`
                               : "text-slate-200 hover:bg-white/10"
                           }`}
                         >
@@ -593,16 +692,17 @@ export function PlayerPage() {
                 )}
               </div>
 
-              <div className="relative" ref={episodeRef}>
-                <span className="block text-xs text-slate-400 mb-1">
+              {/* Episode Selector */}
+              <div className="relative flex-[1.5] min-w-[180px]" ref={episodeRef}>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 pl-1">
                   Episode
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                  className={`flex items-center justify-between gap-3 rounded-xl border border-white/10 ${getCardBackground(appTheme)} px-4 py-2 text-white font-medium focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                  className={`flex items-center justify-between w-full gap-3 rounded-xl border border-white/15 bg-black/60 px-3.5 py-2.5 text-xs sm:text-sm text-white font-bold shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring} transition`}
                 >
-                  <span>
+                  <span className="truncate">
                     {currentEpisodeObj
                       ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
                       : `Episode ${episode}`}
@@ -610,9 +710,7 @@ export function PlayerPage() {
                   <span>▾</span>
                 </button>
                 {isEpisodeOpen && (
-                  <div
-                    className={`absolute left-0 mt-2 z-[999] max-h-60 w-72 overflow-y-auto rounded-xl border border-white/20 ${getCardBackground(appTheme)} shadow-2xl backdrop-blur p-1`}
-                  >
+                  <div className="absolute left-0 right-0 mt-2 z-[999] max-h-60 min-w-[240px] overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-xl p-1">
                     {seasonEpisodes.length > 0 ? (
                       seasonEpisodes.map((ep: any) => (
                         <button
@@ -622,9 +720,9 @@ export function PlayerPage() {
                             setEpisode(ep.episode_number);
                             setIsEpisodeOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                          className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl transition ${
                             episode === ep.episode_number
-                              ? `${activeTheme.bg} text-white font-bold`
+                              ? `${activeTheme.bg} text-white font-black`
                               : "text-slate-200 hover:bg-white/10"
                           }`}
                         >
@@ -632,7 +730,7 @@ export function PlayerPage() {
                         </button>
                       ))
                     ) : (
-                      <div className="px-3 py-2 text-sm text-slate-400">
+                      <div className="px-3 py-2 text-xs text-slate-400 font-bold">
                         Loading episodes...
                       </div>
                     )}
@@ -641,36 +739,40 @@ export function PlayerPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Next / Prev Episode & Autoplay Controls */}
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-1 sm:pt-4">
               <button
                 type="button"
                 onClick={() => setEpisode((prev) => Math.max(1, prev - 1))}
                 disabled={episode <= 1}
-                className={`rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:opacity-40 focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                className={`rounded-xl border border-white/15 bg-slate-900/90 hover:bg-slate-800 px-3.5 py-2.5 text-xs font-bold text-white transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
               >
-                ◀ Previous
+                ◀ Prev
               </button>
               <button
                 type="button"
                 onClick={() => setEpisode((prev) => prev + 1)}
-                className={`rounded-xl ${activeTheme.bg} px-4 py-2 text-xs font-semibold text-white shadow transition ${activeTheme.hoverBg} focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                className={`rounded-xl px-4 py-2.5 text-xs font-extrabold tracking-wide transition transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring} ${activeTheme.nextBtn}`}
               >
                 Next Episode ▶
               </button>
-              <label className="ml-2 flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
+              <label className="ml-1 inline-flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs font-semibold text-slate-200 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={autoPlayNext}
                   onChange={(e) => setAutoPlayNext(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-violet-600 focus:ring-violet-500 focus:outline-none"
+                  className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-violet-500 focus:ring-violet-500 focus:outline-none"
                 />
-                Autoplay Next
+                <span>Autoplay</span>
               </label>
             </div>
           </div>
         )}
 
-        <div className="video-player-container relative w-[80vw] mx-auto aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 border border-white/10 z-10">
+        {/* Theater-Grade Video Player Container (100% Untouched vidsrc Iframe) */}
+        <div
+          className={`video-player-container relative w-full mx-auto aspect-video overflow-hidden rounded-2xl sm:rounded-3xl bg-black border border-white/20 z-10 ${activeTheme.playerGlow}`}
+        >
           <iframe
             key={`stable-player-${mediaId}-${season}-${episode}`}
             src={embedUrl}
@@ -680,107 +782,106 @@ export function PlayerPage() {
           ></iframe>
         </div>
 
-        {/* Title & Metadata Pill Box */}
-        <div className="relative w-[80vw] mx-auto overflow-hidden rounded-2xl shadow-xl border border-white/15 p-4 flex flex-col items-center justify-center text-center space-y-2">
-          <div
-            className="absolute inset-0 pointer-events-none z-0"
-            style={{
-              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-              backgroundSize: "113% 380%",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center center",
-            }}
-          />
-          <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
+        {/* Unified High-End Cinema Metadata, Finish Time & Overview Panel */}
+        <div className="relative overflow-hidden w-full rounded-3xl border border-white/15 bg-slate-950/85 backdrop-blur-2xl p-5 sm:p-7 shadow-[0_16px_50px_rgba(0,0,0,0.75)] flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="space-y-2 text-left">
+              <div className="flex items-center flex-wrap gap-2">
+                <span
+                  className={`rounded-full border px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest ${activeTheme.badge}`}
+                >
+                  {genres}
+                </span>
+                {inferredMediaType === "tv" && (
+                  <span className="rounded-full bg-cyan-500/15 border border-cyan-400/30 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-cyan-300">
+                    Season {season} • Episode {episode}
+                  </span>
+                )}
+              </div>
 
-          <div className="relative z-10 flex flex-col items-center justify-center space-y-1.5 w-full">
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-              {title} {inferredMediaType === "tv" && `(S${season} E${episode})`}
-            </h1>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
+                {title}
+                {inferredMediaType === "tv" && currentEpisodeObj?.name
+                  ? ` — ${currentEpisodeObj.name}`
+                  : ""}
+              </h1>
+            </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2.5 text-xs font-semibold">
+            {/* Right Metadata Pills & IMDb Quick Link */}
+            <div className="flex items-center flex-wrap gap-2 shrink-0">
               {rating !== "N/A" && (
-                <span className="flex items-center gap-1 text-yellow-300 font-bold drop-shadow">
-                  ⭐ {rating}
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-400/30 px-3 py-1.5 text-xs font-extrabold text-amber-300">
+                  ★ {rating}
                 </span>
               )}
               {releaseYear && (
-                <span className="text-slate-300 bg-black/40 px-2 py-0.5 rounded-md border border-white/15">
+                <span className="rounded-full bg-white/[0.06] border border-white/10 px-3 py-1.5 text-xs font-bold text-slate-200">
                   {releaseYear}
                 </span>
               )}
-              <span className={`uppercase tracking-wider ${activeTheme.text} font-extrabold drop-shadow`}>
-                {genres}
-              </span>
-              <span className="flex items-center gap-1.5 text-slate-300 bg-black/40 px-2 py-0.5 rounded-md border border-white/15">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 px-3.5 py-1.5 text-xs font-bold text-emerald-300">
                 <span>⏱️ Finish:</span>
-                <span className="font-bold text-white">{estimatedCompletion}</span>
+                <strong className="text-white">{estimatedCompletion}</strong>
               </span>
+              <a
+                href={imdbLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 px-3.5 py-1.5 text-xs font-extrabold text-amber-300 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                title="View Official IMDb Listing"
+              >
+                <span>⭐ IMDb</span>
+              </a>
             </div>
           </div>
-        </div>
 
-        {/* Overview Pill Box (Slightly larger font) */}
-        <div className="relative w-[80vw] mx-auto overflow-hidden rounded-2xl shadow-xl border border-white/15 p-5 flex flex-col items-center justify-center text-center space-y-1.5">
-          <div
-            className="absolute inset-0 pointer-events-none z-0"
-            style={{
-              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-              backgroundSize: "113% 380%",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center center",
-            }}
-          />
-          <div className="absolute inset-0 bg-black/50 pointer-events-none z-0" />
-
-          <div className="relative z-10 flex flex-col items-center justify-center space-y-1.5 w-full max-w-3xl">
-            <h3 className="text-[10px] uppercase tracking-widest text-slate-300 font-bold">Overview</h3>
-            <p className="text-sm sm:text-base leading-relaxed text-slate-200 text-center">
-              {overview}
+          {/* Overview Paragraph */}
+          <div className="space-y-1.5 text-left">
+            <h3 className="text-[10px] uppercase tracking-widest text-slate-400 font-extrabold">
+              Synopsis & Overview
+            </h3>
+            <p className="text-xs sm:text-sm md:text-base leading-relaxed text-slate-300/95 max-w-4xl">
+              {inferredMediaType === "tv" && currentEpisodeObj?.overview
+                ? currentEpisodeObj.overview
+                : overview}
             </p>
           </div>
+
+          {/* Neon Bottom Laser Accent Line */}
+          <div
+            className={`absolute inset-x-6 bottom-0 h-[2px] bg-gradient-to-r ${activeTheme.laserLine} opacity-85 shadow-[0_0_15px_rgba(236,72,153,0.9)]`}
+          />
         </div>
 
+        {/* Similar Recommended Titles */}
         {mappedRecommendations.length > 0 && (
-          <div className="w-[80vw] mx-auto mt-8 pt-4 border-t border-white/10 space-y-4">
-            <div className="relative flex items-center justify-center py-1.5 px-3 my-2 max-w-sm mx-auto overflow-hidden rounded-2xl shadow-xl">
-              <div
-                className="absolute pointer-events-none rounded-2xl border border-white/10 shadow-2xl"
-                style={{
-                  width: "111%",
-                  height: "300%",
-                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "112% 340%",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center center",
-                }}
-              />
-              <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-2xl z-0" />
-              <div className="relative z-10 py-1">
-                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="w-full mt-4 pt-6 border-t border-white/10 space-y-4">
+            <div className="mb-3 flex items-center justify-between px-1 text-left w-full">
+              <div className="flex items-center gap-2.5">
+                <span className={`w-1.5 h-6 rounded-full ${activeTheme.accentBar}`} />
+                <h2 className="text-base sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
                   <span>✨ Similar Recommended Titles</span>
                 </h2>
               </div>
+              <span
+                className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 ${activeTheme.text}`}
+              >
+                {mappedRecommendations.length} matches
+              </span>
             </div>
+
             <div className={gridColsClass}>
               {mappedRecommendations.slice(0, 10).map((item) => (
-                <MediaCard item={item} key={item.id} />
+                <MediaCard
+                  item={item}
+                  cardSize={cardSize}
+                  appTheme={appTheme}
+                  key={item.id}
+                />
               ))}
             </div>
           </div>
         )}
-
-        <div className="w-[80vw] mx-auto mt-8 pb-8 text-center border-t border-white/10 pt-6">
-          <a
-            href={imdbLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-sm transition hover:bg-amber-500/20 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-amber-400`}
-          >
-            <span>⭐ View Official IMDb Listing</span>
-          </a>
-        </div>
-
       </div>
     </div>
   );
