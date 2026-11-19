@@ -1,6 +1,8 @@
 // src/components/AdminPanel.tsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { AdminBugInbox } from "@/components/AdminBugInbox";
+import { AdminReferralModal } from "@/components/AdminReferralModal";
 import {
   AppTheme,
   verifyAgeLockPin,
@@ -9,6 +11,16 @@ import {
   resetPinFailures,
   isValidAgeLockPin,
 } from "@/lib/settings";
+import {
+  getBrokenLinksCount,
+  clearAllBrokenLinks,
+} from "@/lib/broken-links";
+import {
+  fetchReferralSystemData,
+  computeFleetReferralTotals,
+  type FleetReferralTotals,
+  type ReferralSystemData,
+} from "@/lib/referrals";
 
 interface AdminPanelProps {
   appTheme: AppTheme;
@@ -21,7 +33,6 @@ const RABBIT_HEADER_PILL =
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
-const BROKEN_LINKS_STORAGE_KEY = "rabtv_broken_links";
 const ADMIN_VAULT_LOCKED_KEY = "rabtv_admin_vault_locked";
 
 type AdminSection = "inbox" | "toast" | "keygen" | "fleet" | null;
@@ -55,6 +66,11 @@ export function AdminPanel({
   const [vaultPinInput, setVaultPinInput] = useState("");
   const [vaultError, setVaultError] = useState<string | null>(null);
 
+  // Referral Payout Modal & Live Summary Badge States
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+  const [referralTotals, setReferralTotals] =
+    useState<FleetReferralTotals | null>(null);
+
   // Key Generator & Manager States
   const [keygenName, setKeygenName] = useState("");
   const [keygenAge, setKeygenAge] = useState("");
@@ -83,7 +99,9 @@ export function AdminPanel({
     updatedAt: Date.now(),
   });
   const [fleetSyncStatus, setFleetSyncStatus] = useState<string | null>(null);
-  const [brokenLinksCount, setBrokenLinksCount] = useState<number>(0);
+  const [brokenLinksCount, setBrokenLinksCount] = useState<number>(() =>
+    getBrokenLinksCount()
+  );
 
   const [activeAdminSection, setActiveAdminSection] =
     useState<AdminSection>(null);
@@ -122,17 +140,10 @@ export function AdminPanel({
         window.clearTimeout(inactivityTimerRef.current);
       }
     };
-  }, [isVaultLocked, activeAdminSection]);
+  }, [isVaultLocked, activeAdminSection, isReferralModalOpen]);
 
   const refreshLocalBrokenLinksCount = () => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(BROKEN_LINKS_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      setBrokenLinksCount(Array.isArray(parsed) ? parsed.length : 0);
-    } catch {
-      setBrokenLinksCount(0);
-    }
+    setBrokenLinksCount(getBrokenLinksCount());
   };
 
   const fetchRemoteAdminData = async () => {
@@ -193,6 +204,31 @@ export function AdminPanel({
             // ignore
           }
         }
+
+        const rawReferrals = gistData.files?.["referrals.json"]?.content;
+        if (rawReferrals) {
+          try {
+            const parsedRef = JSON.parse(rawReferrals);
+            const normalizedRef: ReferralSystemData = {
+              profiles:
+                parsedRef &&
+                typeof parsedRef.profiles === "object" &&
+                !Array.isArray(parsedRef.profiles)
+                  ? parsedRef.profiles
+                  : {},
+              referrals: Array.isArray(parsedRef?.referrals)
+                ? parsedRef.referrals
+                : [],
+              payouts: Array.isArray(parsedRef?.payouts)
+                ? parsedRef.payouts
+                : [],
+              updatedAt: Number(parsedRef?.updatedAt) || Date.now(),
+            };
+            setReferralTotals(computeFleetReferralTotals(normalizedRef));
+          } catch {
+            // ignore
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to fetch remote admin Gist data", err);
@@ -205,6 +241,20 @@ export function AdminPanel({
   useEffect(() => {
     void fetchRemoteAdminData();
     refreshLocalBrokenLinksCount();
+
+    const onBrokenUpdated = () => refreshLocalBrokenLinksCount();
+    const onReferralsUpdated = () => {
+      void fetchReferralSystemData(false).then((d) =>
+        setReferralTotals(computeFleetReferralTotals(d))
+      );
+    };
+
+    window.addEventListener("rabtv_broken_links_updated", onBrokenUpdated);
+    window.addEventListener("rabtv_referrals_updated", onReferralsUpdated);
+    return () => {
+      window.removeEventListener("rabtv_broken_links_updated", onBrokenUpdated);
+      window.removeEventListener("rabtv_referrals_updated", onReferralsUpdated);
+    };
   }, []);
 
   const uniqueUsers = useMemo(
@@ -261,6 +311,7 @@ export function AdminPanel({
   // Vault Lock & 4-6 Digit Hashed PIN Unlock Handlers
   const handleLockVault = () => {
     setIsVaultLocked(true);
+    setIsReferralModalOpen(false);
     setVaultPinInput("");
     setVaultError(null);
     if (typeof window !== "undefined") {
@@ -683,21 +734,16 @@ export function AdminPanel({
 
   const handleClearQuarantinedBrokenLinks = () => {
     if (typeof window === "undefined") return;
-    localStorage.removeItem(BROKEN_LINKS_STORAGE_KEY);
+    clearAllBrokenLinks();
     refreshLocalBrokenLinksCount();
-    window.dispatchEvent(new Event("rabtv_broken_links_updated"));
     window.dispatchEvent(new Event("rabtv_catalog_updated"));
     setFleetSyncStatus("✓ Restored all locally reported broken titles!");
     window.setTimeout(() => setFleetSyncStatus(null), 3000);
   };
 
-  // Clean Crystal Crimson Glass Panel class (no distorted stretched JPG lines cutting across text)
   const crimsonSubPanelClass =
     "relative w-full p-3.5 sm:p-4 rounded-2xl mt-2 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(239,68,68,0.12)] overflow-hidden box-border backdrop-blur-xl bg-slate-950/85 border border-red-500/40 space-y-3";
 
-  /**
-   * Renders a Crystal Crimson Admin Accordion Pill with concise non-truncating title & 3D hover/focus pop-out.
-   */
   const renderCrimsonAccordionButton = (
     sectionId: AdminSection,
     icon: string,
@@ -753,9 +799,17 @@ export function AdminPanel({
     );
   };
 
+  const referralBadgeText = referralTotals
+    ? referralTotals.totalOwedNow > 0
+      ? `$${referralTotals.totalOwedNow.toFixed(0)} Owed`
+      : referralTotals.pendingApprovals > 0
+        ? `${referralTotals.pendingApprovals} Pending`
+        : `${referralTotals.totalConfirmedPaid} Paid`
+    : undefined;
+
   return (
     <div className="space-y-3 w-full box-border">
-      {/* Executive Command Header — Stacked cleanly so title NEVER truncates */}
+      {/* Executive Command Header */}
       <div className="rounded-2xl bg-gradient-to-r from-red-950/80 via-black/85 to-red-950/80 border border-red-500/45 p-3 shadow-[0_0_20px_rgba(239,68,68,0.25)] backdrop-blur-xl space-y-2.5">
         <div className="flex items-center gap-2.5">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-600/30 border border-red-400/50 text-sm shadow-[0_0_10px_rgba(239,68,68,0.6)]">
@@ -799,7 +853,7 @@ export function AdminPanel({
         </div>
       </div>
 
-      {/* SECURITY VAULT PIN GATE (Supports 4–6 Digit Fire Stick PINs) */}
+      {/* SECURITY VAULT PIN GATE */}
       {isVaultLocked ? (
         <div className={`${crimsonSubPanelClass} text-center py-5`}>
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-red-600/25 border border-red-400/50 text-lg shadow-[0_0_15px_rgba(239,68,68,0.5)]">
@@ -809,8 +863,8 @@ export function AdminPanel({
             Admin Vault Locked
           </h4>
           <p className="text-[11px] text-slate-300 leading-relaxed">
-            Enter your 4–6 digit security PIN to unlock Keygen, Broadcasts, and
-            Fleet Controls.
+            Enter your 4–6 digit security PIN to unlock Keygen, Broadcasts,
+            Referral Payouts, and Fleet Controls.
           </p>
           <form onSubmit={handleUnlockVault} className="space-y-2.5 pt-1">
             <input
@@ -837,6 +891,48 @@ export function AdminPanel({
         </div>
       ) : (
         <div className="space-y-2.5 w-full box-border">
+          {/* 0. REFERRAL PAYOUTS & CONFIRMATIONS LEDGER (Full-Screen Portal Modal) */}
+          <button
+            type="button"
+            onClick={() => {
+              resetInactivityTimer();
+              setIsReferralModalOpen(true);
+            }}
+            className="crystal-admin-pill w-full flex items-center justify-between gap-2 px-4 py-3 text-left text-xs font-extrabold text-amber-100 relative overflow-hidden rounded-2xl border border-amber-400/50 cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.03] focus:scale-[1.04] hover:-translate-y-0.5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-[0_8px_22px_rgba(245,158,11,0.25)]"
+          >
+            <div
+              className="absolute inset-0 pointer-events-none z-0 opacity-85"
+              style={{
+                backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                backgroundSize: "130% 100%",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center center",
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-950/85 via-red-950/60 to-amber-950/85 backdrop-blur-[3px] w-full h-full" />
+            </div>
+
+            <span className="relative z-10 flex items-center gap-2 min-w-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
+              <span className="text-sm shrink-0">💰</span>
+              <span className="truncate">Referral Payouts Ledger</span>
+            </span>
+
+            <div className="relative z-10 flex items-center gap-1.5 shrink-0">
+              {referralBadgeText && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[9px] font-black border ${
+                    referralTotals && referralTotals.totalOwedNow > 0
+                      ? "bg-emerald-950/90 border-emerald-400/60 text-emerald-300"
+                      : "bg-black/75 border-amber-400/45 text-amber-300"
+                  }`}
+                >
+                  {referralBadgeText}
+                </span>
+              )}
+              <span className="text-[11px] font-black text-amber-300">↗</span>
+            </div>
+          </button>
+
           {/* 1. BUG REPORTS INBOX */}
           <div className="w-full box-border">
             {renderCrimsonAccordionButton("inbox", "🐞", "Bug Reports Inbox")}
@@ -1077,7 +1173,6 @@ export function AdminPanel({
                   </div>
                 )}
 
-                {/* Key List Header & Stacked Search + 3-Col Filter Row (Zero Clipping!) */}
                 <div className="pt-2.5 border-t border-red-500/25 space-y-2 w-full box-border">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-[11px] font-extrabold text-slate-200">
@@ -1101,7 +1196,6 @@ export function AdminPanel({
                     </div>
                   </div>
 
-                  {/* Full-width Search Input */}
                   <input
                     type="text"
                     value={keySearchQuery}
@@ -1110,7 +1204,6 @@ export function AdminPanel({
                     className="w-full rounded-xl border border-red-500/35 bg-black/80 px-3 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-400 box-border"
                   />
 
-                  {/* Clean 3-Column Filter Pills (ALL / ACTIVE / USED all visible!) */}
                   <div className="grid grid-cols-3 gap-1.5">
                     {(
                       [
@@ -1134,7 +1227,6 @@ export function AdminPanel({
                     ))}
                   </div>
 
-                  {/* Clean Multi-Row Key Cards (Zero Clipped Badges!) */}
                   <div className="max-h-52 overflow-y-auto space-y-2 pr-0.5 w-full box-border scrollbar-none">
                     {filteredKeys.length === 0 ? (
                       <p className="text-[11px] text-slate-400 text-center py-3">
@@ -1146,7 +1238,6 @@ export function AdminPanel({
                           key={`${kObj.key}-${idx}`}
                           className="bg-black/80 p-2.5 rounded-xl border border-red-500/30 space-y-2 w-full box-border"
                         >
-                          {/* Row 1: Key Number + Status Badge */}
                           <div className="flex items-center justify-between gap-2">
                             <button
                               type="button"
@@ -1169,10 +1260,12 @@ export function AdminPanel({
                             </span>
                           </div>
 
-                          {/* Row 2: Owner Name */}
                           <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
                             <span className="truncate">
-                              👤 <strong>{kObj.owner || kObj.usedBy || "Unassigned"}</strong>
+                              👤{" "}
+                              <strong>
+                                {kObj.owner || kObj.usedBy || "Unassigned"}
+                              </strong>
                             </span>
                             {copiedKeyId === String(kObj.key) && (
                               <span className="text-[10px] text-emerald-400 font-bold shrink-0">
@@ -1181,7 +1274,6 @@ export function AdminPanel({
                             )}
                           </div>
 
-                          {/* Row 3: Clean Action Bar */}
                           <div className="grid grid-cols-3 gap-1.5 pt-0.5">
                             <button
                               type="button"
@@ -1229,7 +1321,8 @@ export function AdminPanel({
             {renderCrimsonAccordionButton(
               "fleet",
               "🛡️",
-              "Fleet & Quarantine"
+              "Fleet & Quarantine",
+              brokenLinksCount > 0 ? `${brokenLinksCount} Hidden` : undefined
             )}
             {activeAdminSection === "fleet" && (
               <div className={crimsonSubPanelClass}>
@@ -1304,7 +1397,6 @@ export function AdminPanel({
                     </button>
                   </div>
 
-                  {/* Stacked inputs so placeholder text NEVER clips */}
                   <div className="space-y-2">
                     <input
                       type="text"
@@ -1345,7 +1437,7 @@ export function AdminPanel({
                   </button>
                 </form>
 
-                {/* Broken Links Quarantine Reset — Clean Stacked Card */}
+                {/* Broken Links Quarantine Reset */}
                 <div className="pt-2.5 border-t border-red-500/25 space-y-2">
                   <div>
                     <p className="text-xs font-bold text-white">
@@ -1386,6 +1478,22 @@ export function AdminPanel({
           className="w-2/3 mx-auto h-2 object-contain opacity-75"
         />
       </div>
+
+      {/* Full-Screen Portal for Admin Referral & Payout Ledger */}
+      {isReferralModalOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <AdminReferralModal
+            isOpen={isReferralModalOpen}
+            onClose={() => {
+              setIsReferralModalOpen(false);
+              void fetchReferralSystemData(false).then((d) =>
+                setReferralTotals(computeFleetReferralTotals(d))
+              );
+            }}
+          />,
+          document.body
+        )}
     </div>
   );
 }
