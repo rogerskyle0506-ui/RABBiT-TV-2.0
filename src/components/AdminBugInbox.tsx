@@ -103,9 +103,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
   }, [reports]);
 
   const bannedIdentifierSet = useMemo(() => {
-    return new Set(
-      bannedUsers.map((b) => b.identifier.trim().toLowerCase())
-    );
+    return new Set(bannedUsers.map((b) => b.identifier.trim().toLowerCase()));
   }, [bannedUsers]);
 
   const strikesMap = useMemo(() => {
@@ -153,7 +151,6 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
   ) => {
     setBusyActionId(id);
     try {
-      // Optimistic UI update
       setReports((prev) =>
         prev.map((r) => (r.id === id ? { ...r, status } : r))
       );
@@ -188,7 +185,9 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
       } else if (target.type === "ban" && target.name && target.codeSuffix) {
         const success = await banUserFromReport(target.name, target.codeSuffix);
         if (success) {
-          showTempFeedback(`🚫 Banned ${target.name} (...${target.codeSuffix}).`);
+          showTempFeedback(
+            `🚫 Banned ${target.name} (...${target.codeSuffix}).`
+          );
           await loadData();
         } else {
           showTempFeedback("⚠️ Failed to ban user.", true);
@@ -224,7 +223,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
     const cleanSuffix = manualBanSuffix.trim().slice(-4);
     if (!cleanName || cleanSuffix.length < 4) {
       showTempFeedback(
-        "⚠️ Enter a valid user name and at least 4 PIN/code digits.",
+        "⚠️ Enter a valid user name and at least 4 PIN digits.",
         true
       );
       return;
@@ -236,7 +235,9 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
       if (success) {
         setManualBanName("");
         setManualBanSuffix("");
-        showTempFeedback(`🚫 Added ${cleanName} (...${cleanSuffix}) to ban list.`);
+        showTempFeedback(
+          `🚫 Added ${cleanName} (...${cleanSuffix}) to ban list.`
+        );
         await loadData();
       } else {
         showTempFeedback("⚠️ Failed to add manual ban.", true);
@@ -349,47 +350,47 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
 
   return (
     <div className="space-y-3 w-full box-border text-white">
-      {/* Header & Quick Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-red-500/25">
-        <div>
-          <h4 className="text-xs font-black uppercase tracking-wider text-red-300 flex items-center gap-1.5">
-            <span>🐞 Bug Reports & Moderation</span>
-            <span className="rounded-full bg-red-600/30 border border-red-400/40 px-2 py-0.5 text-[9px] text-amber-300">
+      {/* Compact Header & Quick Actions */}
+      <div className="space-y-2 pb-2.5 border-b border-red-500/25">
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="text-xs font-black uppercase tracking-wider text-red-300 flex items-center gap-1.5 min-w-0">
+            <span className="truncate">🐞 Bug Inbox</span>
+            <span className="shrink-0 rounded-full bg-red-600/30 border border-red-400/40 px-2 py-0.5 text-[9px] text-amber-300">
               {reports.length}
             </span>
           </h4>
-          <p className="text-[10px] text-slate-400">
-            Triaging, direct user toast replies, strike tracking & ban control
-          </p>
-        </div>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={handleExportInboxJson}
-            className="px-2 py-1 rounded-lg bg-black/70 hover:bg-red-950 border border-red-500/30 text-[10px] font-bold text-amber-300 transition hover:scale-105 cursor-pointer"
-            title="Export Bug & Ban Logs as JSON"
-          >
-            💾 Export
-          </button>
-          <button
-            type="button"
-            onClick={() => void loadData()}
-            disabled={loading}
-            className="px-2.5 py-1 rounded-lg bg-red-950/75 hover:bg-red-800 border border-red-400/40 text-[10px] font-extrabold text-red-100 transition hover:scale-105 disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? "..." : "🔄 Sync"}
-          </button>
-          {onClose && (
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
-              onClick={onClose}
-              className="rounded-lg bg-black/70 hover:bg-red-600 border border-white/15 px-2 py-1 text-[10px] font-bold text-slate-300 hover:text-white transition cursor-pointer"
+              onClick={handleExportInboxJson}
+              className="px-2 py-1 rounded-lg bg-black/75 hover:bg-red-950 border border-red-500/30 text-[10px] font-bold text-amber-300 transition cursor-pointer"
+              title="Export Bug & Ban Logs as JSON"
             >
-              ✕
+              💾 Export
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              disabled={loading}
+              className="px-2.5 py-1 rounded-lg bg-red-950/80 hover:bg-red-800 border border-red-400/40 text-[10px] font-extrabold text-red-100 transition disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? "..." : "🔄 Sync"}
+            </button>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg bg-black/70 hover:bg-red-600 border border-white/15 px-2 py-1 text-[10px] font-bold text-slate-300 hover:text-white transition cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
+        <p className="text-[10px] text-slate-400">
+          Triaging, direct toast replies, strike tracking & ban control.
+        </p>
       </div>
 
       {/* Status Toast Banner */}
@@ -407,12 +408,12 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
 
       {/* Inline Two-Step Security Confirmation Bar (TV / D-Pad Safe) */}
       {confirmTarget && (
-        <div className="rounded-xl bg-red-950/90 border-2 border-amber-400/80 p-3 shadow-[0_0_25px_rgba(239,68,68,0.5)] space-y-2 text-center animate-fade-in">
+        <div className="rounded-xl bg-red-950/90 border-2 border-amber-400/80 p-3 shadow-[0_0_25px_rgba(239,68,68,0.5)] space-y-2 text-center">
           <p className="text-[11px] font-extrabold text-white">
             {confirmTarget.type === "delete" &&
               "⚠️ Permanently delete this bug report?"}
             {confirmTarget.type === "ban" &&
-              `🚫 Ban "${confirmTarget.name}" (...${confirmTarget.codeSuffix}) from submitting reports?`}
+              `🚫 Ban "${confirmTarget.name}" (...${confirmTarget.codeSuffix}) from reporting?`}
             {confirmTarget.type === "unban" &&
               `✓ Restore reporting rights for "${confirmTarget.name}"?`}
             {confirmTarget.type === "purge_completed" &&
@@ -437,16 +438,16 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
         </div>
       )}
 
-      {/* Primary Tab Switcher: Bug Inbox vs Banned Users */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="grid grid-cols-2 gap-1.5 flex-1">
+      {/* Primary Tab Switcher: Equal Single-Line Buttons */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-1.5">
           <button
             type="button"
             onClick={() => setActiveTab("inbox")}
-            className={`py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+            className={`py-2 px-2 rounded-xl text-[11px] font-extrabold whitespace-nowrap transition-all cursor-pointer ${
               activeTab === "inbox"
-                ? "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)] scale-[1.02]"
-                : "bg-black/60 border border-red-500/25 text-slate-300 hover:bg-red-950/40"
+                ? "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                : "bg-black/65 border border-red-500/25 text-slate-300 hover:bg-red-950/40"
             }`}
           >
             📥 Inbox ({reports.length})
@@ -454,10 +455,10 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
           <button
             type="button"
             onClick={() => setActiveTab("banned")}
-            className={`py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+            className={`py-2 px-2 rounded-xl text-[11px] font-extrabold whitespace-nowrap transition-all cursor-pointer ${
               activeTab === "banned"
-                ? "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)] scale-[1.02]"
-                : "bg-black/60 border border-red-500/25 text-slate-300 hover:bg-red-950/40"
+                ? "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                : "bg-black/65 border border-red-500/25 text-slate-300 hover:bg-red-950/40"
             }`}
           >
             🚫 Banned ({bannedUsers.length})
@@ -473,10 +474,10 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
                 id: "purge_completed",
               })
             }
-            className="px-2.5 py-2 rounded-xl bg-black/70 hover:bg-red-950/80 border border-red-500/35 text-[10px] font-extrabold text-amber-300 transition hover:scale-105 shrink-0 cursor-pointer"
+            className="w-full py-1.5 rounded-xl bg-black/70 hover:bg-red-950/80 border border-red-500/35 text-[10px] font-extrabold text-amber-300 transition cursor-pointer"
             title="Delete all completed tickets"
           >
-            🧹 Purge Done ({statusCounts.completed})
+            🧹 Purge Completed Tickets ({statusCounts.completed})
           </button>
         )}
       </div>
@@ -490,10 +491,10 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={
               activeTab === "inbox"
-                ? "Search reporter, PIN suffix (...1234), or bug text..."
-                : "Search banned user or PIN suffix..."
+                ? "Search name, PIN, or bug..."
+                : "Search banned user or PIN..."
             }
-            className="w-full rounded-xl border border-red-500/30 bg-black/75 pl-3 pr-7 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-400 box-border"
+            className="w-full rounded-xl border border-red-500/30 bg-black/80 pl-3 pr-7 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-400 box-border"
           />
           {searchQuery && (
             <button
@@ -520,10 +521,10 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
                 key={tab.id}
                 type="button"
                 onClick={() => setStatusFilter(tab.id)}
-                className={`py-1 px-1.5 rounded-lg text-[10px] font-extrabold transition truncate cursor-pointer ${
+                className={`py-1 px-1 rounded-lg text-[10px] font-extrabold whitespace-nowrap transition truncate cursor-pointer ${
                   statusFilter === tab.id
                     ? "bg-red-600 text-white shadow"
-                    : "bg-black/55 border border-white/10 text-slate-400 hover:text-white"
+                    : "bg-black/60 border border-white/10 text-slate-400 hover:text-white"
                 }`}
               >
                 {tab.label}
@@ -534,17 +535,17 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
       </div>
 
       {/* Main List Body */}
-      <div className="max-h-64 overflow-y-auto py-1 space-y-2.5 pr-1 scrollbar-none">
+      <div className="max-h-64 overflow-y-auto py-1 space-y-2.5 pr-0.5 scrollbar-none">
         {loading ? (
           <div className="text-center py-8 space-y-2">
             <div className="mx-auto h-6 w-6 rounded-full border-2 border-t-transparent border-red-400 animate-spin" />
             <p className="text-xs font-bold text-slate-400">
-              Syncing bug reports from Gist...
+              Syncing bug reports...
             </p>
           </div>
         ) : activeTab === "inbox" ? (
           filteredReports.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-black/50 p-6 text-center space-y-1">
+            <div className="rounded-2xl border border-white/10 bg-black/55 p-6 text-center space-y-1">
               <p className="text-xs font-bold text-slate-300">
                 {reports.length === 0
                   ? "No active bug reports. Inbox clean! 🎉"
@@ -564,7 +565,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
               return (
                 <div
                   key={report.id}
-                  className={`rounded-2xl border bg-black/75 p-3 space-y-2.5 text-xs transition-all ${
+                  className={`rounded-2xl border bg-black/80 p-3 space-y-2.5 text-xs transition-all ${
                     isAlreadyBanned
                       ? "border-red-500/60 bg-red-950/25"
                       : "border-red-500/25 hover:border-red-400/50"
@@ -581,7 +582,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
                       </span>
                       {userStrikes > 0 && (
                         <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/40 text-[9px] font-extrabold text-amber-300">
-                          ⚠️ {userStrikes}/2 Strikes
+                          ⚠️ {userStrikes}/2
                         </span>
                       )}
                       {isAlreadyBanned && (
@@ -594,8 +595,6 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
                       {new Date(report.timestamp).toLocaleDateString([], {
                         month: "short",
                         day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
                       })}
                     </span>
                   </div>
@@ -607,42 +606,24 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
 
                   {/* Ticket Controls Row */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5 text-[11px]">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
-                          report.status === "pending"
-                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                            : report.status === "in_progress"
-                              ? "bg-sky-500/20 text-sky-300 border border-sky-500/40"
-                              : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                        }`}
-                      >
-                        {report.status === "pending"
-                          ? "⏳ Pending"
-                          : report.status === "in_progress"
-                            ? "🔧 Working"
-                            : "✓ Fixed"}
-                      </span>
-
-                      <select
-                        value={report.status}
-                        disabled={isBusy}
-                        onChange={(e) =>
-                          void handleStatusChange(
-                            report.id,
-                            e.target.value as
-                              | "pending"
-                              | "in_progress"
-                              | "completed"
-                          )
-                        }
-                        className="rounded-lg bg-slate-900 border border-white/15 px-2 py-1 text-[10px] font-bold text-white focus:outline-none cursor-pointer"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                      </select>
-                    </div>
+                    <select
+                      value={report.status}
+                      disabled={isBusy}
+                      onChange={(e) =>
+                        void handleStatusChange(
+                          report.id,
+                          e.target.value as
+                            | "pending"
+                            | "in_progress"
+                            | "completed"
+                        )
+                      }
+                      className="rounded-lg bg-slate-900 border border-white/15 px-2 py-1 text-[10px] font-bold text-white focus:outline-none cursor-pointer"
+                    >
+                      <option value="pending">⏳ Pending</option>
+                      <option value="in_progress">🔧 In Progress</option>
+                      <option value="completed">✓ Completed</option>
+                    </select>
 
                     <div className="flex flex-wrap items-center gap-1.5">
                       <button
@@ -651,7 +632,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
                           setReplyingToReportId(isReplying ? null : report.id);
                           setReplyMessage("");
                         }}
-                        className={`rounded-lg px-2.5 py-1 text-[10px] font-extrabold border transition cursor-pointer ${
+                        className={`rounded-lg px-2 py-1 text-[10px] font-extrabold border transition cursor-pointer ${
                           isReplying
                             ? "bg-amber-500 text-slate-950 border-amber-300"
                             : "bg-black/70 hover:bg-amber-950/70 text-amber-300 border-amber-500/35"
@@ -689,7 +670,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
                               codeSuffix: report.codeSuffix,
                             })
                           }
-                          className="rounded-lg bg-red-600/80 hover:bg-red-600 px-2.5 py-1 text-[10px] font-extrabold text-white transition cursor-pointer"
+                          className="rounded-lg bg-red-600/80 hover:bg-red-600 px-2 py-1 text-[10px] font-extrabold text-white transition cursor-pointer"
                         >
                           🚫 Ban
                         </button>
@@ -699,12 +680,12 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
 
                   {/* Direct Toast Reply Drawer */}
                   {isReplying && (
-                    <div className="pt-2 border-t border-white/10 space-y-2 animate-fade-in">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold text-amber-300">
-                          📢 Push Direct Toast Reply to {report.name}:
+                    <div className="pt-2 border-t border-white/10 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-extrabold text-amber-300 truncate">
+                          📢 Reply to {report.name}:
                         </span>
-                        <label className="inline-flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer">
+                        <label className="inline-flex items-center gap-1 text-[10px] text-slate-300 shrink-0 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={replyAutoComplete}
@@ -721,14 +702,14 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
                           type="text"
                           value={replyMessage}
                           onChange={(e) => setReplyMessage(e.target.value)}
-                          placeholder={`Reply to ${report.name} (e.g. Fixed in latest update!)...`}
-                          className="flex-1 rounded-xl border border-amber-400/40 bg-black/85 px-2.5 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                          placeholder="Type reply message..."
+                          className="flex-1 min-w-0 rounded-xl border border-amber-400/40 bg-black/85 px-2.5 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-400"
                         />
                         <button
                           type="button"
                           disabled={isBusy || !replyMessage.trim()}
                           onClick={() => void handleSendDirectToastReply(report)}
-                          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 text-[10px] font-black uppercase tracking-wider shadow disabled:opacity-40 cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 text-[10px] font-black uppercase tracking-wider shadow disabled:opacity-40 shrink-0 cursor-pointer"
                         >
                           Send
                         </button>
@@ -742,13 +723,12 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
         ) : (
           /* BANNED USERS TAB */
           <div className="space-y-3">
-            {/* Manual User Ban Form */}
             <form
               onSubmit={handleManualBanSubmit}
-              className="rounded-2xl border border-red-500/30 bg-black/70 p-3 space-y-2"
+              className="rounded-2xl border border-red-500/30 bg-black/75 p-3 space-y-2"
             >
               <span className="block text-[10px] font-extrabold uppercase tracking-wider text-red-300">
-                ➕ Manually Ban User by Name & PIN Suffix
+                ➕ Manual Ban (Name & PIN)
               </span>
               <div className="grid grid-cols-3 gap-1.5">
                 <input
@@ -767,8 +747,8 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
                       e.target.value.replace(/\D/g, "").slice(0, 6)
                     )
                   }
-                  placeholder="PIN (4-6d)"
-                  className="col-span-1 rounded-xl border border-red-500/30 bg-slate-950 px-2 py-1.5 text-xs font-mono font-bold text-white placeholder-slate-500 focus:outline-none"
+                  placeholder="PIN"
+                  className="col-span-1 rounded-xl border border-red-500/30 bg-slate-950 px-2 py-1.5 text-center text-xs font-mono font-bold text-white placeholder-slate-500 focus:outline-none"
                 />
               </div>
               <button
