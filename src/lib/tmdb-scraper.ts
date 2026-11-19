@@ -1,4 +1,11 @@
 // src/lib/tmdb-scraper.ts
+import {
+  getOptimalTmdbImageWidth,
+  getSavedUserAge,
+  getKidsModeLocked,
+  purgeOldTmdbCaches,
+} from "./settings";
+
 export type MediaItem = {
   id: string;
   title: string;
@@ -23,22 +30,38 @@ export type ScrapeResult = {
   totalPages?: number;
 };
 
-const TMDB_API_KEY = (import.meta as any).env?.VITE_TMDB_API_KEY as string || "";
+const TMDB_API_KEY =
+  ((import.meta as any).env?.VITE_TMDB_API_KEY as string) || "";
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
-const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
-const STORAGE_PREFIX = "rabtv_catalog_cache_v18_";
+// Uses rabtv_cache_ prefix so settings.ts purgeOldTmdbCaches() automatically cleans it
+const STORAGE_PREFIX = "rabtv_cache_catalog_v20_";
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6-hour freshness window
+const FETCH_TIMEOUT_MS = 8000; // Prevent UI hangs on slow TV Wi-Fi
 const ITEMS_PER_PAGE = 20;
+const MAX_CACHED_ITEMS_PER_KEY = 100;
+
+interface CachedCatalogEntry {
+  items: MediaItem[];
+  maxApiPageReached: number;
+  totalAvailablePages: number;
+  isFullyLoaded: boolean;
+  cachedAt: number;
+}
+
+// Fast in-memory session cache (avoids repeated JSON.parse on 1-2GB sticks)
+const memoryCatalogCache = new Map<string, CachedCatalogEntry>();
 
 let lastRequestTimestamp = 0;
-const MIN_REQUEST_INTERVAL_MS = 250;
+const MIN_REQUEST_INTERVAL_MS = 180;
 
 async function throttleRequest() {
   const now = Date.now();
   const timeSinceLast = now - lastRequestTimestamp;
   if (timeSinceLast < MIN_REQUEST_INTERVAL_MS) {
-    const delay = MIN_REQUEST_INTERVAL_MS - timeSinceLast;
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    await new Promise((resolve) =>
+      setTimeout(resolve, MIN_REQUEST_INTERVAL_MS - timeSinceLast)
+    );
   }
   lastRequestTimestamp = Date.now();
 }
@@ -66,33 +89,94 @@ const genreMap: Record<number, string> = {
   10759: "Action & Adventure",
   10762: "Kids",
   10763: "News",
-  10764: "Reality",
+  10764: "Reality-TV",
   10765: "Sci-Fi & Fantasy",
   10766: "Soap",
-  10767: "Talk",
+  10767: "Talk-Show",
   10768: "War & Politics",
 };
 
-const genreNameToId: Record<string, number> = {
-  action: 28,
-  adventure: 12,
-  animation: 16,
-  comedy: 35,
-  crime: 80,
-  documentary: 99,
-  drama: 18,
-  family: 10751,
-  fantasy: 14,
-  history: 36,
-  horror: 27,
-  music: 10402,
-  mystery: 9648,
-  romance: 10749,
-  "sci-fi": 878,
-  "sci-fi & fantasy": 10765,
-  thriller: 53,
-  war: 10752,
-  western: 37,
+interface GenreQuerySpec {
+  movieGenres?: string;
+  tvGenres?: string;
+  movieKeywords?: string;
+  tvKeywords?: string;
+  movieExtra?: Record<string, string>;
+  tvExtra?: Record<string, string>;
+  preferTvOnly?: boolean;
+  preferMovieOnly?: boolean;
+  requireAdultAge?: boolean;
+}
+
+// Complete mapping for all 29 categories in index.tsx (Movie + TV ID accurate)
+const GENRE_SPECS: Record<string, GenreQuerySpec> = {
+  action: { movieGenres: "28", tvGenres: "10759" },
+  adult: {
+    movieExtra: {
+      certification_country: "US",
+      certification: "R",
+      "vote_count.gte": "50",
+    },
+    tvGenres: "18,80",
+    tvExtra: { "vote_count.gte": "50" },
+    requireAdultAge: true,
+  },
+  adventure: { movieGenres: "12", tvGenres: "10759" },
+  animation: { movieGenres: "16", tvGenres: "16" },
+  biography: {
+    movieGenres: "18,36",
+    movieKeywords: "9672",
+    tvGenres: "99,18",
+    tvKeywords: "9672",
+  },
+  comedy: { movieGenres: "35", tvGenres: "35" },
+  crime: { movieGenres: "80", tvGenres: "80" },
+  documentary: { movieGenres: "99", tvGenres: "99" },
+  drama: { movieGenres: "18", tvGenres: "18" },
+  family: { movieGenres: "10751", tvGenres: "10751" },
+  fantasy: { movieGenres: "14", tvGenres: "10765" },
+  "film noir": {
+    movieGenres: "80,9648",
+    movieKeywords: "10714",
+    tvGenres: "80,9648",
+    preferMovieOnly: true,
+  },
+  "game show": {
+    tvGenres: "10764",
+    tvKeywords: "10085",
+    movieGenres: "35",
+    preferTvOnly: true,
+  },
+  history: { movieGenres: "36", tvGenres: "99,10768" },
+  horror: { movieGenres: "27", tvGenres: "9648,10765" },
+  musical: {
+    movieGenres: "10402",
+    movieKeywords: "4344",
+    tvGenres: "35,18",
+    tvKeywords: "4344",
+  },
+  music: { movieGenres: "10402", tvGenres: "99" },
+  mystery: { movieGenres: "9648", tvGenres: "9648" },
+  news: { tvGenres: "10763", movieGenres: "99", preferTvOnly: true },
+  "reality-tv": { tvGenres: "10764", movieGenres: "99", preferTvOnly: true },
+  romance: { movieGenres: "10749", tvGenres: "18" },
+  "sci-fi": { movieGenres: "878", tvGenres: "10765" },
+  "sci-fi & fantasy": { movieGenres: "878,14", tvGenres: "10765" },
+  short: {
+    movieExtra: { "with_runtime.lte": "45", "vote_count.gte": "10" },
+    tvExtra: { "with_runtime.lte": "30" },
+    preferMovieOnly: true,
+  },
+  sport: {
+    movieKeywords: "6075",
+    tvKeywords: "6075",
+    movieGenres: "99,18",
+    tvGenres: "99",
+  },
+  "talk-show": { tvGenres: "10767", movieGenres: "35", preferTvOnly: true },
+  thriller: { movieGenres: "53", tvGenres: "80,9648" },
+  war: { movieGenres: "10752", tvGenres: "10768" },
+  western: { movieGenres: "37", tvGenres: "37" },
 };
 
 // Official TMDB Watch Provider IDs for Canada (watch_region=CA)
@@ -112,7 +196,8 @@ function getGenreName(genreIds: number[]): string {
 
 function mapTmdbItemToMediaItem(
   item: Record<string, unknown>,
-  mediaType: "movie" | "tv"
+  mediaType: "movie" | "tv",
+  imageWidth: "w342" | "w500"
 ): MediaItem | null {
   const title = (item.title || item.name) as string | undefined;
   if (!title) return null;
@@ -122,24 +207,29 @@ function mapTmdbItemToMediaItem(
   if (releaseDate) {
     const releaseTime = new Date(releaseDate).getTime();
     const maxAllowedTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
-    if (releaseTime > maxAllowedTime) {
+    if (!isNaN(releaseTime) && releaseTime > maxAllowedTime) {
       return null;
     }
   }
 
   const tmdbId = item.id;
   const uniqueId = `${mediaType}-${tmdbId}`;
-
   const year = releaseDate.split("-")[0];
   const voteAverage = item.vote_average as number | undefined;
-  const rating = voteAverage ? voteAverage.toFixed(1) : "N/A";
+  const rating =
+    typeof voteAverage === "number" && voteAverage > 0
+      ? voteAverage.toFixed(1)
+      : undefined;
   const posterPath = item.poster_path as string | undefined;
   const imagePath = posterPath
-    ? `${TMDB_IMAGE_BASE}${posterPath}`
+    ? `https://image.tmdb.org/t/p/${imageWidth}${posterPath}`
     : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
-  const genre = getGenreName((item.genre_ids as number[]) || []);
+  const genreIds = Array.isArray(item.genre_ids)
+    ? (item.genre_ids as number[])
+    : [];
+  const genre = getGenreName(genreIds);
   const description =
-    (item.overview as string) || "Discover this amazing content on RABBiT TV";
+    (item.overview as string) || "Discover this title on RABBiT TV";
 
   return {
     id: uniqueId,
@@ -149,10 +239,11 @@ function mapTmdbItemToMediaItem(
     href: `/details?id=${tmdbId}&type=${mediaType}`,
     genre,
     year: year || undefined,
-    rating: rating !== "N/A" ? rating : undefined,
+    rating,
     mediaType,
     releaseDate,
-    genreIds: (item.genre_ids as number[]) || [],
+    genreIds,
+    certification: item.adult ? "R" : undefined,
   };
 }
 
@@ -168,6 +259,7 @@ async function fetchTmdb(
     url.searchParams.set("api_key", TMDB_API_KEY);
   }
   url.searchParams.set("page", page.toString());
+  url.searchParams.set("include_adult", "false");
 
   for (const [key, value] of Object.entries(extraParams)) {
     if (value !== undefined && value !== null && value !== "") {
@@ -175,12 +267,108 @@ async function fetchTmdb(
     }
   }
 
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    throw new Error(`TMDB request failed: ${response.status} ${response.statusText}`);
+  const controller = new AbortController();
+  const timer =
+    typeof window !== "undefined"
+      ? window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+      : setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url.toString(), { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(
+        `TMDB request failed: ${response.status} ${response.statusText}`
+      );
+    }
+    return (await response.json()) as Record<string, unknown>;
+  } finally {
+    if (typeof window !== "undefined") {
+      window.clearTimeout(timer as number);
+    } else {
+      clearTimeout(timer);
+    }
+  }
+}
+
+function buildRegionParams(cleanSubFeed?: string): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (!cleanSubFeed || providerIdMap[cleanSubFeed]) return params;
+
+  if (cleanSubFeed === "Russian") {
+    params.with_original_language = "ru";
+  } else if (cleanSubFeed === "English") {
+    params.with_original_language = "en";
+  } else if (cleanSubFeed === "British") {
+    params.with_original_language = "en";
+    params.with_origin_country = "GB";
+  } else if (cleanSubFeed === "Hungarian") {
+    params.with_original_language = "hu";
+  } else if (cleanSubFeed === "German") {
+    params.with_original_language = "de";
+    params.with_origin_country = "DE";
+  } else if (cleanSubFeed === "Arabic / Islamic") {
+    params.with_original_language = "ar";
+  } else if (cleanSubFeed === "Ukrainian") {
+    params.with_original_language = "uk";
+  } else if (
+    cleanSubFeed === "Canada (All)" ||
+    cleanSubFeed === "Ontario / Toronto" ||
+    cleanSubFeed === "Atlantic Canada" ||
+    cleanSubFeed === "Western Canada"
+  ) {
+    params.with_origin_country = "CA";
+  }
+  return params;
+}
+
+function readCatalogCache(storageKey: string): CachedCatalogEntry | null {
+  const mem = memoryCatalogCache.get(storageKey);
+  if (mem && Date.now() - mem.cachedAt < CACHE_TTL_MS) {
+    return mem;
   }
 
-  return response.json() as Promise<Record<string, unknown>>;
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedCatalogEntry;
+    if (
+      parsed &&
+      Array.isArray(parsed.items) &&
+      typeof parsed.cachedAt === "number" &&
+      Date.now() - parsed.cachedAt < CACHE_TTL_MS
+    ) {
+      memoryCatalogCache.set(storageKey, parsed);
+      return parsed;
+    }
+  } catch {
+    // ignore corrupt cache
+  }
+  return null;
+}
+
+function writeCatalogCache(
+  storageKey: string,
+  entry: CachedCatalogEntry
+): void {
+  const capped: CachedCatalogEntry = {
+    ...entry,
+    items: entry.items.slice(0, MAX_CACHED_ITEMS_PER_KEY),
+  };
+  memoryCatalogCache.set(storageKey, capped);
+
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(capped));
+  } catch {
+    // Quota full on 1-2GB stick: purge stale caches and retry once
+    try {
+      purgeOldTmdbCaches();
+      localStorage.setItem(storageKey, JSON.stringify(capped));
+    } catch {
+      // Fall back to in-memory cache only
+    }
+  }
 }
 
 export async function scrapeTrendingContent(page = 1): Promise<ScrapeResult> {
@@ -194,10 +382,31 @@ export async function scrapeCategoryContent(
   subFeed?: string
 ): Promise<ScrapeResult> {
   try {
+    const imageWidth = getOptimalTmdbImageWidth();
     const cleanSubFeed =
       subFeed && subFeed !== "All (Default)" ? subFeed : undefined;
+    const normalizedGenre = (genreFilter || "Trending").trim().toLowerCase();
+    const genreSpec =
+      normalizedGenre !== "trending" ? GENRE_SPECS[normalizedGenre] : undefined;
+
+    // Gate "Adult" category strictly behind age 16+ and unlocked Kids Mode
+    if (
+      genreSpec?.requireAdultAge &&
+      (getKidsModeLocked() || getSavedUserAge() < 16)
+    ) {
+      return {
+        source: "TMDB API",
+        items: [],
+        fetchedAt: new Date().toISOString(),
+        message:
+          "🔒 Mature category is restricted by your Age Lock or Kids Safe Mode.",
+        page: 1,
+        totalPages: 1,
+      };
+    }
+
     const feedKey = cleanSubFeed ? `_${cleanSubFeed}` : "";
-    const storageKey = `${STORAGE_PREFIX}_${category}${feedKey}_${genreFilter}`;
+    const storageKey = `${STORAGE_PREFIX}${category}${feedKey}_${normalizedGenre}_${imageWidth}`;
     const requiredItemsCount = page * ITEMS_PER_PAGE;
 
     let catalogItems: MediaItem[] = [];
@@ -205,131 +414,47 @@ export async function scrapeCategoryContent(
     let totalAvailablePages = 50;
     let isFullyLoaded = false;
 
-    if (typeof window !== "undefined") {
-      try {
-        const savedData = localStorage.getItem(storageKey);
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          catalogItems = parsed.items || [];
-          maxApiPageReached = parsed.maxApiPageReached || 0;
-          totalAvailablePages = parsed.totalAvailablePages || 50;
-          isFullyLoaded = parsed.isFullyLoaded || false;
-        }
-      } catch (e) {
-        console.error("Failed to read local catalog cache", e);
-      }
+    const cached = readCatalogCache(storageKey);
+    if (cached) {
+      catalogItems = [...cached.items];
+      maxApiPageReached = cached.maxApiPageReached || 0;
+      totalAvailablePages = cached.totalAvailablePages || 50;
+      isFullyLoaded = cached.isFullyLoaded || false;
     }
 
     const seenIds = new Set(catalogItems.map((i) => i.id));
 
     if (catalogItems.length < requiredItemsCount && !isFullyLoaded) {
+      let safetyLoops = 0;
       while (
         catalogItems.length < requiredItemsCount &&
-        maxApiPageReached < totalAvailablePages
+        maxApiPageReached < totalAvailablePages &&
+        safetyLoops < 3
       ) {
+        safetyLoops++;
         const nextApiPage = maxApiPageReached + 1;
         const batch: MediaItem[] = [];
 
         const providerId =
           providerIdMap[category] ||
           (cleanSubFeed ? providerIdMap[cleanSubFeed] : undefined);
-        const genreId =
-          genreFilter && genreFilter !== "Trending"
-            ? genreNameToId[genreFilter.toLowerCase()]
-            : null;
+        const regionParams = buildRegionParams(cleanSubFeed);
 
         const isTvTab = category === "Series" || category === "TV Shows";
         const isMovieTab = category === "Movies";
         const isInTheaters = category === "In Theaters";
-
-        const discoverParams: Record<string, string> = {
-          sort_by: "popularity.desc",
-        };
-
-        if (cleanSubFeed && !providerIdMap[cleanSubFeed]) {
-          if (cleanSubFeed === "Russian") {
-            discoverParams.with_original_language = "ru";
-          } else if (cleanSubFeed === "British") {
-            discoverParams.with_original_language = "en";
-            discoverParams.with_origin_country = "GB";
-          } else if (cleanSubFeed === "Hungarian") {
-            discoverParams.with_original_language = "hu";
-          } else if (cleanSubFeed === "German") {
-            discoverParams.with_original_language = "de";
-            discoverParams.with_origin_country = "DE";
-          } else if (cleanSubFeed === "Arabic / Islamic") {
-            discoverParams.with_original_language = "ar";
-          } else if (cleanSubFeed === "Ukrainian") {
-            discoverParams.with_original_language = "uk";
-          } else if (
-            cleanSubFeed === "Canada (All)" ||
-            cleanSubFeed === "Ontario / Toronto" ||
-            cleanSubFeed === "Atlantic Canada" ||
-            cleanSubFeed === "Western Canada"
-          ) {
-            discoverParams.with_origin_country = "CA";
-          }
-        }
-
-        if (genreId) {
-          discoverParams.with_genres = genreId.toString();
-        }
-
-        if (providerId && !isInTheaters) {
-          discoverParams.with_watch_providers = providerId;
-          discoverParams.watch_region = "CA";
-          discoverParams.with_watch_monetization_types = "flatrate";
-        }
-
-        let endpoint = isTvTab ? "discover/tv" : "discover/movie";
-
-        if (isInTheaters) {
-          endpoint = "movie/now_playing";
-        }
-
-        if (
-          providerId ||
-          cleanSubFeed ||
-          isInTheaters ||
-          isMovieTab ||
-          isTvTab
-        ) {
-          let data = await fetchTmdb(endpoint, nextApiPage, discoverParams);
-          let results = (data.results as Record<string, unknown>[]) || [];
-
-          if (results.length === 0 && genreId && !isInTheaters) {
-            delete discoverParams.with_genres;
-            data = await fetchTmdb(endpoint, nextApiPage, discoverParams);
-            results = (data.results as Record<string, unknown>[]) || [];
-          }
-
-          totalAvailablePages = Math.min((data.total_pages as number) || 50, 50);
-          results.forEach((item) => {
-            const mapped = mapTmdbItemToMediaItem(
-              item,
-              isTvTab ? "tv" : "movie"
-            );
-            if (mapped) batch.push(mapped);
-          });
-
-          if (category === "Home" && !isTvTab && !isMovieTab && !isInTheaters) {
-            const tvData = await fetchTmdb(
-              "discover/tv",
-              nextApiPage,
-              discoverParams
-            );
-            const tvResults = (tvData.results as Record<string, unknown>[]) || [];
-            tvResults.forEach((item) => {
-              const mapped = mapTmdbItemToMediaItem(item, "tv");
-              if (mapped) batch.push(mapped);
-            });
-          }
-        } else if (
+        const isHomeTrending =
           category === "Home" &&
-          (!genreFilter || genreFilter === "Trending")
-        ) {
-          const movieData = await fetchTmdb("trending/movie/week", nextApiPage);
-          const tvData = await fetchTmdb("trending/tv/week", nextApiPage);
+          normalizedGenre === "trending" &&
+          !providerId &&
+          !cleanSubFeed;
+
+        if (isHomeTrending) {
+          // Pure Home + Trending -> weekly trending movies & TV
+          const [movieData, tvData] = await Promise.all([
+            fetchTmdb("trending/movie/week", nextApiPage),
+            fetchTmdb("trending/tv/week", nextApiPage),
+          ]);
 
           totalAvailablePages = Math.min(
             Math.max(
@@ -341,38 +466,167 @@ export async function scrapeCategoryContent(
 
           const movieResults =
             (movieData.results as Record<string, unknown>[]) || [];
-          movieResults.forEach((item) => {
-            const mapped = mapTmdbItemToMediaItem(item, "movie");
-            if (mapped) batch.push(mapped);
-          });
-
           const tvResults = (tvData.results as Record<string, unknown>[]) || [];
-          tvResults.forEach((item) => {
-            const mapped = mapTmdbItemToMediaItem(item, "tv");
+
+          // Interleave movies and TV shows so Home feels balanced
+          const maxLen = Math.max(movieResults.length, tvResults.length);
+          for (let i = 0; i < maxLen; i++) {
+            if (movieResults[i]) {
+              const m = mapTmdbItemToMediaItem(
+                movieResults[i],
+                "movie",
+                imageWidth
+              );
+              if (m) batch.push(m);
+            }
+            if (tvResults[i]) {
+              const t = mapTmdbItemToMediaItem(tvResults[i], "tv", imageWidth);
+              if (t) batch.push(t);
+            }
+          }
+        } else if (isInTheaters) {
+          // In Theaters: use discover/movie with a 45-day theatrical window when a genre is picked
+          const today = new Date();
+          const past45 = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
+          const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+          const theaterParams: Record<string, string> = {
+            sort_by: "popularity.desc",
+            "primary_release_date.gte": fmt(past45),
+            "primary_release_date.lte": fmt(today),
+            ...regionParams,
+          };
+
+          if (genreSpec?.movieGenres) {
+            theaterParams.with_genres = genreSpec.movieGenres;
+          }
+          if (genreSpec?.movieKeywords) {
+            theaterParams.with_keywords = genreSpec.movieKeywords;
+          }
+          if (genreSpec?.movieExtra) {
+            Object.assign(theaterParams, genreSpec.movieExtra);
+          }
+
+          const endpoint =
+            genreSpec || cleanSubFeed ? "discover/movie" : "movie/now_playing";
+          const data = await fetchTmdb(
+            endpoint,
+            nextApiPage,
+            endpoint === "discover/movie" ? theaterParams : {}
+          );
+          const results = (data.results as Record<string, unknown>[]) || [];
+          totalAvailablePages = Math.min((data.total_pages as number) || 20, 50);
+
+          results.forEach((item) => {
+            const mapped = mapTmdbItemToMediaItem(item, "movie", imageWidth);
             if (mapped) batch.push(mapped);
           });
         } else {
-          let standardEndpoint = isTvTab ? "tv/popular" : "movie/popular";
-          let data = await fetchTmdb(
-            standardEndpoint,
-            nextApiPage,
-            genreId ? { with_genres: genreId.toString() } : {}
-          );
-          let results = (data.results as Record<string, unknown>[]) || [];
+          // Unified Discover engine for Home+Genre, Movies, TV Shows, Providers & Regions
+          const baseParams: Record<string, string> = {
+            sort_by: "popularity.desc",
+            ...regionParams,
+          };
 
-          if (results.length === 0 && genreId) {
-            data = await fetchTmdb(standardEndpoint, nextApiPage);
-            results = (data.results as Record<string, unknown>[]) || [];
+          if (providerId) {
+            baseParams.with_watch_providers = providerId;
+            baseParams.watch_region = "CA";
+            baseParams.with_watch_monetization_types = "flatrate";
           }
 
-          totalAvailablePages = Math.min((data.total_pages as number) || 50, 50);
-          results.forEach((item) => {
-            const mapped = mapTmdbItemToMediaItem(
-              item,
-              isTvTab ? "tv" : "movie"
+          const shouldFetchMovies =
+            isMovieTab ||
+            (!isTvTab && !genreSpec?.preferTvOnly);
+          const shouldFetchTv =
+            isTvTab ||
+            (category === "Home" && !genreSpec?.preferMovieOnly) ||
+            (!isMovieTab && Boolean(genreSpec?.preferTvOnly));
+
+          const fetchPromises: Promise<{
+            type: "movie" | "tv";
+            data: Record<string, unknown>;
+          }>[] = [];
+
+          if (shouldFetchMovies) {
+            const movieParams: Record<string, string> = { ...baseParams };
+            if (genreSpec?.movieGenres) {
+              movieParams.with_genres = genreSpec.movieGenres;
+            }
+            if (genreSpec?.movieKeywords) {
+              movieParams.with_keywords = genreSpec.movieKeywords;
+            }
+            if (genreSpec?.movieExtra) {
+              Object.assign(movieParams, genreSpec.movieExtra);
+            }
+
+            fetchPromises.push(
+              fetchTmdb("discover/movie", nextApiPage, movieParams).then(
+                async (data) => {
+                  const res = (data.results as Record<string, unknown>[]) || [];
+                  // If strict keyword + genre combo returned 0, relax keyword and retry
+                  if (res.length === 0 && movieParams.with_keywords) {
+                    delete movieParams.with_keywords;
+                    const retry = await fetchTmdb(
+                      "discover/movie",
+                      nextApiPage,
+                      movieParams
+                    );
+                    return { type: "movie" as const, data: retry };
+                  }
+                  return { type: "movie" as const, data };
+                }
+              )
             );
-            if (mapped) batch.push(mapped);
-          });
+          }
+
+          if (shouldFetchTv) {
+            const tvParams: Record<string, string> = { ...baseParams };
+            if (genreSpec?.tvGenres) {
+              tvParams.with_genres = genreSpec.tvGenres;
+            }
+            if (genreSpec?.tvKeywords) {
+              tvParams.with_keywords = genreSpec.tvKeywords;
+            }
+            if (genreSpec?.tvExtra) {
+              Object.assign(tvParams, genreSpec.tvExtra);
+            }
+
+            fetchPromises.push(
+              fetchTmdb("discover/tv", nextApiPage, tvParams).then(
+                async (data) => {
+                  const res = (data.results as Record<string, unknown>[]) || [];
+                  if (res.length === 0 && tvParams.with_keywords) {
+                    delete tvParams.with_keywords;
+                    const retry = await fetchTmdb(
+                      "discover/tv",
+                      nextApiPage,
+                      tvParams
+                    );
+                    return { type: "tv" as const, data: retry };
+                  }
+                  return { type: "tv" as const, data };
+                }
+              )
+            );
+          }
+
+          const settled = await Promise.all(fetchPromises);
+          let maxPages = 1;
+          for (const entry of settled) {
+            const tp = (entry.data.total_pages as number) || 1;
+            if (tp > maxPages) maxPages = tp;
+            const results =
+              (entry.data.results as Record<string, unknown>[]) || [];
+            results.forEach((item) => {
+              const mapped = mapTmdbItemToMediaItem(
+                item,
+                entry.type,
+                imageWidth
+              );
+              if (mapped) batch.push(mapped);
+            });
+          }
+          totalAvailablePages = Math.min(maxPages, 50);
         }
 
         maxApiPageReached = nextApiPage;
@@ -389,43 +643,13 @@ export async function scrapeCategoryContent(
         }
       }
 
-      if (catalogItems.length < requiredItemsCount) {
-        try {
-          const isTvTab = category === "Series" || category === "TV Shows";
-          const fallbackEndpoint = isTvTab ? "tv/popular" : "movie/popular";
-          const fallbackData = await fetchTmdb(fallbackEndpoint, 1);
-          const fallbackResults =
-            (fallbackData.results as Record<string, unknown>[]) || [];
-          fallbackResults.forEach((item) => {
-            const mapped = mapTmdbItemToMediaItem(
-              item,
-              isTvTab ? "tv" : "movie"
-            );
-            if (mapped && !seenIds.has(mapped.id)) {
-              seenIds.add(mapped.id);
-              catalogItems.push(mapped);
-            }
-          });
-        } catch (e) {
-          console.error("Failed to load fallback buffer", e);
-        }
-      }
-
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(
-            storageKey,
-            JSON.stringify({
-              items: catalogItems,
-              maxApiPageReached,
-              totalAvailablePages,
-              isFullyLoaded,
-            })
-          );
-        } catch (e) {
-          console.error("Failed to save expanded catalog cache", e);
-        }
-      }
+      writeCatalogCache(storageKey, {
+        items: catalogItems,
+        maxApiPageReached,
+        totalAvailablePages,
+        isFullyLoaded,
+        cachedAt: Date.now(),
+      });
     }
 
     const startIndex = (page - 1) * ITEMS_PER_PAGE;
