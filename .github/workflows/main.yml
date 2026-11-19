@@ -325,6 +325,8 @@ jobs:
           git add package.json capacitor.config.json android/app/build.gradle src/lib/version.ts
           if ! git diff --cached --quiet; then
             git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} [skip ci]"
+            # Clear temporary build-time patch copies in tracked files so rebase succeeds cleanly
+            git checkout -- .
             git pull --rebase origin "${{ github.ref_name }}"
             git push
           else
