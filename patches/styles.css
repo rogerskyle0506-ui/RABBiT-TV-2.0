@@ -32,6 +32,7 @@
   --app-panel: #090e1f;
   --app-accent: #a855f7;
   --selection-bg: rgba(168, 85, 247, 0.45);
+  --rabtv-overscan: 0%;
 }
 
 /* Theme: Violet (Default) */
@@ -82,6 +83,21 @@ html[data-theme="cyan"] {
   --selection-bg: rgba(14, 165, 233, 0.35);
 }
 
+/* ==========================================================
+   Senior / Accessibility Text Scaling (Settings.ts Driven)
+   ========================================================== */
+html[data-text-scale="normal"] {
+  font-size: 100%;
+}
+
+html[data-text-scale="large"] {
+  font-size: 112.5%;
+}
+
+html[data-text-scale="xl"] {
+  font-size: 125%;
+}
+
 html,
 body {
   margin: 0;
@@ -97,24 +113,32 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* ==========================================================
+   TV / Projector Overscan Safe-Zone Wrapper
+   ========================================================== */
+.rabtv-overscan-shell {
+  padding: var(--rabtv-overscan, 0%);
+  transition: padding 0.2s ease;
+}
+
 /* --- Global Role-Based Font Mappings --- */
 /* Headers, Titles, Buttons -> Aresink */
-h1, h2, h3, h4, h5, h6, 
-.font-aresink, 
-button, 
+h1, h2, h3, h4, h5, h6,
+.font-aresink,
+button,
 [role="button"] {
   font-family: 'Aresink', sans-serif !important;
 }
 
-/* Media Details -> Last Honey */
-.media-detail, 
-.media-details, 
+/* Media Details -> Cayu */
+.media-detail,
+.media-details,
 .font-cayu {
   font-family: 'Cayu', sans-serif !important;
 }
 
 /* General Body & Sidebar text -> Dancing-Majesty */
-p, span, a, li, label, input, 
+p, span, a, li, label, input, select, textarea,
 .font-dancingmajesty {
   font-family: 'Dancing-Majesty', sans-serif;
 }
@@ -137,6 +161,13 @@ img {
 
 ::selection {
   background: var(--selection-bg);
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .line-clamp-2 {
@@ -164,8 +195,83 @@ img {
 }
 
 /* ==========================================================
+   High-Contrast TV & Senior D-Pad Focus Spotlight
+   ========================================================== */
+html[data-high-contrast-focus="true"] a:focus-visible,
+html[data-high-contrast-focus="true"] button:focus-visible,
+html[data-high-contrast-focus="true"] input:focus-visible,
+html[data-high-contrast-focus="true"] select:focus-visible,
+html[data-high-contrast-focus="true"] textarea:focus-visible,
+html[data-high-contrast-focus="true"] summary:focus-visible,
+html[data-high-contrast-focus="true"] [role="button"]:focus-visible,
+html[data-high-contrast-focus="true"] a:focus,
+html[data-high-contrast-focus="true"] button:focus {
+  outline: 3px solid #facc15 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.85), 0 0 22px rgba(250, 204, 21, 0.75) !important;
+  z-index: 30;
+}
+
+/* ==========================================================
+   Night Owl Warm Eye-Care Filter (Preserves Fixed Positioning)
+   ========================================================== */
+html[data-eye-care="true"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99990;
+  background: rgba(255, 162, 58, 0.13);
+  mix-blend-mode: multiply;
+}
+
+/* ==========================================================
+   Reduced Motion / Steady Screen (Senior & Budget GPU Boost)
+   ========================================================== */
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ==========================================================
+   Low-RAM Streaming Stick Optimization (1GB-2GB Devices)
+   Strips heavy GPU backdrop blurs to prevent WebView OOM crashes
+   ========================================================== */
+html[data-ram-mode="low"] .backdrop-blur-2xl,
+html[data-ram-mode="low"] .backdrop-blur-xl,
+html[data-ram-mode="low"] .backdrop-blur-md,
+html[data-ram-mode="low"] .app-panel-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-ram-mode="low"] .blur-3xl,
+html[data-ram-mode="low"] .animate-ambient-pulse {
+  display: none !important;
+}
+
+/* ==========================================================
+   Neon Glow Intensity Control ("off" | "subtle" | "full")
+   ========================================================== */
+html[data-glow-intensity="off"] .crystal-menu-pill,
+html[data-glow-intensity="off"] .crystal-admin-pill,
+html[data-glow-intensity="off"] header,
+html[data-glow-intensity="off"] [class*="shadow-["] {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65) !important;
+}
+
+html[data-glow-intensity="subtle"] .animate-slow-glow {
+  animation: none !important;
+  opacity: 0.85;
+}
+
+/* ==========================================================
    Category & Genre Scroll Bar Slow Glowing Pulse Animation
-   ================================================---------- */
+   ========================================================== */
 @keyframes slowGlowPulse {
   0%, 100% {
     opacity: 0.35;
@@ -186,7 +292,7 @@ img {
 /* ==========================================================
    Fire OS 7 / Fire Stick Specific Iframe & Viewport Corrections
    (Only applies when the 'fire-os' class is detected at runtime)
-   ================================================---------- */
+   ========================================================== */
 html.fire-os iframe,
 html.fire-os .video-player-container,
 html.fire-os video {
