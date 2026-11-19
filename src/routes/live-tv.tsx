@@ -1,16 +1,30 @@
 // src/routes/live-tv.tsx
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchLiveCategories,
   fetchChannelsByCategory,
   fetchAllChannels,
-  getCatalogHealthStats,
   refreshLiveHealth,
   type LiveChannel,
-  type CatalogHealthStats,
 } from '../lib/live-feed-service';
-import { AppTheme, getSavedTheme } from '@/lib/settings';
+import {
+  AppTheme,
+  PosterShape,
+  getSavedTheme,
+  getHardwareLimits,
+  getLargeButtons,
+  getReducedMotion,
+  getGlowIntensity,
+  getPosterShape,
+  getClockFormat,
+  formatAppTime,
+  getFavoriteChannelIds,
+  toggleFavoriteChannel,
+  MAX_FAVORITE_CHANNELS,
+  getKidsModeLocked,
+  getSavedUserAge,
+} from '@/lib/settings';
 import { ScrollPillBar } from '@/components/scroll-pill-bar';
 import { getChannelDescription } from '@/lib/channel-descriptions';
 import { channelCategories } from '@/lib/channel-categories';
@@ -23,11 +37,11 @@ export const Route = createFileRoute('/live-tv')({
 
 export type ExtendedHealthStatus = 'online' | 'timeout' | 'offline' | 'checking';
 export type HealthFilterOption = 'all' | 'online' | 'timeout' | 'offline';
+export type LiveSortOption = 'status' | 'channelNumber' | 'az';
+export type LiveDensityOption = 'comfort' | 'compact';
 
 const FAST_HEALTH_CACHE_KEY = 'rabtv_fast_live_health_v2';
 const FAST_HEALTH_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-const CHANNELS_PER_PAGE = 36; // Memory cap for 1GB-2GB RAM streaming sticks
-const PROBE_CONCURRENCY = 12;
 const PROBE_TIMEOUT_MS = 2600;
 
 const categoryMapping: Record<string, string> = {
@@ -47,6 +61,35 @@ const categoryMapping: Record<string, string> = {
 const reverseCategoryMapping: Record<string, string> = Object.fromEntries(
   Object.entries(categoryMapping).map(([orig, disp]) => [disp, orig])
 );
+
+// Keywords filtered out from Live TV when Kids Safe Mode Lock is actively engaged
+const MATURE_LIVE_KEYWORDS = [
+  'adult',
+  'crime',
+  'deadly',
+  'murder',
+  'cops',
+  '48 hours',
+  'csi',
+  'thriller',
+  'paranormal',
+  'haunt',
+  'ghost',
+  'botched',
+  'prisoner',
+  'hell',
+  'ridiculousness',
+  'embarrassing bodies',
+  'surveillance',
+  'emergency',
+  'a&e',
+  'warfare',
+];
+
+function isChannelKidsSafe(title: string): boolean {
+  const lower = (title || '').toLowerCase();
+  return !MATURE_LIVE_KEYWORDS.some((kw) => lower.includes(kw));
+}
 
 interface CachedHealthMap {
   timestamp: number;
@@ -82,14 +125,22 @@ function saveCachedHealthMap(statuses: Record<string, ExtendedHealthStatus>): vo
 }
 
 function getChannelKey(channel: LiveChannel): string {
-  return String(channel.channelId || channel.streamUrl || channel.url || channel.title);
+  return String(
+    channel.channelId || channel.streamUrl || channel.url || channel.title
+  );
+}
+
+function normalizeMatchText(text: string): string {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 
 /**
  * Fast, lightweight stream probe with a strict 2.6s timeout.
  * Distinguishes:
  *  - 'online': HTTP 200..299 with valid response
- *  - 'timeout': AbortError (slow stream) or CORS opaque fallback (questionable / possibly online)
+ *  - 'timeout': AbortError (slow stream) or CORS opaque fallback (may still play)
  *  - 'offline': Hard HTTP 4xx/5xx error or dead host
  */
 async function probeSingleChannelFast(url: string): Promise<ExtendedHealthStatus> {
@@ -112,19 +163,16 @@ async function probeSingleChannelFast(url: string): Promise<ExtendedHealthStatus
       return 'online';
     }
     if (response.status === 401 || response.status === 403) {
-      // Token/Geo/Referer protected streams often still play inside the native/HLS video element
       return 'timeout';
     }
     return 'offline';
   } catch (err: any) {
     window.clearTimeout(timer);
 
-    // If aborted due to timeout, classify as questionable/timeout
     if (err?.name === 'AbortError') {
       return 'timeout';
     }
 
-    // Secondary no-cors ping to check if the server is alive behind strict CORS headers
     const fallbackController = new AbortController();
     const fallbackTimer = window.setTimeout(
       () => fallbackController.abort(),
@@ -153,9 +201,9 @@ function StatusBadge({ status }: { status: ExtendedHealthStatus }) {
     return (
       <span
         title="Verified Online"
-        className="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/90 border border-emerald-400/50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.5)] backdrop-blur-md"
+        className="inline-flex items-center gap-1 rounded-full bg-emerald-950/90 border border-emerald-400/50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.45)]"
       >
-        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
         <span>Live</span>
       </span>
     );
@@ -164,11 +212,11 @@ function StatusBadge({ status }: { status: ExtendedHealthStatus }) {
   if (status === 'timeout') {
     return (
       <span
-        title="Questionable / Timeout — Stream responded slowly or has CORS restrictions, but may still play"
-        className="inline-flex items-center gap-1.5 rounded-full bg-amber-950/90 border border-amber-400/50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] backdrop-blur-md"
+        title="Questionable / Timeout — May still play inside the video player"
+        className="inline-flex items-center gap-1 rounded-full bg-amber-950/90 border border-amber-400/50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-300"
       >
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
-        <span>Timeout ?</span>
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        <span>Slow ?</span>
       </span>
     );
   }
@@ -177,9 +225,9 @@ function StatusBadge({ status }: { status: ExtendedHealthStatus }) {
     return (
       <span
         title="Stream Offline"
-        className="inline-flex items-center gap-1.5 rounded-full bg-red-950/90 border border-red-500/50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-red-300 shadow-md backdrop-blur-md"
+        className="inline-flex items-center gap-1 rounded-full bg-red-950/90 border border-red-500/50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-red-300"
       >
-        <span className="h-2 w-2 rounded-full bg-red-500" />
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
         <span>Offline</span>
       </span>
     );
@@ -188,10 +236,10 @@ function StatusBadge({ status }: { status: ExtendedHealthStatus }) {
   return (
     <span
       title="Checking stream health..."
-      className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/90 border border-white/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300 backdrop-blur-md"
+      className="inline-flex items-center gap-1 rounded-full bg-slate-900/90 border border-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-300"
     >
-      <span className="h-2 w-2 rounded-full bg-sky-400 animate-ping" />
-      <span>Checking</span>
+      <span className="h-1.5 w-1.5 rounded-full bg-sky-400 animate-ping" />
+      <span>Scan</span>
     </span>
   );
 }
@@ -199,107 +247,182 @@ function StatusBadge({ status }: { status: ExtendedHealthStatus }) {
 const ChannelCard = React.memo(function ChannelCard({
   channel,
   status,
+  isPinned,
+  onTogglePin,
   laserLineClass,
   playBtnClass,
   borderHoverClass,
+  radiusClass,
+  largeButtons,
+  compact,
+  glowOff,
 }: {
   channel: LiveChannel;
   status: ExtendedHealthStatus;
+  isPinned: boolean;
+  onTogglePin: (channelId: string, channelTitle: string) => void;
   laserLineClass: string;
   playBtnClass: string;
   borderHoverClass: string;
+  radiusClass: string;
+  largeButtons: boolean;
+  compact: boolean;
+  glowOff: boolean;
 }) {
   const streamTarget = channel.streamUrl || channel.url;
+  const channelId = getChannelKey(channel);
+  const rawGroup = channel.groupTitle || (channel as any).category || '';
+  const displayRegion = rawGroup
+    ? categoryMapping[rawGroup] || rawGroup
+    : 'TV';
   const description = useMemo(
     () => getChannelDescription(channel.title),
     [channel.title]
   );
 
   return (
-    <Link
-      to="/live-player"
-      search={{
-        url: streamTarget,
-        title: channel.title,
-        logo: channel.logo || '',
-      }}
-      onClick={() => {
-        recordWatchHistory({
-          id: channel.channelId || streamTarget,
-          title: channel.title,
-          posterPath: channel.logo || '',
-          type: 'livetv',
-        });
-      }}
-      className={`group relative flex flex-col justify-between rounded-3xl bg-slate-950/85 backdrop-blur-xl border border-white/15 ${borderHoverClass} p-3.5 sm:p-4 shadow-[0_12px_35px_rgba(0,0,0,0.75)] hover:shadow-[0_16px_45px_rgba(0,0,0,0.95)] hover:-translate-y-1.5 transition-all duration-300 text-center overflow-hidden focus:outline-none focus:ring-4 focus:ring-purple-500/60`}
+    <div
+      className={`group relative flex flex-col justify-between ${radiusClass} bg-slate-950/88 backdrop-blur-xl border ${
+        isPinned
+          ? 'border-amber-400/50 shadow-[0_12px_32px_rgba(245,158,11,0.18)]'
+          : `border-white/15 ${borderHoverClass} shadow-[0_12px_32px_rgba(0,0,0,0.75)]`
+      } ${
+        compact ? 'p-2.5 sm:p-3' : 'p-3.5 sm:p-4'
+      } hover:-translate-y-1 transition-all duration-300 text-center overflow-hidden`}
     >
-      {/* Top Status Bar */}
-      <div className="flex items-center justify-between gap-1.5 mb-2.5 z-10">
-        <span className="rounded-full bg-white/[0.06] border border-white/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-300 truncate max-w-[50%]">
-          {(channel as any).category
-            ? categoryMapping[(channel as any).category] || (channel as any).category
-            : 'TV'}
-        </span>
-        <StatusBadge status={status} />
-      </div>
-
-      {/* Upfront High-Contrast Logo Showcase Stage */}
-      <div className="relative w-full h-32 sm:h-36 rounded-2xl bg-gradient-to-b from-slate-900/90 via-black to-slate-950 border border-white/10 group-hover:border-white/25 mb-3.5 overflow-hidden flex items-center justify-center p-4 shadow-inner">
-        {/* Radial Spotlight so both dark and white transparent PNG logos pop */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-75 group-hover:opacity-100 transition-opacity duration-300"
-          style={{
-            background:
-              'radial-gradient(circle at center, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 45%, transparent 75%)',
-          }}
-        />
-
-        {channel.logo ? (
-          <img
-            src={channel.logo}
-            alt={channel.title}
-            loading="lazy"
-            decoding="async"
-            className="relative z-10 max-h-full max-w-full w-auto h-auto object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.85)] transform group-hover:scale-110 transition-transform duration-300"
-          />
-        ) : (
-          <div className="relative z-10 flex flex-col items-center justify-center gap-1">
-            <span className="text-2xl">📺</span>
-            <span className="text-xs font-black tracking-widest uppercase text-slate-300">
-              {channel.title.slice(0, 12)}
+      {/* Top Bar: Region + Channel Number + Health + Pin Button (kept outside Link for valid HTML & TV D-Pad) */}
+      <div className="flex items-center justify-between gap-1 mb-2 z-20">
+        <div className="flex items-center gap-1 min-w-0">
+          {channel.channelNumber !== undefined && (
+            <span className="rounded-md bg-white/10 border border-white/15 px-1.5 py-0.5 text-[9px] font-black text-cyan-300 shrink-0">
+              CH {channel.channelNumber}
             </span>
-          </div>
-        )}
-      </div>
-
-      {/* Channel Info & Watch Action */}
-      <div className="flex flex-col flex-1 justify-between space-y-2.5 z-10">
-        <div>
-          <h4 className="text-sm sm:text-base font-black text-white tracking-tight line-clamp-1 group-hover:text-white">
-            {channel.title}
-          </h4>
-          <p className="text-[11px] text-slate-400 font-medium line-clamp-2 mt-1 leading-snug min-h-[2.25rem]">
-            {description}
-          </p>
+          )}
+          <span className="rounded-full bg-white/[0.06] border border-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-300 truncate">
+            {displayRegion}
+          </span>
         </div>
 
+        <div className="flex items-center gap-1 shrink-0">
+          <StatusBadge status={status} />
+          <button
+            type="button"
+            onClick={() => onTogglePin(channelId, channel.title)}
+            aria-label={
+              isPinned
+                ? `Unpin ${channel.title} from Favorites`
+                : `Pin ${channel.title} to Favorites`
+            }
+            title={isPinned ? 'Unpin from Favorites' : 'Pin to Top Favorites'}
+            className={`flex ${
+              largeButtons ? 'h-8 w-8 text-sm' : 'h-6 w-6 text-xs'
+            } items-center justify-center rounded-full border transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+              isPinned
+                ? 'bg-amber-500/25 border-amber-400/70 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]'
+                : 'bg-black/65 border-white/15 text-slate-400 hover:text-amber-300 hover:border-amber-400/50'
+            }`}
+          >
+            {isPinned ? '★' : '☆'}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Clickable Watch Card Link */}
+      <Link
+        to="/live-player"
+        search={{
+          url: streamTarget,
+          title: channel.title,
+          logo: channel.logo || '',
+          channelId,
+        }}
+        onClick={() => {
+          recordWatchHistory({
+            id: channelId,
+            title: channel.title,
+            posterPath: channel.logo || '',
+            type: 'livetv',
+          });
+        }}
+        className="flex flex-col flex-1 justify-between focus:outline-none focus:ring-4 focus:ring-purple-500/60 rounded-2xl"
+      >
+        {/* Upfront High-Contrast Logo Showcase Stage */}
         <div
-          className={`w-full py-2 px-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 ${playBtnClass}`}
+          className={`relative w-full ${
+            compact ? 'h-20 sm:h-24 p-2.5 mb-2' : 'h-28 sm:h-34 p-3.5 mb-3'
+          } rounded-2xl bg-gradient-to-b from-slate-900/90 via-black to-slate-950 border border-white/10 group-hover:border-white/25 overflow-hidden flex items-center justify-center shadow-inner`}
         >
-          <span>▶</span>
-          <span>Watch Live</span>
+          <div
+            className="absolute inset-0 pointer-events-none opacity-75 group-hover:opacity-100 transition-opacity duration-300"
+            style={{
+              background:
+                'radial-gradient(circle at center, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 45%, transparent 75%)',
+            }}
+          />
+
+          {channel.logo ? (
+            <img
+              src={channel.logo}
+              alt={channel.title}
+              loading="lazy"
+              decoding="async"
+              className="relative z-10 max-h-full max-w-full w-auto h-auto object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.85)] transform group-hover:scale-110 transition-transform duration-300"
+            />
+          ) : (
+            <div className="relative z-10 flex flex-col items-center justify-center gap-1">
+              <span className="text-xl">📺</span>
+              <span className="text-[10px] font-black tracking-widest uppercase text-slate-300">
+                {channel.title.slice(0, 12)}
+              </span>
+            </div>
+          )}
         </div>
-      </div>
+
+        {/* Channel Info & Watch Action */}
+        <div className="flex flex-col flex-1 justify-between space-y-2 z-10">
+          <div>
+            <h4
+              className={`${
+                compact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'
+              } font-black text-white tracking-tight line-clamp-1`}
+            >
+              {channel.title}
+            </h4>
+            {!compact && (
+              <p className="text-[11px] text-slate-400 font-medium line-clamp-2 mt-1 leading-snug min-h-[2.25rem]">
+                {description}
+              </p>
+            )}
+          </div>
+
+          <div
+            className={`w-full ${
+              largeButtons
+                ? 'py-2.5 text-xs'
+                : compact
+                  ? 'py-1.5 text-[10px]'
+                  : 'py-2 text-[11px]'
+            } px-3 rounded-xl font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 ${playBtnClass}`}
+          >
+            <span>▶</span>
+            <span>Watch Live</span>
+          </div>
+        </div>
+      </Link>
 
       {/* Neon Bottom Laser Highlight */}
-      <div
-        className={`absolute inset-x-4 bottom-0 h-[2px] bg-gradient-to-r ${laserLineClass} opacity-75 group-hover:opacity-100`}
-      />
-    </Link>
+      {!glowOff && (
+        <div
+          className={`absolute inset-x-4 bottom-0 h-[2px] bg-gradient-to-r ${laserLineClass} opacity-75 group-hover:opacity-100 pointer-events-none`}
+        />
+      )}
+    </div>
   );
 });
 
 function LiveTvComponent() {
+  const navigate = useNavigate();
+
   const [categories, setCategories] = useState<string[]>(['All']);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
@@ -309,12 +432,19 @@ function LiveTvComponent() {
   );
   const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
   const [statusFilter, setStatusFilter] = useState<HealthFilterOption>('all');
+  const [sortBy, setSortBy] = useState<LiveSortOption>('status');
+  const [density, setDensity] = useState<LiveDensityOption>('comfort');
+  const [pinnedOnly, setPinnedOnly] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [rawChannels, setRawChannels] = useState<LiveChannel[]>([]);
   const [healthMap, setHealthMap] = useState<Record<string, ExtendedHealthStatus>>(
     () => loadCachedHealthMap()
   );
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(() =>
+    getFavoriteChannelIds()
+  );
+  const [pinToast, setPinToast] = useState<string | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [probing, setProbing] = useState<boolean>(false);
@@ -324,31 +454,77 @@ function LiveTvComponent() {
   });
 
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [appTheme, setAppTheme] = useState<AppTheme>('violet');
+
+  // Live settings wired from settings.ts
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => getSavedTheme());
+  const [posterShape, setPosterShapeState] = useState<PosterShape>(() =>
+    getPosterShape()
+  );
+  const [largeButtons, setLargeButtons] = useState<boolean>(() =>
+    getLargeButtons()
+  );
+  const [reducedMotion, setReducedMotion] = useState<boolean>(() =>
+    getReducedMotion()
+  );
+  const [glowOff, setGlowOff] = useState<boolean>(
+    () => getGlowIntensity() === 'off'
+  );
+  const [isLowRam, setIsLowRam] = useState<boolean>(
+    () => getHardwareLimits().effectiveMode === 'low'
+  );
+  const [channelsPerPage, setChannelsPerPage] = useState<number>(
+    () => getHardwareLimits().liveChannelsPerPage
+  );
+  const [kidsSafeActive, setKidsSafeActive] = useState<boolean>(
+    () => getKidsModeLocked() || getSavedUserAge() < 13
+  );
+  const [guideClock, setGuideClock] = useState<string>(() =>
+    formatAppTime(new Date(), getClockFormat())
+  );
 
   const probeRunIdRef = useRef<number>(0);
-  const healthMapRef = useRef<Record<string, ExtendedHealthStatus>>(healthMap);
 
+  // Sync live settings whenever Sidebar changes anything
   useEffect(() => {
-    healthMapRef.current = healthMap;
-  }, [healthMap]);
+    const syncSettings = () => {
+      const limits = getHardwareLimits();
+      setAppTheme(getSavedTheme());
+      setPosterShapeState(getPosterShape());
+      setLargeButtons(getLargeButtons());
+      setReducedMotion(getReducedMotion());
+      setGlowOff(getGlowIntensity() === 'off');
+      setIsLowRam(limits.effectiveMode === 'low');
+      setChannelsPerPage(limits.liveChannelsPerPage);
+      setFavoriteIds(getFavoriteChannelIds());
+      setKidsSafeActive(getKidsModeLocked() || getSavedUserAge() < 13);
+      setGuideClock(formatAppTime(new Date(), getClockFormat()));
+    };
 
-  useEffect(() => {
-    setAppTheme(getSavedTheme());
-    const handleSettingsUpdate = () => setAppTheme(getSavedTheme());
-    window.addEventListener('rabtv_settings_updated', handleSettingsUpdate);
-    return () =>
-      window.removeEventListener('rabtv_settings_updated', handleSettingsUpdate);
+    syncSettings();
+    window.addEventListener('rabtv_settings_updated', syncSettings);
+    window.addEventListener('rabtv_ram_mode_updated', syncSettings);
+    return () => {
+      window.removeEventListener('rabtv_settings_updated', syncSettings);
+      window.removeEventListener('rabtv_ram_mode_updated', syncSettings);
+    };
   }, []);
 
-  // Deduplicate categories so "All" never appears twice side-by-side
+  // Keep live guide clock updated
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setGuideClock(formatAppTime(new Date(), getClockFormat()));
+    }, 15000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  // Deduplicate categories so "All" never appears twice
   useEffect(() => {
     let active = true;
     fetchLiveCategories()
       .then((cats) => {
         if (!active) return;
         const mapped = cats
-          .map((cat) => ( categoryMapping[cat] || cat ).trim())
+          .map((cat) => (categoryMapping[cat] || cat).trim())
           .filter((cat) => cat.length > 0 && cat.toLowerCase() !== 'all');
         const uniqueCats = Array.from(new Set(['All', ...mapped]));
         setCategories(uniqueCats);
@@ -363,7 +539,7 @@ function LiveTvComponent() {
 
   /**
    * High-speed concurrent background health prober.
-   * Updates channel statuses in smooth batches without blocking the UI.
+   * Adapts concurrency (6 on 1-2GB sticks, 12 on 4GB+ devices) so low-RAM TVs stay snappy.
    */
   const runFastBackgroundProbe = useCallback(
     async (channelsToProbe: LiveChannel[], forceRefresh = false) => {
@@ -373,7 +549,11 @@ function LiveTvComponent() {
       const pending: LiveChannel[] = [];
       for (const ch of channelsToProbe) {
         const key = getChannelKey(ch);
-        if (!forceRefresh && existingCache[key] && existingCache[key] !== 'checking') {
+        if (
+          !forceRefresh &&
+          existingCache[key] &&
+          existingCache[key] !== 'checking'
+        ) {
           continue;
         }
         pending.push(ch);
@@ -391,7 +571,6 @@ function LiveTvComponent() {
         ...existingCache,
       };
 
-      // Mark uncached channels as checking initially
       for (const ch of pending) {
         const key = getChannelKey(ch);
         if (!workingMap[key]) {
@@ -403,6 +582,7 @@ function LiveTvComponent() {
       let completed = 0;
       let cursor = 0;
       let lastFlushTime = Date.now();
+      const concurrency = getHardwareLimits().effectiveMode === 'low' ? 6 : 12;
 
       const worker = async () => {
         while (cursor < pending.length) {
@@ -420,7 +600,6 @@ function LiveTvComponent() {
           workingMap[key] = result;
           completed++;
 
-          // Batch React state updates every 350ms or on completion to protect 1-2GB RAM sticks
           const now = Date.now();
           if (now - lastFlushTime >= 350 || completed === pending.length) {
             lastFlushTime = now;
@@ -430,7 +609,7 @@ function LiveTvComponent() {
         }
       };
 
-      const workerCount = Math.min(PROBE_CONCURRENCY, pending.length);
+      const workerCount = Math.min(concurrency, pending.length);
       await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
       if (probeRunIdRef.current === runId) {
@@ -442,9 +621,6 @@ function LiveTvComponent() {
     []
   );
 
-  /**
-   * Loads channels immediately without waiting for slow network health probes.
-   */
   const loadChannelsInstantly = useCallback(
     async (opts?: { forceProbe?: boolean }) => {
       setLoading(true);
@@ -465,7 +641,6 @@ function LiveTvComponent() {
           });
         }
 
-        // Deduplicate channels by channelId/streamUrl
         const seen = new Set<string>();
         const uniqueChannels: LiveChannel[] = [];
         for (const ch of fetched) {
@@ -479,7 +654,6 @@ function LiveTvComponent() {
         setRawChannels(uniqueChannels);
         setLoading(false);
 
-        // Kick off non-blocking background health verification
         void runFastBackgroundProbe(uniqueChannels, opts?.forceProbe);
       } catch (err) {
         console.error('Failed to load live channels:', err);
@@ -492,15 +666,13 @@ function LiveTvComponent() {
   useEffect(() => {
     void loadChannelsInstantly();
     return () => {
-      // Cancel in-flight probe batch on category change or unmount
       probeRunIdRef.current++;
     };
   }, [loadChannelsInstantly]);
 
-  // Reset pagination whenever any filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedGenre, statusFilter, searchQuery]);
+  }, [selectedCategory, selectedGenre, statusFilter, searchQuery, pinnedOnly, sortBy]);
 
   const handleRefreshHealth = async () => {
     try {
@@ -512,7 +684,25 @@ function LiveTvComponent() {
     await loadChannelsInstantly({ forceProbe: true });
   };
 
-  // Resolve effective status for every channel
+  const handleTogglePin = useCallback((channelId: string, channelTitle: string) => {
+    const res = toggleFavoriteChannel(channelId);
+    setFavoriteIds(res.favorites);
+    if (res.limitReached) {
+      setPinToast(
+        `Max ${MAX_FAVORITE_CHANNELS} pinned channels reached — unpin one first.`
+      );
+    } else {
+      setPinToast(
+        res.added
+          ? `⭐ Pinned "${channelTitle}" to your top Favorites!`
+          : `Removed "${channelTitle}" from Favorites.`
+      );
+    }
+    window.setTimeout(() => setPinToast(null), 2800);
+  }, []);
+
+  const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+
   const resolveChannelStatus = useCallback(
     (channel: LiveChannel): ExtendedHealthStatus => {
       const key = getChannelKey(channel);
@@ -526,25 +716,50 @@ function LiveTvComponent() {
     [healthMap, probing]
   );
 
-  // Filter by Genre & Search Query first (so Status counts reflect the active Region + Genre)
+  // Apply Kids Lock first so mature crime/adult streams are hidden when Kids Mode is active
+  const ageSafeChannels = useMemo(() => {
+    if (!kidsSafeActive) return rawChannels;
+    return rawChannels.filter((ch) => isChannelKidsSafe(ch.title));
+  }, [rawChannels, kidsSafeActive]);
+
+  // Pinned Favorites shelf matching current loaded channels
+  const pinnedChannels = useMemo(() => {
+    if (favoriteIds.length === 0) return [];
+    const lookup = new Map<string, LiveChannel>();
+    for (const ch of ageSafeChannels) {
+      lookup.set(getChannelKey(ch), ch);
+    }
+    return favoriteIds
+      .map((id) => lookup.get(id))
+      .filter((ch): ch is LiveChannel => Boolean(ch));
+  }, [ageSafeChannels, favoriteIds]);
+
+  // Filter by Genre, Pinned-only, and Search Query
   const genreAndSearchFiltered = useMemo(() => {
-    let list = rawChannels;
+    let list = ageSafeChannels;
+
+    if (pinnedOnly) {
+      list = list.filter((c) => favoriteIdSet.has(getChannelKey(c)));
+    }
 
     if (selectedGenre !== 'All Genres') {
       const allowedNames = channelCategories[selectedGenre] || [];
-      const allowedSet = new Set(allowedNames.map((n) => n.toLowerCase()));
-      list = list.filter((c) => allowedSet.has(c.title.toLowerCase()));
+      const allowedSet = new Set(allowedNames.map(normalizeMatchText));
+      list = list.filter((c) => allowedSet.has(normalizeMatchText(c.title)));
     }
 
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      list = list.filter((c) => c.title.toLowerCase().includes(q));
+      list = list.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          String(c.channelNumber || '').includes(q)
+      );
     }
 
     return list;
-  }, [rawChannels, selectedGenre, searchQuery]);
+  }, [ageSafeChannels, pinnedOnly, favoriteIdSet, selectedGenre, searchQuery]);
 
-  // Live Status Counts for the current Region + Genre view
   const statusCounts = useMemo(() => {
     const counts = {
       all: genreAndSearchFiltered.length,
@@ -565,19 +780,16 @@ function LiveTvComponent() {
     return counts;
   }, [genreAndSearchFiltered, resolveChannelStatus]);
 
-  // Final filtered & sorted channels according to selected status tab
   const finalFilteredChannels = useMemo(() => {
     const filtered = genreAndSearchFiltered.filter((ch) => {
       if (statusFilter === 'all') return true;
       const st = resolveChannelStatus(ch);
       if (statusFilter === 'timeout') {
-        // Include questionable/timeout and still-checking streams
         return st === 'timeout' || st === 'checking';
       }
       return st === statusFilter;
     });
 
-    // Sort online first, then questionable/timeout, then offline
     const rank: Record<ExtendedHealthStatus, number> = {
       online: 1,
       checking: 2,
@@ -586,24 +798,68 @@ function LiveTvComponent() {
     };
 
     return [...filtered].sort((a, b) => {
-      const rA = rank[resolveChannelStatus(a)] || 3;
-      const rB = rank[resolveChannelStatus(b)] || 3;
-      if (rA !== rB) return rA - rB;
+      // Always bubble pinned favorites up slightly in status view
+      if (sortBy === 'status') {
+        const pinA = favoriteIdSet.has(getChannelKey(a)) ? 0 : 1;
+        const pinB = favoriteIdSet.has(getChannelKey(b)) ? 0 : 1;
+        if (pinA !== pinB) return pinA - pinB;
+        const rA = rank[resolveChannelStatus(a)] || 3;
+        const rB = rank[resolveChannelStatus(b)] || 3;
+        if (rA !== rB) return rA - rB;
+        return a.title.localeCompare(b.title);
+      }
+      if (sortBy === 'channelNumber') {
+        const na = a.channelNumber ?? 9999;
+        const nb = b.channelNumber ?? 9999;
+        if (na !== nb) return na - nb;
+        return a.title.localeCompare(b.title);
+      }
       return a.title.localeCompare(b.title);
     });
-  }, [genreAndSearchFiltered, statusFilter, resolveChannelStatus]);
+  }, [
+    genreAndSearchFiltered,
+    statusFilter,
+    resolveChannelStatus,
+    sortBy,
+    favoriteIdSet,
+  ]);
 
-  // Pagination slice for 1GB-2GB RAM device performance
   const totalPages = Math.max(
     1,
-    Math.ceil(finalFilteredChannels.length / CHANNELS_PER_PAGE)
+    Math.ceil(finalFilteredChannels.length / channelsPerPage)
   );
   const paginatedChannels = useMemo(() => {
-    const start = (currentPage - 1) * CHANNELS_PER_PAGE;
-    return finalFilteredChannels.slice(start, start + CHANNELS_PER_PAGE);
-  }, [finalFilteredChannels, currentPage]);
+    const start = (currentPage - 1) * channelsPerPage;
+    return finalFilteredChannels.slice(start, start + channelsPerPage);
+  }, [finalFilteredChannels, currentPage, channelsPerPage]);
 
-  // Toggle selection helper: clicking an active non-All filter unselects it back to 'All'
+  const handleSurpriseChannel = () => {
+    const onlinePool = finalFilteredChannels.filter(
+      (ch) => resolveChannelStatus(ch) === 'online'
+    );
+    const pool =
+      onlinePool.length > 0 ? onlinePool : finalFilteredChannels;
+    if (!pool.length) return;
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    const targetUrl = picked.streamUrl || picked.url;
+    const chId = getChannelKey(picked);
+    recordWatchHistory({
+      id: chId,
+      title: picked.title,
+      posterPath: picked.logo || '',
+      type: 'livetv',
+    });
+    navigate({
+      to: '/live-player',
+      search: {
+        url: targetUrl,
+        title: picked.title,
+        logo: picked.logo || '',
+        channelId: chId,
+      },
+    });
+  };
+
   const handleCategorySelect = (id: string) => {
     setSelectedCategory((prev) => (prev === id && id !== 'All' ? 'All' : id));
   };
@@ -617,6 +873,21 @@ function LiveTvComponent() {
   const handleStatusSelect = (id: HealthFilterOption) => {
     setStatusFilter((prev) => (prev === id && id !== 'all' ? 'all' : id));
   };
+
+  const cardRadiusClass =
+    posterShape === 'sharp'
+      ? 'rounded-lg'
+      : posterShape === 'extra'
+        ? 'rounded-[30px]'
+        : 'rounded-3xl';
+
+  const isCompactMode = density === 'compact' && !largeButtons;
+
+  const gridClass = isCompactMode
+    ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2.5 sm:gap-3'
+    : largeButtons
+      ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
+      : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4';
 
   const themeStyles = useMemo(() => {
     switch (appTheme) {
@@ -649,7 +920,8 @@ function LiveTvComponent() {
           bg: 'bg-gradient-to-br from-slate-950/90 via-emerald-950/40 to-slate-950/95',
           accentText: 'text-emerald-300',
           accentBar: 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]',
-          borderGlow: 'border-emerald-500/30 shadow-[0_16px_50px_rgba(16,185,129,0.2)]',
+          borderGlow:
+            'border-emerald-500/30 shadow-[0_16px_50px_rgba(16,185,129,0.2)]',
           borderHover: 'hover:border-emerald-400/70',
           laserLine: 'from-transparent via-emerald-400 to-cyan-400',
           playBtn:
@@ -661,7 +933,8 @@ function LiveTvComponent() {
           bg: 'bg-gradient-to-br from-stone-950/90 via-yellow-950/40 to-neutral-950/95',
           accentText: 'text-amber-300',
           accentBar: 'bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.95)]',
-          borderGlow: 'border-amber-500/30 shadow-[0_16px_50px_rgba(245,158,11,0.2)]',
+          borderGlow:
+            'border-amber-500/30 shadow-[0_16px_50px_rgba(245,158,11,0.2)]',
           borderHover: 'hover:border-amber-400/70',
           laserLine: 'from-transparent via-amber-400 to-orange-500',
           playBtn:
@@ -673,7 +946,8 @@ function LiveTvComponent() {
           bg: 'bg-gradient-to-br from-slate-950/90 via-cyan-950/40 to-slate-950/95',
           accentText: 'text-cyan-300',
           accentBar: 'bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]',
-          borderGlow: 'border-cyan-500/30 shadow-[0_16px_50px_rgba(6,182,212,0.2)]',
+          borderGlow:
+            'border-cyan-500/30 shadow-[0_16px_50px_rgba(6,182,212,0.2)]',
           borderHover: 'hover:border-cyan-400/70',
           laserLine: 'from-transparent via-cyan-400 to-sky-500',
           playBtn:
@@ -686,7 +960,8 @@ function LiveTvComponent() {
           bg: 'bg-gradient-to-br from-slate-950/90 via-purple-950/40 to-slate-950/95',
           accentText: 'text-violet-300',
           accentBar: 'bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]',
-          borderGlow: 'border-violet-500/30 shadow-[0_16px_50px_rgba(139,92,246,0.2)]',
+          borderGlow:
+            'border-violet-500/30 shadow-[0_16px_50px_rgba(139,92,246,0.2)]',
           borderHover: 'hover:border-purple-400/70',
           laserLine: 'from-transparent via-pink-500 to-cyan-400',
           playBtn:
@@ -718,12 +993,14 @@ function LiveTvComponent() {
     selectedCategory !== 'All' ||
     selectedGenre !== 'All Genres' ||
     statusFilter !== 'all' ||
+    pinnedOnly ||
     searchQuery.trim() !== '';
 
   const resetAllFilters = () => {
     setSelectedCategory('All');
     setSelectedGenre('All Genres');
     setStatusFilter('all');
+    setPinnedOnly(false);
     setSearchQuery('');
   };
 
@@ -732,16 +1009,20 @@ function LiveTvComponent() {
       className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-3 sm:px-6 w-full max-w-full overflow-x-hidden box-border relative rounded-3xl`}
     >
       <AppWallpaper />
-      <div
-        className={`absolute inset-x-0 -top-12 h-96 bg-gradient-to-b ${themeStyles.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
-      />
+      {!isLowRam && !reducedMotion && !glowOff && (
+        <div
+          className={`absolute inset-x-0 -top-12 h-96 bg-gradient-to-b ${themeStyles.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
+        />
+      )}
 
       <header className="py-5 max-w-7xl mx-auto space-y-4 box-border relative z-10">
-        {/* Top Row: Neon Glass Back to Home Capsule + Fast Filter Reset */}
+        {/* Top Row: Back to Home + Live Clock + Surprise Channel + Reset */}
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <Link
             to="/"
-            className="group inline-flex items-center gap-3 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-4 pr-2 py-1.5 border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all duration-300 transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50"
+            className={`group inline-flex items-center gap-3 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-4 pr-2 ${
+              largeButtons ? 'py-2.5' : 'py-1.5'
+            } border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50`}
           >
             <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
               ‹
@@ -749,21 +1030,45 @@ function LiveTvComponent() {
             <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-100 group-hover:text-white">
               Back to Home
             </span>
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600/50 via-pink-500/40 to-cyan-400/50 border border-purple-300/50 text-[11px] text-white shadow-[0_0_12px_rgba(217,70,239,0.7)]">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600/50 via-pink-500/40 to-cyan-400/50 border border-purple-300/50 text-[11px] text-white">
               ⟲
             </span>
           </Link>
 
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={resetAllFilters}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 px-3.5 py-1.5 text-xs font-bold text-white shadow transition cursor-pointer"
-            >
-              <span>✕ Reset All Filters</span>
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-slate-950/80 border border-white/15 px-3 py-1.5 text-xs font-extrabold text-slate-200">
+              🕒 {guideClock}
+            </span>
+
+            {finalFilteredChannels.length > 0 && (
+              <button
+                type="button"
+                onClick={handleSurpriseChannel}
+                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/50 px-3.5 py-1.5 text-xs font-extrabold text-amber-200 hover:text-white shadow transition cursor-pointer"
+                title="Jump into a random live broadcast"
+              >
+                <span>🎲 Channel Surf</span>
+              </button>
+            )}
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 px-3.5 py-1.5 text-xs font-bold text-white shadow transition cursor-pointer"
+              >
+                <span>✕ Reset Filters</span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Pin Notification Toast */}
+        {pinToast && (
+          <div className="rounded-2xl bg-amber-950/85 border border-amber-400/50 px-4 py-2 text-center text-xs font-extrabold text-amber-200 shadow-xl">
+            {pinToast}
+          </div>
+        )}
 
         {/* Hero Console Control Deck */}
         <div
@@ -775,18 +1080,25 @@ function LiveTvComponent() {
                 📡
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                  Live TV & Sports
-                </h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                    Live TV & Sports
+                  </h1>
+                  {kidsSafeActive && (
+                    <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">
+                      🧒 Kids Safe
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs sm:text-sm text-slate-400">
-                  Instant broadcast feeds with real-time background health radar
+                  Instant broadcast feeds with pinned favorites & real-time health radar
                 </p>
               </div>
             </div>
 
-            {/* Quick Channel Search + Non-Blocking Health Refresh Button */}
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto">
-              <div className="relative flex-1 sm:w-56">
+            {/* Quick Search + Sort + Density + Health Refresh */}
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+              <div className="relative flex-1 min-w-[170px] sm:w-52">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
                   🔍
                 </span>
@@ -794,19 +1106,43 @@ function LiveTvComponent() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter channel name..."
-                  className="w-full h-10 rounded-xl border border-white/15 bg-black/70 pl-8 pr-7 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  placeholder="Search channel or CH #..."
+                  className="w-full h-10 rounded-xl border border-white/15 bg-black/75 pl-8 pr-7 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white cursor-pointer"
                   >
                     ✕
                   </button>
                 )}
               </div>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as LiveSortOption)}
+                aria-label="Sort Live Channels"
+                className="h-10 rounded-xl border border-white/15 bg-black/75 px-2.5 text-xs font-bold text-white focus:outline-none cursor-pointer"
+              >
+                <option value="status">Sort: Live First</option>
+                <option value="channelNumber">Sort: Channel #</option>
+                <option value="az">Sort: A–Z</option>
+              </select>
+
+              {!largeButtons && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDensity((d) => (d === 'comfort' ? 'compact' : 'comfort'))
+                  }
+                  className="h-10 px-3 rounded-xl bg-black/70 hover:bg-white/15 border border-white/15 text-xs font-bold text-slate-200 transition cursor-pointer"
+                  title="Switch Card Layout Density"
+                >
+                  {density === 'comfort' ? '▦ Compact' : '▢ Comfort'}
+                </button>
+              )}
 
               <button
                 type="button"
@@ -819,28 +1155,40 @@ function LiveTvComponent() {
                 <span className={probing ? 'animate-spin inline-block' : ''}>↻</span>
                 <span>
                   {probing
-                    ? `Scanning (${probeProgress.done}/${probeProgress.total})`
+                    ? `Scan (${probeProgress.done}/${probeProgress.total})`
                     : 'Refresh Health'}
                 </span>
               </button>
             </div>
           </div>
 
-          {/* 1. STREAM HEALTH STATUS FILTER BAR (All / Online / Questionable Timeout / Offline) */}
+          {/* 1. STREAM HEALTH STATUS & PINNED FILTER BAR */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between px-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
               <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">
-                1. Filter by Stream Status (Tap active to reset to All)
+                1. Filter by Stream Status & Favorites
               </p>
-              {probing && (
-                <span className="text-[11px] font-bold text-amber-300 animate-pulse">
-                  ⚡ Fast background check running…
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {probing && (
+                  <span className="text-[11px] font-bold text-amber-300 animate-pulse">
+                    ⚡ Fast background check running…
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setPinnedOnly((p) => !p)}
+                  className={`rounded-full px-3 py-0.5 text-[11px] font-extrabold border transition cursor-pointer ${
+                    pinnedOnly
+                      ? 'bg-amber-500 text-slate-950 border-amber-300 shadow'
+                      : 'bg-amber-950/40 text-amber-300 border-amber-500/35 hover:bg-amber-900/50'
+                  }`}
+                >
+                  ⭐ Pinned ({favoriteIds.length}/{MAX_FAVORITE_CHANNELS})
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-0.5">
-              {/* All Statuses Button */}
               <button
                 type="button"
                 onClick={() => handleStatusSelect('all')}
@@ -859,7 +1207,6 @@ function LiveTvComponent() {
                 </span>
               </button>
 
-              {/* Online Only Button */}
               <button
                 type="button"
                 onClick={() => handleStatusSelect('online')}
@@ -878,7 +1225,6 @@ function LiveTvComponent() {
                 </span>
               </button>
 
-              {/* Questionable / Timeout Button */}
               <button
                 type="button"
                 onClick={() => handleStatusSelect('timeout')}
@@ -890,14 +1236,13 @@ function LiveTvComponent() {
               >
                 <span className="flex items-center gap-2 truncate">
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
-                  <span>Timeout / ?</span>
+                  <span>Slow / ?</span>
                 </span>
                 <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-amber-200">
                   {statusCounts.timeout + statusCounts.checking}
                 </span>
               </button>
 
-              {/* Offline Only Button */}
               <button
                 type="button"
                 onClick={() => handleStatusSelect('offline')}
@@ -918,7 +1263,7 @@ function LiveTvComponent() {
             </div>
           </div>
 
-          {/* 2. REGIONS & FEEDS BAR (Deduplicated with single "All" option) */}
+          {/* 2. REGIONS & FEEDS BAR */}
           <div className="w-full space-y-1.5">
             <div className="flex items-center justify-between px-1">
               <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">
@@ -943,10 +1288,11 @@ function LiveTvComponent() {
               onSelect={handleCategorySelect}
               appTheme={appTheme}
               getPrimaryBgColor={getPrimaryBgColor}
+              ariaLabel="Live TV regions"
             />
           </div>
 
-          {/* 3. CATEGORIES & GENRES BAR (With "All Genres" option) */}
+          {/* 3. CATEGORIES & GENRES BAR */}
           <div className="w-full space-y-1.5">
             <div className="flex items-center justify-between px-1">
               <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">
@@ -971,137 +1317,200 @@ function LiveTvComponent() {
               onSelect={handleGenreSelect}
               appTheme={appTheme}
               getPrimaryBgColor={getPrimaryBgColor}
+              ariaLabel="Live TV genres"
             />
           </div>
         </div>
       </header>
 
-      {/* Main Channels Section */}
-      <div className="max-w-7xl mx-auto box-border relative z-10 space-y-5">
-        {/* Section Title & Live Telemetry Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-          <div className="flex items-center gap-2.5">
-            <span className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`} />
-            <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
-              {selectedGenre !== 'All Genres' ? selectedGenre : selectedCategory}{' '}
-              {statusFilter === 'online'
-                ? '• Online Feeds'
-                : statusFilter === 'timeout'
-                  ? '• Questionable / Timeout Feeds'
-                  : statusFilter === 'offline'
-                    ? '• Offline Feeds'
-                    : '• All Feeds'}
-            </h3>
-          </div>
+      {/* Main Content Wrapper */}
+      <div className="max-w-7xl mx-auto box-border relative z-10 space-y-7">
+        {/* DEDICATED PINNED FAVORITE CHANNELS SHELF */}
+        {pinnedChannels.length > 0 && !pinnedOnly && !searchQuery.trim() && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2.5">
+                <span className="w-1.5 h-6 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)]" />
+                <h2 className="text-base sm:text-lg font-black tracking-tight text-amber-300">
+                  ⭐ Pinned Favorite Channels
+                </h2>
+              </div>
+              <span className="text-xs font-bold text-slate-400">
+                {pinnedChannels.length} / {MAX_FAVORITE_CHANNELS} pinned
+              </span>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/70 border border-emerald-500/30 px-3 py-1 text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span>{statusCounts.online} online</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-950/70 border border-amber-500/30 px-3 py-1 text-amber-300">
-              <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <span>{statusCounts.timeout + statusCounts.checking} timeout/?</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-950/70 border border-red-500/30 px-3 py-1 text-red-300">
-              <span className="h-2 w-2 rounded-full bg-red-500" />
-              <span>{statusCounts.offline} offline</span>
-            </span>
-            <span
-              className={`rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 ${themeStyles.accentText}`}
-            >
-              {finalFilteredChannels.length} matching
-            </span>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="rounded-3xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-12 flex flex-col justify-center items-center gap-3 text-center">
-            <div
-              className={`animate-spin rounded-full h-10 w-10 border-t-2 ${themeStyles.accentText}`}
-            />
-            <p className="text-sm font-bold text-white">
-              Loading broadcast channels…
-            </p>
-          </div>
-        ) : paginatedChannels.length > 0 ? (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
-              {paginatedChannels.map((channel) => {
+            <div className={gridClass}>
+              {pinnedChannels.map((channel) => {
                 const key = getChannelKey(channel);
                 return (
                   <ChannelCard
-                    key={key}
+                    key={`pinned-${key}`}
                     channel={channel}
                     status={resolveChannelStatus(channel)}
-                    laserLineClass={themeStyles.laserLine}
+                    isPinned={true}
+                    onTogglePin={handleTogglePin}
+                    laserLineClass="from-transparent via-amber-400 to-orange-500"
                     playBtnClass={themeStyles.playBtn}
-                    borderHoverClass={themeStyles.borderHover}
+                    borderHoverClass="hover:border-amber-400"
+                    radiusClass={cardRadiusClass}
+                    largeButtons={largeButtons}
+                    compact={isCompactMode}
+                    glowOff={glowOff}
                   />
                 );
               })}
             </div>
+          </section>
+        )}
 
-            {/* Pagination Deck for 1GB-2GB RAM Optimization */}
-            {totalPages > 1 && (
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3 rounded-2xl bg-slate-950/85 border border-white/15 backdrop-blur-xl p-3.5 mx-auto w-full max-w-md shadow-2xl">
+        {/* MAIN CHANNELS GRID SECTION */}
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+            <div className="flex items-center gap-2.5">
+              <span className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`} />
+              <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                {pinnedOnly
+                  ? '⭐ My Pinned Channels'
+                  : selectedGenre !== 'All Genres'
+                    ? selectedGenre
+                    : selectedCategory}{' '}
+                {statusFilter === 'online'
+                  ? '• Online Feeds'
+                  : statusFilter === 'timeout'
+                    ? '• Slow / ? Feeds'
+                    : statusFilter === 'offline'
+                      ? '• Offline Feeds'
+                      : '• All Feeds'}
+              </h3>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/70 border border-emerald-500/30 px-3 py-1 text-emerald-300">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <span>{statusCounts.online} online</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-950/70 border border-amber-500/30 px-3 py-1 text-amber-300">
+                <span className="h-2 w-2 rounded-full bg-amber-400" />
+                <span>{statusCounts.timeout + statusCounts.checking} slow/?</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-950/70 border border-red-500/30 px-3 py-1 text-red-300">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span>{statusCounts.offline} offline</span>
+              </span>
+              <span
+                className={`rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 ${themeStyles.accentText}`}
+              >
+                {finalFilteredChannels.length} matching • {channelsPerPage}/pg
+              </span>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="rounded-3xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-12 flex flex-col justify-center items-center gap-3 text-center">
+              <div
+                className={`animate-spin rounded-full h-10 w-10 border-t-2 ${themeStyles.accentText}`}
+              />
+              <p className="text-sm font-bold text-white">
+                Loading broadcast channels…
+              </p>
+            </div>
+          ) : paginatedChannels.length > 0 ? (
+            <>
+              <div className={gridClass}>
+                {paginatedChannels.map((channel) => {
+                  const key = getChannelKey(channel);
+                  return (
+                    <ChannelCard
+                      key={key}
+                      channel={channel}
+                      status={resolveChannelStatus(channel)}
+                      isPinned={favoriteIdSet.has(key)}
+                      onTogglePin={handleTogglePin}
+                      laserLineClass={themeStyles.laserLine}
+                      playBtnClass={themeStyles.playBtn}
+                      borderHoverClass={themeStyles.borderHover}
+                      radiusClass={cardRadiusClass}
+                      largeButtons={largeButtons}
+                      compact={isCompactMode}
+                      glowOff={glowOff}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Pagination Deck */}
+              {totalPages > 1 && (
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-3 rounded-2xl bg-slate-950/85 border border-white/15 backdrop-blur-xl p-3.5 mx-auto w-full max-w-md shadow-2xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentPage((p) => Math.max(1, p - 1));
+                      window.scrollTo({
+                        top: 0,
+                        behavior: reducedMotion ? 'auto' : 'smooth',
+                      });
+                    }}
+                    disabled={currentPage <= 1}
+                    className={`rounded-xl bg-white/10 hover:bg-white/20 ${
+                      largeButtons ? 'px-5 py-3 text-sm' : 'px-4 py-2 text-xs'
+                    } font-extrabold text-white transition disabled:opacity-40 cursor-pointer`}
+                  >
+                    ◀ Prev
+                  </button>
+
+                  <span className={`text-xs font-black ${themeStyles.accentText}`}>
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentPage((p) => Math.min(totalPages, p + 1));
+                      window.scrollTo({
+                        top: 0,
+                        behavior: reducedMotion ? 'auto' : 'smooth',
+                      });
+                    }}
+                    disabled={currentPage >= totalPages}
+                    className={`rounded-xl ${
+                      largeButtons ? 'px-5 py-3 text-sm' : 'px-4 py-2 text-xs'
+                    } font-extrabold shadow transition disabled:opacity-40 cursor-pointer ${getPrimaryBgColor(
+                      appTheme
+                    )}`}
+                  >
+                    Next ▶
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-3xl border border-white/15 bg-slate-950/80 backdrop-blur-xl p-10 text-center space-y-3 shadow-2xl">
+              <div className="text-3xl">📡</div>
+              <p className="text-base font-black text-white">
+                {pinnedOnly
+                  ? 'You have no pinned favorite channels yet.'
+                  : 'No channels match this exact status or filter combination.'}
+              </p>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                {pinnedOnly
+                  ? 'Tap the ☆ star on any channel card (or inside the Live Player) to pin up to 12 favorites here.'
+                  : 'Try switching the Stream Status filter to All Channels or Slow / ?, or reset your region and genre filters.'}
+              </p>
+              {hasActiveFilters && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setCurrentPage((p) => Math.max(1, p - 1));
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  disabled={currentPage <= 1}
-                  className="rounded-xl bg-white/10 hover:bg-white/20 px-4 py-2 text-xs font-extrabold text-white transition disabled:opacity-40 cursor-pointer"
-                >
-                  ◀ Prev
-                </button>
-
-                <span className={`text-xs font-black ${themeStyles.accentText}`}>
-                  Page {currentPage} of {totalPages}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentPage((p) => Math.min(totalPages, p + 1));
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  disabled={currentPage >= totalPages}
-                  className={`rounded-xl px-4 py-2 text-xs font-extrabold shadow transition disabled:opacity-40 cursor-pointer ${getPrimaryBgColor(
+                  onClick={resetAllFilters}
+                  className={`mt-2 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-extrabold text-white shadow-lg transition cursor-pointer ${getPrimaryBgColor(
                     appTheme
                   )}`}
                 >
-                  Next ▶
+                  <span>🌐 Show All Channels</span>
                 </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="rounded-3xl border border-white/15 bg-slate-950/80 backdrop-blur-xl p-10 text-center space-y-3 shadow-2xl">
-            <div className="text-3xl">📡</div>
-            <p className="text-base font-black text-white">
-              No channels match this exact status or filter combination.
-            </p>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Try switching the Stream Status filter to{' '}
-              <strong className="text-white">All Channels</strong> or{' '}
-              <strong className="text-amber-300">Timeout / ?</strong>, or reset your
-              region and genre filters.
-            </p>
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={resetAllFilters}
-                className={`mt-2 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-extrabold text-white shadow-lg transition cursor-pointer ${getPrimaryBgColor(
-                  appTheme
-                )}`}
-              >
-                <span>🌐 Show All Channels</span>
-              </button>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
