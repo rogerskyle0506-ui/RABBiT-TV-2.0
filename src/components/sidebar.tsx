@@ -26,6 +26,7 @@ import {
   StartupTab,
   StorageHealthReport,
   DISCLAIMER_ACCEPTED_KEY,
+  MAX_FAVORITE_CHANNELS,
   SLEEP_TIMER_OPTIONS,
   TV_OVERSCAN_OPTIONS,
   GLOW_INTENSITY_OPTIONS,
@@ -97,6 +98,7 @@ import {
   setStartupTab,
   getShowCornerClock,
   setShowCornerClock,
+  getFavoriteChannelIds,
   getStorageHealth,
   purgeOldTmdbCaches,
   resetVisualSettings,
@@ -107,7 +109,8 @@ import {
 
 export type { RamMode };
 
-const HEARTBEAT_DEFAULT_MIGRATED_KEY = "rabtv_heartbeat_default_v1";
+const HEART_DANCE_DEFAULT_MIGRATED_KEY = "rabtv_heart_dance_default_v2";
+const DEFAULT_RADIO_VOLUME = 0.25;
 
 export const globalFeedOptions = [
   "All (Default)",
@@ -123,41 +126,53 @@ export const globalFeedOptions = [
 
 export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 
-// Original Neon Rabbit Console Assets
+// Original Neon Rabbit Console Assets (Outer Shell & Header Pills)
 const RABBIT_HEADER_PILL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
 const RABBIT_PANEL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
-const RABBIT_PANEL_ALT =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
 /**
- * Finds "Heartbeat Radio" inside the "2000s" category of RADIO_STATIONS.
+ * Finds "Heart Dance" inside the "2000s" category of RADIO_STATIONS.
  */
-export function getDefaultHeartbeatStationUrl(): string {
+export function getDefaultHeartDanceStationUrl(): string {
   const stations2000s =
     RADIO_STATIONS["2000s"] ||
     RADIO_STATIONS["2000's"] ||
     RADIO_STATIONS["00s"] ||
     [];
-  const exactHeartbeat = stations2000s.find((s) =>
-    s.name.toLowerCase().includes("heartbeat")
-  );
-  if (exactHeartbeat?.url) return exactHeartbeat.url;
-  if (stations2000s[0]?.url) return stations2000s[0].url;
 
-  for (const [category, list] of Object.entries(RADIO_STATIONS)) {
-    const match = list.find((s) => s.name.toLowerCase().includes("heartbeat"));
+  // 1. Exact match for "Heart Dance" inside 2000s
+  const exactIn2000s = stations2000s.find((s) => {
+    const n = s.name.toLowerCase();
+    return n.includes("heart dance") || n.includes("heartdance");
+  });
+  if (exactIn2000s?.url) return exactIn2000s.url;
+
+  // 2. Fallback match for "Heart" inside 2000s
+  const heartIn2000s = stations2000s.find((s) =>
+    s.name.toLowerCase().includes("heart")
+  );
+  if (heartIn2000s?.url) return heartIn2000s.url;
+
+  // 3. Scan all categories for "Heart Dance"
+  for (const list of Object.values(RADIO_STATIONS)) {
+    const match = list.find((s) => {
+      const n = s.name.toLowerCase();
+      return n.includes("heart dance") || n.includes("heartdance");
+    });
     if (match?.url) return match.url;
-    if (category.toLowerCase().includes("2000") && list[0]?.url) {
-      return list[0].url;
-    }
   }
 
+  // 4. First station in 2000s or 80s fallback
+  if (stations2000s[0]?.url) return stations2000s[0].url;
   return RADIO_STATIONS["80s"]?.[0]?.url || "";
 }
+
+// Backwards-compatible alias used by __root.tsx
+export const getDefaultHeartbeatStationUrl = getDefaultHeartDanceStationUrl;
 
 export interface SidebarProps {
   isOpen: boolean;
@@ -311,6 +326,9 @@ export function Sidebar({
   const [startupTab, setStartupTabState] = useState<StartupTab>(() =>
     getStartupTab()
   );
+  const [favoriteChannelCount, setFavoriteChannelCount] = useState<number>(
+    () => getFavoriteChannelIds().length
+  );
   const [kidsLocked, setKidsLockedState] = useState<boolean>(() =>
     getKidsModeLocked()
   );
@@ -336,28 +354,31 @@ export function Sidebar({
   const [deviceId] = useState<string>(() => getOrCreateDeviceId());
   const [cacheClearMsg, setCacheClearMsg] = useState<string | null>(null);
 
-  // Radio & Feed States
+  // Radio & Feed States (Default: Heart Dance in 2000s at 25% volume)
   const [bgMusicVolume, setBgMusicVolume] = useState<number>(() => {
     if (typeof window !== "undefined") {
+      const migrated = localStorage.getItem(HEART_DANCE_DEFAULT_MIGRATED_KEY);
+      if (!migrated) return DEFAULT_RADIO_VOLUME;
       const saved = localStorage.getItem("rabtv_bg_volume");
-      return saved !== null ? parseFloat(saved) : 0.5;
+      if (saved !== null) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed)) return Math.max(0, Math.min(1, parsed));
+      }
     }
-    return 0.5;
+    return DEFAULT_RADIO_VOLUME;
   });
 
   const [currentStationUrl, setCurrentStationUrl] = useState<string>(() => {
-    const heartbeatUrl = getDefaultHeartbeatStationUrl();
+    const heartDanceUrl = getDefaultHeartDanceStationUrl();
     if (typeof window !== "undefined") {
-      const migrated = localStorage.getItem(HEARTBEAT_DEFAULT_MIGRATED_KEY);
+      const migrated = localStorage.getItem(HEART_DANCE_DEFAULT_MIGRATED_KEY);
       const saved = localStorage.getItem("rabtv_radio_url");
-      if (!migrated && heartbeatUrl) {
-        localStorage.setItem(HEARTBEAT_DEFAULT_MIGRATED_KEY, "true");
-        localStorage.setItem("rabtv_radio_url", heartbeatUrl);
-        return heartbeatUrl;
+      if (!migrated && heartDanceUrl) {
+        return heartDanceUrl;
       }
       if (saved) return saved;
     }
-    return heartbeatUrl;
+    return heartDanceUrl;
   });
 
   const [selectedGlobalFeed, setSelectedGlobalFeed] =
@@ -401,7 +422,7 @@ export function Sidebar({
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
 
-  // Sync all local sidebar controls whenever settings change in bulk (e.g. Senior Easy Mode / Visual Reset)
+  // Sync all local sidebar controls whenever settings change
   const syncLocalControls = useCallback(() => {
     setScreensaverTimeoutMs(getSavedScreensaverTimeout());
     setSleepTimerMin(getSleepTimerMinutes());
@@ -424,6 +445,7 @@ export function Sidebar({
     setGreetingStyleState(getGreetingStyle());
     setWarmEyeCareState(getWarmEyeCare());
     setStartupTabState(getStartupTab());
+    setFavoriteChannelCount(getFavoriteChannelIds().length);
     setKidsLockedState(getKidsModeLocked());
     setRamModeState(getRamMode());
     setDataSaverModeState(getDataSaverMode());
@@ -444,18 +466,42 @@ export function Sidebar({
     setActiveStreamQuality(streamQuality);
   }, [streamQuality]);
 
-  // Ensure Heartbeat Radio (2000s) is applied to bgAudio on initial app boot
+  // Apply Heart Dance (2000s) + 25% Volume default cleanly on initial app boot
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const heartbeatUrl = getDefaultHeartbeatStationUrl();
-    const migrated = localStorage.getItem(HEARTBEAT_DEFAULT_MIGRATED_KEY);
-    const saved = localStorage.getItem("rabtv_radio_url");
+    const heartDanceUrl = getDefaultHeartDanceStationUrl();
+    const migrated = localStorage.getItem(HEART_DANCE_DEFAULT_MIGRATED_KEY);
+    const savedUrl = localStorage.getItem("rabtv_radio_url");
+    const savedVol = localStorage.getItem("rabtv_bg_volume");
 
-    if ((!migrated || !saved) && heartbeatUrl) {
-      localStorage.setItem(HEARTBEAT_DEFAULT_MIGRATED_KEY, "true");
-      localStorage.setItem("rabtv_radio_url", heartbeatUrl);
-      bgAudio.setStation(heartbeatUrl);
-      setCurrentStationUrl(heartbeatUrl);
+    if (!migrated) {
+      localStorage.setItem(HEART_DANCE_DEFAULT_MIGRATED_KEY, "true");
+      if (heartDanceUrl) {
+        localStorage.setItem("rabtv_radio_url", heartDanceUrl);
+        bgAudio.setStation(heartDanceUrl);
+        setCurrentStationUrl(heartDanceUrl);
+      }
+      localStorage.setItem("rabtv_bg_volume", String(DEFAULT_RADIO_VOLUME));
+      bgAudio.setVolume(DEFAULT_RADIO_VOLUME);
+      setBgMusicVolume(DEFAULT_RADIO_VOLUME);
+      return;
+    }
+
+    if (!savedUrl && heartDanceUrl) {
+      localStorage.setItem("rabtv_radio_url", heartDanceUrl);
+      bgAudio.setStation(heartDanceUrl);
+      setCurrentStationUrl(heartDanceUrl);
+    }
+
+    if (savedVol === null) {
+      localStorage.setItem("rabtv_bg_volume", String(DEFAULT_RADIO_VOLUME));
+      bgAudio.setVolume(DEFAULT_RADIO_VOLUME);
+      setBgMusicVolume(DEFAULT_RADIO_VOLUME);
+    } else {
+      const parsedVol = parseFloat(savedVol);
+      if (!isNaN(parsedVol)) {
+        bgAudio.setVolume(Math.max(0, Math.min(1, parsedVol)));
+      }
     }
   }, []);
 
@@ -545,8 +591,12 @@ export function Sidebar({
   };
 
   const handleVolumeChange = (newVol: number) => {
-    setBgMusicVolume(newVol);
-    bgAudio.setVolume(newVol);
+    const clamped = Math.max(0, Math.min(1, newVol));
+    setBgMusicVolume(clamped);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rabtv_bg_volume", String(clamped));
+    }
+    bgAudio.setVolume(clamped);
   };
 
   const handleStationSelect = (url: string) => {
@@ -616,7 +666,6 @@ export function Sidebar({
       return;
     }
 
-    // Unlocking Kids Mode requires the 4-6 digit PIN
     const lockState = getPinLockoutState();
     if (lockState.isLocked) {
       setKidsLockStatus(
@@ -892,30 +941,55 @@ export function Sidebar({
     reader.readAsText(file);
   };
 
+  // Solid active toggle track color per theme (fixes invisible toggle bug!)
+  const getToggleActiveBg = (theme: AppTheme) => {
+    switch (theme) {
+      case "red":
+        return "bg-red-600";
+      case "midnight":
+        return "bg-sky-500";
+      case "emerald":
+        return "bg-emerald-500";
+      case "amber":
+        return "bg-amber-500";
+      case "cyan":
+        return "bg-cyan-500";
+      case "violet":
+      default:
+        return "bg-violet-600";
+    }
+  };
+
   const getSubtlePillBg = (theme: AppTheme) => {
     switch (theme) {
       case "red":
-        return "bg-red-950/45 border border-red-500/30 text-red-100 hover:bg-red-900/65";
+        return "bg-red-950/50 border border-red-500/30 text-red-100 hover:bg-red-900/70";
       case "midnight":
-        return "bg-blue-950/45 border border-blue-500/30 text-blue-100 hover:bg-blue-900/65";
+        return "bg-blue-950/50 border border-blue-500/30 text-blue-100 hover:bg-blue-900/70";
       case "emerald":
-        return "bg-emerald-950/45 border border-emerald-500/30 text-emerald-100 hover:bg-emerald-900/65";
+        return "bg-emerald-950/50 border border-emerald-500/30 text-emerald-100 hover:bg-emerald-900/70";
       case "amber":
-        return "bg-yellow-950/45 border border-amber-500/30 text-amber-100 hover:bg-yellow-900/65";
+        return "bg-yellow-950/50 border border-amber-500/30 text-amber-100 hover:bg-yellow-900/70";
       case "cyan":
-        return "bg-cyan-950/45 border border-cyan-500/30 text-cyan-100 hover:bg-cyan-900/65";
+        return "bg-cyan-950/50 border border-cyan-500/30 text-cyan-100 hover:bg-cyan-900/70";
       case "violet":
       default:
-        return "bg-purple-950/45 border border-violet-500/30 text-purple-100 hover:bg-purple-900/65";
+        return "bg-purple-950/50 border border-violet-500/30 text-purple-100 hover:bg-purple-900/70";
     }
   };
+
+  const toggleActiveClass = getToggleActiveBg(appTheme);
+
+  // Clean Crystal Glass inner panel class (no distorted stretched JPG lines cutting across controls)
+  const crystalSubPanelClass =
+    "relative w-full p-3.5 sm:p-4 rounded-2xl mt-2 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(56,189,248,0.08)] overflow-hidden box-border backdrop-blur-xl bg-slate-950/85 border border-white/15 space-y-3.5";
 
   const toggleSection = (section: ConsolidatedSection) => {
     setActiveSection((prev) => (prev === section ? null : section));
   };
 
   // Find active station name for the radio badge
-  let activeStationName = "Heartbeat Radio";
+  let activeStationName = "Heart Dance";
   for (const stations of Object.values(RADIO_STATIONS)) {
     const match = stations.find(
       (s) =>
@@ -929,8 +1003,8 @@ export function Sidebar({
   }
 
   /**
-   * Renders a Crystal Neon Accordion Header using the signature RABBIT_HEADER_PILL
-   * with 3D mouse hover & D-pad focus pop-out physics.
+   * Renders a Crystal Neon Accordion Header using RABBIT_HEADER_PILL
+   * with full unclipped titles & 3D mouse hover / D-pad focus pop-out physics.
    */
   const renderCrystalAccordionButton = (
     sectionId: ConsolidatedSection,
@@ -943,38 +1017,32 @@ export function Sidebar({
       <button
         type="button"
         onClick={() => toggleSection(sectionId)}
-        className={`crystal-menu-pill w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-extrabold text-white relative overflow-hidden rounded-2xl cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.04] focus:scale-[1.05] hover:-translate-y-0.5 focus:-translate-y-0.5 active:scale-[0.98] focus:outline-none ${
+        className={`crystal-menu-pill w-full flex items-center justify-between gap-2 px-4 py-3 text-left text-xs font-extrabold text-white relative overflow-hidden rounded-2xl border border-white/15 cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.03] focus:scale-[1.04] hover:-translate-y-0.5 focus:-translate-y-0.5 active:scale-[0.98] focus:outline-none ${
           isActive
-            ? "ring-2 ring-cyan-400/90 shadow-[0_0_28px_rgba(56,189,248,0.45),0_0_20px_rgba(239,68,68,0.35)] scale-[1.02]"
-            : "hover:shadow-[0_10px_28px_rgba(56,189,248,0.3),0_0_18px_rgba(239,68,68,0.25)] focus:ring-2 focus:ring-cyan-400"
+            ? "ring-2 ring-cyan-400/90 border-cyan-400/60 shadow-[0_0_26px_rgba(56,189,248,0.45),0_0_18px_rgba(239,68,68,0.3)]"
+            : "hover:border-cyan-400/50 hover:shadow-[0_10px_24px_rgba(56,189,248,0.28),0_0_16px_rgba(239,68,68,0.2)] focus:ring-2 focus:ring-cyan-400"
         }`}
-        style={{
-          WebkitMaskImage:
-            "linear-gradient(to right, rgba(0,0,0,0.12) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 90%, rgba(0,0,0,0.12) 100%)",
-          maskImage:
-            "linear-gradient(to right, rgba(0,0,0,0.12) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 90%, rgba(0,0,0,0.12) 100%)",
-        }}
       >
         <div
-          className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden z-0 opacity-85"
+          className="absolute inset-0 pointer-events-none z-0 opacity-80"
           style={{
             backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-            backgroundSize: "113% 380%",
+            backgroundSize: "115% 380%",
             backgroundRepeat: "no-repeat",
             backgroundPosition: "center center",
           }}
         >
-          <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[4px] w-full h-full" />
+          <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[3px] w-full h-full" />
         </div>
 
-        <span className="relative z-10 flex items-center gap-2.5 truncate pr-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+        <span className="relative z-10 flex items-center gap-2 min-w-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
           <span className="text-sm shrink-0">{icon}</span>
           <span className="truncate">{title}</span>
         </span>
 
-        <div className="relative z-10 flex items-center gap-2 shrink-0">
+        <div className="relative z-10 flex items-center gap-1.5 shrink-0">
           {subtitleBadge && (
-            <span className="rounded-full bg-black/55 border border-white/15 px-2 py-0.5 text-[9px] font-bold text-cyan-300 backdrop-blur-md">
+            <span className="rounded-full bg-black/65 border border-white/15 px-2 py-0.5 text-[9px] font-bold text-cyan-300 whitespace-nowrap">
               {subtitleBadge}
             </span>
           )}
@@ -1016,23 +1084,23 @@ export function Sidebar({
       />
 
       {/* Crystal Neon Console Blade Drawer */}
-      <div className="relative my-1.5 w-[420px] max-w-[95vw] h-[calc(100dvh-74px)] rounded-[30px] border border-white/20 shadow-[0_25px_70px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-11 pb-11 px-5 pointer-events-auto box-border backdrop-blur-2xl bg-slate-950/50">
+      <div className="relative my-1.5 w-[420px] max-w-[95vw] h-[calc(100dvh-74px)] rounded-[28px] border border-white/20 shadow-[0_25px_70px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-10 pb-10 px-3.5 sm:px-4 pointer-events-auto box-border backdrop-blur-2xl bg-slate-950/60">
         {/* Translucent RABBIT_PANEL Neon Outer Frame Layer */}
         <div
-          className="absolute inset-0 pointer-events-none z-0 opacity-80 mix-blend-lighten"
+          className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
           style={{
             backgroundImage: `url(${RABBIT_PANEL})`,
             backgroundSize: "100% 100%",
             backgroundRepeat: "no-repeat",
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/[0.06] via-slate-950/40 to-red-500/[0.06] pointer-events-none z-0" />
+        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/[0.05] via-slate-950/45 to-red-500/[0.05] pointer-events-none z-0" />
 
         {/* Scroll Up Arrow Button */}
         <button
           type="button"
           onClick={() => handleScrollSidebar("up")}
-          className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/75 hover:bg-black border border-cyan-400/35 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-[0_0_12px_rgba(56,189,248,0.4)] transition hover:scale-110 cursor-pointer"
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/80 hover:bg-black border border-cyan-400/40 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-[0_0_12px_rgba(56,189,248,0.4)] transition hover:scale-110 cursor-pointer"
           title="Scroll Up"
         >
           ▲
@@ -1041,18 +1109,18 @@ export function Sidebar({
         {/* Scrollable Inner Container */}
         <div
           ref={sidebarContentRef}
-          className="flex-1 overflow-y-auto px-2.5 pt-4 pb-6 w-full scrollbar-none relative z-10 box-border overflow-x-hidden"
+          className="flex-1 overflow-y-auto px-1 pt-2.5 pb-6 w-full scrollbar-none relative z-10 box-border overflow-x-hidden"
           style={{
             maskImage:
-              "linear-gradient(to bottom, transparent 0%, black 3%, black 97%, transparent 100%)",
+              "linear-gradient(to bottom, transparent 0%, black 2.5%, black 97.5%, transparent 100%)",
             WebkitMaskImage:
-              "linear-gradient(to bottom, transparent 0%, black 3%, black 97%, transparent 100%)",
+              "linear-gradient(to bottom, transparent 0%, black 2.5%, black 97.5%, transparent 100%)",
           }}
         >
           <div className="relative z-10 flex flex-col w-full box-border space-y-3 pb-4">
             {/* Crystal Profile Header Bar */}
-            <div className="flex items-center justify-between rounded-2xl bg-black/45 backdrop-blur-xl border border-white/15 px-3.5 py-2.5 shadow-lg w-full box-border">
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center justify-between gap-2 rounded-2xl bg-black/55 backdrop-blur-xl border border-white/15 px-3 py-2.5 shadow-lg w-full box-border">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-10 h-10 rounded-xl overflow-hidden border border-cyan-400/40 bg-slate-900 shadow-[0_0_15px_rgba(56,189,248,0.3)] shrink-0 flex items-center justify-center">
                   <img
                     src={headerIconUrl}
@@ -1069,7 +1137,7 @@ export function Sidebar({
                     <span className="mr-1">{profileMascot}</span>
                     {savedProfileName || "User Profile"}
                   </h3>
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                     <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       <span>Online</span>
@@ -1083,7 +1151,7 @@ export function Sidebar({
                     </span>
                     {seniorEasyMode && (
                       <span className="text-[9px] text-amber-300 font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-400/30">
-                        Easy Mode
+                        Easy
                       </span>
                     )}
                   </div>
@@ -1100,93 +1168,100 @@ export function Sidebar({
             </div>
 
             {/* CONSOLIDATED CRYSTAL NEON ACCORDIONS */}
-            <div className="space-y-2.5 w-full box-border pt-1">
-              {/* 1. GLOBAL FEED, STARTUP & WATCH HISTORY */}
+            <div className="space-y-2.5 w-full box-border pt-0.5">
+              {/* 1. FEED, STARTUP & HISTORY */}
               <div className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "feedAndHistory",
                   "🌐",
-                  "Feed, Startup & History",
+                  "Feed & Startup",
                   selectedGlobalFeed === "All (Default)"
                     ? startupTab
                     : selectedGlobalFeed
                 )}
 
                 {activeSection === "feedAndHistory" && (
-                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
-                    <div
-                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                      style={{
-                        backgroundImage: `url(${RABBIT_PANEL})`,
-                        backgroundSize: "100% 100%",
-                        backgroundRepeat: "no-repeat",
-                      }}
-                    />
-                    <div className="relative z-10 space-y-3 w-full box-border">
-                      <div>
-                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
-                          Select Region / Language Catalog Feed:
-                        </p>
-                        <select
-                          value={selectedGlobalFeed}
-                          onChange={(e) =>
-                            handleGlobalFeedChange(
-                              e.target.value as GlobalFeedOption
-                            )
-                          }
-                          className="h-10 w-full rounded-xl border border-cyan-400/30 bg-black/70 px-3 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer"
-                        >
-                          {globalFeedOptions.map((opt) => (
-                            <option
-                              key={opt}
-                              value={opt}
-                              className="bg-slate-950 text-white"
-                            >
-                              🌐 {opt}
-                            </option>
-                          ))}
-                        </select>
+                  <div className={crystalSubPanelClass}>
+                    <div>
+                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                        Region / Language Catalog Feed:
+                      </p>
+                      <select
+                        value={selectedGlobalFeed}
+                        onChange={(e) =>
+                          handleGlobalFeedChange(
+                            e.target.value as GlobalFeedOption
+                          )
+                        }
+                        className="h-10 w-full rounded-xl border border-cyan-400/35 bg-black/80 px-3 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer"
+                      >
+                        {globalFeedOptions.map((opt) => (
+                          <option
+                            key={opt}
+                            value={opt}
+                            className="bg-slate-950 text-white"
+                          >
+                            🌐 {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                        Favorite Startup Screen:
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {STARTUP_TAB_OPTIONS.map((tab) => (
+                          <button
+                            key={tab}
+                            type="button"
+                            onClick={() => {
+                              setStartupTab(tab);
+                              setStartupTabState(tab);
+                            }}
+                            className={`rounded-xl py-2 px-2 text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer hover:scale-[1.03] ${
+                              startupTab === tab
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            {tab}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-white/10 space-y-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-300 font-bold">
+                          ⭐ Pinned Live Channels:
+                        </span>
+                        <span className="font-extrabold text-amber-300">
+                          {favoriteChannelCount} / {MAX_FAVORITE_CHANNELS}
+                        </span>
                       </div>
 
-                      <div className="pt-2.5 border-t border-white/10">
-                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
-                          Favorite Startup Screen:
-                        </p>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {STARTUP_TAB_OPTIONS.map((tab) => (
-                            <button
-                              key={tab}
-                              type="button"
-                              onClick={() => {
-                                setStartupTab(tab);
-                                setStartupTabState(tab);
-                              }}
-                              className={`rounded-xl py-1.5 px-1 text-[10px] font-bold transition-all truncate cursor-pointer hover:scale-105 ${
-                                startupTab === tab
-                                  ? `${getPrimaryBgColor(
-                                      appTheme
-                                    )} text-white shadow-md`
-                                  : getSubtlePillBg(appTheme)
-                              }`}
-                            >
-                              {tab}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="pt-2.5 border-t border-white/10">
-                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
-                          Activity & Playback Timeline:
-                        </p>
+                      <div className="grid grid-cols-2 gap-2">
                         <Link
-                          to="/watch-history"
+                          to="/live-tv"
                           onClick={handleCloseSidebar}
-                          className={`flex h-10 w-full items-center justify-center gap-2 rounded-xl px-3 text-xs font-extrabold shadow-lg transition hover:scale-[1.03] active:scale-95 ${getPrimaryBgColor(
+                          className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition hover:scale-[1.02] ${getSubtlePillBg(
                             appTheme
                           )}`}
                         >
-                          <span>🕒 Open Watch History & Activity</span>
+                          <span>📡 Live TV</span>
+                        </Link>
+                        <Link
+                          to="/watch-history"
+                          onClick={handleCloseSidebar}
+                          className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-extrabold shadow-md transition hover:scale-[1.02] ${getPrimaryBgColor(
+                            appTheme
+                          )}`}
+                        >
+                          <span>🕒 History</span>
                         </Link>
                       </div>
                     </div>
@@ -1199,62 +1274,232 @@ export function Sidebar({
                 {renderCrystalAccordionButton(
                   "themesAndScale",
                   "🎨",
-                  "Themes, Posters & Grid Layout",
-                  `${appTheme.toUpperCase()} • ${posterShape.toUpperCase()}`
+                  "Themes & Posters",
+                  appTheme.toUpperCase()
                 )}
 
                 {activeSection === "themesAndScale" && (
-                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
-                    <div
-                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                      style={{
-                        backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                        backgroundSize: "100% 100%",
-                        backgroundRepeat: "no-repeat",
-                      }}
-                    />
-                    <div className="relative z-10 space-y-3.5 w-full box-border">
-                      {/* App Themes */}
-                      <div>
-                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                          Neon App Theme:
-                        </p>
-                        <div className="grid grid-cols-2 gap-2 w-full">
-                          {allThemesList.map((t) => (
+                  <div className={crystalSubPanelClass}>
+                    {/* App Themes */}
+                    <div>
+                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                        Neon App Theme:
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        {allThemesList.map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => onThemeChange(t.id)}
+                            className={`rounded-xl p-2 text-xs font-bold whitespace-nowrap truncate transition-all text-left w-full cursor-pointer hover:scale-[1.03] ${
+                              appTheme === t.id
+                                ? `${getPrimaryBgColor(
+                                    t.id
+                                  )} text-white shadow-md ring-1 ring-white/40`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Poster Corner Shape */}
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                        Poster Corner Shape:
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {POSTER_SHAPE_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setPosterShape(opt.id);
+                              setPosterShapeState(opt.id);
+                            }}
+                            className={`rounded-xl py-2 px-1 text-[10px] font-bold leading-tight text-center transition-all cursor-pointer hover:scale-[1.03] ${
+                              posterShape === opt.id
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Poster Frame Style */}
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                        Poster Frame Style:
+                      </p>
+                      <div className="space-y-1.5">
+                        {POSTER_CARD_STYLE_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setPosterCardStyle(opt.id);
+                              setPosterCardStyleState(opt.id);
+                            }}
+                            className={`w-full rounded-xl px-3 py-2 text-left transition-all cursor-pointer hover:scale-[1.02] ${
+                              posterCardStyle === opt.id
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md ring-1 ring-white/30`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            <span className="block text-xs font-extrabold">
+                              {opt.label}
+                            </span>
+                            <span className="block text-[10px] opacity-85">
+                              {opt.desc}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Poster Info Layout */}
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                        Poster Information Layout:
+                      </p>
+                      <div className="space-y-1.5">
+                        {POSTER_INFO_LAYOUT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setPosterInfoLayout(opt.id);
+                              setPosterInfoLayoutState(opt.id);
+                            }}
+                            className={`w-full rounded-xl px-3 py-2 text-left transition-all cursor-pointer hover:scale-[1.02] ${
+                              posterInfoLayout === opt.id
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md ring-1 ring-white/30`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            <span className="block text-xs font-extrabold">
+                              {opt.label}
+                            </span>
+                            <span className="block text-[10px] opacity-85">
+                              {opt.desc}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white">
+                            Show Rating & Status Badges
+                          </p>
+                          <p className="text-[10px] text-slate-300">
+                            Toggle floating star tags on posters.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !showPosterBadges;
+                            setShowPosterBadges(next);
+                            setShowPosterBadgesState(next);
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                            showPosterBadges ? toggleActiveClass : "bg-slate-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              showPosterBadges
+                                ? "translate-x-6"
+                                : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Catalog Card Size */}
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                        Catalog Poster Grid Size:
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {(["small", "medium", "large"] as CardSize[]).map(
+                          (size) => (
                             <button
-                              key={t.id}
+                              key={size}
                               type="button"
-                              onClick={() => onThemeChange(t.id)}
-                              className={`rounded-xl p-2 text-xs font-bold transition-all text-left w-full cursor-pointer hover:scale-[1.04] focus:scale-[1.04] ${
-                                appTheme === t.id
+                              onClick={() => onSizeChange(size)}
+                              className={`rounded-xl py-2 text-xs font-bold capitalize transition-all cursor-pointer hover:scale-105 ${
+                                cardSize === size
                                   ? `${getPrimaryBgColor(
-                                      t.id
-                                    )} text-white shadow-md ring-1 ring-white/40`
+                                      appTheme
+                                    )} text-white shadow-md`
                                   : getSubtlePillBg(appTheme)
                               }`}
                             >
-                              {t.label}
+                              {size}
                             </button>
-                          ))}
-                        </div>
+                          )
+                        )}
                       </div>
+                    </div>
 
-                      {/* Poster Corner Shape */}
-                      <div className="pt-2.5 border-t border-white/10">
+                    {/* History Page Overscale */}
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                        Watch History Overscale:
+                      </p>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {(
+                          ["off", "20%", "50%", "80%"] as HistoryScale[]
+                        ).map((scale) => (
+                          <button
+                            key={scale}
+                            type="button"
+                            onClick={() => onHistoryOverscaleChange(scale)}
+                            className={`rounded-xl py-1.5 text-xs font-bold capitalize transition-all cursor-pointer hover:scale-105 ${
+                              historyOverscale === scale
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            {scale === "off" ? "Off" : `+${scale}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Neon Glow Intensity + Safe Visual Reset */}
+                    <div className="pt-2.5 border-t border-white/10 space-y-2.5">
+                      <div>
                         <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                          Poster Corner Shape:
+                          Neon Glow Intensity:
                         </p>
                         <div className="grid grid-cols-3 gap-1.5">
-                          {POSTER_SHAPE_OPTIONS.map((opt) => (
+                          {GLOW_INTENSITY_OPTIONS.map((opt) => (
                             <button
                               key={opt.id}
                               type="button"
                               onClick={() => {
-                                setPosterShape(opt.id);
-                                setPosterShapeState(opt.id);
+                                setGlowIntensity(opt.id);
+                                setGlowIntensityState(opt.id);
                               }}
-                              className={`rounded-xl py-2 px-1 text-[10px] font-bold transition-all cursor-pointer hover:scale-105 ${
-                                posterShape === opt.id
+                              className={`rounded-xl py-1.5 px-1 text-[10px] font-bold transition-all cursor-pointer hover:scale-105 ${
+                                glowIntensity === opt.id
                                   ? `${getPrimaryBgColor(
                                       appTheme
                                     )} text-white shadow-md`
@@ -1267,367 +1512,177 @@ export function Sidebar({
                         </div>
                       </div>
 
-                      {/* Poster Frame Style */}
-                      <div className="pt-2.5 border-t border-white/10">
-                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                          Poster Frame Style:
+                      <button
+                        type="button"
+                        onClick={handleResetVisualDefaults}
+                        className="w-full py-2 px-2 rounded-xl bg-black/70 hover:bg-white/15 border border-white/15 text-[11px] font-bold text-amber-300 transition cursor-pointer"
+                      >
+                        ↺ Reset Visual & Poster Defaults
+                      </button>
+                      {visualResetMsg && (
+                        <p className="text-[11px] font-bold text-emerald-400 text-center">
+                          {visualResetMsg}
                         </p>
-                        <div className="space-y-1.5">
-                          {POSTER_CARD_STYLE_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => {
-                                setPosterCardStyle(opt.id);
-                                setPosterCardStyleState(opt.id);
-                              }}
-                              className={`w-full rounded-xl px-3 py-2 text-left transition-all cursor-pointer hover:scale-[1.02] ${
-                                posterCardStyle === opt.id
-                                  ? `${getPrimaryBgColor(
-                                      appTheme
-                                    )} text-white shadow-md ring-1 ring-white/30`
-                                  : getSubtlePillBg(appTheme)
-                              }`}
-                            >
-                              <span className="block text-xs font-extrabold">
-                                {opt.label}
-                              </span>
-                              <span className="block text-[9px] opacity-85">
-                                {opt.desc}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Poster Info Layout */}
-                      <div className="pt-2.5 border-t border-white/10">
-                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                          Poster Information Layout:
-                        </p>
-                        <div className="space-y-1.5">
-                          {POSTER_INFO_LAYOUT_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => {
-                                setPosterInfoLayout(opt.id);
-                                setPosterInfoLayoutState(opt.id);
-                              }}
-                              className={`w-full rounded-xl px-3 py-2 text-left transition-all cursor-pointer hover:scale-[1.02] ${
-                                posterInfoLayout === opt.id
-                                  ? `${getPrimaryBgColor(
-                                      appTheme
-                                    )} text-white shadow-md ring-1 ring-white/30`
-                                  : getSubtlePillBg(appTheme)
-                              }`}
-                            >
-                              <span className="block text-xs font-extrabold">
-                                {opt.label}
-                              </span>
-                              <span className="block text-[9px] opacity-85">
-                                {opt.desc}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2.5">
-                          <div>
-                            <p className="text-xs font-bold text-white">
-                              Show Rating & Status Badges
-                            </p>
-                            <p className="text-[10px] text-slate-300">
-                              Toggle floating star tags on posters.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const next = !showPosterBadges;
-                              setShowPosterBadges(next);
-                              setShowPosterBadgesState(next);
-                            }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                              showPosterBadges
-                                ? getPrimaryBgColor(appTheme).split(" ")[0]
-                                : "bg-slate-700"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                showPosterBadges
-                                  ? "translate-x-6"
-                                  : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Catalog Card Size */}
-                      <div className="pt-2.5 border-t border-white/10">
-                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                          Catalog Poster Grid Size:
-                        </p>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {(["small", "medium", "large"] as CardSize[]).map(
-                            (size) => (
-                              <button
-                                key={size}
-                                type="button"
-                                onClick={() => onSizeChange(size)}
-                                className={`rounded-xl py-2 text-xs font-bold capitalize transition-all cursor-pointer hover:scale-105 ${
-                                  cardSize === size
-                                    ? `${getPrimaryBgColor(
-                                        appTheme
-                                      )} text-white shadow-md`
-                                    : getSubtlePillBg(appTheme)
-                                }`}
-                              >
-                                {size}
-                              </button>
-                            )
-                          )}
-                        </div>
-                      </div>
-
-                      {/* History Page Overscale */}
-                      <div className="pt-2.5 border-t border-white/10">
-                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                          Watch History Overscale:
-                        </p>
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {(
-                            ["off", "20%", "50%", "80%"] as HistoryScale[]
-                          ).map((scale) => (
-                            <button
-                              key={scale}
-                              type="button"
-                              onClick={() => onHistoryOverscaleChange(scale)}
-                              className={`rounded-xl py-1.5 text-xs font-bold capitalize transition-all cursor-pointer hover:scale-105 ${
-                                historyOverscale === scale
-                                  ? `${getPrimaryBgColor(
-                                      appTheme
-                                    )} text-white shadow-md`
-                                  : getSubtlePillBg(appTheme)
-                              }`}
-                            >
-                              {scale === "off" ? "Off" : `+${scale}`}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Neon Glow Intensity + Safe Visual Reset */}
-                      <div className="pt-2.5 border-t border-white/10 space-y-2.5">
-                        <div>
-                          <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
-                            Neon Glow Intensity:
-                          </p>
-                          <div className="grid grid-cols-3 gap-1.5">
-                            {GLOW_INTENSITY_OPTIONS.map((opt) => (
-                              <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() => {
-                                  setGlowIntensity(opt.id);
-                                  setGlowIntensityState(opt.id);
-                                }}
-                                className={`rounded-xl py-1.5 text-[10px] font-bold transition-all cursor-pointer hover:scale-105 ${
-                                  glowIntensity === opt.id
-                                    ? `${getPrimaryBgColor(
-                                        appTheme
-                                      )} text-white shadow-md`
-                                    : getSubtlePillBg(appTheme)
-                                }`}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={handleResetVisualDefaults}
-                          className="w-full py-2 rounded-xl bg-black/60 hover:bg-white/15 border border-white/15 text-[11px] font-bold text-amber-300 transition cursor-pointer"
-                        >
-                          ↺ Reset Visual & Poster Defaults (Keeps License & PIN)
-                        </button>
-                        {visualResetMsg && (
-                          <p className="text-[11px] font-bold text-emerald-400 text-center">
-                            {visualResetMsg}
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* 3. BACKGROUND LOBBY RADIO (Defaulted to Heartbeat Radio in 2000s!) */}
+              {/* 3. BACKGROUND LOBBY RADIO (Default: Heart Dance in 2000s @ 25% Vol) */}
               <div className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "audio",
                   "🎵",
-                  "Background Lobby Radio",
-                  bgMusicState === "playing" ? "ON" : "MUTED"
+                  "Lobby Radio",
+                  bgMusicState === "playing"
+                    ? `${Math.round(bgMusicVolume * 100)}%`
+                    : "MUTED"
                 )}
 
                 {activeSection === "audio" && (
-                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3">
-                    <div
-                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                      style={{
-                        backgroundImage: `url(${RABBIT_PANEL})`,
-                        backgroundSize: "100% 100%",
-                        backgroundRepeat: "no-repeat",
-                      }}
-                    />
-                    <div className="relative z-10 space-y-3 w-full box-border">
-                      <div className="flex items-center justify-between rounded-xl bg-black/55 border border-white/10 px-3 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          Tuned Station:
-                        </span>
-                        <span className="text-xs font-extrabold text-amber-300 truncate max-w-[180px]">
-                          📻 {activeStationName}
-                        </span>
-                      </div>
+                  <div className={crystalSubPanelClass}>
+                    <div className="flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/10 px-3 py-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
+                        Station:
+                      </span>
+                      <span className="text-xs font-extrabold text-amber-300 truncate">
+                        📻 {activeStationName}
+                      </span>
+                    </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onBackgroundAudioToggle("playing")}
-                          className={`rounded-xl py-2 text-xs font-bold transition-all cursor-pointer hover:scale-105 ${
-                            bgMusicState === "playing"
-                              ? `${getPrimaryBgColor(
-                                  appTheme
-                                )} text-white shadow-md`
-                              : getSubtlePillBg(appTheme)
-                          }`}
-                        >
-                          🎵 Radio ON
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onBackgroundAudioToggle("muted")}
-                          className={`rounded-xl py-2 text-xs font-bold transition-all cursor-pointer hover:scale-105 ${
-                            bgMusicState === "muted"
-                              ? `${getPrimaryBgColor(
-                                  appTheme
-                                )} text-white shadow-md`
-                              : getSubtlePillBg(appTheme)
-                          }`}
-                        >
-                          🔇 Radio Off
-                        </button>
-                      </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onBackgroundAudioToggle("playing")}
+                        className={`rounded-xl py-2 text-xs font-bold transition-all cursor-pointer hover:scale-[1.03] ${
+                          bgMusicState === "playing"
+                            ? `${getPrimaryBgColor(
+                                appTheme
+                              )} text-white shadow-md`
+                            : getSubtlePillBg(appTheme)
+                        }`}
+                      >
+                        🎵 Radio ON
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onBackgroundAudioToggle("muted")}
+                        className={`rounded-xl py-2 text-xs font-bold transition-all cursor-pointer hover:scale-[1.03] ${
+                          bgMusicState === "muted"
+                            ? `${getPrimaryBgColor(
+                                appTheme
+                              )} text-white shadow-md`
+                            : getSubtlePillBg(appTheme)
+                        }`}
+                      >
+                        🔇 Radio Off
+                      </button>
+                    </div>
 
-                      <div className="pt-2 border-t border-white/10 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[11px] text-slate-300 font-bold">
-                            Music Volume:
-                          </p>
-                          <span className="text-[11px] font-bold text-amber-300">
-                            {Math.round(bgMusicVolume * 100)}%
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.05"
-                          value={bgMusicVolume}
-                          onChange={(e) =>
-                            handleVolumeChange(parseFloat(e.target.value))
-                          }
-                          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
-                        />
-                      </div>
-
-                      <div className="pt-2 border-t border-white/10">
-                        <p className="text-[11px] text-slate-300 mb-2 font-bold">
-                          Select Channel by Genre:
+                    <div className="pt-2 border-t border-white/10 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] text-slate-300 font-bold">
+                          Music Volume:
                         </p>
-                        <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 scrollbar-none">
-                          {Object.entries(RADIO_STATIONS).map(
-                            ([category, stations]) => {
-                              const hasActiveStation = stations.some(
-                                (s) =>
-                                  currentStationUrl === s.url ||
-                                  (!currentStationUrl &&
-                                    bgAudio.getCurrentStation().url === s.url)
-                              );
+                        <span className="text-[11px] font-bold text-amber-300">
+                          {Math.round(bgMusicVolume * 100)}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={bgMusicVolume}
+                        onChange={(e) =>
+                          handleVolumeChange(parseFloat(e.target.value))
+                        }
+                        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                      />
+                    </div>
 
-                              return (
-                                <details
-                                  key={category}
-                                  open={
-                                    hasActiveStation ||
-                                    category.toLowerCase().includes("2000")
-                                  }
-                                  className="group rounded-xl bg-black/50 border border-white/10 overflow-hidden"
-                                >
-                                  <summary className="flex items-center justify-between px-3 py-1.5 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/10 transition">
-                                    <span className="flex items-center gap-2 truncate pr-2">
-                                      <span>📁 {category}</span>
-                                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
-                                        {stations.length}
-                                      </span>
+                    <div className="pt-2 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 mb-2 font-bold">
+                        Select Channel by Genre:
+                      </p>
+                      <div className="max-h-40 overflow-y-auto space-y-1.5 pr-0.5 scrollbar-none">
+                        {Object.entries(RADIO_STATIONS).map(
+                          ([category, stations]) => {
+                            const hasActiveStation = stations.some(
+                              (s) =>
+                                currentStationUrl === s.url ||
+                                (!currentStationUrl &&
+                                  bgAudio.getCurrentStation().url === s.url)
+                            );
+
+                            return (
+                              <details
+                                key={category}
+                                open={
+                                  hasActiveStation ||
+                                  category.toLowerCase().includes("2000")
+                                }
+                                className="group rounded-xl bg-black/60 border border-white/10 overflow-hidden"
+                              >
+                                <summary className="flex items-center justify-between px-3 py-1.5 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/10 transition">
+                                  <span className="flex items-center gap-2 truncate pr-2">
+                                    <span>📁 {category}</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
+                                      {stations.length}
                                     </span>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      {hasActiveStation && (
-                                        <span
-                                          className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
-                                          title="Active stream in this category"
-                                        />
-                                      )}
-                                      <span className="transform group-open:rotate-180 transition-transform text-[10px]">
-                                        ▼
-                                      </span>
-                                    </div>
-                                  </summary>
-
-                                  <div className="p-1.5 space-y-1 border-t border-white/10 bg-slate-950/65">
-                                    {stations.map((station) => {
-                                      const isSelected =
-                                        currentStationUrl === station.url ||
-                                        (!currentStationUrl &&
-                                          bgAudio.getCurrentStation().url ===
-                                            station.url);
-                                      return (
-                                        <button
-                                          key={station.url}
-                                          type="button"
-                                          onClick={() =>
-                                            handleStationSelect(station.url)
-                                          }
-                                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-between cursor-pointer hover:scale-[1.02] ${
-                                            isSelected
-                                              ? `${getPrimaryBgColor(
-                                                  appTheme
-                                                )} text-white shadow-md`
-                                              : getSubtlePillBg(appTheme)
-                                          }`}
-                                        >
-                                          <span className="truncate pr-1">
-                                            🎵 {station.name}
-                                          </span>
-                                          {isSelected && (
-                                            <span className="text-[9px] shrink-0 font-bold bg-black/50 px-1.5 py-0.5 rounded">
-                                              ▶ LIVE
-                                            </span>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
+                                  </span>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {hasActiveStation && (
+                                      <span
+                                        className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+                                        title="Active stream in this category"
+                                      />
+                                    )}
+                                    <span className="transform group-open:rotate-180 transition-transform text-[10px]">
+                                      ▼
+                                    </span>
                                   </div>
-                                </details>
-                              );
-                            }
-                          )}
-                        </div>
+                                </summary>
+
+                                <div className="p-1.5 space-y-1 border-t border-white/10 bg-slate-950/75">
+                                  {stations.map((station) => {
+                                    const isSelected =
+                                      currentStationUrl === station.url ||
+                                      (!currentStationUrl &&
+                                        bgAudio.getCurrentStation().url ===
+                                          station.url);
+                                    return (
+                                      <button
+                                        key={station.url}
+                                        type="button"
+                                        onClick={() =>
+                                          handleStationSelect(station.url)
+                                        }
+                                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-between cursor-pointer ${
+                                          isSelected
+                                            ? `${getPrimaryBgColor(
+                                                appTheme
+                                              )} text-white shadow-md`
+                                            : getSubtlePillBg(appTheme)
+                                        }`}
+                                      >
+                                        <span className="truncate pr-1">
+                                          🎵 {station.name}
+                                        </span>
+                                        {isSelected && (
+                                          <span className="text-[9px] shrink-0 font-bold bg-black/50 px-1.5 py-0.5 rounded">
+                                            ▶ LIVE
+                                          </span>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </details>
+                            );
+                          }
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1639,627 +1694,627 @@ export function Sidebar({
                 {renderCrystalAccordionButton(
                   "profileAndAccessibility",
                   "🔒",
-                  "Profile, PIN & Senior / TV Mode",
-                  kidsLocked ? "KIDS LOCK" : seniorEasyMode ? "EASY" : undefined
+                  "Profile & Senior/TV",
+                  kidsLocked ? "KIDS" : seniorEasyMode ? "EASY" : undefined
                 )}
 
                 {activeSection === "profileAndAccessibility" && (
-                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-4">
-                    <div
-                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                      style={{
-                        backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                        backgroundSize: "100% 100%",
-                        backgroundRepeat: "no-repeat",
-                      }}
-                    />
-                    <div className="relative z-10 space-y-4 w-full box-border">
-                      {/* ONE-TAP SENIOR EASY MODE */}
-                      <div className="rounded-2xl bg-gradient-to-r from-amber-500/20 via-black/70 to-amber-500/15 border border-amber-400/45 p-3 flex items-center justify-between gap-2">
-                        <div>
-                          <p className="text-xs font-black text-amber-300">
-                            👓 One-Tap Senior Easy Mode
+                  <div className={crystalSubPanelClass}>
+                    {/* ONE-TAP SENIOR EASY MODE */}
+                    <div className="rounded-2xl bg-gradient-to-r from-amber-500/20 via-black/75 to-amber-500/15 border border-amber-400/45 p-3 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-amber-300">
+                          👓 One-Tap Senior Easy Mode
+                        </p>
+                        <p className="text-[10px] text-slate-200 leading-snug">
+                          Large text, big buttons, yellow XL pointer, bright TV
+                          focus & steady screen.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !seniorEasyMode;
+                          applySeniorEasyPreset(next);
+                          setSeniorEasyModeState(next);
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                          seniorEasyMode ? "bg-amber-500" : "bg-slate-700"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                            seniorEasyMode ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* PERSONALIZATION: MASCOT, GREETING, EYE-CARE, CORNER CLOCK */}
+                    <div className="space-y-2.5 pb-3 border-b border-white/15">
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-pink-300">
+                        ✨ Fun Personalizations
+                      </p>
+
+                      <div>
+                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                          Profile Mascot Badge:
+                        </p>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {PROFILE_MASCOT_OPTIONS.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                setProfileMascot(m.id);
+                                setProfileMascotState(m.id);
+                              }}
+                              title={m.label}
+                              className={`py-1.5 rounded-xl text-base transition-all cursor-pointer hover:scale-110 ${
+                                profileMascot === m.id
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} ring-2 ring-white/50 shadow-md`
+                                  : "bg-black/65 border border-white/10 hover:bg-white/15"
+                              }`}
+                            >
+                              {m.id}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                          Home Greeting Style:
+                        </p>
+                        <select
+                          value={greetingStyle}
+                          onChange={(e) => {
+                            const val = e.target.value as GreetingStyle;
+                            setGreetingStyle(val);
+                            setGreetingStyleState(val);
+                          }}
+                          className="h-9 w-full rounded-xl border border-white/15 bg-black/80 px-3 text-xs font-bold text-white focus:outline-none cursor-pointer"
+                        >
+                          {GREETING_STYLE_OPTIONS.map((g) => (
+                            <option
+                              key={g.id}
+                              value={g.id}
+                              className="bg-slate-950 text-white"
+                            >
+                              {g.label} — {g.sample}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white">
+                            🌙 Night Owl Eye-Care Filter
                           </p>
-                          <p className="text-[10px] text-slate-200 leading-snug">
-                            Large text, big buttons, yellow XL pointer, bright TV focus & steady screen.
+                          <p className="text-[10px] text-slate-300">
+                            Soft warm tint for late-night watching.
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            const next = !seniorEasyMode;
-                            applySeniorEasyPreset(next);
-                            setSeniorEasyModeState(next);
+                            const next = !warmEyeCare;
+                            setWarmEyeCare(next);
+                            setWarmEyeCareState(next);
                           }}
                           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                            seniorEasyMode ? "bg-amber-500" : "bg-slate-700"
+                            warmEyeCare ? "bg-amber-500" : "bg-slate-700"
                           }`}
                         >
                           <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              seniorEasyMode ? "translate-x-6" : "translate-x-1"
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              warmEyeCare ? "translate-x-6" : "translate-x-1"
                             }`}
                           />
                         </button>
                       </div>
 
-                      {/* PERSONALIZATION: MASCOT, GREETING, EYE-CARE, CORNER CLOCK */}
-                      <div className="space-y-2.5 pb-3 border-b border-white/15">
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-pink-300">
-                          ✨ Fun Personalizations
-                        </p>
-
-                        <div>
-                          <p className="text-[11px] text-slate-300 font-bold mb-1">
-                            Profile Mascot Badge:
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white">
+                            🕒 Couch Corner Clock
                           </p>
-                          <div className="grid grid-cols-5 gap-1.5">
-                            {PROFILE_MASCOT_OPTIONS.map((m) => (
-                              <button
-                                key={m.id}
-                                type="button"
-                                onClick={() => {
-                                  setProfileMascot(m.id);
-                                  setProfileMascotState(m.id);
-                                }}
-                                title={m.label}
-                                className={`py-1.5 rounded-xl text-base transition-all cursor-pointer hover:scale-110 ${
-                                  profileMascot === m.id
-                                    ? `${getPrimaryBgColor(
-                                        appTheme
-                                      )} ring-2 ring-white/50 shadow-md`
-                                    : "bg-black/55 border border-white/10 hover:bg-white/15"
-                                }`}
-                              >
-                                {m.id}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="text-[11px] text-slate-300 font-bold mb-1">
-                            Home Greeting Style:
+                          <p className="text-[10px] text-slate-300">
+                            Subtle live time while browsing.
                           </p>
-                          <select
-                            value={greetingStyle}
-                            onChange={(e) => {
-                              const val = e.target.value as GreetingStyle;
-                              setGreetingStyle(val);
-                              setGreetingStyleState(val);
-                            }}
-                            className="h-9 w-full rounded-xl border border-white/15 bg-black/70 px-3 text-xs font-bold text-white focus:outline-none cursor-pointer"
-                          >
-                            {GREETING_STYLE_OPTIONS.map((g) => (
-                              <option
-                                key={g.id}
-                                value={g.id}
-                                className="bg-slate-950 text-white"
-                              >
-                                {g.label} — {g.sample}
-                              </option>
-                            ))}
-                          </select>
                         </div>
-
-                        <div className="flex items-center justify-between pt-1">
-                          <div>
-                            <p className="text-xs font-bold text-white">
-                              🌙 Night Owl Eye-Care Filter
-                            </p>
-                            <p className="text-[10px] text-slate-300">
-                              Soft warm tint for late-night watching.
-                            </p>
-                          </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
                             onClick={() => {
-                              const next = !warmEyeCare;
-                              setWarmEyeCare(next);
-                              setWarmEyeCareState(next);
+                              const nextFmt: ClockFormat =
+                                clockFormat === "12h" ? "24h" : "12h";
+                              setClockFormat(nextFmt);
+                              setClockFormatState(nextFmt);
                             }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                              warmEyeCare ? "bg-amber-500" : "bg-slate-700"
+                            className="px-2 py-1 rounded-lg bg-black/80 border border-white/15 text-[10px] font-bold text-cyan-300 cursor-pointer"
+                            title="Toggle 12h / 24h"
+                          >
+                            {clockFormat.toUpperCase()}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = !showCornerClock;
+                              setShowCornerClock(next);
+                              setShowCornerClockState(next);
+                            }}
+                            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                              showCornerClock
+                                ? toggleActiveClass
+                                : "bg-slate-700"
                             }`}
                           >
                             <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                warmEyeCare ? "translate-x-6" : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-1">
-                          <div>
-                            <p className="text-xs font-bold text-white">
-                              🕒 Couch Corner Clock
-                            </p>
-                            <p className="text-[10px] text-slate-300">
-                              Subtle live time while browsing.
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const nextFmt: ClockFormat =
-                                  clockFormat === "12h" ? "24h" : "12h";
-                                setClockFormat(nextFmt);
-                                setClockFormatState(nextFmt);
-                              }}
-                              className="px-2 py-1 rounded-lg bg-black/70 border border-white/15 text-[10px] font-bold text-cyan-300 cursor-pointer"
-                              title="Toggle 12h / 24h"
-                            >
-                              {clockFormat.toUpperCase()}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const next = !showCornerClock;
-                                setShowCornerClock(next);
-                                setShowCornerClockState(next);
-                              }}
-                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                                 showCornerClock
-                                  ? getPrimaryBgColor(appTheme).split(" ")[0]
-                                  : "bg-slate-700"
+                                  ? "translate-x-6"
+                                  : "translate-x-1"
                               }`}
-                            >
-                              <span
-                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                  showCornerClock
-                                    ? "translate-x-6"
-                                    : "translate-x-1"
-                                }`}
-                              />
-                            </button>
-                          </div>
+                            />
+                          </button>
                         </div>
                       </div>
+                    </div>
 
-                      {/* ACCESSIBILITY, TV OVERSCAN & SUBTITLES */}
-                      <div className="space-y-2.5 pb-3 border-b border-white/15">
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-300">
-                          ♿ TV, Projector & Accessibility
+                    {/* ACCESSIBILITY, TV OVERSCAN & SUBTITLES */}
+                    <div className="space-y-2.5 pb-3 border-b border-white/15">
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-300">
+                        ♿ TV, Projector & Accessibility
+                      </p>
+
+                      {/* Text Size */}
+                      <div>
+                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                          Text Size:
                         </p>
-
-                        {/* Text Size */}
-                        <div>
-                          <p className="text-[11px] text-slate-300 font-bold mb-1">
-                            Text Size:
-                          </p>
-                          <div className="grid grid-cols-3 gap-1.5">
-                            {(["normal", "large", "xl"] as TextScale[]).map(
-                              (sc) => (
-                                <button
-                                  key={sc}
-                                  type="button"
-                                  onClick={() => {
-                                    setTextScale(sc);
-                                    setTextScaleState(sc);
-                                  }}
-                                  className={`rounded-xl py-1.5 text-xs font-bold uppercase transition cursor-pointer ${
-                                    textScale === sc
-                                      ? `${getPrimaryBgColor(
-                                          appTheme
-                                        )} text-white shadow-md`
-                                      : getSubtlePillBg(appTheme)
-                                  }`}
-                                >
-                                  {sc}
-                                </button>
-                              )
-                            )}
-                          </div>
-                        </div>
-
-                        {/* XL Mouse Pointer + Color Picker */}
-                        <div className="flex items-center justify-between pt-1">
-                          <div>
-                            <p className="text-xs font-bold text-white">
-                              XL Mouse Pointer (3x)
-                            </p>
-                            <p className="text-[10px] text-slate-300">
-                              Enlarges cursor for TVs & projectors.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => onMouseToggle(!helpfulMouse)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                              helpfulMouse
-                                ? getPrimaryBgColor(appTheme).split(" ")[0]
-                                : "bg-slate-700"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                helpfulMouse ? "translate-x-6" : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        {helpfulMouse && (
-                          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                            {CURSOR_STYLE_OPTIONS.map((c) => (
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(["normal", "large", "xl"] as TextScale[]).map(
+                            (sc) => (
                               <button
-                                key={c.id}
+                                key={sc}
                                 type="button"
                                 onClick={() => {
-                                  setCursorStyle(c.id);
-                                  setCursorStyleState(c.id);
+                                  setTextScale(sc);
+                                  setTextScaleState(sc);
                                 }}
-                                className={`rounded-xl py-1.5 px-2 text-[10px] font-bold transition cursor-pointer ${
-                                  cursorStyle === c.id
+                                className={`rounded-xl py-1.5 text-xs font-bold uppercase transition cursor-pointer ${
+                                  textScale === sc
                                     ? `${getPrimaryBgColor(
                                         appTheme
-                                      )} text-white shadow`
+                                      )} text-white shadow-md`
                                     : getSubtlePillBg(appTheme)
                                 }`}
                               >
-                                {c.label}
+                                {sc}
                               </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Action Buttons, Focus Ring, Steady Screen, Click Sounds */}
-                        <div className="flex items-center justify-between pt-1">
-                          <div>
-                            <p className="text-xs font-bold text-white">
-                              Enlarged Action Buttons
-                            </p>
-                            <p className="text-[10px] text-slate-300">
-                              Bigger icons & touch targets.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => onLargeButtonsToggle(!largeButtons)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                              largeButtons
-                                ? getPrimaryBgColor(appTheme).split(" ")[0]
-                                : "bg-slate-700"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                largeButtons ? "translate-x-6" : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-1">
-                          <div>
-                            <p className="text-xs font-bold text-white">
-                              Bright TV Focus Spotlight
-                            </p>
-                            <p className="text-[10px] text-slate-300">
-                              High-contrast yellow D-pad highlight.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const next = !highContrastFocus;
-                              setHighContrastFocus(next);
-                              setHighContrastFocusState(next);
-                            }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                              highContrastFocus ? "bg-amber-500" : "bg-slate-700"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                highContrastFocus
-                                  ? "translate-x-6"
-                                  : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-1">
-                          <div>
-                            <p className="text-xs font-bold text-white">
-                              Steady Screen (Reduced Motion)
-                            </p>
-                            <p className="text-[10px] text-slate-300">
-                              Stops animations for sensitive eyes & sticks.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const next = !reducedMotion;
-                              setReducedMotion(next);
-                              setReducedMotionState(next);
-                            }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                              reducedMotion
-                                ? getPrimaryBgColor(appTheme).split(" ")[0]
-                                : "bg-slate-700"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                reducedMotion
-                                  ? "translate-x-6"
-                                  : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-1">
-                          <div>
-                            <p className="text-xs font-bold text-white">
-                              Soft Remote Click Sounds
-                            </p>
-                            <p className="text-[10px] text-slate-300">
-                              Gentle audio feedback on button taps.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const next = !uiClickSounds;
-                              setUiClickSounds(next);
-                              setUiClickSoundsState(next);
-                            }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                              uiClickSounds
-                                ? getPrimaryBgColor(appTheme).split(" ")[0]
-                                : "bg-slate-700"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                uiClickSounds
-                                  ? "translate-x-6"
-                                  : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        {/* TV Overscan Safe-Zone */}
-                        <div className="pt-1">
-                          <p className="text-[11px] text-slate-300 font-bold mb-1">
-                            TV / Projector Screen Safe-Zone:
-                          </p>
-                          <div className="grid grid-cols-4 gap-1">
-                            {TV_OVERSCAN_OPTIONS.map((opt) => (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => {
-                                  setTvOverscan(opt.value);
-                                  setTvOverscanState(opt.value);
-                                }}
-                                className={`rounded-xl py-1.5 text-[10px] font-bold transition cursor-pointer ${
-                                  tvOverscan === opt.value
-                                    ? `${getPrimaryBgColor(
-                                        appTheme
-                                      )} text-white shadow`
-                                    : getSubtlePillBg(appTheme)
-                                }`}
-                              >
-                                {opt.value}%
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Subtitle Defaults */}
-                        <div className="pt-1">
-                          <p className="text-[11px] text-slate-300 font-bold mb-1">
-                            Caption / Subtitle Style:
-                          </p>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <select
-                              value={subtitles.size}
-                              onChange={(e) =>
-                                setSubtitlesState(
-                                  saveSubtitleSettings({
-                                    size: e.target.value as SubtitleSettings["size"],
-                                  })
-                                )
-                              }
-                              className="h-8 rounded-lg border border-white/15 bg-black/70 px-2 text-[11px] font-bold text-white"
-                            >
-                              <option value="normal">Size: Normal</option>
-                              <option value="large">Size: Large</option>
-                              <option value="xl">Size: XL</option>
-                            </select>
-                            <select
-                              value={subtitles.color}
-                              onChange={(e) =>
-                                setSubtitlesState(
-                                  saveSubtitleSettings({
-                                    color: e.target.value as SubtitleSettings["color"],
-                                  })
-                                )
-                              }
-                              className="h-8 rounded-lg border border-white/15 bg-black/70 px-2 text-[11px] font-bold text-white"
-                            >
-                              <option value="white">Color: White</option>
-                              <option value="yellow">Color: Yellow</option>
-                              <option value="cyan">Color: Cyan</option>
-                            </select>
-                          </div>
+                            )
+                          )}
                         </div>
                       </div>
 
-                      {/* KIDS SAFE MODE LOCK */}
-                      <div className="space-y-2 pb-3 border-b border-white/15">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-extrabold text-emerald-300">
-                              🧒 Kids Safe Mode Lock
-                            </p>
-                            <p className="text-[10px] text-slate-300">
-                              Caps catalog to kid-safe titles until PIN unlocked.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => void handleKidsLockToggle()}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold transition cursor-pointer ${
-                              kidsLocked
-                                ? "bg-emerald-600 text-white shadow"
-                                : "bg-black/65 border border-white/15 text-slate-200 hover:bg-white/15"
-                            }`}
-                          >
-                            {kidsLocked ? "🔓 Unlock" : "🔒 Lock ON"}
-                          </button>
+                      {/* XL Mouse Pointer + Color Picker */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white">
+                            XL Mouse Pointer (3x)
+                          </p>
+                          <p className="text-[10px] text-slate-300">
+                            Enlarges cursor for TVs & projectors.
+                          </p>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => onMouseToggle(!helpfulMouse)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                            helpfulMouse ? toggleActiveClass : "bg-slate-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              helpfulMouse ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
 
-                        {kidsLocked && (
-                          <input
-                            type="password"
-                            inputMode="numeric"
-                            maxLength={6}
-                            placeholder="Enter 4–6 digit PIN then tap Unlock"
-                            value={kidsUnlockPin}
+                      {helpfulMouse && (
+                        <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                          {CURSOR_STYLE_OPTIONS.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setCursorStyle(c.id);
+                                setCursorStyleState(c.id);
+                              }}
+                              className={`rounded-xl py-1.5 px-2 text-[10px] font-bold transition cursor-pointer ${
+                                cursorStyle === c.id
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              {c.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Enlarged Action Buttons */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white">
+                            Enlarged Action Buttons
+                          </p>
+                          <p className="text-[10px] text-slate-300">
+                            Bigger icons & touch targets.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onLargeButtonsToggle(!largeButtons)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                            largeButtons ? toggleActiveClass : "bg-slate-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              largeButtons ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Bright TV Focus Spotlight */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white">
+                            Bright TV Focus Spotlight
+                          </p>
+                          <p className="text-[10px] text-slate-300">
+                            High-contrast yellow D-pad highlight.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !highContrastFocus;
+                            setHighContrastFocus(next);
+                            setHighContrastFocusState(next);
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                            highContrastFocus ? "bg-amber-500" : "bg-slate-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              highContrastFocus
+                                ? "translate-x-6"
+                                : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Steady Screen (Reduced Motion) */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white">
+                            Steady Screen (No Motion)
+                          </p>
+                          <p className="text-[10px] text-slate-300">
+                            Stops animations for eyes & low-RAM sticks.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !reducedMotion;
+                            setReducedMotion(next);
+                            setReducedMotionState(next);
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                            reducedMotion ? toggleActiveClass : "bg-slate-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              reducedMotion ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Soft Remote Click Sounds */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white">
+                            Soft Remote Click Sounds
+                          </p>
+                          <p className="text-[10px] text-slate-300">
+                            Gentle audio feedback on button taps.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !uiClickSounds;
+                            setUiClickSounds(next);
+                            setUiClickSoundsState(next);
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                            uiClickSounds ? toggleActiveClass : "bg-slate-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              uiClickSounds ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* TV Overscan Safe-Zone */}
+                      <div className="pt-1">
+                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                          TV / Projector Screen Safe-Zone:
+                        </p>
+                        <div className="grid grid-cols-4 gap-1">
+                          {TV_OVERSCAN_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                setTvOverscan(opt.value);
+                                setTvOverscanState(opt.value);
+                              }}
+                              className={`rounded-xl py-1.5 text-[10px] font-bold transition cursor-pointer ${
+                                tvOverscan === opt.value
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              {opt.value}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Subtitle Defaults (Size, Color & Background Box Opacity) */}
+                      <div className="pt-1">
+                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                          Caption / Subtitle Style:
+                        </p>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <select
+                            value={subtitles.size}
                             onChange={(e) =>
-                              setKidsUnlockPin(
-                                e.target.value.replace(/\D/g, "").slice(0, 6)
+                              setSubtitlesState(
+                                saveSubtitleSettings({
+                                  size: e.target
+                                    .value as SubtitleSettings["size"],
+                                })
                               )
                             }
-                            className="w-full rounded-xl border border-emerald-400/40 bg-black/75 px-3 py-1.5 text-xs font-bold text-white placeholder-slate-400 focus:outline-none tracking-widest"
-                          />
-                        )}
+                            className="h-8 rounded-lg border border-white/15 bg-black/80 px-1.5 text-[10px] font-bold text-white"
+                          >
+                            <option value="normal">Normal</option>
+                            <option value="large">Large</option>
+                            <option value="xl">XL Size</option>
+                          </select>
+                          <select
+                            value={subtitles.color}
+                            onChange={(e) =>
+                              setSubtitlesState(
+                                saveSubtitleSettings({
+                                  color: e.target
+                                    .value as SubtitleSettings["color"],
+                                })
+                              )
+                            }
+                            className="h-8 rounded-lg border border-white/15 bg-black/80 px-1.5 text-[10px] font-bold text-white"
+                          >
+                            <option value="white">White</option>
+                            <option value="yellow">Yellow</option>
+                            <option value="cyan">Cyan</option>
+                          </select>
+                          <select
+                            value={subtitles.bgOpacity}
+                            onChange={(e) =>
+                              setSubtitlesState(
+                                saveSubtitleSettings({
+                                  bgOpacity: e.target
+                                    .value as SubtitleSettings["bgOpacity"],
+                                })
+                              )
+                            }
+                            className="h-8 rounded-lg border border-white/15 bg-black/80 px-1.5 text-[10px] font-bold text-white"
+                          >
+                            <option value="none">No Box</option>
+                            <option value="medium">Dim Box</option>
+                            <option value="solid">Solid Box</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
 
-                        {kidsLockStatus && (
-                          <p className="text-[10px] font-bold text-amber-300 text-center">
-                            {kidsLockStatus}
+                    {/* KIDS SAFE MODE LOCK */}
+                    <div className="space-y-2 pb-3 border-b border-white/15">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-extrabold text-emerald-300">
+                            🧒 Kids Safe Mode Lock
                           </p>
-                        )}
+                          <p className="text-[10px] text-slate-300">
+                            Caps catalog to kid-safe titles until PIN unlocked.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleKidsLockToggle()}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold shrink-0 transition cursor-pointer ${
+                            kidsLocked
+                              ? "bg-emerald-600 text-white shadow"
+                              : "bg-black/75 border border-white/15 text-slate-200 hover:bg-white/15"
+                          }`}
+                        >
+                          {kidsLocked ? "🔓 Unlock" : "🔒 Lock ON"}
+                        </button>
                       </div>
 
-                      {/* PROFILE, AGE & 4-6 DIGIT HASHED PIN FORM */}
-                      <form
-                        onSubmit={handleUnifiedProfileUpdate}
-                        className="space-y-2.5"
-                      >
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-amber-300">
-                          🔐 Profile, Age & Parental PIN (4–6 Digits)
+                      {kidsLocked && (
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={6}
+                          placeholder="Enter 4–6 digit PIN then tap Unlock"
+                          value={kidsUnlockPin}
+                          onChange={(e) =>
+                            setKidsUnlockPin(
+                              e.target.value.replace(/\D/g, "").slice(0, 6)
+                            )
+                          }
+                          className="w-full rounded-xl border border-emerald-400/40 bg-black/80 px-3 py-1.5 text-xs font-bold text-white placeholder-slate-400 focus:outline-none tracking-widest"
+                        />
+                      )}
+
+                      {kidsLockStatus && (
+                        <p className="text-[10px] font-bold text-amber-300 text-center">
+                          {kidsLockStatus}
                         </p>
+                      )}
+                    </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                              Name:
-                            </span>
-                            <input
-                              type="text"
-                              maxLength={25}
-                              value={profileNameInput}
-                              onChange={(e) =>
-                                setProfileNameInput(e.target.value)
-                              }
-                              className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                            />
-                          </div>
-                          <div>
-                            <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                              Age:
-                            </span>
-                            <input
-                              type="number"
-                              min={1}
-                              max={120}
-                              value={userAgeInput}
-                              onChange={(e) => setUserAgeInput(e.target.value)}
-                              className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                            />
-                          </div>
-                        </div>
+                    {/* PROFILE, AGE & 4-6 DIGIT HASHED PIN FORM */}
+                    <form
+                      onSubmit={handleUnifiedProfileUpdate}
+                      className="space-y-2.5"
+                    >
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-amber-300">
+                        🔐 Profile, Age & Parental PIN (4–6 Digits)
+                      </p>
 
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
                           <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                            Current 4–6 Digit PIN (Required):
+                            Name:
+                          </span>
+                          <input
+                            type="text"
+                            maxLength={25}
+                            value={profileNameInput}
+                            onChange={(e) =>
+                              setProfileNameInput(e.target.value)
+                            }
+                            className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                          />
+                        </div>
+                        <div>
+                          <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                            Age:
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={120}
+                            value={userAgeInput}
+                            onChange={(e) => setUserAgeInput(e.target.value)}
+                            className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                          Current 4–6 Digit PIN (Required):
+                        </span>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={6}
+                          placeholder="••••••"
+                          value={unifiedAgeCodeInput}
+                          onChange={(e) =>
+                            setUnifiedAgeCodeInput(
+                              e.target.value.replace(/\D/g, "").slice(0, 6)
+                            )
+                          }
+                          className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <div>
+                          <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                            New PIN (Opt):
                           </span>
                           <input
                             type="password"
                             inputMode="numeric"
                             maxLength={6}
                             placeholder="••••••"
-                            value={unifiedAgeCodeInput}
+                            value={newPasscode}
                             onChange={(e) =>
-                              setUnifiedAgeCodeInput(
+                              setNewPasscode(
                                 e.target.value.replace(/\D/g, "").slice(0, 6)
                               )
                             }
-                            className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                            className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
                           />
                         </div>
-
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                          <div>
-                            <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                              New PIN (4–6d Opt):
-                            </span>
-                            <input
-                              type="password"
-                              inputMode="numeric"
-                              maxLength={6}
-                              placeholder="••••••"
-                              value={newPasscode}
-                              onChange={(e) =>
-                                setNewPasscode(
-                                  e.target.value.replace(/\D/g, "").slice(0, 6)
-                                )
-                              }
-                              className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
-                            />
-                          </div>
-                          <div>
-                            <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                              Confirm PIN:
-                            </span>
-                            <input
-                              type="password"
-                              inputMode="numeric"
-                              maxLength={6}
-                              placeholder="••••••"
-                              value={confirmNewPasscode}
-                              onChange={(e) =>
-                                setConfirmNewPasscode(
-                                  e.target.value.replace(/\D/g, "").slice(0, 6)
-                                )
-                              }
-                              className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
-                            />
-                          </div>
+                        <div>
+                          <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                            Confirm PIN:
+                          </span>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="••••••"
+                            value={confirmNewPasscode}
+                            onChange={(e) =>
+                              setConfirmNewPasscode(
+                                e.target.value.replace(/\D/g, "").slice(0, 6)
+                              )
+                            }
+                            className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                          />
                         </div>
+                      </div>
 
-                        <button
-                          type="submit"
-                          className={`w-full py-2.5 rounded-xl ${getPrimaryBgColor(
-                            appTheme
-                          )} text-xs font-extrabold shadow-lg transition hover:scale-[1.02] cursor-pointer`}
+                      <button
+                        type="submit"
+                        className={`w-full py-2.5 rounded-xl ${getPrimaryBgColor(
+                          appTheme
+                        )} text-xs font-extrabold shadow-lg transition hover:scale-[1.02] cursor-pointer`}
+                      >
+                        Save Profile & PIN Updates
+                      </button>
+
+                      {unifiedUpdateStatus && (
+                        <p
+                          className={`text-[11px] font-bold text-center ${
+                            unifiedUpdateStatus.isError
+                              ? "text-red-400"
+                              : "text-emerald-400"
+                          }`}
                         >
-                          Save Profile & PIN Updates
-                        </button>
-
-                        {unifiedUpdateStatus && (
-                          <p
-                            className={`text-[11px] font-bold text-center ${
-                              unifiedUpdateStatus.isError
-                                ? "text-red-400"
-                                : "text-emerald-400"
-                            }`}
-                          >
-                            {unifiedUpdateStatus.text}
-                          </p>
-                        )}
-                      </form>
-                    </div>
+                          {unifiedUpdateStatus.text}
+                        </p>
+                      )}
+                    </form>
                   </div>
                 )}
               </div>
@@ -2269,224 +2324,215 @@ export function Sidebar({
                 {renderCrystalAccordionButton(
                   "hardwareAndStream",
                   "⚡",
-                  "Hardware RAM, Stream & Storage",
+                  "RAM & Stream Engine",
                   ramMode === "low"
-                    ? "1-2GB Mode"
+                    ? "1-2GB"
                     : ramMode === "high"
-                      ? "4GB+ Turbo"
+                      ? "4GB+"
                       : "Auto"
                 )}
 
                 {activeSection === "hardwareAndStream" && (
-                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
-                    <div
-                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                      style={{
-                        backgroundImage: `url(${RABBIT_PANEL})`,
-                        backgroundSize: "100% 100%",
-                        backgroundRepeat: "no-repeat",
-                      }}
-                    />
-                    <div className="relative z-10 space-y-3.5 w-full box-border">
-                      {/* RAM Profile */}
-                      <div>
-                        <p className="text-[11px] text-slate-300 font-bold mb-1">
-                          Device Memory Allocation Profile:
-                        </p>
-                        <p className="text-[10px] text-slate-400 mb-2 leading-snug">
-                          Use <strong className="text-cyan-300">Low (1–2GB)</strong> for Nero 8K / Fire TV Sticks to cap video RAM buffers & disable heavy blurs.
-                        </p>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {(
-                            [
-                              { id: "auto", label: "✨ Auto" },
-                              { id: "low", label: "📟 1–2GB" },
-                              { id: "high", label: "🚀 4GB+" },
-                            ] as { id: RamMode; label: string }[]
-                          ).map((opt) => (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => handleRamModeChange(opt.id)}
-                              className={`rounded-xl py-2 px-1 text-xs font-extrabold transition-all cursor-pointer hover:scale-[1.03] ${
-                                ramMode === opt.id
-                                  ? `${getPrimaryBgColor(
-                                      appTheme
-                                    )} text-white shadow-md ring-1 ring-white/40`
-                                  : getSubtlePillBg(appTheme)
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Data Saver Toggle */}
-                      <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                        <div>
-                          <p className="text-xs font-bold text-white">
-                            📶 Data Saver / Lite Posters
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            Uses lighter w342 images (~45% less RAM).
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = !dataSaverMode;
-                            setDataSaverMode(next);
-                            setDataSaverModeState(next);
-                          }}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                            dataSaverMode
-                              ? getPrimaryBgColor(appTheme).split(" ")[0]
-                              : "bg-slate-700"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              dataSaverMode ? "translate-x-6" : "translate-x-1"
+                  <div className={crystalSubPanelClass}>
+                    {/* RAM Profile */}
+                    <div>
+                      <p className="text-[11px] text-slate-300 font-bold mb-1">
+                        Device Memory Allocation Profile:
+                      </p>
+                      <p className="text-[10px] text-slate-400 mb-2 leading-snug">
+                        Use <strong className="text-cyan-300">1–2GB</strong> for
+                        Nero 8K / Fire TV Sticks to cap video RAM buffers &
+                        disable heavy blurs.
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {(
+                          [
+                            { id: "auto", label: "✨ Auto" },
+                            { id: "low", label: "📟 1–2GB" },
+                            { id: "high", label: "🚀 4GB+" },
+                          ] as { id: RamMode; label: string }[]
+                        ).map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => handleRamModeChange(opt.id)}
+                            className={`rounded-xl py-2 px-1 text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer hover:scale-[1.03] ${
+                              ramMode === opt.id
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md ring-1 ring-white/40`
+                                : getSubtlePillBg(appTheme)
                             }`}
-                          />
-                        </button>
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
                       </div>
+                    </div>
 
-                      {/* Default Stream Quality */}
-                      <div className="pt-2 border-t border-white/10">
-                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
-                          Preferred Stream Resolution:
+                    {/* Data Saver Toggle */}
+                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/10">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white">
+                          📶 Data Saver / Lite Posters
                         </p>
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {(
-                            ["auto", "1080p", "720p", "480p"] as StreamQuality[]
-                          ).map((q) => (
-                            <button
-                              key={q}
-                              type="button"
-                              onClick={() => handleStreamQualitySelect(q)}
-                              className={`rounded-xl py-2 text-[11px] font-bold uppercase transition-all cursor-pointer hover:scale-105 ${
-                                activeStreamQuality === q
-                                  ? `${getPrimaryBgColor(
-                                      appTheme
-                                    )} text-white shadow-md`
-                                  : getSubtlePillBg(appTheme)
-                              }`}
-                            >
-                              {q}
-                            </button>
-                          ))}
-                        </div>
+                        <p className="text-[10px] text-slate-400">
+                          Uses lighter w342 images (~45% less RAM).
+                        </p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !dataSaverMode;
+                          setDataSaverMode(next);
+                          setDataSaverModeState(next);
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                          dataSaverMode ? toggleActiveClass : "bg-slate-700"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                            dataSaverMode ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
 
-                      {/* Default Player Volume */}
-                      <div className="pt-2 border-t border-white/10 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[11px] text-slate-300 font-bold">
-                            Default Live Player Volume:
-                          </p>
-                          <span className="text-[11px] font-bold text-cyan-300">
-                            {Math.round(defaultPlayerVolume * 100)}%
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.05"
-                          value={defaultPlayerVolume}
-                          onChange={(e) => {
-                            const val = parseFloat(e.target.value);
-                            setDefaultPlayerVolume(val);
-                            setDefaultPlayerVolumeState(val);
+                    {/* Default Stream Quality */}
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                        Preferred Stream Resolution:
+                      </p>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {(
+                          ["auto", "1080p", "720p", "480p"] as StreamQuality[]
+                        ).map((q) => (
+                          <button
+                            key={q}
+                            type="button"
+                            onClick={() => handleStreamQualitySelect(q)}
+                            className={`rounded-xl py-2 text-[11px] font-bold uppercase transition-all cursor-pointer hover:scale-105 ${
+                              activeStreamQuality === q
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Default Player Volume */}
+                    <div className="pt-2.5 border-t border-white/10 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] text-slate-300 font-bold">
+                          Default Live Player Volume:
+                        </p>
+                        <span className="text-[11px] font-bold text-cyan-300">
+                          {Math.round(defaultPlayerVolume * 100)}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={defaultPlayerVolume}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setDefaultPlayerVolume(val);
+                          setDefaultPlayerVolumeState(val);
+                        }}
+                        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                      />
+                    </div>
+
+                    {/* Auto-Play Next Episode */}
+                    <div className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white">
+                          Auto-Play Next Episode
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Seamless binge-watching for TV series.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !autoPlayNext;
+                          setAutoPlayNext(next);
+                          setAutoPlayNextState(next);
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                          autoPlayNext ? toggleActiveClass : "bg-slate-700"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                            autoPlayNext ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Live WebView Storage Meter & Cache Cleaner */}
+                    <div className="pt-2.5 border-t border-white/10 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-bold">
+                        <span className="text-slate-300">
+                          Storage ({storageHealth.cacheEntriesCount} caches)
+                        </span>
+                        <span
+                          className={
+                            storageHealth.status === "high"
+                              ? "text-red-400"
+                              : storageHealth.status === "moderate"
+                                ? "text-amber-300"
+                                : "text-emerald-400"
+                          }
+                        >
+                          {storageHealth.usedKB} / {storageHealth.maxEstimatedKB}{" "}
+                          KB ({storageHealth.percentUsed}%)
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            storageHealth.status === "high"
+                              ? "bg-red-500"
+                              : storageHealth.status === "moderate"
+                                ? "bg-amber-400"
+                                : "bg-emerald-400"
+                          }`}
+                          style={{
+                            width: `${Math.max(4, storageHealth.percentUsed)}%`,
                           }}
-                          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
                         />
                       </div>
 
-                      {/* Auto-Play Next Episode */}
-                      <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-bold text-white">
-                            Auto-Play Next Episode
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            Seamless binge-watching for TV series.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = !autoPlayNext;
-                            setAutoPlayNext(next);
-                            setAutoPlayNextState(next);
-                          }}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                            autoPlayNext
-                              ? getPrimaryBgColor(appTheme).split(" ")[0]
-                              : "bg-slate-700"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              autoPlayNext ? "translate-x-6" : "translate-x-1"
-                            }`}
-                          />
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={handlePurgeVolatileCaches}
+                        className={`w-full py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:scale-[1.02] ${getSubtlePillBg(
+                          appTheme
+                        )}`}
+                      >
+                        🧹 Purge Stream & Metadata Caches
+                      </button>
 
-                      {/* Live WebView Storage Meter & Cache Cleaner */}
-                      <div className="pt-2.5 border-t border-white/10 space-y-2">
-                        <div className="flex items-center justify-between text-[10px] font-bold">
-                          <span className="text-slate-300">
-                            App Storage ({storageHealth.cacheEntriesCount} caches)
-                          </span>
-                          <span
-                            className={
-                              storageHealth.status === "high"
-                                ? "text-red-400"
-                                : storageHealth.status === "moderate"
-                                  ? "text-amber-300"
-                                  : "text-emerald-400"
-                            }
-                          >
-                            {storageHealth.usedKB} KB / {storageHealth.maxEstimatedKB} KB ({storageHealth.percentUsed}%)
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 ${
-                              storageHealth.status === "high"
-                                ? "bg-red-500"
-                                : storageHealth.status === "moderate"
-                                  ? "bg-amber-400"
-                                  : "bg-emerald-400"
-                            }`}
-                            style={{ width: `${Math.max(4, storageHealth.percentUsed)}%` }}
-                          />
-                        </div>
+                      <p className="text-[9px] text-slate-400 font-mono text-center break-all">
+                        Device ID: {deviceId}
+                      </p>
 
-                        <button
-                          type="button"
-                          onClick={handlePurgeVolatileCaches}
-                          className={`w-full py-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:scale-[1.02] ${getSubtlePillBg(
-                            appTheme
-                          )}`}
-                        >
-                          🧹 Purge Stream & Metadata Caches (Free RAM)
-                        </button>
-
-                        <p className="text-[9px] text-slate-500 font-mono text-center">
-                          Device ID: {deviceId}
+                      {cacheClearMsg && (
+                        <p className="text-[11px] font-bold text-emerald-400 text-center">
+                          {cacheClearMsg}
                         </p>
-
-                        {cacheClearMsg && (
-                          <p className="text-[11px] font-bold text-emerald-400 text-center">
-                            {cacheClearMsg}
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2497,63 +2543,59 @@ export function Sidebar({
                 {renderCrystalAccordionButton(
                   "screensaverAndBackup",
                   "💤",
-                  "Screensaver, Sleep & Backup",
+                  "Sleep & Backup",
                   sleepTimerMin > 0 ? `SLEEP ${sleepTimerMin}m` : undefined
                 )}
 
                 {activeSection === "screensaverAndBackup" && (
-                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
-                    <div
-                      className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                      style={{
-                        backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                        backgroundSize: "100% 100%",
-                        backgroundRepeat: "no-repeat",
-                      }}
-                    />
-                    <div className="relative z-10 space-y-3.5 w-full box-border">
-                      {/* Couch Sleep Timer */}
-                      <div>
-                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
-                          🌙 Couch Sleep Timer (Auto-Pause & Dark Screen):
-                        </p>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {SLEEP_TIMER_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => {
-                                setSleepTimerMinutes(opt.value);
-                                setSleepTimerMin(opt.value);
-                              }}
-                              className={`rounded-xl py-2 px-1 text-[11px] font-bold transition-all cursor-pointer hover:scale-105 ${
-                                sleepTimerMin === opt.value
-                                  ? `${getPrimaryBgColor(
-                                      appTheme
-                                    )} text-white shadow-md`
-                                  : getSubtlePillBg(appTheme)
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
+                  <div className={crystalSubPanelClass}>
+                    {/* Couch Sleep Timer */}
+                    <div>
+                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                        🌙 Couch Sleep Timer (Auto-Pause & Dark Screen):
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {SLEEP_TIMER_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              setSleepTimerMinutes(opt.value);
+                              setSleepTimerMin(opt.value);
+                            }}
+                            className={`rounded-xl py-2 px-1 text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer hover:scale-105 ${
+                              sleepTimerMin === opt.value
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
                       </div>
+                    </div>
 
-                      {/* Screensaver Timeout */}
-                      <div className="pt-2.5 border-t border-white/10">
-                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
-                          Start Screensaver After:
-                        </p>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {TIMEOUT_OPTIONS.map((opt) => (
+                    {/* Screensaver Timeout */}
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                        Start Screensaver After:
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {TIMEOUT_OPTIONS.map((opt) => {
+                          const shortLabel = opt.label.replace(
+                            " (Default)",
+                            " ★"
+                          );
+                          return (
                             <button
                               key={opt.value}
                               type="button"
                               onClick={() =>
                                 handleScreensaverTimeoutChange(opt.value)
                               }
-                              className={`rounded-xl py-2 px-2 text-xs font-bold transition-all truncate cursor-pointer hover:scale-105 ${
+                              className={`rounded-xl py-2 px-2 text-xs font-bold whitespace-nowrap transition-all cursor-pointer hover:scale-[1.03] ${
                                 screensaverTimeoutMs === opt.value
                                   ? `${getPrimaryBgColor(
                                       appTheme
@@ -2561,51 +2603,51 @@ export function Sidebar({
                                   : getSubtlePillBg(appTheme)
                               }`}
                             >
-                              {opt.label}
+                              {shortLabel}
                             </button>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
+                    </div>
 
-                      {/* Validated Backup & Restore */}
-                      <div className="pt-2.5 border-t border-white/10 space-y-2">
-                        <p className="text-[11px] text-slate-300 font-bold">
-                          Profile, Poster Styles & Watchlist Backup:
-                        </p>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={handleSaveBackup}
-                            className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold transition-all cursor-pointer hover:scale-105 ${getSubtlePillBg(
-                              appTheme
-                            )}`}
-                          >
-                            💾 Export JSON
-                          </button>
-                          <label
-                            className={`flex-1 text-center cursor-pointer rounded-xl px-3 py-2 text-xs font-bold transition-all hover:scale-105 ${getSubtlePillBg(
-                              appTheme
-                            )}`}
-                          >
-                            🔄 Restore
-                            <input
-                              type="file"
-                              accept=".json"
-                              onChange={handleRestoreBackup}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
-                        {backupStatus && (
-                          <span
-                            className={`text-xs ${getPrimaryAccentColor(
-                              appTheme
-                            )} font-bold block text-center`}
-                          >
-                            {backupStatus}
-                          </span>
-                        )}
+                    {/* Validated Backup & Restore */}
+                    <div className="pt-2.5 border-t border-white/10 space-y-2">
+                      <p className="text-[11px] text-slate-300 font-bold">
+                        Profile, Poster Styles & Watchlist Backup:
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSaveBackup}
+                          className={`rounded-xl px-2 py-2 text-xs font-bold whitespace-nowrap transition-all cursor-pointer hover:scale-[1.03] ${getSubtlePillBg(
+                            appTheme
+                          )}`}
+                        >
+                          💾 Export JSON
+                        </button>
+                        <label
+                          className={`text-center cursor-pointer rounded-xl px-2 py-2 text-xs font-bold whitespace-nowrap transition-all hover:scale-[1.03] ${getSubtlePillBg(
+                            appTheme
+                          )}`}
+                        >
+                          🔄 Restore
+                          <input
+                            type="file"
+                            accept=".json"
+                            onChange={handleRestoreBackup}
+                            className="hidden"
+                          />
+                        </label>
                       </div>
+                      {backupStatus && (
+                        <span
+                          className={`text-xs ${getPrimaryAccentColor(
+                            appTheme
+                          )} font-bold block text-center`}
+                        >
+                          {backupStatus}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2631,7 +2673,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onOpenBugModal}
-                className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all hover:scale-[1.03] active:scale-95 cursor-pointer ${getPrimaryBgColor(
+                className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all hover:scale-[1.02] active:scale-95 cursor-pointer ${getPrimaryBgColor(
                   appTheme
                 )} text-white shadow-md`}
               >
@@ -2640,7 +2682,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onOpenBugFeedModal}
-                className="w-full py-2.5 rounded-xl bg-black/55 hover:bg-white/[0.12] border border-white/15 text-xs font-bold text-slate-200 transition-all hover:scale-[1.03] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-black/60 hover:bg-white/[0.12] border border-white/15 text-xs font-bold text-slate-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
               >
                 📋 View Bug Reports Feed
               </button>
@@ -2658,7 +2700,7 @@ export function Sidebar({
                   className={`py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 cursor-pointer ${
                     updateChannel === "stable"
                       ? `${getPrimaryBgColor(appTheme)} text-white`
-                      : "bg-black/55 text-slate-300 hover:bg-white/[0.12] border border-white/15"
+                      : "bg-black/60 text-slate-300 hover:bg-white/[0.12] border border-white/15"
                   }`}
                 >
                   🛡️ Stable
@@ -2669,7 +2711,7 @@ export function Sidebar({
                   className={`py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 cursor-pointer ${
                     updateChannel === "nightly"
                       ? `${getPrimaryBgColor(appTheme)} text-white`
-                      : "bg-black/55 text-slate-300 hover:bg-white/[0.12] border border-white/15"
+                      : "bg-black/60 text-slate-300 hover:bg-white/[0.12] border border-white/15"
                   }`}
                 >
                   ⚡ Nightly
@@ -2678,7 +2720,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={() => void checkForAppUpdates(false)}
-                className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all hover:scale-[1.03] active:scale-95 cursor-pointer ${getPrimaryBgColor(
+                className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all hover:scale-[1.02] active:scale-95 cursor-pointer ${getPrimaryBgColor(
                   appTheme
                 )} text-white shadow-md`}
               >
@@ -2714,7 +2756,7 @@ export function Sidebar({
                       placeholder="Unlock code"
                       value={unlockCodeInput}
                       onChange={(e) => setUnlockCodeInput(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-black/70 px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                      className="w-full rounded-xl border border-white/15 bg-black/80 px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
                     />
                     <button
                       type="submit"
@@ -2752,7 +2794,7 @@ export function Sidebar({
                 className="w-2/3 mx-auto h-2 object-contain opacity-80 mb-2.5"
               />
               <span className="text-[9px] text-slate-400 uppercase tracking-widest font-extrabold">
-                Crystal Console UI v2.7 • RABBiT TV
+                Crystal Console UI v2.8 • RABBiT TV
               </span>
             </div>
           </div>
@@ -2762,7 +2804,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => handleScrollSidebar("down")}
-          className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/75 hover:bg-black border border-red-400/35 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-[0_0_12px_rgba(239,68,68,0.4)] transition hover:scale-110 cursor-pointer"
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/80 hover:bg-black border border-red-400/40 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-[0_0_12px_rgba(239,68,68,0.4)] transition hover:scale-110 cursor-pointer"
           title="Scroll Down"
         >
           ▼
