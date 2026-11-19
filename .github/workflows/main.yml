@@ -299,9 +299,9 @@ jobs:
 
       - name: Build Signed Release APK with Custom Keystore
         env:
-          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD || 'RABBITV34688643' }}
-          KEY_ALIAS_NAME: ${{ secrets.KEY_ALIAS || 'RABBITV34688643' }}
-          KEY_PASS: ${{ secrets.KEY_PASSWORD || 'RABBITV34688643' }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS_NAME: ${{ secrets.KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
           ./gradlew assembleRelease \
