@@ -4,6 +4,11 @@ import { createPortal } from "react-dom";
 import { Link } from "@tanstack/react-router";
 import { AdminPanel } from "@/components/AdminPanel";
 import { ReferralModal } from "@/components/ReferralModal";
+import {
+  SIDEBAR_SECTION_EVENT,
+  triggerRabbitWalkthrough,
+} from "@/components/InteractiveWalkthrough";
+import { triggerOpenTosModal } from "@/components/TermsOfServiceModal";
 import { TIMEOUT_OPTIONS } from "@/components/Screensaver";
 import { bgAudio, RADIO_STATIONS } from "@/lib/background-audio";
 import { sendPermanentActivationAlert } from "@/lib/report";
@@ -211,6 +216,8 @@ export interface SidebarProps {
   onOpenBugModal: () => void;
   onOpenBugFeedModal: () => void;
   onTriggerFirstStartModal: () => void;
+  onOpenTosModal?: () => void;
+  onStartWalkthrough?: () => void;
   headerIconUrl: string;
   allThemesList: { id: AppTheme; label: string }[];
   getPrimaryBgColor: (theme: AppTheme) => string;
@@ -255,6 +262,8 @@ export function Sidebar({
   onOpenBugModal,
   onOpenBugFeedModal,
   onTriggerFirstStartModal,
+  onOpenTosModal,
+  onStartWalkthrough,
   headerIconUrl,
   allThemesList,
   getPrimaryBgColor,
@@ -527,6 +536,10 @@ export function Sidebar({
     lastScrollYRef.current = window.scrollY;
 
     const handleWindowScroll = () => {
+      if (document.body?.dataset?.walkthroughActive === "true") {
+        lastScrollYRef.current = window.scrollY;
+        return;
+      }
       if (Math.abs(window.scrollY - lastScrollYRef.current) > 60) {
         setActiveSection(null);
         onClose();
@@ -536,6 +549,30 @@ export function Sidebar({
     window.addEventListener("scroll", handleWindowScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleWindowScroll);
   }, [isOpen, isReferralModalOpen, onClose]);
+
+  // Allow InteractiveWalkthrough to expand specific accordions & scroll them into view
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const handleTourSection = (event: Event) => {
+      const custom = event as CustomEvent<{
+        section?: ConsolidatedSection;
+        scrollTarget?: string | null;
+      }>;
+      if (custom.detail && "section" in custom.detail) {
+        setActiveSection(custom.detail.section ?? null);
+      }
+      if (custom.detail?.scrollTarget && sidebarContentRef.current) {
+        const selector = `[data-tour="${custom.detail.scrollTarget}"]`;
+        window.setTimeout(() => {
+          const el = sidebarContentRef.current?.querySelector<HTMLElement>(selector);
+          el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 90);
+      }
+    };
+    window.addEventListener(SIDEBAR_SECTION_EVENT, handleTourSection);
+    return () =>
+      window.removeEventListener(SIDEBAR_SECTION_EVENT, handleTourSection);
+  }, [isOpen]);
 
   // D-pad / Arrow Key navigation handler with smooth scroll-into-view
   useEffect(() => {
@@ -1097,7 +1134,10 @@ export function Sidebar({
       />
 
       {/* Crystal Neon Console Blade Drawer */}
-      <div className="relative my-1.5 w-[420px] max-w-[95vw] h-[calc(100dvh-74px)] rounded-[28px] border border-white/20 shadow-[0_25px_70px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-10 pb-10 px-3.5 sm:px-4 pointer-events-auto box-border backdrop-blur-2xl bg-slate-950/60">
+      <div
+        data-tour="sidebar"
+        className="relative my-1.5 w-[420px] max-w-[95vw] h-[calc(100dvh-74px)] rounded-[28px] border border-white/20 shadow-[0_25px_70px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-10 pb-10 px-3.5 sm:px-4 pointer-events-auto box-border backdrop-blur-2xl bg-slate-950/60"
+      >
         {/* Translucent RABBIT_PANEL Neon Outer Frame Layer */}
         <div
           className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
@@ -1132,7 +1172,10 @@ export function Sidebar({
         >
           <div className="relative z-10 flex flex-col w-full box-border space-y-3 pb-4">
             {/* Crystal Profile Header Bar */}
-            <div className="flex items-center justify-between gap-2 rounded-2xl bg-black/55 backdrop-blur-xl border border-white/15 px-3 py-2.5 shadow-lg w-full box-border">
+            <div
+              data-tour="sidebar-profile-header"
+              className="flex items-center justify-between gap-2 rounded-2xl bg-black/55 backdrop-blur-xl border border-white/15 px-3 py-2.5 shadow-lg w-full box-border"
+            >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-10 h-10 rounded-xl overflow-hidden border border-cyan-400/40 bg-slate-900 shadow-[0_0_15px_rgba(56,189,248,0.3)] shrink-0 flex items-center justify-center">
                   <img
@@ -1183,7 +1226,7 @@ export function Sidebar({
             {/* CONSOLIDATED CRYSTAL NEON ACCORDIONS */}
             <div className="space-y-2.5 w-full box-border pt-0.5">
               {/* 1. FEED, STARTUP & HISTORY */}
-              <div className="w-full box-border">
+              <div data-tour="sidebar-feed-history" className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "feedAndHistory",
                   "🌐",
@@ -1283,7 +1326,7 @@ export function Sidebar({
               </div>
 
               {/* 2. THEMES, POSTER STYLES & HOLIDAY OVERLAY */}
-              <div className="w-full box-border">
+              <div data-tour="sidebar-themes-posters" className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "themesAndScale",
                   "🎨",
@@ -1571,7 +1614,7 @@ export function Sidebar({
               </div>
 
               {/* 3. BACKGROUND LOBBY RADIO */}
-              <div className="w-full box-border">
+              <div data-tour="sidebar-radio" className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "audio",
                   "🎵",
@@ -1731,7 +1774,7 @@ export function Sidebar({
               </div>
 
               {/* 4. PROFILE, PIN, PERSONALIZATION & SENIOR / TV MODE */}
-              <div className="w-full box-border">
+              <div data-tour="sidebar-profile-accessibility" className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "profileAndAccessibility",
                   "🔒",
@@ -2353,7 +2396,7 @@ export function Sidebar({
               </div>
 
               {/* 5. HARDWARE RAM, STREAM ENGINE & STORAGE METER */}
-              <div className="w-full box-border">
+              <div data-tour="sidebar-hardware-stream" className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "hardwareAndStream",
                   "⚡",
@@ -2566,7 +2609,7 @@ export function Sidebar({
               </div>
 
               {/* 6. SCREENSAVER, SLEEP TIMER & BACKUP */}
-              <div className="w-full box-border">
+              <div data-tour="sidebar-sleep-backup" className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "screensaverAndBackup",
                   "💤",
@@ -2679,7 +2722,7 @@ export function Sidebar({
             </div>
 
             {/* REFER FRIENDS & EARN CASH LAUNCHER */}
-            <div className="pt-2 w-full box-border">
+            <div data-tour="sidebar-referrals" className="pt-2 w-full box-border">
               <button
                 type="button"
                 onClick={() => setIsReferralModalOpen(true)}
@@ -2718,10 +2761,13 @@ export function Sidebar({
               </div>
             )}
 
-            {/* FEEDBACK & SUPPORT SECTION */}
-            <div className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
+            {/* FEEDBACK, WALKTHROUGH & LEGAL SECTION */}
+            <div
+              data-tour="sidebar-support"
+              className="pt-3 border-t border-white/15 space-y-2 w-full box-border"
+            >
               <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 px-1">
-                Feedback & Support
+                Feedback, Guide & Legal
               </h4>
               <button
                 type="button"
@@ -2739,10 +2785,42 @@ export function Sidebar({
               >
                 📋 View Bug Reports Feed
               </button>
+              <div className="grid grid-cols-2 gap-2 pt-0.5">
+                <button
+                  type="button"
+                  data-tour="sidebar-walkthrough"
+                  onClick={() => {
+                    if (onStartWalkthrough) {
+                      onStartWalkthrough();
+                    } else {
+                      handleCloseSidebar();
+                      triggerRabbitWalkthrough(0);
+                    }
+                  }}
+                  className="w-full py-2.5 px-2 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/75 border border-cyan-400/35 text-[11px] font-extrabold text-cyan-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  🧭 Replay Tour
+                </button>
+                <button
+                  type="button"
+                  data-tour="sidebar-tos"
+                  onClick={() => {
+                    if (onOpenTosModal) {
+                      onOpenTosModal();
+                    } else {
+                      handleCloseSidebar();
+                      triggerOpenTosModal(false);
+                    }
+                  }}
+                  className="w-full py-2.5 px-2 rounded-xl bg-black/60 hover:bg-white/[0.12] border border-white/15 text-[11px] font-extrabold text-slate-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  📜 Terms (ToS)
+                </button>
+              </div>
             </div>
 
             {/* UPDATE CHANNEL & ACTIONS */}
-            <div className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
+            <div data-tour="sidebar-updates" className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
               <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 px-1">
                 Update Channel
               </h4>
@@ -2782,7 +2860,7 @@ export function Sidebar({
             </div>
 
             {/* LICENSE STATUS */}
-            <div className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
+            <div data-tour="sidebar-license" className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
               <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 px-1">
                 License Status
               </h4>
