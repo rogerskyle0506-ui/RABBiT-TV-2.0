@@ -1,7 +1,8 @@
-// lib/adblocker.ts
+// src/lib/adblocker.ts
+import { getHardwareLimits, purgeOldTmdbCaches } from "./settings";
 
 /**
- * Ad / tracking / popup hosts.
+ * Ad / tracking / popup / popunder hosts.
  * Prefer exact host or subdomain matching.
  */
 const AD_DOMAINS = [
@@ -35,7 +36,7 @@ const AD_DOMAINS = [
   "pushnami.com",
   "pushengage.com",
   "onesignal.com",
-  // Additional streaming / popunder ad networks
+  // Streaming / vidsrc popunder & overlay ad networks
   "acscdn.com",
   "onclasrv.com",
   "realsrv.com",
@@ -54,6 +55,33 @@ const AD_DOMAINS = [
   "pushwhy.com",
   "dtscout.com",
   "histats.com",
+  "admaven.com",
+  "adspyglass.com",
+  "clickaine.com",
+  "trafficstars.com",
+  "popmyads.com",
+  "plugrush.com",
+  "pushhouse.com",
+  "kadam.net",
+  "zeropark.com",
+  "wpadmngr.com",
+  "highperformanceformat.com",
+  "topcreativeformat.com",
+  "profitablegate.com",
+  "effectivegatecpm.com",
+  "alwingulla.com",
+  "al5sm.com",
+  "fpyf8.com",
+  "bvtpk.com",
+  "dolohen.com",
+  "goomaphy.com",
+  "thaudray.com",
+  "inpagepush.com",
+  "pushub.net",
+  "a-ads.com",
+  "exdynsrv.com",
+  "bet365.com",
+  "1xbet.com",
 ];
 
 /**
@@ -85,11 +113,20 @@ const AD_HOST_KEYWORDS = [
   "evadav",
   "adskeeper",
   "adserver",
+  "admaven",
+  "adspyglass",
+  "clickaine",
+  "trafficstars",
+  "inpagepush",
+  "wpadmngr",
+  "profitablegate",
+  "effectivegate",
+  "casino",
+  "slots",
 ];
 
 /**
- * Scam / fake-captcha / reward-bait phrases.
- * Used both for URL checks and for parent-page text scanning.
+ * Scam / fake-captcha / reward-bait / fake-player overlay phrases.
  */
 const SCAM_TEXT_PATTERNS = [
   /confirm\s+(you'?re|you\s+are)\s+not\s+a\s+robot/i,
@@ -103,6 +140,9 @@ const SCAM_TEXT_PATTERNS = [
   /your\s+(device|phone|computer|system)\s+is\s+(infected|at\s+risk)/i,
   /update\s+your\s+(flash|video\s+player|browser|vpn)\s+to\s+continue/i,
   /allow\s+notifications\s+to\s+(watch|continue|play)/i,
+  /click\s+allow\s+to\s+(watch|verify|continue|play)/i,
+  /vpn\s+required\s+to\s+stream/i,
+  /disable\s+adblock\s+to\s+continue/i,
 ];
 
 /**
@@ -111,6 +151,8 @@ const SCAM_TEXT_PATTERNS = [
 const MALICIOUS_SCRIPT_SIGNATURES = [
   "aclib.runpop",
   "aclib.runauto",
+  "aclib.runinpagepush",
+  "aclib.runbanner",
   "atoptions",
   "popunder",
   "clickunder",
@@ -123,11 +165,16 @@ const MALICIOUS_SCRIPT_SIGNATURES = [
   "adcash",
   "_pop.push",
   "poperblocker",
+  "betterjspop",
+  "admaven",
+  "hilltopads",
+  "inpagepush",
+  "wpadmngr",
+  "__htapop",
 ];
 
 /**
- * uBlock Origin Scriptlet Globals (abort-on-property-read / abort-on-property-write targets)
- * These are the exact global objects streaming ad networks use to spawn popunders and overlays.
+ * uBlock Origin Scriptlet Globals (abort-on-property-read / write targets).
  */
 const UBLOCK_SCRIPTLET_TRAPS = [
   "aclib",
@@ -142,10 +189,19 @@ const UBLOCK_SCRIPTLET_TRAPS = [
   "pClick",
   "popAds",
   "propellerads",
+  "AdMaven",
+  "am_pop",
+  "PuJs",
+  "popMagic",
+  "popUnder",
+  "_wm_pop",
+  "wpadmngr",
+  "zfgloadedpopup",
+  "zfgloadedpush",
 ];
 
 /**
- * uBlock Origin & Upstream Filter List URLs (CORS-friendly raw & GitHub Pages mirrors)
+ * uBlock Origin & Upstream Filter List URLs (CORS-friendly raw mirrors).
  */
 const UBLOCK_ORIGIN_FILTER_URLS = [
   "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt",
@@ -159,14 +215,78 @@ const UBLOCK_ORIGIN_FILTER_URLS = [
   "https://easylist.to/easylist/easyprivacy.txt",
 ];
 
-const UBLOCK_CACHE_STORAGE_KEY = "rabtv_ublock_cached_rules_v1";
+// Uses rabtv_cache_ prefix so settings.ts purgeOldTmdbCaches() can safely reclaim space on 1-2GB sticks
+const UBLOCK_CACHE_STORAGE_KEY = "rabtv_cache_ublock_rules_v2";
 const UBLOCK_CACHE_TTL_MS = 1000 * 60 * 60 * 12; // 12 hours
+const UBLOCK_FETCH_TIMEOUT_MS = 6500;
 
-// Sets storing dynamic network rules and cosmetic DOM selectors parsed from uBlock Origin & EasyList files
+export interface AdBlockerStats {
+  blockedOverlays: number;
+  blockedPopups: number;
+  blockedNetwork: number;
+  blockedScripts: number;
+  blockedForms: number;
+  totalBlocked: number;
+  loadedNetworkRules: number;
+  loadedCosmeticRules: number;
+}
+
+const sessionStats = {
+  blockedOverlays: 0,
+  blockedPopups: 0,
+  blockedNetwork: 0,
+  blockedScripts: 0,
+  blockedForms: 0,
+};
+
+let lastStatsEmitAt = 0;
+
+function recordBlock(
+  category:
+    | "blockedOverlays"
+    | "blockedPopups"
+    | "blockedNetwork"
+    | "blockedScripts"
+    | "blockedForms"
+): void {
+  sessionStats[category]++;
+  if (typeof window !== "undefined") {
+    const now = Date.now();
+    if (now - lastStatsEmitAt > 600) {
+      lastStatsEmitAt = now;
+      window.dispatchEvent(
+        new CustomEvent("rabtv_adblock_stats_updated", {
+          detail: getAdBlockerStats(),
+        })
+      );
+    }
+  }
+}
+
+export function getAdBlockerStats(): AdBlockerStats {
+  const totalBlocked =
+    sessionStats.blockedOverlays +
+    sessionStats.blockedPopups +
+    sessionStats.blockedNetwork +
+    sessionStats.blockedScripts +
+    sessionStats.blockedForms;
+
+  return {
+    ...sessionStats,
+    totalBlocked,
+    loadedNetworkRules: dynamicBlockRules.size,
+    loadedCosmeticRules: dynamicCosmeticSelectors.size,
+  };
+}
+
 let dynamicBlockRules: Set<string> = new Set();
 let dynamicCosmeticSelectors: Set<string> = new Set();
 let listsLoaded = false;
 let listsLoadingPromise: Promise<void> | null = null;
+
+// Track all pierced ShadowRoots so our sweep & cleanup handle them cleanly
+const trackedShadowRoots = new Set<ShadowRoot>();
+const shadowObservers = new Map<ShadowRoot, MutationObserver>();
 
 /**
  * Hydrates cached uBlock rules from localStorage immediately (0ms delay on page load).
@@ -202,45 +322,42 @@ function hydrateCachedUBlockRules(): boolean {
 }
 
 /**
- * Saves parsed uBlock rules to localStorage (capped to prevent quota overflow).
+ * Saves parsed uBlock rules to localStorage (RAM & quota safe for 1-2GB sticks).
  */
 function persistUBlockRulesToCache(): void {
   if (typeof window === "undefined") return;
+  const isLowRam = getHardwareLimits().effectiveMode === "low";
+  const maxNet = isLowRam ? 8000 : 15000;
+  const maxCosmetic = isLowRam ? 1500 : 3000;
+
+  const serialized = JSON.stringify({
+    timestamp: Date.now(),
+    networkRules: Array.from(dynamicBlockRules).slice(0, maxNet),
+    cosmeticSelectors: Array.from(dynamicCosmeticSelectors).slice(
+      0,
+      maxCosmetic
+    ),
+  });
+
   try {
-    const networkRules = Array.from(dynamicBlockRules).slice(0, 15000);
-    const cosmeticSelectors = Array.from(dynamicCosmeticSelectors).slice(0, 3000);
-    localStorage.setItem(
-      UBLOCK_CACHE_STORAGE_KEY,
-      JSON.stringify({
-        timestamp: Date.now(),
-        networkRules,
-        cosmeticSelectors,
-      })
-    );
+    localStorage.setItem(UBLOCK_CACHE_STORAGE_KEY, serialized);
   } catch {
-    // Ignore localStorage quota errors
+    try {
+      purgeOldTmdbCaches();
+      localStorage.setItem(UBLOCK_CACHE_STORAGE_KEY, serialized);
+    } catch {
+      // Fall back to in-memory rules only
+    }
   }
 }
 
-/**
- * Injects parsed uBlock Origin `##selector` cosmetic rules directly into a dedicated DOM <style> tag
- * while strictly excluding any selector that could touch vidsrc or iframes.
- */
-function injectDynamicUBlockCosmeticStyles(): void {
-  if (typeof document === "undefined" || dynamicCosmeticSelectors.size === 0) {
-    return;
-  }
-
-  const styleId = "rab-ublock-cosmetic-styles";
-  let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
-  if (!styleEl) {
-    styleEl = document.createElement("style");
-    styleEl.id = styleId;
-    document.head.appendChild(styleEl);
-  }
-
-  // Batch up to 2,500 safe cosmetic selectors with :not([class*="vidsrc"]) protection
-  const safeSelectors = Array.from(dynamicCosmeticSelectors).slice(0, 2500);
+function buildCosmeticCssText(): string {
+  if (dynamicCosmeticSelectors.size === 0) return "";
+  const isLowRam = getHardwareLimits().effectiveMode === "low";
+  const safeSelectors = Array.from(dynamicCosmeticSelectors).slice(
+    0,
+    isLowRam ? 1200 : 2500
+  );
   const chunkedCss: string[] = [];
   const chunkSize = 250;
 
@@ -250,8 +367,43 @@ function injectDynamicUBlockCosmeticStyles(): void {
       `${slice.join(",\n")} {\n  display: none !important;\n  visibility: hidden !important;\n  opacity: 0 !important;\n  pointer-events: none !important;\n}`
     );
   }
+  return chunkedCss.join("\n\n");
+}
 
-  styleEl.textContent = chunkedCss.join("\n\n");
+/**
+ * Injects parsed uBlock Origin `##selector` cosmetic rules into document.head
+ * and any tracked ShadowRoots while strictly excluding vidsrc and protected RABBiT TV nodes.
+ */
+function injectDynamicUBlockCosmeticStyles(): void {
+  if (typeof document === "undefined" || dynamicCosmeticSelectors.size === 0) {
+    return;
+  }
+
+  const cssText = buildCosmeticCssText();
+  const styleId = "rab-ublock-cosmetic-styles";
+  let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+  if (!styleEl) {
+    styleEl = document.createElement("style");
+    styleEl.id = styleId;
+    styleEl.className = "rabtv-vidsrc-protected";
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = cssText;
+
+  // Also keep pierced ShadowRoots updated
+  trackedShadowRoots.forEach((root) => {
+    try {
+      let s = root.getElementById(styleId) as HTMLStyleElement | null;
+      if (!s) {
+        s = document.createElement("style");
+        s.id = styleId;
+        root.appendChild(s);
+      }
+      s.textContent = cssText;
+    } catch {
+      // Ignore detached shadow roots
+    }
+  });
 }
 
 /**
@@ -284,12 +436,13 @@ function parseUBlockFilterText(text: string): void {
         selector.length < 75 &&
         /^[.#a-zA-Z0-9_\-[\]="*^$|~+> ]+$/.test(selector)
       ) {
-        dynamicCosmeticSelectors.add(`${selector}:not([class*="vidsrc" i]):not([id*="vidsrc" i])`);
+        dynamicCosmeticSelectors.add(
+          `${selector}:not(.rabtv-vidsrc-protected):not([class*="vidsrc" i]):not([id*="vidsrc" i])`
+        );
       }
       continue;
     }
 
-    // Skip site-specific cosmetic rules, scriptlet lines, or exception rules
     if (
       trimmed.includes("##") ||
       trimmed.includes("#@#") ||
@@ -307,25 +460,20 @@ function parseUBlockFilterText(text: string): void {
       rule = rule.replace(/^\|https?:\/\//i, "");
     }
 
-    if (rule.includes("^")) {
-      rule = rule.split("^")[0];
-    }
-    if (rule.includes("$")) {
-      rule = rule.split("$")[0];
-    }
-    if (rule.includes("/")) {
-      rule = rule.split("/")[0];
-    }
+    if (rule.includes("^")) rule = rule.split("^")[0];
+    if (rule.includes("$")) rule = rule.split("$")[0];
+    if (rule.includes("/")) rule = rule.split("/")[0];
 
-    // Store clean hostnames that won't false-positive
     if (
       rule.length > 4 &&
       rule.includes(".") &&
       !rule.includes("*") &&
       !rule.includes("vidsrc") &&
       !rule.includes("themoviedb") &&
+      !rule.includes("tmdb") &&
       !rule.includes("youtube") &&
-      !rule.includes("github")
+      !rule.includes("github") &&
+      !rule.includes("mjh.nz")
     ) {
       dynamicBlockRules.add(rule.toLowerCase());
     }
@@ -333,17 +481,13 @@ function parseUBlockFilterText(text: string): void {
 }
 
 /**
- * Asynchronously fetches and parses official uBlock Origin and EasyList filter list repositories.
- * Uses Promise.allSettled so a single CORS failure never stops the other lists from loading.
+ * Asynchronously fetches and parses official uBlock Origin and EasyList filter lists
+ * with strict per-request AbortController timeouts so slow TV Wi-Fi never stalls boot.
  */
 export async function updateUBlockLists(): Promise<void> {
   if (typeof window === "undefined") return;
 
-  // Hydrate from localStorage cache immediately if available
   if (hydrateCachedUBlockRules()) {
-    console.log(
-      `[uBlock Origin Integration] Hydrated ${dynamicBlockRules.size} network rules and ${dynamicCosmeticSelectors.size} cosmetic selectors from cache.`
-    );
     return;
   }
 
@@ -353,9 +497,18 @@ export async function updateUBlockLists(): Promise<void> {
   listsLoadingPromise = (async () => {
     try {
       const fetchPromises = UBLOCK_ORIGIN_FILTER_URLS.map(async (url) => {
-        const response = await fetch(url);
-        if (!response.ok) return "";
-        return await response.text();
+        const controller = new AbortController();
+        const timer = window.setTimeout(
+          () => controller.abort(),
+          UBLOCK_FETCH_TIMEOUT_MS
+        );
+        try {
+          const response = await fetch(url, { signal: controller.signal });
+          if (!response.ok) return "";
+          return await response.text();
+        } finally {
+          window.clearTimeout(timer);
+        }
       });
 
       const results = await Promise.allSettled(fetchPromises);
@@ -369,9 +522,6 @@ export async function updateUBlockLists(): Promise<void> {
         listsLoaded = true;
         injectDynamicUBlockCosmeticStyles();
         persistUBlockRulesToCache();
-        console.log(
-          `[uBlock Origin Integration] Successfully loaded ${dynamicBlockRules.size} network rules and ${dynamicCosmeticSelectors.size} DOM cosmetic selectors.`
-        );
       }
     } catch (error) {
       console.error("[uBlock Origin Integration] Failed to update lists:", error);
@@ -384,8 +534,8 @@ export async function updateUBlockLists(): Promise<void> {
 }
 
 /**
- * uBlock Origin Scriptlet Engine (`+js(abort-on-property-read)` & `+js(abort-on-property-write)`):
- * Traps global variables used by popunder/overlay scripts so they throw or no-op upon access.
+ * uBlock Origin Scriptlet Engine:
+ * Traps global variables used by popunder/overlay scripts so calls silently no-op.
  */
 function installUBlockScriptletTraps(): void {
   if (typeof window === "undefined") return;
@@ -400,7 +550,6 @@ function installUBlockScriptletTraps(): void {
         }
       }
 
-      // Create a harmless Proxy trap so any property call like `aclib.runPop()` silently no-ops
       const inertProxy: any = new Proxy(() => inertProxy, {
         get: () => inertProxy,
         set: () => true,
@@ -411,11 +560,11 @@ function installUBlockScriptletTraps(): void {
       Object.defineProperty(window, prop, {
         configurable: true,
         get() {
-          console.warn(`[uBlock Scriptlet] Neutralized access to ad global: window.${prop}`);
+          recordBlock("blockedScripts");
           return inertProxy;
         },
         set() {
-          console.warn(`[uBlock Scriptlet] Blocked write to ad global: window.${prop}`);
+          recordBlock("blockedScripts");
           return true;
         },
       });
@@ -426,50 +575,49 @@ function installUBlockScriptletTraps(): void {
 }
 
 /**
- * Robust check – prefers host matching, falls back carefully.
+ * Robust ad URL matcher – O(1) uBlock domain lookup + static lists + host keywords.
  */
-function isAdUrl(urlStr: string): boolean {
+export function isAdUrl(urlStr: string): boolean {
   if (!urlStr) return false;
 
   const lowerUrl = urlStr.toLowerCase().trim();
 
-  // Never block vidsrc or TMDB or YouTube or GitHub assets
+  // Never block vidsrc, TMDB, YouTube, GitHub assets, or live TV feeds
   if (
     lowerUrl.includes("vidsrc") ||
     lowerUrl.includes("themoviedb.org") ||
     lowerUrl.includes("tmdb.org") ||
     lowerUrl.includes("youtube.com") ||
     lowerUrl.includes("youtube-nocookie.com") ||
-    lowerUrl.includes("githubusercontent.com")
+    lowerUrl.includes("githubusercontent.com") ||
+    lowerUrl.includes("api.github.com") ||
+    lowerUrl.includes("mjh.nz")
   ) {
     return false;
   }
 
-  // Block javascript: or suspicious data: popups
   if (lowerUrl.startsWith("javascript:")) {
     return true;
   }
 
-  // 1. Check dynamic rules fetched from uBlock Origin and EasyList sources (O(1) domain lookup)
   if (dynamicBlockRules.size > 0) {
     try {
       const parsed = new URL(
         urlStr,
-        typeof window !== "undefined" ? window.location.origin : "https://localhost"
+        typeof window !== "undefined"
+          ? window.location.origin
+          : "https://localhost"
       );
       const host = parsed.hostname.toLowerCase();
-      if (dynamicBlockRules.has(host)) {
-        return true;
-      }
+      if (dynamicBlockRules.has(host)) return true;
       const parts = host.split(".");
       for (let i = 1; i < parts.length - 1; i++) {
-        const sub = parts.slice(i).join(".");
-        if (dynamicBlockRules.has(sub)) {
+        if (dynamicBlockRules.has(parts.slice(i).join("."))) {
           return true;
         }
       }
     } catch {
-      // Fallback if URL parsing fails
+      // Fallback below
     }
   }
 
@@ -480,34 +628,25 @@ function isAdUrl(urlStr: string): boolean {
     );
     const host = url.hostname.toLowerCase();
 
-    // 2. Exact / subdomain host match against static AD_DOMAINS
-    if (AD_DOMAINS.some((domain) => host === domain || host.endsWith("." + domain))) {
+    if (
+      AD_DOMAINS.some(
+        (domain) => host === domain || host.endsWith("." + domain)
+      )
+    ) {
       return true;
     }
 
-    // 3. Keyword match only on the host (safer than path matching)
     if (AD_HOST_KEYWORDS.some((kw) => host.includes(kw))) {
       return true;
     }
 
     return false;
   } catch {
-    // Very defensive fallback
     return (
       AD_DOMAINS.some((d) => lowerUrl.includes(d)) ||
       AD_HOST_KEYWORDS.some((kw) => lowerUrl.includes(kw))
     );
   }
-}
-
-/**
- * Quick text scan – useful if the ad ever injects content into the parent
- * or if a second overlay is created outside the iframe.
- */
-function pageContainsScamText(): boolean {
-  if (typeof document === "undefined") return false;
-  const text = document.body?.innerText || "";
-  return SCAM_TEXT_PATTERNS.some((re) => re.test(text));
 }
 
 /**
@@ -518,16 +657,15 @@ export function shouldAllowExternalNavigation(url: string): boolean {
 
   const lowerUrl = url.toLowerCase().trim();
 
-  // Block empty, about:blank, or javascript: popups
   if (
     lowerUrl === "about:blank" ||
     lowerUrl.startsWith("javascript:") ||
-    lowerUrl.startsWith("blob:")
+    lowerUrl.startsWith("blob:") ||
+    lowerUrl.startsWith("data:")
   ) {
     return false;
   }
 
-  // Allowed protocols / apps
   if (lowerUrl.startsWith("tel:") || lowerUrl.startsWith("sms:")) return true;
 
   if (
@@ -541,7 +679,8 @@ export function shouldAllowExternalNavigation(url: string): boolean {
 
   // GitHub releases / raw / your own repo
   if (
-    (lowerUrl.includes("github.com") || lowerUrl.includes("githubusercontent.com")) &&
+    (lowerUrl.includes("github.com") ||
+      lowerUrl.includes("githubusercontent.com")) &&
     (lowerUrl.includes("/releases/download/") ||
       lowerUrl.includes("/releases/latest") ||
       lowerUrl.includes("raw.githubusercontent.com") ||
@@ -550,8 +689,11 @@ export function shouldAllowExternalNavigation(url: string): boolean {
     return true;
   }
 
-  // Allow official IMDb listing links clicked intentionally by the user
-  if (lowerUrl.includes("imdb.com/title/") || lowerUrl.includes("imdb.com/find")) {
+  // Official IMDb links intentionally clicked by the user
+  if (
+    lowerUrl.includes("imdb.com/title/") ||
+    lowerUrl.includes("imdb.com/find")
+  ) {
     return true;
   }
 
@@ -567,14 +709,13 @@ export function shouldAllowExternalNavigation(url: string): boolean {
     }
   }
 
-  // On the details/player page we are extremely strict against any other external navigation
+  // Strict lock on /details and /player pages against any other external redirect
   const currentPath =
     typeof window !== "undefined" ? window.location.pathname : "";
   if (currentPath.includes("/details") || currentPath.includes("/player")) {
     return false;
   }
 
-  // Explicit ad / scam block
   if (isAdUrl(url)) {
     return false;
   }
@@ -593,6 +734,7 @@ export function handleExternalUrlIntent(
     return true;
   }
 
+  recordBlock("blockedPopups");
   if (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -604,15 +746,34 @@ export function handleExternalUrlIntent(
 }
 
 /**
+ * Checks if a DOM node was genuinely rendered by React (via React 18+ Fiber keys).
+ * Foreign ad overlays injected into #root or <body> NEVER possess React Fiber keys.
+ */
+function hasReactFiberSignature(element: Element | null): boolean {
+  if (!element) return false;
+  const keys = Object.keys(element);
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    if (
+      k.startsWith("__reactFiber$") ||
+      k.startsWith("__reactProps$") ||
+      k.startsWith("__reactContainer$") ||
+      k.startsWith("__reactInternalInstance$")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * ABSOLUTE PROHIBITION COMPLIANCE:
  * Determines if an element IS the VIDSRC iframe, its direct wrapper container,
- * or an ancestor that contains the VIDSRC iframe (so we never delete the page wrapper).
- * ABSOLUTE PROHIBITION COMPLIANCE: Never touch or affect vidsrc or its container.
+ * or an ancestor containing the VIDSRC iframe. Never touch or modify vidsrc.
  */
 function isVidsrcRelated(element: Element | null): boolean {
   if (!element) return false;
 
-  // 1. If this element ITSELF contains the vidsrc iframe (e.g., body, #root, .player-view-wrapper, .video-player-container),
-  // protect it so we never delete an ancestor of the player.
   if (
     element.querySelector &&
     element.querySelector('iframe[src*="vidsrc"], iframe[src*="youtube"]')
@@ -620,8 +781,6 @@ function isVidsrcRelated(element: Element | null): boolean {
     return true;
   }
 
-  // 2. Walk up the tree ONLY to check if this element is the vidsrc iframe itself
-  // or has an explicit vidsrc id/class.
   let current: Element | null = element;
   while (current) {
     if (current.tagName === "IFRAME") {
@@ -654,61 +813,86 @@ function isVidsrcRelated(element: Element | null): boolean {
 }
 
 /**
- * Checks if an element is part of RABBiT TV's legitimate React UI
- * so aggressive DOM sweeps only destroy foreign injected ad overlays.
+ * Strictly verifies whether an element is part of RABBiT TV's legitimate React UI.
+ * Closes the #root loophole by requiring React Fiber keys or explicit rabtv-vidsrc-protected tagging.
  */
 function isLegitimateAppElement(element: Element | null): boolean {
   if (!element) return false;
   if (isVidsrcRelated(element)) return true;
 
-  // Protect core root and player containers
   if (
     element === document.body ||
     element === document.documentElement ||
     element.id === "root" ||
     element.id === "app" ||
     element.classList.contains("player-view-wrapper") ||
-    element.classList.contains("video-player-container")
+    element.classList.contains("video-player-container") ||
+    element.classList.contains("rabtv-vidsrc-protected") ||
+    Boolean(element.closest(".rabtv-vidsrc-protected"))
   ) {
     return true;
   }
 
-  // Protect legitimate app elements inside .player-view-wrapper or details view
-  if (element.closest(".player-view-wrapper") || element.closest("#root")) {
-    const tag = element.tagName.toLowerCase();
-    if (tag === "ins") return false;
-    if (tag === "iframe" && !isVidsrcRelated(element)) return false;
-    if (tag === "a") {
-      const href = (element as HTMLAnchorElement).href || "";
-      if (href && !shouldAllowExternalNavigation(href)) {
-        return false;
-      }
+  const tag = element.tagName.toLowerCase();
+  if (tag === "ins") return false;
+  if (tag === "iframe" && !isVidsrcRelated(element)) return false;
+
+  if (tag === "a") {
+    const href =
+      element.getAttribute("href") || (element as HTMLAnchorElement).href || "";
+    if (href && !shouldAllowExternalNavigation(href)) {
+      return false;
     }
+  }
+
+  // Genuine React-owned DOM elements carry internal React Fiber keys
+  if (hasReactFiberSignature(element)) {
+    return true;
+  }
+
+  // Core semantic layout tags & our own injected style tags
+  if (
+    tag === "header" ||
+    tag === "main" ||
+    tag === "nav" ||
+    tag === "footer" ||
+    (tag === "style" &&
+      (element.id === "rab-industrial-adblock-styles" ||
+        element.id === "rab-ublock-cosmetic-styles"))
+  ) {
     return true;
   }
 
   return false;
 }
 
+/**
+ * Fast, targeted scam-text check on a single foreign node (never triggers full-page reflows).
+ */
+function nodeContainsScamText(node: HTMLElement): boolean {
+  const txt = (node.textContent || "").trim();
+  if (txt.length < 10 || txt.length > 1500) return false;
+  return SCAM_TEXT_PATTERNS.some((re) => re.test(txt));
+}
+
 const ADBLOCK_CSS_RULES = `
-  /* Industrial Ad Neutralization Styles (2025-2026 Standards) */
-  div[class*="banner" i]:not([class*="vidsrc" i]),
-  div[class*="popup" i]:not([class*="vidsrc" i]),
-  div[class*="popunder" i]:not([class*="vidsrc" i]),
-  div[class*="overlay-ad" i]:not([class*="vidsrc" i]),
-  div[class*="ad-overlay" i]:not([class*="vidsrc" i]),
-  div[class*="advert" i]:not([class*="vidsrc" i]),
-  div[class*="sponsored" i]:not([class*="vidsrc" i]),
-  div[id*="banner" i]:not([id*="vidsrc" i]),
-  div[id*="popup" i]:not([id*="vidsrc" i]),
-  div[id*="popunder" i]:not([id*="vidsrc" i]),
-  div[id*="overlay-ad" i]:not([id*="vidsrc" i]),
-  div[id*="ad-overlay" i]:not([id*="vidsrc" i]),
-  div[id*="ads-" i]:not([id*="vidsrc" i]),
-  div[id*="-ads" i]:not([id*="vidsrc" i]),
-  aside:not([class*="vidsrc" i]):not([id*="vidsrc" i]),
+  /* Industrial Ad & Clickjacking Neutralization Styles (Protects vidsrc & RABBiT TV UI) */
+  div[class*="banner" i]:not(.rabtv-vidsrc-protected):not([class*="vidsrc" i]),
+  div[class*="popup" i]:not(.rabtv-vidsrc-protected):not([class*="vidsrc" i]),
+  div[class*="popunder" i]:not(.rabtv-vidsrc-protected):not([class*="vidsrc" i]),
+  div[class*="overlay-ad" i]:not(.rabtv-vidsrc-protected):not([class*="vidsrc" i]),
+  div[class*="ad-overlay" i]:not(.rabtv-vidsrc-protected):not([class*="vidsrc" i]),
+  div[class*="advert" i]:not(.rabtv-vidsrc-protected):not([class*="vidsrc" i]),
+  div[class*="sponsored" i]:not(.rabtv-vidsrc-protected):not([class*="vidsrc" i]),
+  div[id*="banner" i]:not(.rabtv-vidsrc-protected):not([id*="vidsrc" i]),
+  div[id*="popup" i]:not(.rabtv-vidsrc-protected):not([id*="vidsrc" i]),
+  div[id*="popunder" i]:not(.rabtv-vidsrc-protected):not([id*="vidsrc" i]),
+  div[id*="overlay-ad" i]:not(.rabtv-vidsrc-protected):not([id*="vidsrc" i]),
+  div[id*="ad-overlay" i]:not(.rabtv-vidsrc-protected):not([id*="vidsrc" i]),
+  div[id*="ads-" i]:not(.rabtv-vidsrc-protected):not([id*="vidsrc" i]),
+  div[id*="-ads" i]:not(.rabtv-vidsrc-protected):not([id*="vidsrc" i]),
   ins.adsbygoogle,
-  a[target="_blank"]:not([href*="imdb.com"]):not([href*="github.com"]):not([href*="whatsapp.com"]):not([href*="wa.me"]),
+  a[target="_blank"]:not(.rabtv-vidsrc-protected):not([href*="imdb.com"]):not([href*="github.com"]):not([href*="whatsapp.com"]):not([href*="wa.me"]),
   iframe[src*="doubleclick.net"],
   iframe[src*="googlesyndication.com"],
   iframe[src*="popads.net"],
@@ -722,7 +906,9 @@ const ADBLOCK_CSS_RULES = `
   iframe[src*="onclasrv.com"],
   iframe[src*="realsrv.com"],
   iframe[src*="magsrv.com"],
-  iframe[src="about:blank"]:not([class*="vidsrc" i]):not([id*="vidsrc" i]) {
+  iframe[src*="admaven.com"],
+  iframe[src*="hilltopads.com"],
+  iframe[src="about:blank"]:not(.rabtv-vidsrc-protected):not([class*="vidsrc" i]):not([id*="vidsrc" i]) {
     display: none !important;
     opacity: 0 !important;
     visibility: hidden !important;
@@ -736,18 +922,15 @@ const ADBLOCK_CSS_RULES = `
   }
 `;
 
-/**
- * Injects industrial-strength CSS rules to neutralize ad overlays and floating elements
- * while completely omitting any selector that targets vidsrc elements or containers.
- */
 function injectAggressiveAdblockStyles(): HTMLStyleElement | null {
   if (typeof document === "undefined") return null;
 
   const styleId = "rab-industrial-adblock-styles";
-  let styleEl = document.getElementById(styleId) as HTMLStyleElement;
+  let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
   if (!styleEl) {
     styleEl = document.createElement("style");
     styleEl.id = styleId;
+    styleEl.className = "rabtv-vidsrc-protected";
     document.head.appendChild(styleEl);
   }
 
@@ -756,65 +939,12 @@ function injectAggressiveAdblockStyles(): HTMLStyleElement | null {
 }
 
 /**
- * DOM Attack #1: Geometric Bounding-Box Hit-Testing Radar.
- * Samples 9 coordinate points across the video player container using document.elementsFromPoint().
- * Any foreign overlay floating over the vidsrc player is immediately neutralized.
- */
-function scanAndDestroyPlayerOverlays(): void {
-  if (typeof document === "undefined" || typeof window === "undefined") return;
-
-  const playerContainer = document.querySelector(".video-player-container");
-  if (!playerContainer) return;
-
-  const rect = playerContainer.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) return;
-
-  // Sample 9 points (center, 4 corners, 4 midpoints) over the video player
-  const samplePoints: [number, number][] = [
-    [rect.left + rect.width * 0.5, rect.top + rect.height * 0.5],
-    [rect.left + rect.width * 0.2, rect.top + rect.height * 0.2],
-    [rect.left + rect.width * 0.8, rect.top + rect.height * 0.2],
-    [rect.left + rect.width * 0.2, rect.top + rect.height * 0.8],
-    [rect.left + rect.width * 0.8, rect.top + rect.height * 0.8],
-    [rect.left + rect.width * 0.5, rect.top + 15],
-    [rect.left + rect.width * 0.5, rect.bottom - 15],
-    [rect.left + 15, rect.top + rect.height * 0.5],
-    [rect.right - 15, rect.top + rect.height * 0.5],
-  ];
-
-  for (const [x, y] of samplePoints) {
-    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
-      continue;
-    }
-
-    const hitElements = document.elementsFromPoint(x, y);
-    for (const el of hitElements) {
-      // Stop once we hit the legitimate vidsrc iframe or player container
-      if (
-        el.tagName === "IFRAME" &&
-        ((el as HTMLIFrameElement).src || "").toLowerCase().includes("vidsrc")
-      ) {
-        break;
-      }
-      if (el === playerContainer) {
-        break;
-      }
-
-      // If an element sits ABOVE the vidsrc iframe in the z-stack:
-      if (!isLegitimateAppElement(el)) {
-        console.warn("[AdBlocker DOM Radar] Destroyed overlay sitting above player:", el);
-        killDomElement(el as HTMLElement);
-      }
-    }
-  }
-}
-
-/**
- * Helper to completely neutralize and remove a malicious DOM node.
+ * Completely neutralizes and removes a malicious foreign DOM node.
  */
 function killDomElement(el: HTMLElement): void {
   if (!el || isVidsrcRelated(el)) return;
   try {
+    recordBlock("blockedOverlays");
     el.style.setProperty("display", "none", "important");
     el.style.setProperty("pointer-events", "none", "important");
     el.style.setProperty("visibility", "hidden", "important");
@@ -829,8 +959,8 @@ function killDomElement(el: HTMLElement): void {
 }
 
 /**
- * Inspects a single DOM element to see if it behaves like an ad overlay,
- * clickjacking layer, rogue iframe, or malicious script.
+ * Inspects a single DOM element (or Shadow DOM element) to detect ad overlays,
+ * invisible clickjacking traps, rogue iframes, fake forms, scam prompts, or ad scripts.
  */
 function isSuspiciousDomOverlay(node: HTMLElement): boolean {
   if (!node || isVidsrcRelated(node)) return false;
@@ -849,6 +979,7 @@ function isSuspiciousDomOverlay(node: HTMLElement): boolean {
       !src.includes("youtube") &&
       (src === "" ||
         src === "about:blank" ||
+        src.startsWith("javascript:") ||
         srcdoc.length > 0 ||
         isAdUrl(src))
     ) {
@@ -876,7 +1007,24 @@ function isSuspiciousDomOverlay(node: HTMLElement): boolean {
     return true;
   }
 
-  // 4. High-confidence class/id ad patterns
+  // 4. Hidden popup <form target="_blank" action="ad-host">
+  if (tagName === "form") {
+    const action = node.getAttribute("action") || "";
+    const target = (node.getAttribute("target") || "").toLowerCase();
+    if (
+      (action && !shouldAllowExternalNavigation(action)) ||
+      (target === "_blank" && !isLegitimateAppElement(node))
+    ) {
+      return true;
+    }
+  }
+
+  // If verified as a genuine React / protected RABBiT TV UI element, stop here
+  if (isLegitimateAppElement(node)) {
+    return false;
+  }
+
+  // 5. High-confidence class/id ad patterns
   if (
     className.includes("popunder") ||
     className.includes("popup-ad") ||
@@ -884,6 +1032,7 @@ function isSuspiciousDomOverlay(node: HTMLElement): boolean {
     className.includes("ad-overlay") ||
     className.includes("ad-banner") ||
     className.includes("clickunder") ||
+    className.includes("adblock-overlay") ||
     id.includes("popunder") ||
     id.includes("overlay-ad") ||
     id.includes("ad-overlay")
@@ -891,7 +1040,12 @@ function isSuspiciousDomOverlay(node: HTMLElement): boolean {
     return true;
   }
 
-  // 5. Direct children of <body> injected outside #root (classic ad-script injection zone)
+  // 6. Scam / fake-captcha / fake-player text injected into foreign node
+  if (nodeContainsScamText(node)) {
+    return true;
+  }
+
+  // 7. Direct foreign children of <body> outside #root
   if (
     node.parentElement === document.body &&
     node.id !== "root" &&
@@ -903,27 +1057,33 @@ function isSuspiciousDomOverlay(node: HTMLElement): boolean {
     return true;
   }
 
-  // 6. Computed style check for invisible / high-z-index full-screen clickjackers
+  // 8. Foreign high-z-index, invisible, or viewport/player-overlapping clickjackers
+  // Catches <div>, <a>, <canvas>, <svg>, <label>, <section> overlays even inside #root!
   try {
     const style = window.getComputedStyle(node);
     const zIndex = parseInt(style.zIndex, 10);
     const isPositioned =
-      style.position === "fixed" || style.position === "absolute";
+      style.position === "fixed" ||
+      style.position === "absolute" ||
+      style.position === "sticky";
 
-    if (isPositioned && !isLegitimateAppElement(node)) {
+    if (isPositioned) {
       const rect = node.getBoundingClientRect();
-      const coversLargeArea =
-        rect.width >= window.innerWidth * 0.25 &&
-        rect.height >= window.innerHeight * 0.25;
-      const isInvisibleClickLayer =
+      const coversSignificantArea =
+        rect.width >= window.innerWidth * 0.2 &&
+        rect.height >= window.innerHeight * 0.2;
+      const isTransparentShield =
         style.opacity === "0" ||
-        parseFloat(style.opacity) < 0.05 ||
+        parseFloat(style.opacity) < 0.08 ||
         style.backgroundColor === "rgba(0, 0, 0, 0)" ||
         style.backgroundColor === "transparent";
+      const hasSuspiciousCursor =
+        style.cursor === "pointer" && coversSignificantArea;
 
       if (
-        (!isNaN(zIndex) && zIndex > 999) ||
-        (coversLargeArea && isInvisibleClickLayer)
+        (!isNaN(zIndex) && zIndex >= 900) ||
+        (coversSignificantArea && (isTransparentShield || hasSuspiciousCursor)) ||
+        (tagName === "a" && rect.width > 120 && rect.height > 120)
       ) {
         return true;
       }
@@ -936,23 +1096,177 @@ function isSuspiciousDomOverlay(node: HTMLElement): boolean {
 }
 
 /**
- * Self-contained ad-blocking interceptor suite with enhanced overlay and popup neutralization,
- * integrated with uBlock Origin and EasyList filter list feeds + uBlock Scriptlet traps.
+ * Inspects a single hit element (and pierces into its open ShadowRoot if present).
+ */
+function inspectHitStackAtPoint(
+  elements: Element[],
+  x: number,
+  y: number,
+  playerContainer: Element
+): void {
+  for (const el of elements) {
+    if (
+      el.tagName === "IFRAME" &&
+      ((el as HTMLIFrameElement).src || "").toLowerCase().includes("vidsrc")
+    ) {
+      break;
+    }
+    if (el === playerContainer) {
+      break;
+    }
+
+    // If this element hosts an open Shadow DOM, pierce inside it recursively
+    if (el.shadowRoot && typeof el.shadowRoot.elementsFromPoint === "function") {
+      try {
+        const shadowHits = el.shadowRoot.elementsFromPoint(x, y);
+        for (const sEl of shadowHits) {
+          if (
+            sEl instanceof HTMLElement &&
+            sEl !== el &&
+            !isLegitimateAppElement(sEl)
+          ) {
+            killDomElement(sEl);
+          }
+        }
+      } catch {
+        // ignore shadow hit-test errors
+      }
+    }
+
+    // Foreign element sitting ABOVE the vidsrc iframe in the visual z-stack
+    if (el instanceof HTMLElement && !isLegitimateAppElement(el)) {
+      console.warn(
+        "[AdBlocker 13-Point Radar] Destroyed overlay sitting above player:",
+        el
+      );
+      killDomElement(el);
+    }
+  }
+}
+
+/**
+ * DOM Attack #1: 13-Point Geometric Bounding-Box Hit-Testing Radar (with Shadow DOM piercing).
+ * Samples 13 coordinates across the player container and destroys any foreign element floating above it.
+ */
+function scanAndDestroyPlayerOverlays(): void {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+
+  const playerContainer = document.querySelector(".video-player-container");
+  if (!playerContainer) return;
+
+  const rect = playerContainer.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return;
+
+  const samplePoints: [number, number][] = [
+    // Center + Inner Play-Button Ring (most common clickjacking zone!)
+    [rect.left + rect.width * 0.5, rect.top + rect.height * 0.5],
+    [rect.left + rect.width * 0.42, rect.top + rect.height * 0.5],
+    [rect.left + rect.width * 0.58, rect.top + rect.height * 0.5],
+    [rect.left + rect.width * 0.5, rect.top + rect.height * 0.38],
+    [rect.left + rect.width * 0.5, rect.top + rect.height * 0.62],
+    // Quadrants
+    [rect.left + rect.width * 0.2, rect.top + rect.height * 0.2],
+    [rect.left + rect.width * 0.8, rect.top + rect.height * 0.2],
+    [rect.left + rect.width * 0.2, rect.top + rect.height * 0.8],
+    [rect.left + rect.width * 0.8, rect.top + rect.height * 0.8],
+    // Perimeter Edges (catches close-button & control-bar overlays)
+    [rect.left + rect.width * 0.5, rect.top + 14],
+    [rect.left + rect.width * 0.5, rect.bottom - 14],
+    [rect.left + 14, rect.top + rect.height * 0.5],
+    [rect.right - 14, rect.top + rect.height * 0.5],
+  ];
+
+  for (const [x, y] of samplePoints) {
+    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
+      continue;
+    }
+    const hitElements = document.elementsFromPoint(x, y);
+    inspectHitStackAtPoint(hitElements, x, y, playerContainer);
+  }
+}
+
+/**
+ * Deeply sweeps a DOM container (document or ShadowRoot) for foreign overlays & rogue nodes.
+ */
+function sweepRootForOverlays(root: Document | ShadowRoot): void {
+  const suspiciousElements = root.querySelectorAll(
+    'div[class*="popunder" i], div[class*="overlay-ad" i], div[class*="ad-overlay" i], div[id*="popunder" i], iframe:not([src*="vidsrc"]):not([src*="youtube"]), ins.adsbygoogle, form[target="_blank"], a[target="_blank"]:not(.rabtv-vidsrc-protected)'
+  );
+
+  suspiciousElements.forEach((el) => {
+    if (
+      el instanceof HTMLElement &&
+      !isVidsrcRelated(el) &&
+      isSuspiciousDomOverlay(el)
+    ) {
+      killDomElement(el);
+    }
+  });
+}
+
+/**
+ * Public on-demand sweep trigger (can be called manually if needed).
+ */
+export function forceDomOverlaySweep(): void {
+  if (typeof document === "undefined") return;
+  scanAndDestroyPlayerOverlays();
+  sweepRootForOverlays(document);
+  trackedShadowRoots.forEach((sr) => sweepRootForOverlays(sr));
+
+  if (document.body) {
+    Array.from(document.body.children).forEach((child) => {
+      if (
+        child instanceof HTMLElement &&
+        !isLegitimateAppElement(child) &&
+        isSuspiciousDomOverlay(child)
+      ) {
+        killDomElement(child);
+      }
+    });
+  }
+}
+
+/**
+ * Checks raw HTML strings passed to insertAdjacentHTML / document.write for ad payloads.
+ */
+function isSuspiciousHtmlString(html: string): boolean {
+  if (!html || typeof html !== "string") return false;
+  const lower = html.toLowerCase();
+  if (lower.includes("vidsrc") || lower.includes("rabtv-vidsrc-protected")) {
+    return false;
+  }
+  if (MALICIOUS_SCRIPT_SIGNATURES.some((sig) => lower.includes(sig))) {
+    return true;
+  }
+  if (SCAM_TEXT_PATTERNS.some((re) => re.test(html))) {
+    return true;
+  }
+  // Check embedded URLs inside raw HTML tags
+  const urlMatches = html.match(/https?:\/\/[^\s"'<>]+/gi);
+  if (urlMatches && urlMatches.some((u) => isAdUrl(u))) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Self-contained multi-layer ad-blocking interceptor suite.
+ * Hardened against popunders, invisible clickjacking shields, Shadow DOM overlays,
+ * form-submit redirects, synthetic click events, and rogue scripts — while strictly
+ * leaving the vidsrc <iframe> 100% untouched.
  */
 export function initAdBlockerGlobalInterceptors(): () => void {
   if (typeof window === "undefined") return () => {};
 
   // 0. Install uBlock Origin Scriptlet Traps (+js property defusers)
   installUBlockScriptletTraps();
+  void updateUBlockLists();
 
-  // Kick off asynchronous fetch/hydration of uBlock Origin & EasyList block lists
-  updateUBlockLists();
-
-  // Inject high-performance CSS protection rules
+  // Inject CSS protection rules
   const injectedStyle = injectAggressiveAdblockStyles();
   injectDynamicUBlockCosmeticStyles();
 
-  // 1. Hard-Lock window.open so ad scripts cannot overwrite or bypass it
+  // 1. Hard-Lock window.open
   const originalOpen = window.open;
   const lockedWindowOpen = function (
     url?: string | URL,
@@ -961,6 +1275,7 @@ export function initAdBlockerGlobalInterceptors(): () => void {
   ): WindowProxy | null {
     const targetStr = url ? url.toString() : "";
     if (!shouldAllowExternalNavigation(targetStr)) {
+      recordBlock("blockedPopups");
       console.warn("[AdBlocker] Neutralized window.open:", targetStr);
       return null;
     }
@@ -977,8 +1292,23 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     window.open = lockedWindowOpen;
   }
 
-  // 1b. uBlock Origin `+js(nano-setTimeout-booster)` / `setTimeout-defuser`:
-  // Neutralizes string-based eval timers and popunder timers scheduled by ad scripts.
+  // 1b. Defuse Notification.requestPermission ("Allow notifications to watch" scam overlays)
+  const originalNotificationRequest =
+    typeof Notification !== "undefined" && Notification.requestPermission
+      ? Notification.requestPermission.bind(Notification)
+      : null;
+  if (originalNotificationRequest) {
+    try {
+      Notification.requestPermission = async () => {
+        recordBlock("blockedPopups");
+        return "denied";
+      };
+    } catch {
+      // Ignore if read-only on WebView
+    }
+  }
+
+  // 1c. uBlock Scriptlet setTimeout & setInterval defusers
   const originalSetTimeout = window.setTimeout;
   window.setTimeout = function (
     handler: TimerHandler,
@@ -996,18 +1326,41 @@ export function initAdBlockerGlobalInterceptors(): () => void {
       handlerStr &&
       MALICIOUS_SCRIPT_SIGNATURES.some((sig) => handlerStr.includes(sig))
     ) {
-      console.warn("[uBlock Scriptlet] Defused malicious setTimeout popunder timer");
+      recordBlock("blockedScripts");
       return 0;
     }
     return originalSetTimeout.call(window, handler, timeout, ...args);
   } as typeof window.setTimeout;
 
-  // 2. Multi-Event Capture-Phase Shield (pointerdown, mousedown, mouseup, touchstart, click, auxclick)
+  const originalSetInterval = window.setInterval;
+  window.setInterval = function (
+    handler: TimerHandler,
+    timeout?: number,
+    ...args: any[]
+  ): number {
+    const handlerStr =
+      typeof handler === "string"
+        ? handler.toLowerCase()
+        : typeof handler === "function"
+          ? handler.toString().toLowerCase()
+          : "";
+
+    if (
+      handlerStr &&
+      MALICIOUS_SCRIPT_SIGNATURES.some((sig) => handlerStr.includes(sig))
+    ) {
+      recordBlock("blockedScripts");
+      return 0;
+    }
+    return originalSetInterval.call(window, handler, timeout, ...args);
+  } as typeof window.setInterval;
+
+  // 2. Multi-Event Capture-Phase Shield (mouse, pointer, touch, click, auxclick, contextmenu)
   const handlePointerAndClickCapture = (event: Event) => {
     const target = event.target as HTMLElement | null;
     if (!target) return;
 
-    // If the user clicked directly on the vidsrc iframe, allow the click into the player
+    // Allow direct interaction with the vidsrc iframe
     if (
       target.tagName === "IFRAME" &&
       ((target as HTMLIFrameElement).src || "").toLowerCase().includes("vidsrc")
@@ -1015,61 +1368,75 @@ export function initAdBlockerGlobalInterceptors(): () => void {
       return;
     }
 
-    // Check if clicking an anchor tag (even if injected dynamically)
-    const anchor = target.closest("a");
-    if (anchor) {
-      const href = anchor.getAttribute("href") || anchor.href || "";
-      const targetAttr = (anchor.getAttribute("target") || "").toLowerCase();
-      if (
-        !shouldAllowExternalNavigation(href) ||
-        (targetAttr === "_blank" && !shouldAllowExternalNavigation(href))
-      ) {
-        console.warn("[AdBlocker] Blocked malicious link interaction:", href);
+    // Check anchor clicks (including composedPath for Shadow DOM links)
+    const composedPath =
+      typeof event.composedPath === "function" ? event.composedPath() : [target];
+    for (const pathNode of composedPath) {
+      if (!(pathNode instanceof HTMLElement)) continue;
+
+      if (pathNode.tagName === "A") {
+        const href =
+          pathNode.getAttribute("href") ||
+          (pathNode as HTMLAnchorElement).href ||
+          "";
+        const targetAttr = (
+          pathNode.getAttribute("target") || ""
+        ).toLowerCase();
+        if (
+          !shouldAllowExternalNavigation(href) ||
+          (targetAttr === "_blank" && !shouldAllowExternalNavigation(href))
+        ) {
+          recordBlock("blockedPopups");
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          if (!isLegitimateAppElement(pathNode)) {
+            killDomElement(pathNode);
+          }
+          return;
+        }
+      }
+
+      if (isSuspiciousDomOverlay(pathNode)) {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        if (!isLegitimateAppElement(anchor)) {
-          killDomElement(anchor);
-        }
+        killDomElement(pathNode);
         return;
       }
     }
 
-    // Check if the clicked element is a suspicious overlay
-    if (isSuspiciousDomOverlay(target)) {
-      console.warn("[AdBlocker] Neutralized suspicious overlay interaction:", target);
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      killDomElement(target);
-      return;
-    }
+    // Extra transparent-overlay check on direct target
+    if (!isLegitimateAppElement(target)) {
+      try {
+        const style = window.getComputedStyle(target);
+        const isTransparentOrFixed =
+          (style.position === "fixed" || style.position === "absolute") &&
+          (style.backgroundColor === "rgba(0, 0, 0, 0)" ||
+            style.backgroundColor === "transparent" ||
+            style.opacity === "0" ||
+            parseFloat(style.opacity) < 0.08 ||
+            target.tagName.toLowerCase() === "a");
 
-    // Neutralize transparent/invisible overlays injected directly over the page/player
-    const style = window.getComputedStyle(target);
-    const isTransparentOrFixed =
-      (style.position === "fixed" || style.position === "absolute") &&
-      (style.backgroundColor === "rgba(0, 0, 0, 0)" ||
-        style.opacity === "0" ||
-        parseFloat(style.opacity) < 0.05 ||
-        target.tagName.toLowerCase() === "a");
-
-    if (
-      isTransparentOrFixed &&
-      target.tagName.toLowerCase() !== "button" &&
-      !target.closest("iframe") &&
-      !isLegitimateAppElement(target)
-    ) {
-      console.warn("[AdBlocker] Neutralized transparent overlay element click:", target);
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      killDomElement(target);
+        if (
+          isTransparentOrFixed &&
+          target.tagName.toLowerCase() !== "button" &&
+          !target.closest("iframe")
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          killDomElement(target);
+        }
+      } catch {
+        // ignore
+      }
     }
   };
 
   const INTERCEPTED_EVENTS = [
     "pointerdown",
+    "pointerup",
     "mousedown",
     "mouseup",
     "touchstart",
@@ -1083,15 +1450,30 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     window.addEventListener(evtName, handlePointerAndClickCapture, true);
   }
 
-  // 3. Iframe Focus-Steal / Popunder Trap (window.blur)
+  // 3. Iframe Focus-Steal / Popunder Trap + Malicious postMessage Blocker
   const handleWindowBlur = () => {
-    setTimeout(() => {
-      scanAndDestroyPlayerOverlays();
-    }, 50);
+    originalSetTimeout.call(window, () => {
+      forceDomOverlaySweep();
+    }, 60);
   };
   window.addEventListener("blur", handleWindowBlur);
 
-  // 4. Block fetch to ad hosts
+  const handleMessageCapture = (event: MessageEvent) => {
+    if (typeof event.data === "string") {
+      const lower = event.data.toLowerCase();
+      if (
+        (lower.includes("open") || lower.includes("redirect")) &&
+        (isAdUrl(event.data) ||
+          MALICIOUS_SCRIPT_SIGNATURES.some((s) => lower.includes(s)))
+      ) {
+        recordBlock("blockedPopups");
+        event.stopImmediatePropagation();
+      }
+    }
+  };
+  window.addEventListener("message", handleMessageCapture, true);
+
+  // 4. Network Shields: fetch, XHR, sendBeacon
   const originalFetch = window.fetch;
   window.fetch = async function (
     input: RequestInfo | URL,
@@ -1105,13 +1487,12 @@ export function initAdBlockerGlobalInterceptors(): () => void {
           : input.url;
 
     if (isAdUrl(urlStr)) {
-      console.warn("[AdBlocker] Blocked ad fetch:", urlStr);
+      recordBlock("blockedNetwork");
       return new Response("", { status: 200, statusText: "OK" });
     }
     return originalFetch.call(window, input, init);
   };
 
-  // 5. Block XHR to ad hosts
   const originalXhrOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function (
     method: string,
@@ -1120,28 +1501,72 @@ export function initAdBlockerGlobalInterceptors(): () => void {
   ) {
     const urlStr = url ? url.toString() : "";
     if (isAdUrl(urlStr)) {
-      console.warn("[AdBlocker] Blocked ad XHR:", urlStr);
+      recordBlock("blockedNetwork");
       return originalXhrOpen.call(this, method, "data:text/plain,", ...args);
     }
     return originalXhrOpen.call(this, method, url, ...args);
   };
 
-  // 6. Block navigator.sendBeacon to ad hosts
   const originalSendBeacon =
     typeof navigator !== "undefined" && navigator.sendBeacon
       ? navigator.sendBeacon.bind(navigator)
       : null;
   if (originalSendBeacon) {
-    navigator.sendBeacon = function (url: string | URL, data?: BodyInit | null) {
+    navigator.sendBeacon = function (
+      url: string | URL,
+      data?: BodyInit | null
+    ) {
       if (isAdUrl(url.toString())) {
-        console.warn("[AdBlocker] Blocked ad beacon:", url.toString());
+        recordBlock("blockedNetwork");
         return true;
       }
       return originalSendBeacon(url, data);
     };
   }
 
-  // 7. DOM Creation & Insertion Firewall (createElement, appendChild, insertBefore, attachShadow)
+  // 5. Programmatic Popup Defusers: Form.submit, Anchor.click, dispatchEvent
+  const originalFormSubmit = HTMLFormElement.prototype.submit;
+  HTMLFormElement.prototype.submit = function () {
+    const action = this.getAttribute("action") || this.action || "";
+    const target = (this.getAttribute("target") || this.target || "").toLowerCase();
+    if (
+      (action && !shouldAllowExternalNavigation(action)) ||
+      (target === "_blank" && !isLegitimateAppElement(this))
+    ) {
+      recordBlock("blockedForms");
+      console.warn("[AdBlocker] Blocked hidden form popup redirect:", action);
+      return;
+    }
+    return originalFormSubmit.call(this);
+  };
+
+  const originalAnchorClick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function () {
+    const href = this.getAttribute("href") || this.href || "";
+    if (!shouldAllowExternalNavigation(href)) {
+      recordBlock("blockedPopups");
+      console.warn("[AdBlocker] Blocked programmatic anchor .click():", href);
+      return;
+    }
+    return originalAnchorClick.call(this);
+  };
+
+  const originalDispatchEvent = EventTarget.prototype.dispatchEvent;
+  EventTarget.prototype.dispatchEvent = function (event: Event): boolean {
+    if (
+      this instanceof HTMLAnchorElement &&
+      (event.type === "click" || event.type === "mousedown")
+    ) {
+      const href = this.getAttribute("href") || this.href || "";
+      if (!shouldAllowExternalNavigation(href)) {
+        recordBlock("blockedPopups");
+        return false;
+      }
+    }
+    return originalDispatchEvent.call(this, event);
+  };
+
+  // 6. Deep DOM Creation, Insertion & Shadow DOM Firewall
   const originalCreateElement = document.createElement.bind(document);
   document.createElement = function (
     tagName: string,
@@ -1151,49 +1576,84 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     const lowerTag = tagName.toLowerCase();
 
     if (lowerTag === "a") {
-      const originalSetAttribute = el.setAttribute.bind(el);
+      const originalSetAttr = el.setAttribute.bind(el);
       el.setAttribute = function (name: string, value: string) {
-        if (name.toLowerCase() === "target" && value === "_blank") {
-          console.debug("[AdBlocker] Script tried to set target=_blank");
-        }
-        return originalSetAttribute(name, value);
-      };
-      const originalClick = el.click.bind(el);
-      el.click = function () {
-        const href = (el as HTMLAnchorElement).href || "";
-        if (!shouldAllowExternalNavigation(href)) {
-          console.warn("[AdBlocker] Blocked programmatic anchor .click() hijack:", href);
+        if (
+          name.toLowerCase() === "href" &&
+          value &&
+          isAdUrl(value)
+        ) {
+          recordBlock("blockedPopups");
           return;
         }
-        return originalClick();
+        return originalSetAttr(name, value);
       };
     }
 
     return el;
   };
 
-  // Pierce Shadow DOMs created by modern ad scripts and inject our ad-killing stylesheet
+  // Pierce Shadow DOMs: force open mode, inject CSS, and attach live MutationObserver
   const originalAttachShadow = Element.prototype.attachShadow;
   Element.prototype.attachShadow = function (init: ShadowRootInit): ShadowRoot {
     const shadowRoot = originalAttachShadow.call(this, {
       ...init,
       mode: "open",
     });
+    trackedShadowRoots.add(shadowRoot);
+
     try {
       const style = originalCreateElement("style");
+      style.id = "rab-industrial-adblock-styles";
       style.textContent = ADBLOCK_CSS_RULES;
       shadowRoot.appendChild(style);
+
+      const cosmeticText = buildCosmeticCssText();
+      if (cosmeticText) {
+        const cStyle = originalCreateElement("style");
+        cStyle.id = "rab-ublock-cosmetic-styles";
+        cStyle.textContent = cosmeticText;
+        shadowRoot.appendChild(cStyle);
+      }
+
+      const srObserver = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          for (const n of Array.from(m.addedNodes)) {
+            if (n instanceof HTMLElement && isSuspiciousDomOverlay(n)) {
+              killDomElement(n);
+            }
+          }
+        }
+      });
+      srObserver.observe(shadowRoot, { childList: true, subtree: true });
+      shadowObservers.set(shadowRoot, srObserver);
     } catch {
-      // Ignore if shadow style injection fails
+      // Ignore if shadow style/observer fails
     }
     return shadowRoot;
   };
 
-  // Intercept appendChild & insertBefore to block ad <script> and rogue <iframe> nodes before execution
+  // Helper to filter single or variadic DOM insertions
+  const filterSafeNodes = (nodes: (Node | string)[]): (Node | string)[] => {
+    const safe: (Node | string)[] = [];
+    for (const item of nodes) {
+      if (item instanceof HTMLElement && isSuspiciousDomOverlay(item)) {
+        recordBlock("blockedOverlays");
+        continue;
+      }
+      if (typeof item === "string" && isSuspiciousHtmlString(item)) {
+        recordBlock("blockedScripts");
+        continue;
+      }
+      safe.push(item);
+    }
+    return safe;
+  };
+
   const originalAppendChild = Node.prototype.appendChild;
   Node.prototype.appendChild = function <T extends Node>(newChild: T): T {
     if (newChild instanceof HTMLElement && isSuspiciousDomOverlay(newChild)) {
-      console.warn("[AdBlocker Firewall] Blocked appendChild of malicious node:", newChild);
+      recordBlock("blockedOverlays");
       const dummy = originalCreateElement("span");
       dummy.style.display = "none";
       return dummy as unknown as T;
@@ -1207,7 +1667,7 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     referenceNode: Node | null
   ): T {
     if (newNode instanceof HTMLElement && isSuspiciousDomOverlay(newNode)) {
-      console.warn("[AdBlocker Firewall] Blocked insertBefore of malicious node:", newNode);
+      recordBlock("blockedOverlays");
       const dummy = originalCreateElement("span");
       dummy.style.display = "none";
       return dummy as unknown as T;
@@ -1215,48 +1675,119 @@ export function initAdBlockerGlobalInterceptors(): () => void {
     return originalInsertBefore.call(this, newNode, referenceNode) as T;
   };
 
-  // 8. MutationObserver to automatically strip out injected full-screen transparent ad overlays or suspicious popup elements
-  const observer = new MutationObserver((mutations) => {
-    if (pageContainsScamText()) {
-      console.warn(
-        "[AdBlocker] Scam text detected on parent page – hard block mode active"
-      );
-    }
+  const originalAppend = Element.prototype.append;
+  if (typeof originalAppend === "function") {
+    Element.prototype.append = function (...nodes: (Node | string)[]) {
+      return originalAppend.apply(this, filterSafeNodes(nodes));
+    };
+  }
 
+  const originalPrepend = Element.prototype.prepend;
+  if (typeof originalPrepend === "function") {
+    Element.prototype.prepend = function (...nodes: (Node | string)[]) {
+      return originalPrepend.apply(this, filterSafeNodes(nodes));
+    };
+  }
+
+  const originalAfter = Element.prototype.after;
+  if (typeof originalAfter === "function") {
+    Element.prototype.after = function (...nodes: (Node | string)[]) {
+      return originalAfter.apply(this, filterSafeNodes(nodes));
+    };
+  }
+
+  const originalBefore = Element.prototype.before;
+  if (typeof originalBefore === "function") {
+    Element.prototype.before = function (...nodes: (Node | string)[]) {
+      return originalBefore.apply(this, filterSafeNodes(nodes));
+    };
+  }
+
+  const originalInsertAdjacentElement = Element.prototype.insertAdjacentElement;
+  if (typeof originalInsertAdjacentElement === "function") {
+    Element.prototype.insertAdjacentElement = function (
+      where: InsertPosition,
+      element: Element
+    ): Element | null {
+      if (element instanceof HTMLElement && isSuspiciousDomOverlay(element)) {
+        recordBlock("blockedOverlays");
+        return null;
+      }
+      return originalInsertAdjacentElement.call(this, where, element);
+    };
+  }
+
+  const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML;
+  if (typeof originalInsertAdjacentHTML === "function") {
+    Element.prototype.insertAdjacentHTML = function (
+      where: InsertPosition,
+      html: string
+    ): void {
+      if (isSuspiciousHtmlString(html)) {
+        recordBlock("blockedScripts");
+        return;
+      }
+      return originalInsertAdjacentHTML.call(this, where, html);
+    };
+  }
+
+  const originalDocWrite = document.write?.bind(document);
+  const originalDocWriteln = document.writeln?.bind(document);
+  try {
+    if (originalDocWrite) {
+      document.write = (...args: string[]) => {
+        if (args.some((a) => isSuspiciousHtmlString(String(a)))) {
+          recordBlock("blockedScripts");
+          return;
+        }
+        originalDocWrite(...args);
+      };
+    }
+    if (originalDocWriteln) {
+      document.writeln = (...args: string[]) => {
+        if (args.some((a) => isSuspiciousHtmlString(String(a)))) {
+          recordBlock("blockedScripts");
+          return;
+        }
+        originalDocWriteln(...args);
+      };
+    }
+  } catch {
+    // Ignore if document.write is non-writable
+  }
+
+  // 7. MutationObserver (Zero full-page innerText reflows; inspects only new/mutated nodes)
+  const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      if (mutation.type === "attributes" && mutation.target instanceof HTMLElement) {
+      if (
+        mutation.type === "attributes" &&
+        mutation.target instanceof HTMLElement
+      ) {
         const targetEl = mutation.target;
         if (!isVidsrcRelated(targetEl) && isSuspiciousDomOverlay(targetEl)) {
-          console.warn("[AdBlocker] Stripped mutated ad element:", targetEl);
           killDomElement(targetEl);
         }
         continue;
       }
 
       for (const node of Array.from(mutation.addedNodes)) {
-        if (node instanceof HTMLElement) {
-          // ABSOLUTE PROHIBITION: Never touch vidsrc iframe or container
-          if (isVidsrcRelated(node)) {
-            continue;
-          }
+        if (!(node instanceof HTMLElement)) continue;
+        if (isVidsrcRelated(node)) continue;
 
-          if (isSuspiciousDomOverlay(node)) {
-            console.warn("[AdBlocker] Stripped injected ad overlay via MutationObserver:", node);
-            killDomElement(node);
-            continue;
-          }
-
-          // Also scan children of newly added wrapper nodes
-          const nestedSuspects = node.querySelectorAll(
-            'iframe:not([src*="vidsrc"]):not([src*="youtube"]), script, ins, a[target="_blank"], div[style*="fixed"], div[style*="z-index"]'
-          );
-          nestedSuspects.forEach((child) => {
-            if (child instanceof HTMLElement && isSuspiciousDomOverlay(child)) {
-              console.warn("[AdBlocker] Stripped nested ad child:", child);
-              killDomElement(child);
-            }
-          });
+        if (isSuspiciousDomOverlay(node)) {
+          killDomElement(node);
+          continue;
         }
+
+        // Deep scan children of newly injected wrapper nodes
+        const nestedSuspects = node.querySelectorAll(
+          'iframe:not([src*="vidsrc"]):not([src*="youtube"]), script, ins, form[target="_blank"], a[target="_blank"], div[style*="fixed"], div[style*="z-index"], div[style*="absolute"]'
+        );
+        nestedSuspects.forEach((child) => {
+          if (child instanceof HTMLElement && isSuspiciousDomOverlay(child)) {
+            killDomElement(child);
+          }
+        });
       }
     }
   });
@@ -1266,42 +1797,22 @@ export function initAdBlockerGlobalInterceptors(): () => void {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["style", "class", "src", "href"],
+      attributeFilter: ["style", "class", "src", "href", "target"],
     });
   }
 
-  // 9. Periodic sweep interval (runs Geometric Radar + DOM selector sweep)
-  const cleanupInterval = setInterval(() => {
-    if (typeof document === "undefined") return;
+  // 8. Hardware-Aware Periodic Radar & DOM Sweep
+  const sweepMs = getHardwareLimits().effectiveMode === "low" ? 1100 : 750;
+  const cleanupInterval = originalSetInterval.call(
+    window,
+    () => {
+      if (typeof document === "undefined" || document.hidden) return;
+      forceDomOverlaySweep();
+    },
+    sweepMs
+  );
 
-    // Run geometric hit-box radar over the video player
-    scanAndDestroyPlayerOverlays();
-
-    // Sweep known ad selectors
-    const suspiciousElements = document.querySelectorAll(
-      'div[class*="popunder" i], div[class*="overlay-ad" i], div[id*="popunder" i], iframe[src="about:blank"], ins.adsbygoogle'
-    );
-    suspiciousElements.forEach((el) => {
-      if (el instanceof HTMLElement && !isVidsrcRelated(el)) {
-        console.warn("[AdBlocker] Periodic sweep neutralized ad element:", el);
-        killDomElement(el);
-      }
-    });
-
-    // Sweep any direct children appended to <body> outside #root
-    Array.from(document.body.children).forEach((child) => {
-      if (
-        child instanceof HTMLElement &&
-        !isLegitimateAppElement(child) &&
-        isSuspiciousDomOverlay(child)
-      ) {
-        console.warn("[AdBlocker] Removed rogue body child:", child);
-        killDomElement(child);
-      }
-    });
-  }, 1200);
-
-  // Cleanup function
+  // Full Clean Teardown
   return () => {
     try {
       Object.defineProperty(window, "open", {
@@ -1313,29 +1824,74 @@ export function initAdBlockerGlobalInterceptors(): () => void {
       window.open = originalOpen;
     }
 
+    if (originalNotificationRequest) {
+      try {
+        Notification.requestPermission = originalNotificationRequest;
+      } catch {
+        // ignore
+      }
+    }
+
     window.setTimeout = originalSetTimeout;
+    window.setInterval = originalSetInterval;
 
     for (const evtName of INTERCEPTED_EVENTS) {
       window.removeEventListener(evtName, handlePointerAndClickCapture, true);
     }
     window.removeEventListener("blur", handleWindowBlur);
+    window.removeEventListener("message", handleMessageCapture, true);
 
     window.fetch = originalFetch;
     XMLHttpRequest.prototype.open = originalXhrOpen;
     if (originalSendBeacon) {
       navigator.sendBeacon = originalSendBeacon;
     }
+
+    HTMLFormElement.prototype.submit = originalFormSubmit;
+    HTMLAnchorElement.prototype.click = originalAnchorClick;
+    EventTarget.prototype.dispatchEvent = originalDispatchEvent;
+
     document.createElement = originalCreateElement;
     Element.prototype.attachShadow = originalAttachShadow;
     Node.prototype.appendChild = originalAppendChild;
     Node.prototype.insertBefore = originalInsertBefore;
+    if (typeof originalAppend === "function") {
+      Element.prototype.append = originalAppend;
+    }
+    if (typeof originalPrepend === "function") {
+      Element.prototype.prepend = originalPrepend;
+    }
+    if (typeof originalAfter === "function") {
+      Element.prototype.after = originalAfter;
+    }
+    if (typeof originalBefore === "function") {
+      Element.prototype.before = originalBefore;
+    }
+    if (typeof originalInsertAdjacentElement === "function") {
+      Element.prototype.insertAdjacentElement = originalInsertAdjacentElement;
+    }
+    if (typeof originalInsertAdjacentHTML === "function") {
+      Element.prototype.insertAdjacentHTML = originalInsertAdjacentHTML;
+    }
+    try {
+      if (originalDocWrite) document.write = originalDocWrite;
+      if (originalDocWriteln) document.writeln = originalDocWriteln;
+    } catch {
+      // ignore
+    }
 
     observer.disconnect();
+    shadowObservers.forEach((obs) => obs.disconnect());
+    shadowObservers.clear();
+    trackedShadowRoots.clear();
+
     clearInterval(cleanupInterval);
     if (injectedStyle && injectedStyle.parentNode) {
       injectedStyle.parentNode.removeChild(injectedStyle);
     }
-    const cosmeticStyleEl = document.getElementById("rab-ublock-cosmetic-styles");
+    const cosmeticStyleEl = document.getElementById(
+      "rab-ublock-cosmetic-styles"
+    );
     if (cosmeticStyleEl && cosmeticStyleEl.parentNode) {
       cosmeticStyleEl.parentNode.removeChild(cosmeticStyleEl);
     }
