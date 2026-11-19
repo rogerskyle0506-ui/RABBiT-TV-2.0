@@ -239,6 +239,7 @@ export function MediaCard({
       <Link
         to="/details"
         search={detailsSearch}
+        data-tour="media-card"
         className={`group flex flex-col ${
           isBelow ? "w-full" : `${dimensions.card} w-full`
         } ${appearance.radiusClass} ${appearance.cardFrameClass} ${
@@ -327,6 +328,7 @@ export function MediaCard({
 
   return (
     <div
+      data-tour="media-card"
       className={`group relative flex w-full flex-col overflow-hidden ${appearance.radiusClass} ${appearance.cardFrameClass} ${cardThemeStyles.glow} transition-all duration-300 hover:-translate-y-1.5 ${cardThemeStyles.ring} ${
         isBelow ? "h-auto" : dimensions.card
       }`}
@@ -1240,31 +1242,34 @@ function Home() {
     ? getDetailsSearch(activeHeroItem)
     : null;
 
+  const pillTrackMaskStyle: React.CSSProperties = {
+    maskImage:
+      "linear-gradient(to right, transparent 0%, black 14px, black calc(100% - 14px), transparent 100%)",
+    WebkitMaskImage:
+      "linear-gradient(to right, transparent 0%, black 14px, black calc(100% - 14px), transparent 100%)",
+  };
+
   return (
     <main
-      className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 relative rounded-3xl`}
+      className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-12 relative rounded-3xl`}
     >
       <div className="relative z-10">
-        {/* Signature Neon Rabbit Top Navigation Bar */}
+        {/* Signature Neon Rabbit Top Navigation Bar (Non-Overlapping Scroll Controls) */}
         <div className="sticky top-0 z-30 mb-4 mt-1 px-2 sm:px-4 py-2 flex justify-center">
           <div
-            className="relative max-w-6xl w-full flex items-center justify-center rounded-2xl shadow-2xl overflow-hidden border border-white/10"
+            className="relative max-w-6xl w-full flex items-center gap-1.5 rounded-2xl shadow-2xl overflow-hidden border border-white/10 px-2 py-2"
             style={{
               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
               backgroundSize: "112% 380%",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
-              maskImage:
-                "linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
-              WebkitMaskImage:
-                "linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
             }}
           >
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] pointer-events-none rounded-2xl z-0" />
+            <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] pointer-events-none rounded-2xl z-0" />
             <button
               type="button"
               onClick={() => scrollPill("nav-tabs-pill", "left")}
-              className="absolute left-1.5 z-20 w-7 h-7 bg-black/75 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md border border-white/10 transition cursor-pointer"
+              className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md border border-white/15 transition cursor-pointer"
               title="Scroll Left"
               aria-label="Scroll navigation left"
             >
@@ -1272,7 +1277,8 @@ function Home() {
             </button>
             <div
               id="nav-tabs-pill"
-              className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-14 py-2.5 flex items-center justify-start sm:justify-center gap-2"
+              style={pillTrackMaskStyle}
+              className="relative z-10 flex-1 min-w-0 overflow-x-auto scrollbar-none px-2 py-0.5 flex items-center justify-start sm:justify-center gap-2"
             >
               <div className="flex items-center gap-2 min-w-max mx-auto">
                 {navTabs.map((tab) => {
@@ -1288,8 +1294,8 @@ function Home() {
                         isActive
                           ? `${getPrimaryBgColor(
                               appTheme
-                            )} text-white shadow-lg scale-105`
-                          : "bg-black/45 hover:bg-white/10 text-slate-200 border border-white/5"
+                            )} text-white shadow-lg scale-[1.03]`
+                          : "bg-black/50 hover:bg-white/10 text-slate-200 border border-white/10"
                       }`}
                     >
                       {tab}
@@ -1301,7 +1307,7 @@ function Home() {
             <button
               type="button"
               onClick={() => scrollPill("nav-tabs-pill", "right")}
-              className="absolute right-1.5 z-20 w-7 h-7 bg-black/75 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md border border-white/10 transition cursor-pointer"
+              className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md border border-white/15 transition cursor-pointer"
               title="Scroll Right"
               aria-label="Scroll navigation right"
             >
@@ -1313,7 +1319,10 @@ function Home() {
         <div className="mx-auto max-w-7xl px-2 sm:px-6 overflow-x-hidden flex flex-col items-center">
           {/* Personalized Greeting & Quick "Surprise Me" Bar */}
           {(greetingText || filteredItems.length > 0) && (
-            <div className="mb-4 w-full max-w-6xl flex flex-wrap items-center justify-between gap-2.5 px-1">
+            <div
+              data-tour="greeting-header"
+              className="mb-4 w-full max-w-6xl flex flex-wrap items-center justify-between gap-2.5 px-1"
+            >
               <div className="flex items-center gap-2 min-w-0">
                 {greetingText && (
                   <p className="text-sm sm:text-base font-black tracking-wide text-white truncate">
@@ -1343,132 +1352,157 @@ function Home() {
             </div>
           )}
 
-          {/* Cinematic Netflix / Disney+ Hero Billboard */}
+          {/* Clean Split Hero Card: Unobstructed Cover Art Above + Glass Details Panel Below */}
           {activeHeroItem && heroDetailsSearch ? (
-            <div className="mb-6 w-full max-w-6xl relative group">
+            <div
+              data-tour="hero-banner"
+              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-slate-950/95 border border-white/15 ${themeStyles.borderGlow} shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col group`}
+            >
+              {/* Top: Pure, Unobstructed Cover Art (No Overlaid Text or Buttons) */}
               <Link
                 to="/details"
                 search={heroDetailsSearch}
-                className="w-full overflow-hidden rounded-[28px] bg-black border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative h-[350px] sm:h-[420px] md:h-[460px] flex flex-col focus:outline-none focus:ring-4"
+                className="relative block w-full h-[240px] sm:h-[320px] md:h-[380px] overflow-hidden bg-black focus:outline-none focus:ring-4"
               >
-                <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
-                  <img
-                    src={optimizePosterUrl(
-                      activeHeroItem.image,
-                      isLowRam ? "w342" : "w500"
-                    )}
-                    alt={activeHeroItem.title}
-                    decoding="async"
-                    className="absolute inset-0 h-full w-full object-cover object-top opacity-90 transition-transform duration-700 ease-out group-hover:scale-105"
-                  />
-                  {/* Deep Cinema Bottom & Left Vignette Gradients */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#050b16] via-[#050b16]/55 to-transparent" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#050b16]/90 via-[#050b16]/30 to-transparent" />
+                <img
+                  src={optimizePosterUrl(
+                    activeHeroItem.image,
+                    isLowRam ? "w342" : "w500"
+                  )}
+                  alt={activeHeroItem.title}
+                  decoding="async"
+                  className="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-slate-950/80 to-transparent" />
+              </Link>
+
+              {/* Bottom: Clean Glass Details Panel (Matches Below-Card Catalog Style) */}
+              <div className="p-4 sm:p-6 md:p-7 bg-slate-950/95 border-t border-white/10 text-left space-y-3">
+                {/* Metadata Badges */}
+                <div className="flex items-center flex-wrap gap-2">
+                  <span
+                    className={`rounded-full bg-white/10 border border-white/15 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.16em] leading-snug ${themeStyles.accentText}`}
+                  >
+                    {activeHeroItem.genre ?? "Featured"}
+                  </span>
+                  {activeHeroItem.rating && (
+                    <span className="rounded-full bg-amber-500/20 border border-amber-400/30 px-2.5 py-0.5 text-amber-300 text-[11px] font-bold">
+                      ⭐ {activeHeroItem.rating}
+                    </span>
+                  )}
+                  {activeHeroItem.year && (
+                    <span className="rounded-full bg-black/60 border border-white/10 px-2.5 py-0.5 text-[11px] text-slate-200 font-semibold">
+                      {activeHeroItem.year}
+                    </span>
+                  )}
                 </div>
 
-                <div className="relative z-10 mt-auto p-5 sm:p-8 flex flex-col items-start text-left max-w-2xl space-y-2.5">
-                  <div className="flex items-center flex-wrap gap-2">
-                    <span
-                      className={`rounded-full bg-white/10 backdrop-blur-md border border-white/15 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.2em] ${themeStyles.accentText}`}
-                    >
-                      {activeHeroItem.genre ?? "Featured"}
-                    </span>
-                    {activeHeroItem.rating && (
-                      <span className="rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-400/30 px-2.5 py-0.5 text-amber-300 text-[11px] font-bold">
-                        ⭐ {activeHeroItem.rating}
-                      </span>
-                    )}
-                    {activeHeroItem.year && (
-                      <span className="rounded-full bg-black/50 backdrop-blur-md border border-white/10 px-2.5 py-0.5 text-[11px] text-slate-200 font-semibold">
-                        {activeHeroItem.year}
-                      </span>
-                    )}
-                  </div>
-
-                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] line-clamp-2">
+                {/* Title */}
+                <Link
+                  to="/details"
+                  search={heroDetailsSearch}
+                  className="block focus:outline-none"
+                >
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight hover:text-slate-200 transition line-clamp-2">
                     {activeHeroItem.title}
                   </h2>
+                </Link>
 
-                  {activeHeroItem.description && (
-                    <p className="text-xs sm:text-sm leading-relaxed text-slate-200/90 line-clamp-2 max-w-xl drop-shadow">
-                      {activeHeroItem.description}
-                    </p>
-                  )}
+                {/* Synopsis */}
+                {activeHeroItem.description && (
+                  <p className="text-xs sm:text-sm leading-relaxed text-slate-300 line-clamp-2 sm:line-clamp-3 max-w-3xl">
+                    {activeHeroItem.description}
+                  </p>
+                )}
 
-                  <div className="pt-1 flex items-center gap-3">
-                    <span
+                {/* Action Buttons + Dedicated Non-Overlapping Carousel Controls */}
+                <div className="pt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center flex-wrap gap-2.5">
+                    <Link
+                      to="/details"
+                      search={heroDetailsSearch}
+                      data-tour="hero-play"
                       className={`inline-flex items-center gap-2 ${
                         largeButtons
                           ? "px-6 py-3 text-sm"
-                          : "px-5 py-2 text-xs"
+                          : "px-5 py-2.5 text-xs"
                       } rounded-xl font-bold uppercase tracking-wider ${getPrimaryBgColor(
                         appTheme
-                      )} transition group-hover:scale-105`}
+                      )} transition hover:scale-[1.03] active:scale-95`}
                     >
                       ▶ Watch Now
-                    </span>
-                    <span
+                    </Link>
+                    <Link
+                      to="/details"
+                      search={heroDetailsSearch}
                       className={`inline-flex items-center gap-1.5 ${
                         largeButtons
                           ? "px-5 py-3 text-sm"
-                          : "px-4 py-2 text-xs"
-                      } rounded-xl font-bold text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 transition`}
+                          : "px-4 py-2.5 text-xs"
+                      } rounded-xl font-bold text-white bg-white/10 hover:bg-white/20 border border-white/15 transition`}
                     >
                       ⓘ Details
-                    </span>
-                  </div>
-                </div>
-              </Link>
-
-              {/* Hero Manual Controls + Indicator Dots (Great for TV Remotes & Steady Screen) */}
-              {heroItems.length > 1 && (
-                <div className="absolute bottom-4 right-4 sm:right-5 z-20 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCurrentHeroIndex(
-                        (prev) =>
-                          (prev - 1 + heroItems.length) % heroItems.length
-                      )
-                    }
-                    className="h-7 w-7 rounded-full bg-black/70 hover:bg-black border border-white/20 text-white text-xs font-bold flex items-center justify-center transition cursor-pointer"
-                    aria-label="Previous featured title"
-                  >
-                    ‹
-                  </button>
-
-                  <div className="hidden sm:flex items-center gap-1.5">
-                    {heroItems.slice(0, 8).map((hItem, idx) => (
-                      <button
-                        key={hItem.id}
-                        type="button"
-                        onClick={() => setCurrentHeroIndex(idx)}
-                        aria-label={`Show featured title ${idx + 1}`}
-                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                          idx === currentHeroIndex % 8
-                            ? `w-6 ${themeStyles.accentBar}`
-                            : "w-1.5 bg-white/30 hover:bg-white/60"
-                        }`}
-                      />
-                    ))}
+                    </Link>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCurrentHeroIndex((prev) => (prev + 1) % heroItems.length)
-                    }
-                    className="h-7 w-7 rounded-full bg-black/70 hover:bg-black border border-white/20 text-white text-xs font-bold flex items-center justify-center transition cursor-pointer"
-                    aria-label="Next featured title"
-                  >
-                    ›
-                  </button>
+                  {heroItems.length > 1 && (
+                    <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t border-white/10 sm:border-t-0">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:hidden">
+                        Featured {currentHeroIndex + 1} / {heroItems.length}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCurrentHeroIndex(
+                              (prev) =>
+                                (prev - 1 + heroItems.length) % heroItems.length
+                            )
+                          }
+                          className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white text-sm font-bold flex items-center justify-center transition cursor-pointer"
+                          aria-label="Previous featured title"
+                        >
+                          ‹
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          {heroItems.slice(0, 8).map((hItem, idx) => (
+                            <button
+                              key={hItem.id}
+                              type="button"
+                              onClick={() => setCurrentHeroIndex(idx)}
+                              aria-label={`Show featured title ${idx + 1}`}
+                              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                                idx === currentHeroIndex % 8
+                                  ? `w-5 sm:w-6 ${themeStyles.accentBar}`
+                                  : "w-1.5 bg-white/30 hover:bg-white/60"
+                              }`}
+                            />
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCurrentHeroIndex(
+                              (prev) => (prev + 1) % heroItems.length
+                            )
+                          }
+                          className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white text-sm font-bold flex items-center justify-center transition cursor-pointer"
+                          aria-label="Next featured title"
+                        >
+                          ›
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           ) : (
             <section
-              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-gradient-to-br ${themeStyles.cardGradient} border border-white/10 shadow-2xl relative h-[320px] sm:h-[380px] flex flex-col items-center justify-center`}
+              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-gradient-to-br ${themeStyles.cardGradient} border border-white/10 shadow-2xl relative h-[280px] sm:h-[340px] flex flex-col items-center justify-center`}
             >
               <div className="text-slate-300 text-center px-4">
                 {loading
@@ -1479,9 +1513,12 @@ function Home() {
           )}
 
           {activeTab !== "My List" && (
-            <section className="mb-6 space-y-4 flex flex-col items-center justify-center text-center w-full max-w-6xl">
+            <section
+              data-tour="catalog-filters"
+              className="mb-6 space-y-4 flex flex-col items-center justify-center text-center w-full max-w-6xl"
+            >
               {/* Disney+ Style Brand Hub Tiles (Netflix, Prime, Disney+, All) */}
-              <div className="w-full px-1">
+              <div data-tour="provider-filter" className="w-full px-1">
                 <div className="grid grid-cols-4 gap-2.5 sm:gap-4 w-full">
                   {providerCategories.map((prov) => {
                     const isActive = providerFilter === prov.name;
@@ -1516,13 +1553,13 @@ function Home() {
                 </div>
               </div>
 
-              {/* Sleek Frameless Glass Genre Ribbon */}
-              <div className="flex justify-center w-full px-1">
-                <div className="relative w-full flex items-center justify-center rounded-2xl bg-slate-950/65 backdrop-blur-xl border border-white/10 shadow-lg overflow-hidden">
+              {/* Sleek Frameless Glass Genre Ribbon (Non-Overlapping Scroll Controls) */}
+              <div data-tour="genre-filter" className="flex justify-center w-full px-1">
+                <div className="relative w-full flex items-center gap-1.5 rounded-2xl bg-slate-950/65 backdrop-blur-xl border border-white/10 shadow-lg overflow-hidden px-2 py-2">
                   <button
                     type="button"
                     onClick={() => scrollPill("genre-pill", "left")}
-                    className="absolute left-1.5 z-20 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/10 shadow-md transition cursor-pointer"
+                    className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/15 shadow-md transition cursor-pointer"
                     title="Scroll Left"
                     aria-label="Scroll genres left"
                   >
@@ -1530,7 +1567,8 @@ function Home() {
                   </button>
                   <div
                     id="genre-pill"
-                    className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-12 py-2.5 flex items-center justify-start gap-2"
+                    style={pillTrackMaskStyle}
+                    className="relative z-10 flex-1 min-w-0 overflow-x-auto scrollbar-none px-2 py-0.5 flex items-center justify-start gap-2"
                   >
                     <div className="flex items-center gap-2 min-w-max mx-auto">
                       {genreCategories.map((genre) => {
@@ -1548,7 +1586,7 @@ function Home() {
                               isActive
                                 ? `${getPrimaryBgColor(
                                     appTheme
-                                  )} text-white shadow-md scale-105`
+                                  )} text-white shadow-md scale-[1.03]`
                                 : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 border border-white/5"
                             }`}
                           >
@@ -1561,7 +1599,7 @@ function Home() {
                   <button
                     type="button"
                     onClick={() => scrollPill("genre-pill", "right")}
-                    className="absolute right-1.5 z-20 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/10 shadow-md transition cursor-pointer"
+                    className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/15 shadow-md transition cursor-pointer"
                     title="Scroll Right"
                     aria-label="Scroll genres right"
                   >
@@ -1574,11 +1612,11 @@ function Home() {
 
           {activeTab === "My List" && (
             <section className="mb-6 flex justify-center w-full max-w-4xl px-1">
-              <div className="relative w-full flex items-center justify-center rounded-2xl bg-slate-950/65 backdrop-blur-xl border border-white/10 shadow-xl overflow-hidden">
+              <div className="relative w-full flex items-center gap-1.5 rounded-2xl bg-slate-950/65 backdrop-blur-xl border border-white/10 shadow-xl overflow-hidden px-2 py-2">
                 <button
                   type="button"
                   onClick={() => scrollPill("mylist-pill", "left")}
-                  className="absolute left-1.5 z-20 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/10 shadow-md transition cursor-pointer"
+                  className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/15 shadow-md transition cursor-pointer"
                   title="Scroll Left"
                   aria-label="Scroll list tabs left"
                 >
@@ -1586,7 +1624,8 @@ function Home() {
                 </button>
                 <div
                   id="mylist-pill"
-                  className="relative z-10 w-full overflow-x-auto scrollbar-none px-10 sm:px-14 py-2.5 flex items-center justify-start sm:justify-center gap-2"
+                  style={pillTrackMaskStyle}
+                  className="relative z-10 flex-1 min-w-0 overflow-x-auto scrollbar-none px-2 py-0.5 flex items-center justify-start sm:justify-center gap-2"
                 >
                   <div className="flex items-center gap-2 min-w-max mx-auto">
                     <button
@@ -1596,7 +1635,7 @@ function Home() {
                         myListSubTab === "all"
                           ? `${getPrimaryBgColor(
                               appTheme
-                            )} text-white shadow-md scale-105`
+                            )} text-white shadow-md scale-[1.03]`
                           : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
                       }`}
                     >
@@ -1614,7 +1653,7 @@ function Home() {
                         myListSubTab === "in_progress"
                           ? `${getPrimaryBgColor(
                               appTheme
-                            )} text-white shadow-md scale-105`
+                            )} text-white shadow-md scale-[1.03]`
                           : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
                       }`}
                     >
@@ -1628,7 +1667,7 @@ function Home() {
                         myListSubTab === "mylist"
                           ? `${getPrimaryBgColor(
                               appTheme
-                            )} text-white shadow-md scale-105`
+                            )} text-white shadow-md scale-[1.03]`
                           : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
                       }`}
                     >
@@ -1642,7 +1681,7 @@ function Home() {
                         myListSubTab === "favorites"
                           ? `${getPrimaryBgColor(
                               appTheme
-                            )} text-white shadow-md scale-105`
+                            )} text-white shadow-md scale-[1.03]`
                           : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
                       }`}
                     >
@@ -1653,7 +1692,7 @@ function Home() {
                 <button
                   type="button"
                   onClick={() => scrollPill("mylist-pill", "right")}
-                  className="absolute right-1.5 z-20 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/10 shadow-md transition cursor-pointer"
+                  className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/15 shadow-md transition cursor-pointer"
                   title="Scroll Right"
                   aria-label="Scroll list tabs right"
                 >
@@ -1664,7 +1703,10 @@ function Home() {
           )}
 
           {/* Main Catalog Section */}
-          <section className="mb-8 px-1 w-full max-w-6xl">
+          <section
+            data-tour={activeTab === "My List" ? "favorites-grid" : "catalog-grid"}
+            className="mb-8 px-1 w-full max-w-6xl"
+          >
             <div className="mb-4 flex items-center justify-between px-1">
               <div className="flex items-center gap-2.5">
                 <span
@@ -1774,7 +1816,10 @@ function Home() {
           )}
 
           {activeTab !== "My List" && totalPages > 1 && (
-            <div className="mb-6 flex items-center justify-center gap-4 rounded-2xl bg-slate-950/75 border border-white/10 backdrop-blur-xl p-3 mx-2 w-full max-w-sm shadow-xl">
+            <div
+              data-tour="load-more"
+              className="mb-4 flex items-center justify-center gap-4 rounded-2xl bg-slate-950/75 border border-white/10 backdrop-blur-xl p-3 mx-2 w-full max-w-sm shadow-xl"
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -1808,20 +1853,6 @@ function Home() {
               </button>
             </div>
           )}
-
-          <div className="mt-8 mb-4 text-center">
-            <p className="text-[10px] text-slate-500">
-              Data provided by{" "}
-              <a
-                href="https://www.themoviedb.org"
-                target="_blank"
-                rel="noreferrer"
-                className="underline hover:text-slate-400"
-              >
-                TMDB
-              </a>
-            </p>
-          </div>
         </div>
       </div>
     </main>
