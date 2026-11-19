@@ -1,5 +1,5 @@
 // src/components/sidebar.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import { AdminPanel } from "@/components/AdminPanel";
 import { TIMEOUT_OPTIONS } from "@/components/Screensaver";
@@ -11,18 +11,103 @@ import {
   StreamQuality,
   AppTheme,
   HistoryScale,
+  RamMode,
+  GlowIntensity,
+  TextScale,
+  CursorStyle,
+  SleepTimerMinutes,
+  TvOverscanPercent,
+  ClockFormat,
+  SubtitleSettings,
+  PosterShape,
+  PosterCardStyle,
+  PosterInfoLayout,
+  GreetingStyle,
+  StartupTab,
+  StorageHealthReport,
   DISCLAIMER_ACCEPTED_KEY,
+  SLEEP_TIMER_OPTIONS,
+  TV_OVERSCAN_OPTIONS,
+  GLOW_INTENSITY_OPTIONS,
+  POSTER_SHAPE_OPTIONS,
+  POSTER_CARD_STYLE_OPTIONS,
+  POSTER_INFO_LAYOUT_OPTIONS,
+  PROFILE_MASCOT_OPTIONS,
+  GREETING_STYLE_OPTIONS,
+  CURSOR_STYLE_OPTIONS,
+  STARTUP_TAB_OPTIONS,
   saveStreamQuality,
   getSavedUserAge,
   saveUserAge,
+  isValidAgeLockPin,
+  verifyAgeLockPin,
+  saveAgeLockPinSecure,
+  getPinLockoutState,
+  recordPinFailure,
+  resetPinFailures,
+  getKidsModeLocked,
+  setKidsModeLocked,
+  getRamMode,
+  setRamMode,
+  getDataSaverMode,
+  setDataSaverMode,
+  getAutoPlayNext,
+  setAutoPlayNext,
+  getGlowIntensity,
+  setGlowIntensity,
+  getDefaultPlayerVolume,
+  setDefaultPlayerVolume,
+  getPosterShape,
+  setPosterShape,
+  getPosterCardStyle,
+  setPosterCardStyle,
+  getPosterInfoLayout,
+  setPosterInfoLayout,
+  getShowPosterBadges,
+  setShowPosterBadges,
+  getSavedScreensaverTimeout,
+  saveScreensaverTimeout,
+  getSleepTimerMinutes,
+  setSleepTimerMinutes,
+  getClockFormat,
+  setClockFormat,
+  getTextScale,
+  setTextScale,
+  getHighContrastFocus,
+  setHighContrastFocus,
+  getReducedMotion,
+  setReducedMotion,
+  getUiClickSounds,
+  setUiClickSounds,
+  getCursorStyle,
+  setCursorStyle,
+  getTvOverscan,
+  setTvOverscan,
+  getSubtitleSettings,
+  saveSubtitleSettings,
+  getSeniorEasyMode,
+  applySeniorEasyPreset,
+  getGreetingStyle,
+  setGreetingStyle,
+  getProfileMascot,
+  setProfileMascot,
+  getWarmEyeCare,
+  setWarmEyeCare,
+  getStartupTab,
+  setStartupTab,
+  getShowCornerClock,
+  setShowCornerClock,
+  getStorageHealth,
+  purgeOldTmdbCaches,
+  resetVisualSettings,
+  exportAllSettingsSnapshot,
+  importSettingsSnapshot,
+  getOrCreateDeviceId,
 } from "@/lib/settings";
 
-const AGE_LOCK_KEY = "rabtv_age_passcode";
-const RAM_MODE_STORAGE_KEY = "rabtv_ram_mode";
-const AUTOPLAY_NEXT_STORAGE_KEY = "rabtv_autoplay_next";
-const HEARTBEAT_DEFAULT_MIGRATED_KEY = "rabtv_heartbeat_default_v1";
+export type { RamMode };
 
-export type RamMode = "low" | "high";
+const HEARTBEAT_DEFAULT_MIGRATED_KEY = "rabtv_heartbeat_default_v1";
 
 export const globalFeedOptions = [
   "All (Default)",
@@ -52,7 +137,6 @@ const RABBIT_DIVIDER =
  * Finds "Heartbeat Radio" inside the "2000s" category of RADIO_STATIONS.
  */
 export function getDefaultHeartbeatStationUrl(): string {
-  // 1. Direct lookup in "2000s"
   const stations2000s =
     RADIO_STATIONS["2000s"] ||
     RADIO_STATIONS["2000's"] ||
@@ -64,7 +148,6 @@ export function getDefaultHeartbeatStationUrl(): string {
   if (exactHeartbeat?.url) return exactHeartbeat.url;
   if (stations2000s[0]?.url) return stations2000s[0].url;
 
-  // 2. Fallback scan across all categories for Heartbeat Radio or 2000s
   for (const [category, list] of Object.entries(RADIO_STATIONS)) {
     const match = list.find((s) => s.name.toLowerCase().includes("heartbeat"));
     if (match?.url) return match.url;
@@ -160,16 +243,100 @@ export function Sidebar({
   const [activeSection, setActiveSection] =
     useState<ConsolidatedSection>(null);
 
-  const [screensaverTimeoutMs, setScreensaverTimeoutMs] = useState<number>(
-    () => {
-      if (typeof window !== "undefined") {
-        const saved = localStorage.getItem("rabtv_screensaver_timeout_ms");
-        return saved ? Number(saved) : 2.5 * 60 * 60 * 1000;
-      }
-      return 2.5 * 60 * 60 * 1000;
-    }
+  // Synced Settings States
+  const [screensaverTimeoutMs, setScreensaverTimeoutMs] = useState<number>(() =>
+    getSavedScreensaverTimeout()
+  );
+  const [sleepTimerMin, setSleepTimerMin] = useState<SleepTimerMinutes>(() =>
+    getSleepTimerMinutes()
+  );
+  const [clockFormat, setClockFormatState] = useState<ClockFormat>(() =>
+    getClockFormat()
+  );
+  const [showCornerClock, setShowCornerClockState] = useState<boolean>(() =>
+    getShowCornerClock()
   );
 
+  // Poster Appearance & Layout States
+  const [posterShape, setPosterShapeState] = useState<PosterShape>(() =>
+    getPosterShape()
+  );
+  const [posterCardStyle, setPosterCardStyleState] = useState<PosterCardStyle>(
+    () => getPosterCardStyle()
+  );
+  const [posterInfoLayout, setPosterInfoLayoutState] =
+    useState<PosterInfoLayout>(() => getPosterInfoLayout());
+  const [showPosterBadges, setShowPosterBadgesState] = useState<boolean>(() =>
+    getShowPosterBadges()
+  );
+  const [glowIntensity, setGlowIntensityState] = useState<GlowIntensity>(() =>
+    getGlowIntensity()
+  );
+  const [visualResetMsg, setVisualResetMsg] = useState<string | null>(null);
+
+  // Senior, TV & Personalization States
+  const [seniorEasyMode, setSeniorEasyModeState] = useState<boolean>(() =>
+    getSeniorEasyMode()
+  );
+  const [textScale, setTextScaleState] = useState<TextScale>(() =>
+    getTextScale()
+  );
+  const [cursorStyle, setCursorStyleState] = useState<CursorStyle>(() =>
+    getCursorStyle()
+  );
+  const [highContrastFocus, setHighContrastFocusState] = useState<boolean>(() =>
+    getHighContrastFocus()
+  );
+  const [reducedMotion, setReducedMotionState] = useState<boolean>(() =>
+    getReducedMotion()
+  );
+  const [uiClickSounds, setUiClickSoundsState] = useState<boolean>(() =>
+    getUiClickSounds()
+  );
+  const [tvOverscan, setTvOverscanState] = useState<TvOverscanPercent>(() =>
+    getTvOverscan()
+  );
+  const [subtitles, setSubtitlesState] = useState<SubtitleSettings>(() =>
+    getSubtitleSettings()
+  );
+  const [profileMascot, setProfileMascotState] = useState<string>(() =>
+    getProfileMascot()
+  );
+  const [greetingStyle, setGreetingStyleState] = useState<GreetingStyle>(() =>
+    getGreetingStyle()
+  );
+  const [warmEyeCare, setWarmEyeCareState] = useState<boolean>(() =>
+    getWarmEyeCare()
+  );
+  const [startupTab, setStartupTabState] = useState<StartupTab>(() =>
+    getStartupTab()
+  );
+  const [kidsLocked, setKidsLockedState] = useState<boolean>(() =>
+    getKidsModeLocked()
+  );
+  const [kidsUnlockPin, setKidsUnlockPin] = useState<string>("");
+  const [kidsLockStatus, setKidsLockStatus] = useState<string | null>(null);
+
+  // Hardware & Stream Engine States
+  const [ramMode, setRamModeState] = useState<RamMode>(() => getRamMode());
+  const [dataSaverMode, setDataSaverModeState] = useState<boolean>(() =>
+    getDataSaverMode()
+  );
+  const [activeStreamQuality, setActiveStreamQuality] =
+    useState<StreamQuality>(streamQuality);
+  const [autoPlayNext, setAutoPlayNextState] = useState<boolean>(() =>
+    getAutoPlayNext()
+  );
+  const [defaultPlayerVolume, setDefaultPlayerVolumeState] = useState<number>(
+    () => getDefaultPlayerVolume()
+  );
+  const [storageHealth, setStorageHealth] = useState<StorageHealthReport>(() =>
+    getStorageHealth()
+  );
+  const [deviceId] = useState<string>(() => getOrCreateDeviceId());
+  const [cacheClearMsg, setCacheClearMsg] = useState<string | null>(null);
+
+  // Radio & Feed States
   const [bgMusicVolume, setBgMusicVolume] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("rabtv_bg_volume");
@@ -193,55 +360,6 @@ export function Sidebar({
     return heartbeatUrl;
   });
 
-  // Ensure Heartbeat Radio (2000s) is applied to bgAudio on initial app boot
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const heartbeatUrl = getDefaultHeartbeatStationUrl();
-    const migrated = localStorage.getItem(HEARTBEAT_DEFAULT_MIGRATED_KEY);
-    const saved = localStorage.getItem("rabtv_radio_url");
-
-    if ((!migrated || !saved) && heartbeatUrl) {
-      localStorage.setItem(HEARTBEAT_DEFAULT_MIGRATED_KEY, "true");
-      localStorage.setItem("rabtv_radio_url", heartbeatUrl);
-      bgAudio.setStation(heartbeatUrl);
-      setCurrentStationUrl(heartbeatUrl);
-    }
-  }, []);
-
-  // Hardware RAM Mode State ("low" for 1-2GB streaming sticks, "high" for 4GB+ devices)
-  const [ramMode, setRamModeState] = useState<RamMode>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(RAM_MODE_STORAGE_KEY) as RamMode | null;
-      if (saved === "low" || saved === "high") return saved;
-      const devMem = (navigator as any).deviceMemory;
-      if (typeof devMem === "number" && devMem <= 2) return "low";
-    }
-    return "low";
-  });
-
-  useEffect(() => {
-    if (typeof document !== "undefined") {
-      document.documentElement.setAttribute("data-ram-mode", ramMode);
-    }
-  }, [ramMode]);
-
-  const [activeStreamQuality, setActiveStreamQuality] =
-    useState<StreamQuality>(streamQuality);
-
-  useEffect(() => {
-    setActiveStreamQuality(streamQuality);
-  }, [streamQuality]);
-
-  const [autoPlayNext, setAutoPlayNextState] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(AUTOPLAY_NEXT_STORAGE_KEY);
-      return saved !== null ? saved === "true" : true;
-    }
-    return true;
-  });
-
-  const [cacheClearMsg, setCacheClearMsg] = useState<string | null>(null);
-
   const [selectedGlobalFeed, setSelectedGlobalFeed] =
     useState<GlobalFeedOption>(() => {
       if (typeof window !== "undefined") {
@@ -253,6 +371,7 @@ export function Sidebar({
       return "All (Default)";
     });
 
+  // Profile / PIN / License States
   const [unifiedAgeCodeInput, setUnifiedAgeCodeInput] = useState<string>("");
   const [newPasscode, setNewPasscode] = useState<string>("");
   const [confirmNewPasscode, setConfirmNewPasscode] = useState<string>("");
@@ -281,6 +400,64 @@ export function Sidebar({
   );
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
+
+  // Sync all local sidebar controls whenever settings change in bulk (e.g. Senior Easy Mode / Visual Reset)
+  const syncLocalControls = useCallback(() => {
+    setScreensaverTimeoutMs(getSavedScreensaverTimeout());
+    setSleepTimerMin(getSleepTimerMinutes());
+    setClockFormatState(getClockFormat());
+    setShowCornerClockState(getShowCornerClock());
+    setPosterShapeState(getPosterShape());
+    setPosterCardStyleState(getPosterCardStyle());
+    setPosterInfoLayoutState(getPosterInfoLayout());
+    setShowPosterBadgesState(getShowPosterBadges());
+    setGlowIntensityState(getGlowIntensity());
+    setSeniorEasyModeState(getSeniorEasyMode());
+    setTextScaleState(getTextScale());
+    setCursorStyleState(getCursorStyle());
+    setHighContrastFocusState(getHighContrastFocus());
+    setReducedMotionState(getReducedMotion());
+    setUiClickSoundsState(getUiClickSounds());
+    setTvOverscanState(getTvOverscan());
+    setSubtitlesState(getSubtitleSettings());
+    setProfileMascotState(getProfileMascot());
+    setGreetingStyleState(getGreetingStyle());
+    setWarmEyeCareState(getWarmEyeCare());
+    setStartupTabState(getStartupTab());
+    setKidsLockedState(getKidsModeLocked());
+    setRamModeState(getRamMode());
+    setDataSaverModeState(getDataSaverMode());
+    setAutoPlayNextState(getAutoPlayNext());
+    setDefaultPlayerVolumeState(getDefaultPlayerVolume());
+    setStorageHealth(getStorageHealth());
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    syncLocalControls();
+    window.addEventListener("rabtv_settings_updated", syncLocalControls);
+    return () =>
+      window.removeEventListener("rabtv_settings_updated", syncLocalControls);
+  }, [isOpen, syncLocalControls]);
+
+  useEffect(() => {
+    setActiveStreamQuality(streamQuality);
+  }, [streamQuality]);
+
+  // Ensure Heartbeat Radio (2000s) is applied to bgAudio on initial app boot
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const heartbeatUrl = getDefaultHeartbeatStationUrl();
+    const migrated = localStorage.getItem(HEARTBEAT_DEFAULT_MIGRATED_KEY);
+    const saved = localStorage.getItem("rabtv_radio_url");
+
+    if ((!migrated || !saved) && heartbeatUrl) {
+      localStorage.setItem(HEARTBEAT_DEFAULT_MIGRATED_KEY, "true");
+      localStorage.setItem("rabtv_radio_url", heartbeatUrl);
+      bgAudio.setStation(heartbeatUrl);
+      setCurrentStationUrl(heartbeatUrl);
+    }
+  }, []);
 
   // Close sidebar if main window scrolls significantly
   useEffect(() => {
@@ -364,10 +541,7 @@ export function Sidebar({
 
   const handleScreensaverTimeoutChange = (newMs: number) => {
     setScreensaverTimeoutMs(newMs);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("rabtv_screensaver_timeout_ms", String(newMs));
-      window.dispatchEvent(new Event("rabtv_settings_updated"));
-    }
+    saveScreensaverTimeout(newMs);
   };
 
   const handleVolumeChange = (newVol: number) => {
@@ -388,14 +562,7 @@ export function Sidebar({
 
   const handleRamModeChange = (mode: RamMode) => {
     setRamModeState(mode);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(RAM_MODE_STORAGE_KEY, mode);
-      document.documentElement.setAttribute("data-ram-mode", mode);
-      window.dispatchEvent(
-        new CustomEvent("rabtv_ram_mode_updated", { detail: mode })
-      );
-      window.dispatchEvent(new Event("rabtv_settings_updated"));
-    }
+    setRamMode(mode);
   };
 
   const handleStreamQualitySelect = (quality: StreamQuality) => {
@@ -406,38 +573,21 @@ export function Sidebar({
     }
   };
 
-  const handleAutoPlayNextToggle = (enabled: boolean) => {
-    setAutoPlayNextState(enabled);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(AUTOPLAY_NEXT_STORAGE_KEY, String(enabled));
-      window.dispatchEvent(new Event("rabtv_settings_updated"));
-    }
+  const handlePurgeVolatileCaches = () => {
+    const count = purgeOldTmdbCaches();
+    setStorageHealth(getStorageHealth());
+    setCacheClearMsg(
+      count > 0
+        ? `✓ Purged ${count} cached stream & metadata buffers!`
+        : "✓ Storage caches are already clean!"
+    );
+    window.setTimeout(() => setCacheClearMsg(null), 3500);
   };
 
-  const handlePurgeVolatileCaches = () => {
-    if (typeof window === "undefined") return;
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (
-          key &&
-          (key.startsWith("rabtv_cache_") ||
-            key.startsWith("rabtv_fast_live_health") ||
-            key.startsWith("rabtv_ublock_cached"))
-        ) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach((k) => localStorage.removeItem(k));
-      setCacheClearMsg(
-        `✓ Purged ${keysToRemove.length} cached stream & metadata buffers!`
-      );
-      setTimeout(() => setCacheClearMsg(null), 3500);
-    } catch {
-      setCacheClearMsg("✓ Stream memory buffers refreshed!");
-      setTimeout(() => setCacheClearMsg(null), 3000);
-    }
+  const handleResetVisualDefaults = () => {
+    resetVisualSettings();
+    setVisualResetMsg("✓ Visual & poster styles restored to defaults!");
+    window.setTimeout(() => setVisualResetMsg(null), 3000);
   };
 
   const handleGlobalFeedChange = (feed: GlobalFeedOption) => {
@@ -457,23 +607,70 @@ export function Sidebar({
     }
   };
 
-  const getAgeLockCode = () =>
-    typeof window !== "undefined"
-      ? localStorage.getItem(AGE_LOCK_KEY) || ""
-      : "";
+  const handleKidsLockToggle = async () => {
+    if (!kidsLocked) {
+      setKidsModeLocked(true);
+      setKidsLockedState(true);
+      setKidsLockStatus("🧒 Kids Safe Mode locked ON (Under-13 filter active).");
+      window.setTimeout(() => setKidsLockStatus(null), 3000);
+      return;
+    }
 
-  const handleUnifiedProfileUpdate = (e: React.FormEvent) => {
+    // Unlocking Kids Mode requires the 4-6 digit PIN
+    const lockState = getPinLockoutState();
+    if (lockState.isLocked) {
+      setKidsLockStatus(
+        `⏳ Too many attempts. Wait ${lockState.remainingSeconds}s.`
+      );
+      return;
+    }
+
+    const ok = await verifyAgeLockPin(kidsUnlockPin);
+    if (!ok) {
+      const next = recordPinFailure();
+      setKidsUnlockPin("");
+      setKidsLockStatus(
+        next.isLocked
+          ? `🚨 Locked for ${next.remainingSeconds}s due to failed PINs.`
+          : `⚠️ Enter your 4–6 digit PIN to turn Kids Mode off (${next.attemptsLeft} tries left).`
+      );
+      return;
+    }
+
+    resetPinFailures();
+    setKidsModeLocked(false);
+    setKidsLockedState(false);
+    setKidsUnlockPin("");
+    setKidsLockStatus("🔓 Kids Safe Mode unlocked.");
+    window.setTimeout(() => setKidsLockStatus(null), 3000);
+  };
+
+  const handleUnifiedProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const locked = getAgeLockCode();
 
-    if (!locked || unifiedAgeCodeInput.trim() !== locked) {
+    const lockState = getPinLockoutState();
+    if (lockState.isLocked) {
       setUnifiedUpdateStatus({
-        text: "⚠️ Current age-lock code is incorrect.",
+        text: `⏳ PIN cooldown active. Wait ${lockState.remainingSeconds}s.`,
+        isError: true,
+      });
+      return;
+    }
+
+    const validCurrent = await verifyAgeLockPin(unifiedAgeCodeInput);
+    if (!validCurrent) {
+      const next = recordPinFailure();
+      setUnifiedUpdateStatus({
+        text: next.isLocked
+          ? `🚨 Too many failed PINs. Locked for ${next.remainingSeconds}s.`
+          : `⚠️ Current 4–6 digit PIN is incorrect (${next.attemptsLeft} tries left).`,
         isError: true,
       });
       setUnifiedAgeCodeInput("");
       return;
     }
+
+    resetPinFailures();
 
     const parsedAge = parseInt(userAgeInput, 10);
     if (isNaN(parsedAge) || parsedAge < 1 || parsedAge > 120) {
@@ -488,23 +685,21 @@ export function Sidebar({
     const trimmedConfirm = confirmNewPasscode.trim();
 
     if (trimmedNew || trimmedConfirm) {
-      if (!/^\d{4}$/.test(trimmedNew)) {
+      if (!isValidAgeLockPin(trimmedNew)) {
         setUnifiedUpdateStatus({
-          text: "⚠️ New age-lock code must be exactly 4 digits.",
+          text: "⚠️ New PIN must be 4 to 6 digits (numbers only).",
           isError: true,
         });
         return;
       }
       if (trimmedNew !== trimmedConfirm) {
         setUnifiedUpdateStatus({
-          text: "⚠️ New codes do not match.",
+          text: "⚠️ New PIN codes do not match.",
           isError: true,
         });
         return;
       }
-      if (typeof window !== "undefined") {
-        localStorage.setItem(AGE_LOCK_KEY, trimmedNew);
-      }
+      await saveAgeLockPinSecure(trimmedNew);
     }
 
     saveUserAge(parsedAge);
@@ -515,13 +710,13 @@ export function Sidebar({
     setSavedProfileName(finalName);
 
     setUnifiedUpdateStatus({
-      text: "✓ Profile and age-lock updated successfully!",
+      text: "✓ Profile & hashed PIN updated securely!",
       isError: false,
     });
     setUnifiedAgeCodeInput("");
     setNewPasscode("");
     setConfirmNewPasscode("");
-    setTimeout(() => setUnifiedUpdateStatus(null), 3500);
+    window.setTimeout(() => setUnifiedUpdateStatus(null), 3500);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("rabtv_settings_updated"));
     }
@@ -553,6 +748,7 @@ export function Sidebar({
             Accept: "application/vnd.github+json",
             "User-Agent": "RabbitTV-App",
           },
+          cache: "no-store",
         });
         if (res.ok) {
           const gistData = await res.json();
@@ -562,15 +758,16 @@ export function Sidebar({
             if (Array.isArray(keysList)) {
               const matchedIndex = keysList.findIndex((item: any) =>
                 typeof item === "object" && item !== null
-                  ? item.key === String(unlockCodeInput.trim()) &&
+                  ? String(item.key).trim() === String(unlockCodeInput.trim()) &&
                     item.active === true
-                  : String(item) === String(unlockCodeInput.trim())
+                  : String(item).trim() === String(unlockCodeInput.trim())
               );
               if (matchedIndex !== -1) {
                 isValidGitHubCode = true;
                 if (typeof keysList[matchedIndex] === "object") {
                   keysList[matchedIndex].active = false;
                   keysList[matchedIndex].usedBy = `${name} (Age: ${age})`;
+                  keysList[matchedIndex].claimedAt = new Date().toISOString();
                 } else {
                   keysList.splice(matchedIndex, 1);
                 }
@@ -611,7 +808,7 @@ export function Sidebar({
         isError: false,
       });
       setUnlockCodeInput("");
-      setTimeout(() => {
+      window.setTimeout(() => {
         setUnlockStatusMsg(null);
         handleCloseSidebar();
         if (typeof window !== "undefined") {
@@ -628,15 +825,7 @@ export function Sidebar({
 
   const handleSaveBackup = () => {
     const backupData = {
-      cardSize,
-      streamQuality: activeStreamQuality,
-      appTheme,
-      helpfulMouse,
-      historyOverscale,
-      largeButtons,
-      ramMode,
-      autoPlayNext,
-      userAge: getSavedUserAge(),
+      ...exportAllSettingsSnapshot(),
       profileName: savedProfileName,
       myList:
         typeof window !== "undefined"
@@ -657,8 +846,8 @@ export function Sidebar({
     a.download = "rabtv_profile_backup.json";
     a.click();
     URL.revokeObjectURL(url);
-    setBackupStatus("Profile settings backup saved!");
-    setTimeout(() => setBackupStatus(null), 3000);
+    setBackupStatus("✓ Full profile & style backup exported!");
+    window.setTimeout(() => setBackupStatus(null), 3000);
   };
 
   const handleRestoreBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -668,41 +857,36 @@ export function Sidebar({
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        if (data.cardSize) onSizeChange(data.cardSize);
-        if (data.streamQuality) handleStreamQualitySelect(data.streamQuality);
-        if (data.appTheme) onThemeChange(data.appTheme);
-        if (typeof data.helpfulMouse === "boolean")
-          onMouseToggle(data.helpfulMouse);
-        if (data.historyOverscale)
-          onHistoryOverscaleChange(data.historyOverscale);
-        if (typeof data.largeButtons === "boolean")
-          onLargeButtonsToggle(data.largeButtons);
-        if (data.ramMode === "low" || data.ramMode === "high")
-          handleRamModeChange(data.ramMode);
-        if (typeof data.autoPlayNext === "boolean")
-          handleAutoPlayNextToggle(data.autoPlayNext);
-        if (data.userAge) saveUserAge(data.userAge);
-        if (data.profileName && typeof window !== "undefined") {
-          localStorage.setItem("rabtv_profile_name", data.profileName);
-          setSavedProfileName(data.profileName);
+        const result = importSettingsSnapshot(data);
+        if (!result.valid) {
+          setBackupStatus("⚠️ Invalid or empty backup file.");
+          return;
         }
-        if (data.myList && typeof window !== "undefined")
-          localStorage.setItem("rabtv_my_list", data.myList);
-        if (data.favorites && typeof window !== "undefined")
-          localStorage.setItem("rabtv_favorites", data.favorites);
 
-        if (typeof window !== "undefined") {
-          localStorage.removeItem(DISCLAIMER_ACCEPTED_KEY);
-          localStorage.removeItem("rabtv_access_status");
-          localStorage.removeItem("rabtv_is_admin");
+        if (typeof data.profileName === "string" && data.profileName.trim()) {
+          const safeName = data.profileName.trim().slice(0, 25);
+          localStorage.setItem("rabtv_profile_name", safeName);
+          setSavedProfileName(safeName);
         }
+        if (typeof data.myList === "string") {
+          localStorage.setItem("rabtv_my_list", data.myList);
+        }
+        if (typeof data.favorites === "string") {
+          localStorage.setItem("rabtv_favorites", data.favorites);
+        }
+
+        // Security rule: Always require fresh activation/PIN confirmation after restore
+        localStorage.removeItem(DISCLAIMER_ACCEPTED_KEY);
+        localStorage.removeItem("rabtv_access_status");
+        localStorage.removeItem("rabtv_is_admin");
+
         onTriggerFirstStartModal();
         handleCloseSidebar();
         setBackupStatus(
-          "Settings restored. Please reinstate your passcode agreement."
+          `✓ Restored ${result.appliedCount} settings. Please verify access.`
         );
       } catch {
-        setBackupStatus("Failed to restore backup file.");
+        setBackupStatus("⚠️ Failed to restore backup file.");
       }
     };
     reader.readAsText(file);
@@ -771,7 +955,6 @@ export function Sidebar({
             "linear-gradient(to right, rgba(0,0,0,0.12) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 90%, rgba(0,0,0,0.12) 100%)",
         }}
       >
-        {/* Signature Neon Pill Artwork with Crystal Glass Transparency */}
         <div
           className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden z-0 opacity-85"
           style={{
@@ -832,7 +1015,7 @@ export function Sidebar({
         onClick={handleCloseSidebar}
       />
 
-      {/* Crystal Neon Console Blade Drawer (Restored RABBIT_PANEL with Glass Transparency) */}
+      {/* Crystal Neon Console Blade Drawer */}
       <div className="relative my-1.5 w-[420px] max-w-[95vw] h-[calc(100dvh-74px)] rounded-[30px] border border-white/20 shadow-[0_25px_70px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-11 pb-11 px-5 pointer-events-auto box-border backdrop-blur-2xl bg-slate-950/50">
         {/* Translucent RABBIT_PANEL Neon Outer Frame Layer */}
         <div
@@ -843,7 +1026,6 @@ export function Sidebar({
             backgroundRepeat: "no-repeat",
           }}
         />
-        {/* Subtle Glass Specular Tint */}
         <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/[0.06] via-slate-950/40 to-red-500/[0.06] pointer-events-none z-0" />
 
         {/* Scroll Up Arrow Button */}
@@ -884,16 +1066,26 @@ export function Sidebar({
                       appTheme
                     )}`}
                   >
+                    <span className="mr-1">{profileMascot}</span>
                     {savedProfileName || "User Profile"}
                   </h3>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       <span>Online</span>
                     </span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
-                      {ramMode === "low" ? "1-2GB Stick" : "High RAM"}
+                    <span className="text-[9px] text-slate-300 font-bold uppercase px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
+                      {ramMode === "low"
+                        ? "1-2GB Stick"
+                        : ramMode === "high"
+                          ? "High RAM"
+                          : "Auto RAM"}
                     </span>
+                    {seniorEasyMode && (
+                      <span className="text-[9px] text-amber-300 font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-400/30">
+                        Easy Mode
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -909,14 +1101,14 @@ export function Sidebar({
 
             {/* CONSOLIDATED CRYSTAL NEON ACCORDIONS */}
             <div className="space-y-2.5 w-full box-border pt-1">
-              {/* 1. GLOBAL FEED & WATCH HISTORY */}
+              {/* 1. GLOBAL FEED, STARTUP & WATCH HISTORY */}
               <div className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "feedAndHistory",
                   "🌐",
-                  "Global Feed & Watch History",
+                  "Feed, Startup & History",
                   selectedGlobalFeed === "All (Default)"
-                    ? "Global"
+                    ? startupTab
                     : selectedGlobalFeed
                 )}
 
@@ -958,6 +1150,33 @@ export function Sidebar({
 
                       <div className="pt-2.5 border-t border-white/10">
                         <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                          Favorite Startup Screen:
+                        </p>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {STARTUP_TAB_OPTIONS.map((tab) => (
+                            <button
+                              key={tab}
+                              type="button"
+                              onClick={() => {
+                                setStartupTab(tab);
+                                setStartupTabState(tab);
+                              }}
+                              className={`rounded-xl py-1.5 px-1 text-[10px] font-bold transition-all truncate cursor-pointer hover:scale-105 ${
+                                startupTab === tab
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow-md`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              {tab}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-2.5 border-t border-white/10">
+                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
                           Activity & Playback Timeline:
                         </p>
                         <Link
@@ -975,13 +1194,13 @@ export function Sidebar({
                 )}
               </div>
 
-              {/* 2. THEMES, SCALE & GRID SIZE (Collapsed Together!) */}
+              {/* 2. THEMES, POSTER STYLES & GRID LAYOUT */}
               <div className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "themesAndScale",
                   "🎨",
-                  "Themes, Scale & Grid Size",
-                  `${appTheme.toUpperCase()} • ${cardSize.toUpperCase()}`
+                  "Themes, Posters & Grid Layout",
+                  `${appTheme.toUpperCase()} • ${posterShape.toUpperCase()}`
                 )}
 
                 {activeSection === "themesAndScale" && (
@@ -1017,6 +1236,132 @@ export function Sidebar({
                               {t.label}
                             </button>
                           ))}
+                        </div>
+                      </div>
+
+                      {/* Poster Corner Shape */}
+                      <div className="pt-2.5 border-t border-white/10">
+                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                          Poster Corner Shape:
+                        </p>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {POSTER_SHAPE_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                setPosterShape(opt.id);
+                                setPosterShapeState(opt.id);
+                              }}
+                              className={`rounded-xl py-2 px-1 text-[10px] font-bold transition-all cursor-pointer hover:scale-105 ${
+                                posterShape === opt.id
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow-md`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Poster Frame Style */}
+                      <div className="pt-2.5 border-t border-white/10">
+                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                          Poster Frame Style:
+                        </p>
+                        <div className="space-y-1.5">
+                          {POSTER_CARD_STYLE_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                setPosterCardStyle(opt.id);
+                                setPosterCardStyleState(opt.id);
+                              }}
+                              className={`w-full rounded-xl px-3 py-2 text-left transition-all cursor-pointer hover:scale-[1.02] ${
+                                posterCardStyle === opt.id
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow-md ring-1 ring-white/30`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              <span className="block text-xs font-extrabold">
+                                {opt.label}
+                              </span>
+                              <span className="block text-[9px] opacity-85">
+                                {opt.desc}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Poster Info Layout */}
+                      <div className="pt-2.5 border-t border-white/10">
+                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                          Poster Information Layout:
+                        </p>
+                        <div className="space-y-1.5">
+                          {POSTER_INFO_LAYOUT_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                setPosterInfoLayout(opt.id);
+                                setPosterInfoLayoutState(opt.id);
+                              }}
+                              className={`w-full rounded-xl px-3 py-2 text-left transition-all cursor-pointer hover:scale-[1.02] ${
+                                posterInfoLayout === opt.id
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow-md ring-1 ring-white/30`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              <span className="block text-xs font-extrabold">
+                                {opt.label}
+                              </span>
+                              <span className="block text-[9px] opacity-85">
+                                {opt.desc}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2.5">
+                          <div>
+                            <p className="text-xs font-bold text-white">
+                              Show Rating & Status Badges
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              Toggle floating star tags on posters.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = !showPosterBadges;
+                              setShowPosterBadges(next);
+                              setShowPosterBadgesState(next);
+                            }}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              showPosterBadges
+                                ? getPrimaryBgColor(appTheme).split(" ")[0]
+                                : "bg-slate-700"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                showPosterBadges
+                                  ? "translate-x-6"
+                                  : "translate-x-1"
+                              }`}
+                            />
+                          </button>
                         </div>
                       </div>
 
@@ -1072,6 +1417,49 @@ export function Sidebar({
                             </button>
                           ))}
                         </div>
+                      </div>
+
+                      {/* Neon Glow Intensity + Safe Visual Reset */}
+                      <div className="pt-2.5 border-t border-white/10 space-y-2.5">
+                        <div>
+                          <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                            Neon Glow Intensity:
+                          </p>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {GLOW_INTENSITY_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => {
+                                  setGlowIntensity(opt.id);
+                                  setGlowIntensityState(opt.id);
+                                }}
+                                className={`rounded-xl py-1.5 text-[10px] font-bold transition-all cursor-pointer hover:scale-105 ${
+                                  glowIntensity === opt.id
+                                    ? `${getPrimaryBgColor(
+                                        appTheme
+                                      )} text-white shadow-md`
+                                    : getSubtlePillBg(appTheme)
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleResetVisualDefaults}
+                          className="w-full py-2 rounded-xl bg-black/60 hover:bg-white/15 border border-white/15 text-[11px] font-bold text-amber-300 transition cursor-pointer"
+                        >
+                          ↺ Reset Visual & Poster Defaults (Keeps License & PIN)
+                        </button>
+                        {visualResetMsg && (
+                          <p className="text-[11px] font-bold text-emerald-400 text-center">
+                            {visualResetMsg}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1136,7 +1524,6 @@ export function Sidebar({
                         </button>
                       </div>
 
-                      {/* Volume Slider */}
                       <div className="pt-2 border-t border-white/10 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <p className="text-[11px] text-slate-300 font-bold">
@@ -1159,7 +1546,6 @@ export function Sidebar({
                         />
                       </div>
 
-                      {/* Genre Folders (2000s auto-expanded if active) */}
                       <div className="pt-2 border-t border-white/10">
                         <p className="text-[11px] text-slate-300 mb-2 font-bold">
                           Select Channel by Genre:
@@ -1248,16 +1634,17 @@ export function Sidebar({
                 )}
               </div>
 
-              {/* 4. PROFILE, PIN & ACCESSIBILITY (Collapsed Together!) */}
+              {/* 4. PROFILE, PIN, PERSONALIZATION & SENIOR / TV MODE */}
               <div className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "profileAndAccessibility",
                   "🔒",
-                  "Profile, PIN & Accessibility"
+                  "Profile, PIN & Senior / TV Mode",
+                  kidsLocked ? "KIDS LOCK" : seniorEasyMode ? "EASY" : undefined
                 )}
 
                 {activeSection === "profileAndAccessibility" && (
-                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-3.5">
+                  <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/55 border border-white/15 space-y-4">
                     <div
                       className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
                       style={{
@@ -1266,20 +1653,215 @@ export function Sidebar({
                         backgroundRepeat: "no-repeat",
                       }}
                     />
-                    <div className="relative z-10 space-y-3.5 w-full box-border">
-                      {/* Accessibility Toggles */}
+                    <div className="relative z-10 space-y-4 w-full box-border">
+                      {/* ONE-TAP SENIOR EASY MODE */}
+                      <div className="rounded-2xl bg-gradient-to-r from-amber-500/20 via-black/70 to-amber-500/15 border border-amber-400/45 p-3 flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-black text-amber-300">
+                            👓 One-Tap Senior Easy Mode
+                          </p>
+                          <p className="text-[10px] text-slate-200 leading-snug">
+                            Large text, big buttons, yellow XL pointer, bright TV focus & steady screen.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !seniorEasyMode;
+                            applySeniorEasyPreset(next);
+                            setSeniorEasyModeState(next);
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                            seniorEasyMode ? "bg-amber-500" : "bg-slate-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              seniorEasyMode ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* PERSONALIZATION: MASCOT, GREETING, EYE-CARE, CORNER CLOCK */}
                       <div className="space-y-2.5 pb-3 border-b border-white/15">
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-300">
-                          ♿ TV & Accessibility Controls
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-pink-300">
+                          ✨ Fun Personalizations
                         </p>
 
-                        <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] text-slate-300 font-bold mb-1">
+                            Profile Mascot Badge:
+                          </p>
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {PROFILE_MASCOT_OPTIONS.map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => {
+                                  setProfileMascot(m.id);
+                                  setProfileMascotState(m.id);
+                                }}
+                                title={m.label}
+                                className={`py-1.5 rounded-xl text-base transition-all cursor-pointer hover:scale-110 ${
+                                  profileMascot === m.id
+                                    ? `${getPrimaryBgColor(
+                                        appTheme
+                                      )} ring-2 ring-white/50 shadow-md`
+                                    : "bg-black/55 border border-white/10 hover:bg-white/15"
+                                }`}
+                              >
+                                {m.id}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-[11px] text-slate-300 font-bold mb-1">
+                            Home Greeting Style:
+                          </p>
+                          <select
+                            value={greetingStyle}
+                            onChange={(e) => {
+                              const val = e.target.value as GreetingStyle;
+                              setGreetingStyle(val);
+                              setGreetingStyleState(val);
+                            }}
+                            className="h-9 w-full rounded-xl border border-white/15 bg-black/70 px-3 text-xs font-bold text-white focus:outline-none cursor-pointer"
+                          >
+                            {GREETING_STYLE_OPTIONS.map((g) => (
+                              <option
+                                key={g.id}
+                                value={g.id}
+                                className="bg-slate-950 text-white"
+                              >
+                                {g.label} — {g.sample}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <div>
+                            <p className="text-xs font-bold text-white">
+                              🌙 Night Owl Eye-Care Filter
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              Soft warm tint for late-night watching.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = !warmEyeCare;
+                              setWarmEyeCare(next);
+                              setWarmEyeCareState(next);
+                            }}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              warmEyeCare ? "bg-amber-500" : "bg-slate-700"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                warmEyeCare ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <div>
+                            <p className="text-xs font-bold text-white">
+                              🕒 Couch Corner Clock
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              Subtle live time while browsing.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextFmt: ClockFormat =
+                                  clockFormat === "12h" ? "24h" : "12h";
+                                setClockFormat(nextFmt);
+                                setClockFormatState(nextFmt);
+                              }}
+                              className="px-2 py-1 rounded-lg bg-black/70 border border-white/15 text-[10px] font-bold text-cyan-300 cursor-pointer"
+                              title="Toggle 12h / 24h"
+                            >
+                              {clockFormat.toUpperCase()}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = !showCornerClock;
+                                setShowCornerClock(next);
+                                setShowCornerClockState(next);
+                              }}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                                showCornerClock
+                                  ? getPrimaryBgColor(appTheme).split(" ")[0]
+                                  : "bg-slate-700"
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  showCornerClock
+                                    ? "translate-x-6"
+                                    : "translate-x-1"
+                                }`}
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ACCESSIBILITY, TV OVERSCAN & SUBTITLES */}
+                      <div className="space-y-2.5 pb-3 border-b border-white/15">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-300">
+                          ♿ TV, Projector & Accessibility
+                        </p>
+
+                        {/* Text Size */}
+                        <div>
+                          <p className="text-[11px] text-slate-300 font-bold mb-1">
+                            Text Size:
+                          </p>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {(["normal", "large", "xl"] as TextScale[]).map(
+                              (sc) => (
+                                <button
+                                  key={sc}
+                                  type="button"
+                                  onClick={() => {
+                                    setTextScale(sc);
+                                    setTextScaleState(sc);
+                                  }}
+                                  className={`rounded-xl py-1.5 text-xs font-bold uppercase transition cursor-pointer ${
+                                    textScale === sc
+                                      ? `${getPrimaryBgColor(
+                                          appTheme
+                                        )} text-white shadow-md`
+                                      : getSubtlePillBg(appTheme)
+                                  }`}
+                                >
+                                  {sc}
+                                </button>
+                              )
+                            )}
+                          </div>
+                        </div>
+
+                        {/* XL Mouse Pointer + Color Picker */}
+                        <div className="flex items-center justify-between pt-1">
                           <div>
                             <p className="text-xs font-bold text-white">
                               XL Mouse Pointer (3x)
                             </p>
                             <p className="text-[10px] text-slate-300">
-                              Enlarges cursor for TVs/projectors.
+                              Enlarges cursor for TVs & projectors.
                             </p>
                           </div>
                           <button
@@ -1299,13 +1881,38 @@ export function Sidebar({
                           </button>
                         </div>
 
+                        {helpfulMouse && (
+                          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                            {CURSOR_STYLE_OPTIONS.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setCursorStyle(c.id);
+                                  setCursorStyleState(c.id);
+                                }}
+                                className={`rounded-xl py-1.5 px-2 text-[10px] font-bold transition cursor-pointer ${
+                                  cursorStyle === c.id
+                                    ? `${getPrimaryBgColor(
+                                        appTheme
+                                      )} text-white shadow`
+                                    : getSubtlePillBg(appTheme)
+                                }`}
+                              >
+                                {c.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Action Buttons, Focus Ring, Steady Screen, Click Sounds */}
                         <div className="flex items-center justify-between pt-1">
                           <div>
                             <p className="text-xs font-bold text-white">
                               Enlarged Action Buttons
                             </p>
                             <p className="text-[10px] text-slate-300">
-                              Bigger icons & buttons.
+                              Bigger icons & touch targets.
                             </p>
                           </div>
                           <button
@@ -1324,15 +1931,223 @@ export function Sidebar({
                             />
                           </button>
                         </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <div>
+                            <p className="text-xs font-bold text-white">
+                              Bright TV Focus Spotlight
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              High-contrast yellow D-pad highlight.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = !highContrastFocus;
+                              setHighContrastFocus(next);
+                              setHighContrastFocusState(next);
+                            }}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              highContrastFocus ? "bg-amber-500" : "bg-slate-700"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                highContrastFocus
+                                  ? "translate-x-6"
+                                  : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <div>
+                            <p className="text-xs font-bold text-white">
+                              Steady Screen (Reduced Motion)
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              Stops animations for sensitive eyes & sticks.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = !reducedMotion;
+                              setReducedMotion(next);
+                              setReducedMotionState(next);
+                            }}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              reducedMotion
+                                ? getPrimaryBgColor(appTheme).split(" ")[0]
+                                : "bg-slate-700"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                reducedMotion
+                                  ? "translate-x-6"
+                                  : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <div>
+                            <p className="text-xs font-bold text-white">
+                              Soft Remote Click Sounds
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              Gentle audio feedback on button taps.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = !uiClickSounds;
+                              setUiClickSounds(next);
+                              setUiClickSoundsState(next);
+                            }}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                              uiClickSounds
+                                ? getPrimaryBgColor(appTheme).split(" ")[0]
+                                : "bg-slate-700"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                uiClickSounds
+                                  ? "translate-x-6"
+                                  : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        {/* TV Overscan Safe-Zone */}
+                        <div className="pt-1">
+                          <p className="text-[11px] text-slate-300 font-bold mb-1">
+                            TV / Projector Screen Safe-Zone:
+                          </p>
+                          <div className="grid grid-cols-4 gap-1">
+                            {TV_OVERSCAN_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                  setTvOverscan(opt.value);
+                                  setTvOverscanState(opt.value);
+                                }}
+                                className={`rounded-xl py-1.5 text-[10px] font-bold transition cursor-pointer ${
+                                  tvOverscan === opt.value
+                                    ? `${getPrimaryBgColor(
+                                        appTheme
+                                      )} text-white shadow`
+                                    : getSubtlePillBg(appTheme)
+                                }`}
+                              >
+                                {opt.value}%
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Subtitle Defaults */}
+                        <div className="pt-1">
+                          <p className="text-[11px] text-slate-300 font-bold mb-1">
+                            Caption / Subtitle Style:
+                          </p>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <select
+                              value={subtitles.size}
+                              onChange={(e) =>
+                                setSubtitlesState(
+                                  saveSubtitleSettings({
+                                    size: e.target.value as SubtitleSettings["size"],
+                                  })
+                                )
+                              }
+                              className="h-8 rounded-lg border border-white/15 bg-black/70 px-2 text-[11px] font-bold text-white"
+                            >
+                              <option value="normal">Size: Normal</option>
+                              <option value="large">Size: Large</option>
+                              <option value="xl">Size: XL</option>
+                            </select>
+                            <select
+                              value={subtitles.color}
+                              onChange={(e) =>
+                                setSubtitlesState(
+                                  saveSubtitleSettings({
+                                    color: e.target.value as SubtitleSettings["color"],
+                                  })
+                                )
+                              }
+                              className="h-8 rounded-lg border border-white/15 bg-black/70 px-2 text-[11px] font-bold text-white"
+                            >
+                              <option value="white">Color: White</option>
+                              <option value="yellow">Color: Yellow</option>
+                              <option value="cyan">Color: Cyan</option>
+                            </select>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Profile, Age & 4-Digit PIN Form */}
+                      {/* KIDS SAFE MODE LOCK */}
+                      <div className="space-y-2 pb-3 border-b border-white/15">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-extrabold text-emerald-300">
+                              🧒 Kids Safe Mode Lock
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              Caps catalog to kid-safe titles until PIN unlocked.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleKidsLockToggle()}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold transition cursor-pointer ${
+                              kidsLocked
+                                ? "bg-emerald-600 text-white shadow"
+                                : "bg-black/65 border border-white/15 text-slate-200 hover:bg-white/15"
+                            }`}
+                          >
+                            {kidsLocked ? "🔓 Unlock" : "🔒 Lock ON"}
+                          </button>
+                        </div>
+
+                        {kidsLocked && (
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="Enter 4–6 digit PIN then tap Unlock"
+                            value={kidsUnlockPin}
+                            onChange={(e) =>
+                              setKidsUnlockPin(
+                                e.target.value.replace(/\D/g, "").slice(0, 6)
+                              )
+                            }
+                            className="w-full rounded-xl border border-emerald-400/40 bg-black/75 px-3 py-1.5 text-xs font-bold text-white placeholder-slate-400 focus:outline-none tracking-widest"
+                          />
+                        )}
+
+                        {kidsLockStatus && (
+                          <p className="text-[10px] font-bold text-amber-300 text-center">
+                            {kidsLockStatus}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* PROFILE, AGE & 4-6 DIGIT HASHED PIN FORM */}
                       <form
                         onSubmit={handleUnifiedProfileUpdate}
                         className="space-y-2.5"
                       >
                         <p className="text-[10px] font-extrabold uppercase tracking-widest text-amber-300">
-                          🔐 Profile, Age & Parental PIN
+                          🔐 Profile, Age & Parental PIN (4–6 Digits)
                         </p>
 
                         <div className="grid grid-cols-2 gap-2">
@@ -1367,17 +2182,17 @@ export function Sidebar({
 
                         <div>
                           <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                            Current 4-digit PIN (Required):
+                            Current 4–6 Digit PIN (Required):
                           </span>
                           <input
                             type="password"
                             inputMode="numeric"
-                            maxLength={4}
-                            placeholder="••••"
+                            maxLength={6}
+                            placeholder="••••••"
                             value={unifiedAgeCodeInput}
                             onChange={(e) =>
                               setUnifiedAgeCodeInput(
-                                e.target.value.replace(/\D/g, "").slice(0, 4)
+                                e.target.value.replace(/\D/g, "").slice(0, 6)
                               )
                             }
                             className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
@@ -1387,17 +2202,17 @@ export function Sidebar({
                         <div className="grid grid-cols-2 gap-2 pt-1">
                           <div>
                             <span className="block text-[11px] text-slate-300 mb-1 font-bold">
-                              New PIN (Opt):
+                              New PIN (4–6d Opt):
                             </span>
                             <input
                               type="password"
                               inputMode="numeric"
-                              maxLength={4}
-                              placeholder="••••"
+                              maxLength={6}
+                              placeholder="••••••"
                               value={newPasscode}
                               onChange={(e) =>
                                 setNewPasscode(
-                                  e.target.value.replace(/\D/g, "").slice(0, 4)
+                                  e.target.value.replace(/\D/g, "").slice(0, 6)
                                 )
                               }
                               className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
@@ -1410,12 +2225,12 @@ export function Sidebar({
                             <input
                               type="password"
                               inputMode="numeric"
-                              maxLength={4}
-                              placeholder="••••"
+                              maxLength={6}
+                              placeholder="••••••"
                               value={confirmNewPasscode}
                               onChange={(e) =>
                                 setConfirmNewPasscode(
-                                  e.target.value.replace(/\D/g, "").slice(0, 4)
+                                  e.target.value.replace(/\D/g, "").slice(0, 6)
                                 )
                               }
                               className="w-full rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
@@ -1449,13 +2264,17 @@ export function Sidebar({
                 )}
               </div>
 
-              {/* 5. HARDWARE RAM MODE & STREAM ENGINE (New Modern Streaming Hub!) */}
+              {/* 5. HARDWARE RAM, STREAM ENGINE & STORAGE METER */}
               <div className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "hardwareAndStream",
                   "⚡",
-                  "Hardware RAM & Stream Engine",
-                  ramMode === "low" ? "1-2GB Mode" : "4GB+ Turbo"
+                  "Hardware RAM, Stream & Storage",
+                  ramMode === "low"
+                    ? "1-2GB Mode"
+                    : ramMode === "high"
+                      ? "4GB+ Turbo"
+                      : "Auto"
                 )}
 
                 {activeSection === "hardwareAndStream" && (
@@ -1469,110 +2288,183 @@ export function Sidebar({
                       }}
                     />
                     <div className="relative z-10 space-y-3.5 w-full box-border">
-                      {/* Low RAM vs High RAM Selector */}
+                      {/* RAM Profile */}
                       <div>
                         <p className="text-[11px] text-slate-300 font-bold mb-1">
                           Device Memory Allocation Profile:
                         </p>
                         <p className="text-[10px] text-slate-400 mb-2 leading-snug">
-                          Choose <strong className="text-cyan-300">Low RAM Stick</strong> for 1–2GB streaming sticks (Nero 8K / Fire Stick) to cap video buffers and prevent crashes.
+                          Use <strong className="text-cyan-300">Low (1–2GB)</strong> for Nero 8K / Fire TV Sticks to cap video RAM buffers & disable heavy blurs.
                         </p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleRamModeChange("low")}
-                            className={`rounded-xl p-2.5 text-left transition-all cursor-pointer hover:scale-[1.03] ${
-                              ramMode === "low"
-                                ? `${getPrimaryBgColor(
-                                    appTheme
-                                  )} text-white shadow-md ring-1 ring-white/40`
-                                : getSubtlePillBg(appTheme)
-                            }`}
-                          >
-                            <span className="block text-xs font-extrabold">
-                              📟 Low RAM (1–2GB)
-                            </span>
-                            <span className="block text-[9px] opacity-85 mt-0.5">
-                              15MB buffer cap • Anti-crash
-                            </span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleRamModeChange("high")}
-                            className={`rounded-xl p-2.5 text-left transition-all cursor-pointer hover:scale-[1.03] ${
-                              ramMode === "high"
-                                ? `${getPrimaryBgColor(
-                                    appTheme
-                                  )} text-white shadow-md ring-1 ring-white/40`
-                                : getSubtlePillBg(appTheme)
-                            }`}
-                          >
-                            <span className="block text-xs font-extrabold">
-                              🚀 High RAM (4GB+)
-                            </span>
-                            <span className="block text-[9px] opacity-85 mt-0.5">
-                              Max pre-buffer • Full FX
-                            </span>
-                          </button>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(
+                            [
+                              { id: "auto", label: "✨ Auto" },
+                              { id: "low", label: "📟 1–2GB" },
+                              { id: "high", label: "🚀 4GB+" },
+                            ] as { id: RamMode; label: string }[]
+                          ).map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => handleRamModeChange(opt.id)}
+                              className={`rounded-xl py-2 px-1 text-xs font-extrabold transition-all cursor-pointer hover:scale-[1.03] ${
+                                ramMode === opt.id
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow-md ring-1 ring-white/40`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
                         </div>
+                      </div>
+
+                      {/* Data Saver Toggle */}
+                      <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                        <div>
+                          <p className="text-xs font-bold text-white">
+                            📶 Data Saver / Lite Posters
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            Uses lighter w342 images (~45% less RAM).
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !dataSaverMode;
+                            setDataSaverMode(next);
+                            setDataSaverModeState(next);
+                          }}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                            dataSaverMode
+                              ? getPrimaryBgColor(appTheme).split(" ")[0]
+                              : "bg-slate-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              dataSaverMode ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
                       </div>
 
                       {/* Default Stream Quality */}
-                      <div className="pt-2.5 border-t border-white/10">
+                      <div className="pt-2 border-t border-white/10">
                         <p className="text-[11px] text-slate-300 font-bold mb-1.5">
                           Preferred Stream Resolution:
                         </p>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {(["1080p", "720p", "480p"] as StreamQuality[]).map(
-                            (q) => (
-                              <button
-                                key={q}
-                                type="button"
-                                onClick={() => handleStreamQualitySelect(q)}
-                                className={`rounded-xl py-2 text-xs font-bold uppercase transition-all cursor-pointer hover:scale-105 ${
-                                  activeStreamQuality === q
-                                    ? `${getPrimaryBgColor(
-                                        appTheme
-                                      )} text-white shadow-md`
-                                    : getSubtlePillBg(appTheme)
-                                }`}
-                              >
-                                {q}
-                              </button>
-                            )
-                          )}
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {(
+                            ["auto", "1080p", "720p", "480p"] as StreamQuality[]
+                          ).map((q) => (
+                            <button
+                              key={q}
+                              type="button"
+                              onClick={() => handleStreamQualitySelect(q)}
+                              className={`rounded-xl py-2 text-[11px] font-bold uppercase transition-all cursor-pointer hover:scale-105 ${
+                                activeStreamQuality === q
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow-md`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              {q}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
-                      {/* Auto-Play Next Episode & Fast Cache Cleaner */}
-                      <div className="pt-2.5 border-t border-white/10 space-y-2.5">
+                      {/* Default Player Volume */}
+                      <div className="pt-2 border-t border-white/10 space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-bold text-white">
-                              Auto-Play Next Episode
-                            </p>
-                            <p className="text-[10px] text-slate-400">
-                              Seamless binge-watching for TV series.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleAutoPlayNextToggle(!autoPlayNext)
-                            }
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                              autoPlayNext
-                                ? getPrimaryBgColor(appTheme).split(" ")[0]
-                                : "bg-slate-700"
+                          <p className="text-[11px] text-slate-300 font-bold">
+                            Default Live Player Volume:
+                          </p>
+                          <span className="text-[11px] font-bold text-cyan-300">
+                            {Math.round(defaultPlayerVolume * 100)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={defaultPlayerVolume}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            setDefaultPlayerVolume(val);
+                            setDefaultPlayerVolumeState(val);
+                          }}
+                          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                        />
+                      </div>
+
+                      {/* Auto-Play Next Episode */}
+                      <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-white">
+                            Auto-Play Next Episode
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            Seamless binge-watching for TV series.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !autoPlayNext;
+                            setAutoPlayNext(next);
+                            setAutoPlayNextState(next);
+                          }}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                            autoPlayNext
+                              ? getPrimaryBgColor(appTheme).split(" ")[0]
+                              : "bg-slate-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              autoPlayNext ? "translate-x-6" : "translate-x-1"
                             }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Live WebView Storage Meter & Cache Cleaner */}
+                      <div className="pt-2.5 border-t border-white/10 space-y-2">
+                        <div className="flex items-center justify-between text-[10px] font-bold">
+                          <span className="text-slate-300">
+                            App Storage ({storageHealth.cacheEntriesCount} caches)
+                          </span>
+                          <span
+                            className={
+                              storageHealth.status === "high"
+                                ? "text-red-400"
+                                : storageHealth.status === "moderate"
+                                  ? "text-amber-300"
+                                  : "text-emerald-400"
+                            }
                           >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                autoPlayNext ? "translate-x-6" : "translate-x-1"
-                              }`}
-                            />
-                          </button>
+                            {storageHealth.usedKB} KB / {storageHealth.maxEstimatedKB} KB ({storageHealth.percentUsed}%)
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-300 ${
+                              storageHealth.status === "high"
+                                ? "bg-red-500"
+                                : storageHealth.status === "moderate"
+                                  ? "bg-amber-400"
+                                  : "bg-emerald-400"
+                            }`}
+                            style={{ width: `${Math.max(4, storageHealth.percentUsed)}%` }}
+                          />
                         </div>
 
                         <button
@@ -1585,6 +2477,10 @@ export function Sidebar({
                           🧹 Purge Stream & Metadata Caches (Free RAM)
                         </button>
 
+                        <p className="text-[9px] text-slate-500 font-mono text-center">
+                          Device ID: {deviceId}
+                        </p>
+
                         {cacheClearMsg && (
                           <p className="text-[11px] font-bold text-emerald-400 text-center">
                             {cacheClearMsg}
@@ -1596,12 +2492,13 @@ export function Sidebar({
                 )}
               </div>
 
-              {/* 6. SCREENSAVER, BACKUP & DATA (Collapsed Together!) */}
+              {/* 6. SCREENSAVER, SLEEP TIMER & BACKUP */}
               <div className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "screensaverAndBackup",
                   "💤",
-                  "Screensaver, Backup & Data"
+                  "Screensaver, Sleep & Backup",
+                  sleepTimerMin > 0 ? `SLEEP ${sleepTimerMin}m` : undefined
                 )}
 
                 {activeSection === "screensaverAndBackup" && (
@@ -1615,8 +2512,36 @@ export function Sidebar({
                       }}
                     />
                     <div className="relative z-10 space-y-3.5 w-full box-border">
-                      {/* Screensaver Timeout */}
+                      {/* Couch Sleep Timer */}
                       <div>
+                        <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                          🌙 Couch Sleep Timer (Auto-Pause & Dark Screen):
+                        </p>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {SLEEP_TIMER_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                setSleepTimerMinutes(opt.value);
+                                setSleepTimerMin(opt.value);
+                              }}
+                              className={`rounded-xl py-2 px-1 text-[11px] font-bold transition-all cursor-pointer hover:scale-105 ${
+                                sleepTimerMin === opt.value
+                                  ? `${getPrimaryBgColor(
+                                      appTheme
+                                    )} text-white shadow-md`
+                                  : getSubtlePillBg(appTheme)
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Screensaver Timeout */}
+                      <div className="pt-2.5 border-t border-white/10">
                         <p className="text-[11px] text-slate-300 font-bold mb-1.5">
                           Start Screensaver After:
                         </p>
@@ -1642,10 +2567,10 @@ export function Sidebar({
                         </div>
                       </div>
 
-                      {/* Backup & Restore */}
+                      {/* Validated Backup & Restore */}
                       <div className="pt-2.5 border-t border-white/10 space-y-2">
                         <p className="text-[11px] text-slate-300 font-bold">
-                          Profile & Watchlist Backup:
+                          Profile, Poster Styles & Watchlist Backup:
                         </p>
                         <div className="flex gap-2">
                           <button
@@ -1827,7 +2752,7 @@ export function Sidebar({
                 className="w-2/3 mx-auto h-2 object-contain opacity-80 mb-2.5"
               />
               <span className="text-[9px] text-slate-400 uppercase tracking-widest font-extrabold">
-                Crystal Console UI v2.6 • RABBiT TV
+                Crystal Console UI v2.7 • RABBiT TV
               </span>
             </div>
           </div>
