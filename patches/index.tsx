@@ -178,46 +178,100 @@ export function MediaCard({
     switch (appTheme) {
       case "red":
         return {
-          glow: "group-hover:shadow-[0_8px_28px_rgba(239,68,68,0.28)]",
-          ring: "focus-within:ring-red-400 focus:ring-red-400",
-          accentBadge: "text-red-300 border-red-500/30 bg-red-950/75",
-          laser: "from-transparent via-red-500 to-amber-400",
+          glow: "group-hover:shadow-[0_8px_28px_rgba(239,68,68,0.32)]",
+          ring: "focus-within:ring-red-500 focus:ring-red-500",
+          accentBadge: "text-red-300 border-red-500/35 bg-red-950/80",
+          ratingBadge: "text-red-200 border-red-500/35 bg-black/85",
+          typeBadge: "text-zinc-100 border-red-500/30 bg-black/85",
+          belowPanel: "bg-gradient-to-b from-zinc-950 to-black border-t border-red-500/25",
+          watchBar: "bg-black/95 border-t border-red-500/25",
+          watchBtn:
+            "bg-red-950/55 hover:bg-red-900/80 border-red-500/30 text-white",
+          mutedText: "text-zinc-300",
+          subMutedText: "text-zinc-400",
+          ratingText: "text-red-300",
+          laser: "from-transparent via-red-500 to-rose-400",
         };
       case "midnight":
         return {
-          glow: "group-hover:shadow-[0_8px_28px_rgba(59,130,246,0.28)]",
+          glow: "group-hover:shadow-[0_8px_28px_rgba(59,130,246,0.32)]",
           ring: "focus-within:ring-blue-400 focus:ring-blue-400",
-          accentBadge: "text-sky-300 border-blue-500/30 bg-blue-950/75",
+          accentBadge: "text-sky-300 border-blue-500/35 bg-blue-950/80",
+          ratingBadge: "text-sky-200 border-blue-500/35 bg-black/85",
+          typeBadge: "text-slate-100 border-blue-500/30 bg-black/85",
+          belowPanel: "bg-gradient-to-b from-slate-950 to-black border-t border-blue-500/25",
+          watchBar: "bg-black/95 border-t border-blue-500/25",
+          watchBtn:
+            "bg-blue-950/55 hover:bg-blue-900/80 border-blue-500/30 text-white",
+          mutedText: "text-slate-300",
+          subMutedText: "text-slate-400",
+          ratingText: "text-sky-300",
           laser: "from-transparent via-sky-400 to-blue-500",
         };
       case "emerald":
         return {
-          glow: "group-hover:shadow-[0_8px_28px_rgba(16,185,129,0.28)]",
+          glow: "group-hover:shadow-[0_8px_28px_rgba(16,185,129,0.32)]",
           ring: "focus-within:ring-emerald-400 focus:ring-emerald-400",
-          accentBadge: "text-emerald-300 border-emerald-500/30 bg-emerald-950/75",
-          laser: "from-transparent via-emerald-400 to-cyan-400",
+          accentBadge: "text-emerald-300 border-emerald-500/35 bg-emerald-950/80",
+          ratingBadge: "text-emerald-200 border-emerald-500/35 bg-black/85",
+          typeBadge: "text-neutral-100 border-emerald-500/30 bg-black/85",
+          belowPanel: "bg-gradient-to-b from-neutral-950 to-black border-t border-emerald-500/25",
+          watchBar: "bg-black/95 border-t border-emerald-500/25",
+          watchBtn:
+            "bg-emerald-950/55 hover:bg-emerald-900/80 border-emerald-500/30 text-white",
+          mutedText: "text-neutral-300",
+          subMutedText: "text-neutral-400",
+          ratingText: "text-emerald-300",
+          laser: "from-transparent via-emerald-400 to-teal-400",
         };
       case "amber":
         return {
-          glow: "group-hover:shadow-[0_8px_28px_rgba(245,158,11,0.28)]",
+          glow: "group-hover:shadow-[0_8px_28px_rgba(245,158,11,0.32)]",
           ring: "focus-within:ring-amber-400 focus:ring-amber-400",
-          accentBadge: "text-amber-300 border-amber-500/30 bg-amber-950/75",
+          accentBadge: "text-amber-300 border-amber-500/35 bg-amber-950/80",
+          ratingBadge: "text-amber-200 border-amber-500/35 bg-black/85",
+          typeBadge: "text-stone-100 border-amber-500/30 bg-black/85",
+          belowPanel: "bg-gradient-to-b from-stone-950 to-black border-t border-amber-500/25",
+          watchBar: "bg-black/95 border-t border-amber-500/25",
+          watchBtn:
+            "bg-amber-950/55 hover:bg-amber-900/80 border-amber-500/30 text-white",
+          mutedText: "text-stone-300",
+          subMutedText: "text-stone-400",
+          ratingText: "text-amber-300",
           laser: "from-transparent via-amber-400 to-orange-500",
         };
       case "cyan":
         return {
-          glow: "group-hover:shadow-[0_8px_28px_rgba(6,182,212,0.28)]",
+          glow: "group-hover:shadow-[0_8px_28px_rgba(6,182,212,0.32)]",
           ring: "focus-within:ring-cyan-400 focus:ring-cyan-400",
-          accentBadge: "text-cyan-300 border-cyan-500/30 bg-cyan-950/75",
-          laser: "from-transparent via-cyan-400 to-sky-500",
+          accentBadge: "text-cyan-300 border-cyan-500/35 bg-cyan-950/80",
+          ratingBadge: "text-cyan-200 border-cyan-500/35 bg-black/85",
+          typeBadge: "text-slate-100 border-cyan-500/30 bg-black/85",
+          belowPanel: "bg-gradient-to-b from-slate-950 to-black border-t border-cyan-500/25",
+          watchBar: "bg-black/95 border-t border-cyan-500/25",
+          watchBtn:
+            "bg-cyan-950/55 hover:bg-cyan-900/80 border-cyan-500/30 text-white",
+          mutedText: "text-slate-300",
+          subMutedText: "text-slate-400",
+          ratingText: "text-cyan-300",
+          laser: "from-transparent via-cyan-400 to-teal-400",
         };
       case "violet":
       default:
         return {
-          glow: "group-hover:shadow-[0_8px_28px_rgba(139,92,246,0.28)]",
+          glow: "group-hover:shadow-[0_8px_28px_rgba(139,92,246,0.32)]",
           ring: "focus-within:ring-violet-400 focus:ring-violet-400",
-          accentBadge: "text-violet-300 border-violet-500/30 bg-purple-950/75",
-          laser: "from-transparent via-pink-500 to-cyan-400",
+          accentBadge: "text-violet-300 border-violet-500/35 bg-purple-950/80",
+          ratingBadge: "text-violet-200 border-violet-500/35 bg-black/85",
+          typeBadge: "text-slate-100 border-violet-500/30 bg-black/85",
+          belowPanel: "bg-gradient-to-b from-slate-950 to-black border-t border-violet-500/25",
+          watchBar: "bg-black/95 border-t border-violet-500/25",
+          watchBtn:
+            "bg-purple-950/55 hover:bg-purple-900/80 border-violet-500/30 text-white",
+          mutedText: "text-slate-300",
+          subMutedText: "text-slate-400",
+          ratingText: "text-violet-300",
+          laser: "from-transparent via-purple-500 to-violet-400",
         };
     }
   }, [appTheme]);
@@ -263,13 +317,17 @@ export function MediaCard({
 
           {/* Top Badges */}
           {appearance.showBadges && item.rating && (
-            <div className="absolute top-1.5 right-1.5 z-10 rounded-md bg-black/80 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-amber-300 border border-white/10 shadow">
+            <div
+              className={`absolute top-1.5 right-1.5 z-10 rounded-md backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold border shadow ${cardThemeStyles.ratingBadge}`}
+            >
               ★ {item.rating}
             </div>
           )}
 
           {appearance.showBadges && isDetailed && (
-            <div className="absolute top-1.5 left-1.5 z-10 rounded-md bg-black/80 backdrop-blur-md px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider text-slate-200 border border-white/10">
+            <div
+              className={`absolute top-1.5 left-1.5 z-10 rounded-md backdrop-blur-md px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider border ${cardThemeStyles.typeBadge}`}
+            >
               {item.mediaType === "tv" ? "TV" : "MOV"}
             </div>
           )}
@@ -287,7 +345,7 @@ export function MediaCard({
                 {item.title}
               </p>
               {item.year && (
-                <p className="text-[9px] text-slate-300 font-medium mt-0.5">
+                <p className={`text-[9px] font-medium mt-0.5 ${cardThemeStyles.mutedText}`}>
                   {item.year}
                 </p>
               )}
@@ -295,16 +353,18 @@ export function MediaCard({
           )}
         </div>
 
-        {/* Below-Card Clean Glass Footer */}
+        {/* Below-Card Clean Theme-Matched Footer */}
         {isBelow && (
-          <div className="px-2 py-1.5 bg-slate-950/95 border-t border-white/10 text-left">
+          <div className={`px-2 py-1.5 text-left ${cardThemeStyles.belowPanel}`}>
             <p className="text-[11px] font-bold text-white leading-tight line-clamp-1">
               {item.title}
             </p>
-            <div className="flex items-center justify-between gap-1 mt-0.5 text-[9px] text-slate-400 font-semibold">
+            <div
+              className={`flex items-center justify-between gap-1 mt-0.5 text-[9px] font-semibold ${cardThemeStyles.subMutedText}`}
+            >
               <span>{item.year || (item.mediaType === "tv" ? "Series" : "Movie")}</span>
               {appearance.showBadges && item.rating && (
-                <span className="text-amber-300">★ {item.rating}</span>
+                <span className={cardThemeStyles.ratingText}>★ {item.rating}</span>
               )}
             </div>
           </div>
@@ -350,14 +410,18 @@ export function MediaCard({
 
         {/* Top-Right Rating Badge */}
         {appearance.showBadges && item.rating && (
-          <div className="absolute top-2.5 right-2.5 z-10 rounded-lg bg-black/80 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-white/15 shadow-md">
-            ⭐ {item.rating}
+          <div
+            className={`absolute top-2.5 right-2.5 z-10 rounded-lg backdrop-blur-md px-2 py-0.5 text-[10px] font-bold border shadow-md ${cardThemeStyles.ratingBadge}`}
+          >
+            ★ {item.rating}
           </div>
         )}
 
         {/* Top-Left Media Type Badge (Detailed Layout) */}
         {appearance.showBadges && isDetailed && (
-          <div className="absolute top-2.5 left-2.5 z-10 rounded-lg bg-black/80 backdrop-blur-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white border border-white/15 shadow-md">
+          <div
+            className={`absolute top-2.5 left-2.5 z-10 rounded-lg backdrop-blur-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider border shadow-md ${cardThemeStyles.typeBadge}`}
+          >
             {item.mediaType === "tv" ? "TV SERIES" : "MOVIE"}
           </div>
         )}
@@ -378,7 +442,7 @@ export function MediaCard({
                 {item.genre ?? "TV"}
               </span>
               {item.year ? (
-                <span className="text-[10px] text-slate-300 font-semibold shrink-0">
+                <span className={`text-[10px] font-semibold shrink-0 ${cardThemeStyles.mutedText}`}>
                   {item.year}
                 </span>
               ) : null}
@@ -392,13 +456,15 @@ export function MediaCard({
         )}
       </Link>
 
-      {/* Below-Poster Clean Unobstructed Info Panel */}
+      {/* Below-Poster Clean Unobstructed Theme-Matched Info Panel */}
       {isBelow && (
-        <div className="p-3 bg-slate-950/95 border-t border-white/10 text-left space-y-1.5 z-20">
+        <div className={`p-3 text-left space-y-1.5 z-20 ${cardThemeStyles.belowPanel}`}>
           <h4 className={`font-bold text-white truncate ${dimensions.text}`}>
             {item.title}
           </h4>
-          <div className="flex items-center justify-between gap-2 text-[10px] font-semibold text-slate-300">
+          <div
+            className={`flex items-center justify-between gap-2 text-[10px] font-semibold ${cardThemeStyles.mutedText}`}
+          >
             <span
               className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider truncate max-w-[68%] border ${cardThemeStyles.accentBadge}`}
             >
@@ -409,9 +475,9 @@ export function MediaCard({
           <Link
             to="/details"
             search={detailsSearch}
-            className={`mt-1 block w-full text-center rounded-xl bg-white/[0.07] hover:bg-white/[0.16] border border-white/15 ${
+            className={`mt-1 block w-full text-center rounded-xl border ${cardThemeStyles.watchBtn} ${
               largeButtons ? "py-2.5 text-xs" : "py-1.5 text-[10px]"
-            } font-bold tracking-wider uppercase text-white transition focus:outline-none focus:ring-2 ${
+            } font-bold tracking-wider uppercase transition focus:outline-none focus:ring-2 ${
               cardThemeStyles.ring
             }`}
           >
@@ -422,13 +488,13 @@ export function MediaCard({
 
       {/* Standard Watch Bar (hidden in Pure Poster Wall & Hover-Reveal modes for cleaner art) */}
       {!isBelow && !isClean && !isHoverReveal && (
-        <div className="p-2 bg-black/95 border-t border-white/10 flex items-center justify-between z-20">
+        <div className={`p-2 flex items-center justify-between z-20 ${cardThemeStyles.watchBar}`}>
           <Link
             to="/details"
             search={detailsSearch}
-            className={`w-full text-center rounded-xl bg-white/[0.06] hover:bg-white/[0.15] border border-white/10 ${
+            className={`w-full text-center rounded-xl border ${cardThemeStyles.watchBtn} ${
               largeButtons ? "py-2.5 text-xs" : "py-1.5 text-[10px]"
-            } font-bold tracking-wider uppercase text-white transition focus:outline-none focus:ring-2 ${
+            } font-bold tracking-wider uppercase transition focus:outline-none focus:ring-2 ${
               cardThemeStyles.ring
             }`}
           >
@@ -1106,135 +1172,277 @@ function Home() {
     return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 justify-items-center";
   }, [cardSize]);
 
+  // Comprehensive per-theme visual tokens — zero hardcoded blue/slate/amber fallbacks
   const themeStyles =
     {
       violet: {
-        bg: "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80",
-        cardGradient: "from-purple-950/80 via-slate-900 to-indigo-950/80",
+        bg: "bg-gradient-to-br from-slate-950/75 via-purple-950/35 to-black/85",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        cardGradient: "from-purple-950/85 via-slate-950 to-indigo-950/85",
+        navShell: "border-violet-500/35 shadow-[0_12px_36px_rgba(139,92,246,0.22)]",
+        navOverlay: "bg-gradient-to-r from-black/75 via-purple-950/60 to-black/75",
+        heroContainer:
+          "bg-gradient-to-b from-slate-950 via-purple-950/25 to-black border border-violet-500/40 shadow-[0_20px_50px_rgba(139,92,246,0.22)]",
+        heroImageFade: "from-slate-950/90",
+        heroPanelBg:
+          "bg-gradient-to-b from-slate-950/95 via-purple-950/20 to-black/95 border-t border-violet-500/25",
+        surfacePanel:
+          "bg-slate-950/80 border border-violet-500/25 shadow-[0_10px_30px_rgba(139,92,246,0.14)]",
+        dividerBorder: "border-violet-500/20",
         btnActive:
           "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
+        btnSecondary:
+          "bg-purple-950/65 hover:bg-purple-900/80 border border-violet-500/35 text-purple-100 hover:text-white",
+        pillInactive:
+          "bg-purple-950/45 hover:bg-purple-900/65 text-purple-100 border border-violet-500/20",
+        scrollArrowBtn:
+          "bg-black/80 hover:bg-purple-950 text-violet-300 hover:text-white border border-violet-500/35",
         accentText: "text-violet-300",
         accentBar: "bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.9)]",
-        borderGlow: "border-violet-500/30",
+        accentBadge: "bg-purple-950/80 border border-violet-500/40 text-violet-200",
+        subtleBadge: "bg-black/70 border border-violet-500/25 text-slate-200",
+        ratingBadge: "bg-purple-950/75 border border-violet-400/40 text-violet-200",
+        dotInactive: "bg-violet-300/30 hover:bg-violet-300/65",
+        focusRing: "focus:ring-violet-400",
         activeTile:
           "bg-gradient-to-b from-violet-900/50 via-purple-950/70 to-slate-950/90 border-2 border-violet-400 shadow-[0_0_25px_rgba(139,92,246,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-white/[0.07] to-black/70 hover:from-white/[0.12] hover:to-black/80 border border-white/10 hover:border-white/25",
+          "bg-gradient-to-b from-purple-950/35 to-black/80 hover:from-purple-900/45 hover:to-black/85 border border-violet-500/20 hover:border-violet-400/45",
+        scrollReminderArrow:
+          "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.85)]",
       },
       red: {
-        bg: "bg-gradient-to-br from-zinc-950/70 via-red-950/35 to-black/80",
-        cardGradient: "from-red-950/80 via-zinc-900 to-neutral-950",
+        bg: "bg-gradient-to-br from-zinc-950/80 via-red-950/40 to-black/90",
+        baseText: "text-zinc-100",
+        mutedText: "text-zinc-300",
+        subMutedText: "text-zinc-400",
+        cardGradient: "from-red-950/85 via-zinc-950 to-black",
+        navShell: "border-red-500/40 shadow-[0_12px_36px_rgba(239,68,68,0.22)]",
+        navOverlay: "bg-gradient-to-r from-black/85 via-red-950/65 to-black/85",
+        heroContainer:
+          "bg-gradient-to-b from-zinc-950 via-red-950/25 to-black border border-red-500/45 shadow-[0_20px_50px_rgba(239,68,68,0.22)]",
+        heroImageFade: "from-zinc-950/95",
+        heroPanelBg:
+          "bg-gradient-to-b from-zinc-950/95 via-red-950/25 to-black border-t border-red-500/30",
+        surfacePanel:
+          "bg-zinc-950/85 border border-red-500/30 shadow-[0_10px_30px_rgba(239,68,68,0.14)]",
+        dividerBorder: "border-red-500/25",
         btnActive:
-          "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
+          "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/35",
+        btnSecondary:
+          "bg-red-950/65 hover:bg-red-900/80 border border-red-500/35 text-red-100 hover:text-white",
+        pillInactive:
+          "bg-red-950/40 hover:bg-red-900/65 text-red-100 border border-red-500/20",
+        scrollArrowBtn:
+          "bg-black/85 hover:bg-red-950 text-red-300 hover:text-white border border-red-500/40",
         accentText: "text-red-400",
         accentBar: "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]",
-        borderGlow: "border-red-500/30",
+        accentBadge: "bg-red-950/80 border border-red-500/40 text-red-200",
+        subtleBadge: "bg-black/75 border border-red-500/25 text-zinc-200",
+        ratingBadge: "bg-red-950/75 border border-red-400/40 text-red-200",
+        dotInactive: "bg-red-300/30 hover:bg-red-300/65",
+        focusRing: "focus:ring-red-500",
         activeTile:
-          "bg-gradient-to-b from-red-900/50 via-red-950/70 to-zinc-950/90 border-2 border-red-400 shadow-[0_0_25px_rgba(239,68,68,0.45)] scale-[1.03]",
+          "bg-gradient-to-b from-red-900/50 via-red-950/75 to-black/95 border-2 border-red-400 shadow-[0_0_25px_rgba(239,68,68,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-white/[0.07] to-black/70 hover:from-white/[0.12] hover:to-black/80 border border-white/10 hover:border-white/25",
+          "bg-gradient-to-b from-red-950/30 to-black/85 hover:from-red-900/45 hover:to-black/90 border border-red-500/20 hover:border-red-400/45",
+        scrollReminderArrow:
+          "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.85)]",
       },
       midnight: {
-        bg: "bg-gradient-to-br from-slate-950/70 via-blue-950/35 to-slate-950/80",
-        cardGradient: "from-blue-950/80 via-slate-900 to-sky-950/80",
+        bg: "bg-gradient-to-br from-slate-950/75 via-blue-950/35 to-black/85",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        cardGradient: "from-blue-950/85 via-slate-950 to-sky-950/85",
+        navShell: "border-blue-500/35 shadow-[0_12px_36px_rgba(59,130,246,0.22)]",
+        navOverlay: "bg-gradient-to-r from-black/75 via-blue-950/60 to-black/75",
+        heroContainer:
+          "bg-gradient-to-b from-slate-950 via-blue-950/25 to-black border border-blue-500/40 shadow-[0_20px_50px_rgba(59,130,246,0.22)]",
+        heroImageFade: "from-slate-950/90",
+        heroPanelBg:
+          "bg-gradient-to-b from-slate-950/95 via-blue-950/20 to-black/95 border-t border-blue-500/25",
+        surfacePanel:
+          "bg-slate-950/80 border border-blue-500/25 shadow-[0_10px_30px_rgba(59,130,246,0.14)]",
+        dividerBorder: "border-blue-500/20",
         btnActive:
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
+        btnSecondary:
+          "bg-blue-950/65 hover:bg-blue-900/80 border border-blue-500/35 text-blue-100 hover:text-white",
+        pillInactive:
+          "bg-blue-950/45 hover:bg-blue-900/65 text-blue-100 border border-blue-500/20",
+        scrollArrowBtn:
+          "bg-black/80 hover:bg-blue-950 text-sky-300 hover:text-white border border-blue-500/35",
         accentText: "text-sky-300",
         accentBar: "bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.9)]",
-        borderGlow: "border-sky-500/30",
+        accentBadge: "bg-blue-950/80 border border-blue-500/40 text-sky-200",
+        subtleBadge: "bg-black/70 border border-blue-500/25 text-slate-200",
+        ratingBadge: "bg-blue-950/75 border border-sky-400/40 text-sky-200",
+        dotInactive: "bg-sky-300/30 hover:bg-sky-300/65",
+        focusRing: "focus:ring-blue-400",
         activeTile:
           "bg-gradient-to-b from-blue-900/50 via-sky-950/70 to-slate-950/90 border-2 border-sky-400 shadow-[0_0_25px_rgba(56,189,248,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-white/[0.07] to-black/70 hover:from-white/[0.12] hover:to-black/80 border border-white/10 hover:border-white/25",
+          "bg-gradient-to-b from-blue-950/35 to-black/80 hover:from-blue-900/45 hover:to-black/85 border border-blue-500/20 hover:border-sky-400/45",
+        scrollReminderArrow:
+          "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.85)]",
       },
       emerald: {
-        bg: "bg-gradient-to-br from-slate-950/70 via-emerald-950/35 to-slate-950/80",
-        cardGradient: "from-emerald-950/80 via-slate-900 to-teal-950/80",
+        bg: "bg-gradient-to-br from-neutral-950/80 via-emerald-950/35 to-black/90",
+        baseText: "text-neutral-100",
+        mutedText: "text-neutral-300",
+        subMutedText: "text-neutral-400",
+        cardGradient: "from-emerald-950/85 via-neutral-950 to-teal-950/85",
+        navShell: "border-emerald-500/35 shadow-[0_12px_36px_rgba(16,185,129,0.22)]",
+        navOverlay: "bg-gradient-to-r from-black/80 via-emerald-950/60 to-black/80",
+        heroContainer:
+          "bg-gradient-to-b from-neutral-950 via-emerald-950/25 to-black border border-emerald-500/40 shadow-[0_20px_50px_rgba(16,185,129,0.22)]",
+        heroImageFade: "from-neutral-950/95",
+        heroPanelBg:
+          "bg-gradient-to-b from-neutral-950/95 via-emerald-950/20 to-black border-t border-emerald-500/25",
+        surfacePanel:
+          "bg-neutral-950/85 border border-emerald-500/25 shadow-[0_10px_30px_rgba(16,185,129,0.14)]",
+        dividerBorder: "border-emerald-500/20",
         btnActive:
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
+        btnSecondary:
+          "bg-emerald-950/65 hover:bg-emerald-900/80 border border-emerald-500/35 text-emerald-100 hover:text-white",
+        pillInactive:
+          "bg-emerald-950/40 hover:bg-emerald-900/65 text-emerald-100 border border-emerald-500/20",
+        scrollArrowBtn:
+          "bg-black/80 hover:bg-emerald-950 text-emerald-300 hover:text-white border border-emerald-500/35",
         accentText: "text-emerald-300",
         accentBar: "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]",
-        borderGlow: "border-emerald-500/30",
+        accentBadge:
+          "bg-emerald-950/80 border border-emerald-500/40 text-emerald-200",
+        subtleBadge: "bg-black/75 border border-emerald-500/25 text-neutral-200",
+        ratingBadge:
+          "bg-emerald-950/75 border border-emerald-400/40 text-emerald-200",
+        dotInactive: "bg-emerald-300/30 hover:bg-emerald-300/65",
+        focusRing: "focus:ring-emerald-400",
         activeTile:
-          "bg-gradient-to-b from-emerald-900/50 via-emerald-950/70 to-slate-950/90 border-2 border-emerald-400 shadow-[0_0_25px_rgba(52,211,153,0.45)] scale-[1.03]",
+          "bg-gradient-to-b from-emerald-900/50 via-emerald-950/70 to-black/95 border-2 border-emerald-400 shadow-[0_0_25px_rgba(52,211,153,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-white/[0.07] to-black/70 hover:from-white/[0.12] hover:to-black/80 border border-white/10 hover:border-white/25",
+          "bg-gradient-to-b from-emerald-950/35 to-black/85 hover:from-emerald-900/45 hover:to-black/90 border border-emerald-500/20 hover:border-emerald-400/45",
+        scrollReminderArrow:
+          "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.85)]",
       },
       amber: {
-        bg: "bg-gradient-to-br from-stone-950/70 via-yellow-950/35 to-neutral-950/80",
-        cardGradient: "from-yellow-950/80 via-stone-900 to-amber-950/80",
+        bg: "bg-gradient-to-br from-stone-950/80 via-yellow-950/35 to-black/90",
+        baseText: "text-stone-100",
+        mutedText: "text-stone-300",
+        subMutedText: "text-stone-400",
+        cardGradient: "from-yellow-950/85 via-stone-950 to-amber-950/85",
+        navShell: "border-amber-500/35 shadow-[0_12px_36px_rgba(245,158,11,0.22)]",
+        navOverlay: "bg-gradient-to-r from-black/80 via-yellow-950/60 to-black/80",
+        heroContainer:
+          "bg-gradient-to-b from-stone-950 via-amber-950/25 to-black border border-amber-500/40 shadow-[0_20px_50px_rgba(245,158,11,0.22)]",
+        heroImageFade: "from-stone-950/95",
+        heroPanelBg:
+          "bg-gradient-to-b from-stone-950/95 via-amber-950/20 to-black border-t border-amber-500/25",
+        surfacePanel:
+          "bg-stone-950/85 border border-amber-500/25 shadow-[0_10px_30px_rgba(245,158,11,0.14)]",
+        dividerBorder: "border-amber-500/20",
         btnActive:
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
+        btnSecondary:
+          "bg-amber-950/65 hover:bg-amber-900/80 border border-amber-500/35 text-amber-100 hover:text-white",
+        pillInactive:
+          "bg-amber-950/40 hover:bg-amber-900/65 text-amber-100 border border-amber-500/20",
+        scrollArrowBtn:
+          "bg-black/80 hover:bg-amber-950 text-amber-300 hover:text-white border border-amber-500/35",
         accentText: "text-amber-300",
         accentBar: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)]",
-        borderGlow: "border-amber-500/30",
+        accentBadge: "bg-amber-950/80 border border-amber-500/40 text-amber-200",
+        subtleBadge: "bg-black/75 border border-amber-500/25 text-stone-200",
+        ratingBadge: "bg-amber-950/75 border border-amber-400/40 text-amber-200",
+        dotInactive: "bg-amber-300/30 hover:bg-amber-300/65",
+        focusRing: "focus:ring-amber-400",
         activeTile:
-          "bg-gradient-to-b from-amber-900/50 via-amber-950/70 to-stone-950/90 border-2 border-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.45)] scale-[1.03]",
+          "bg-gradient-to-b from-amber-900/50 via-amber-950/70 to-black/95 border-2 border-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-white/[0.07] to-black/70 hover:from-white/[0.12] hover:to-black/80 border border-white/10 hover:border-white/25",
+          "bg-gradient-to-b from-amber-950/35 to-black/85 hover:from-amber-900/45 hover:to-black/90 border border-amber-500/20 hover:border-amber-400/45",
+        scrollReminderArrow:
+          "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.85)]",
       },
       cyan: {
-        bg: "bg-gradient-to-br from-slate-950/70 via-cyan-950/35 to-slate-950/80",
-        cardGradient: "from-cyan-950/80 via-slate-900 to-blue-950/80",
+        bg: "bg-gradient-to-br from-slate-950/75 via-cyan-950/35 to-black/85",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        cardGradient: "from-cyan-950/85 via-slate-950 to-teal-950/85",
+        navShell: "border-cyan-500/35 shadow-[0_12px_36px_rgba(6,182,212,0.22)]",
+        navOverlay: "bg-gradient-to-r from-black/75 via-cyan-950/60 to-black/75",
+        heroContainer:
+          "bg-gradient-to-b from-slate-950 via-cyan-950/25 to-black border border-cyan-500/40 shadow-[0_20px_50px_rgba(6,182,212,0.22)]",
+        heroImageFade: "from-slate-950/90",
+        heroPanelBg:
+          "bg-gradient-to-b from-slate-950/95 via-cyan-950/20 to-black/95 border-t border-cyan-500/25",
+        surfacePanel:
+          "bg-slate-950/80 border border-cyan-500/25 shadow-[0_10px_30px_rgba(6,182,212,0.14)]",
+        dividerBorder: "border-cyan-500/20",
         btnActive:
           "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
+        btnSecondary:
+          "bg-cyan-950/65 hover:bg-cyan-900/80 border border-cyan-500/35 text-cyan-100 hover:text-white",
+        pillInactive:
+          "bg-cyan-950/45 hover:bg-cyan-900/65 text-cyan-100 border border-cyan-500/20",
+        scrollArrowBtn:
+          "bg-black/80 hover:bg-cyan-950 text-cyan-300 hover:text-white border border-cyan-500/35",
         accentText: "text-cyan-300",
         accentBar: "bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)]",
-        borderGlow: "border-cyan-500/30",
+        accentBadge: "bg-cyan-950/80 border border-cyan-500/40 text-cyan-200",
+        subtleBadge: "bg-black/70 border border-cyan-500/25 text-slate-200",
+        ratingBadge: "bg-cyan-950/75 border border-cyan-400/40 text-cyan-200",
+        dotInactive: "bg-cyan-300/30 hover:bg-cyan-300/65",
+        focusRing: "focus:ring-cyan-400",
         activeTile:
           "bg-gradient-to-b from-cyan-900/50 via-cyan-950/70 to-slate-950/90 border-2 border-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-white/[0.07] to-black/70 hover:from-white/[0.12] hover:to-black/80 border border-white/10 hover:border-white/25",
+          "bg-gradient-to-b from-cyan-950/35 to-black/80 hover:from-cyan-900/45 hover:to-black/85 border border-cyan-500/20 hover:border-cyan-400/45",
+        scrollReminderArrow:
+          "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.85)]",
       },
     }[appTheme] ?? {
-      bg: "bg-gradient-to-br from-slate-950/70 via-purple-950/35 to-slate-950/80",
-      cardGradient: "from-purple-950/80 via-slate-900 to-indigo-950/80",
+      bg: "bg-gradient-to-br from-slate-950/75 via-purple-950/35 to-black/85",
+      baseText: "text-slate-100",
+      mutedText: "text-slate-300",
+      subMutedText: "text-slate-400",
+      cardGradient: "from-purple-950/85 via-slate-950 to-indigo-950/85",
+      navShell: "border-violet-500/35 shadow-[0_12px_36px_rgba(139,92,246,0.22)]",
+      navOverlay: "bg-gradient-to-r from-black/75 via-purple-950/60 to-black/75",
+      heroContainer:
+        "bg-gradient-to-b from-slate-950 via-purple-950/25 to-black border border-violet-500/40 shadow-[0_20px_50px_rgba(139,92,246,0.22)]",
+      heroImageFade: "from-slate-950/90",
+      heroPanelBg:
+        "bg-gradient-to-b from-slate-950/95 via-purple-950/20 to-black/95 border-t border-violet-500/25",
+      surfacePanel:
+        "bg-slate-950/80 border border-violet-500/25 shadow-[0_10px_30px_rgba(139,92,246,0.14)]",
+      dividerBorder: "border-violet-500/20",
       btnActive:
         "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
+      btnSecondary:
+        "bg-purple-950/65 hover:bg-purple-900/80 border border-violet-500/35 text-purple-100 hover:text-white",
+      pillInactive:
+        "bg-purple-950/45 hover:bg-purple-900/65 text-purple-100 border border-violet-500/20",
+      scrollArrowBtn:
+        "bg-black/80 hover:bg-purple-950 text-violet-300 hover:text-white border border-violet-500/35",
       accentText: "text-violet-300",
       accentBar: "bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.9)]",
-      borderGlow: "border-violet-500/30",
+      accentBadge: "bg-purple-950/80 border border-violet-500/40 text-violet-200",
+      subtleBadge: "bg-black/70 border border-violet-500/25 text-slate-200",
+      ratingBadge: "bg-purple-950/75 border border-violet-400/40 text-violet-200",
+      dotInactive: "bg-violet-300/30 hover:bg-violet-300/65",
+      focusRing: "focus:ring-violet-400",
       activeTile:
         "bg-gradient-to-b from-violet-900/50 via-purple-950/70 to-slate-950/90 border-2 border-violet-400 shadow-[0_0_25px_rgba(139,92,246,0.45)] scale-[1.03]",
       inactiveTile:
-        "bg-gradient-to-b from-white/[0.07] to-black/70 hover:from-white/[0.12] hover:to-black/80 border border-white/10 hover:border-white/25",
+        "bg-gradient-to-b from-purple-950/35 to-black/80 hover:from-purple-900/45 hover:to-black/85 border border-violet-500/20 hover:border-violet-400/45",
+      scrollReminderArrow:
+        "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.85)]",
     };
-
-  const getPrimaryBgColor = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30";
-      case "midnight":
-        return "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30";
-      case "emerald":
-        return "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30";
-      case "amber":
-        return "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30";
-      case "cyan":
-        return "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30";
-      case "violet":
-      default:
-        return "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30";
-    }
-  };
-
-  const getThemeArrowColor = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
-      case "midnight":
-        return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
-      case "emerald":
-        return "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]";
-      case "amber":
-        return "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.8)]";
-      case "cyan":
-        return "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.8)]";
-      case "violet":
-      default:
-        return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
-    }
-  };
 
   const activeHeroItem =
     heroItems.length > 0 ? heroItems[currentHeroIndex] : null;
@@ -1251,13 +1459,13 @@ function Home() {
 
   return (
     <main
-      className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-12 relative rounded-3xl`}
+      className={`min-h-screen ${themeStyles.bg} ${themeStyles.baseText} transition-colors duration-300 pb-12 relative rounded-3xl`}
     >
       <div className="relative z-10">
-        {/* Signature Neon Rabbit Top Navigation Bar (Non-Overlapping Scroll Controls) */}
+        {/* Theme-Tinted Top Navigation Bar (Non-Overlapping Scroll Controls) */}
         <div className="sticky top-0 z-30 mb-4 mt-1 px-2 sm:px-4 py-2 flex justify-center">
           <div
-            className="relative max-w-6xl w-full flex items-center gap-1.5 rounded-2xl shadow-2xl overflow-hidden border border-white/10 px-2 py-2"
+            className={`relative max-w-6xl w-full flex items-center gap-1.5 rounded-2xl overflow-hidden border px-2 py-2 ${themeStyles.navShell}`}
             style={{
               backgroundImage: `url(${RABBIT_HEADER_PILL})`,
               backgroundSize: "112% 380%",
@@ -1265,11 +1473,13 @@ function Home() {
               backgroundPosition: "center center",
             }}
           >
-            <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] pointer-events-none rounded-2xl z-0" />
+            <div
+              className={`absolute inset-0 backdrop-blur-[3px] pointer-events-none rounded-2xl z-0 ${themeStyles.navOverlay}`}
+            />
             <button
               type="button"
               onClick={() => scrollPill("nav-tabs-pill", "left")}
-              className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md border border-white/15 transition cursor-pointer"
+              className={`relative z-20 shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.scrollArrowBtn} ${themeStyles.focusRing}`}
               title="Scroll Left"
               aria-label="Scroll navigation left"
             >
@@ -1290,12 +1500,12 @@ function Home() {
                       onClick={() => handleTabSelect(tab)}
                       className={`${
                         largeButtons ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-xs"
-                      } rounded-xl font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 ${
+                      } rounded-xl font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                        themeStyles.focusRing
+                      } ${
                         isActive
-                          ? `${getPrimaryBgColor(
-                              appTheme
-                            )} text-white shadow-lg scale-[1.03]`
-                          : "bg-black/50 hover:bg-white/10 text-slate-200 border border-white/10"
+                          ? `${themeStyles.btnActive} scale-[1.03]`
+                          : themeStyles.pillInactive
                       }`}
                     >
                       {tab}
@@ -1307,7 +1517,7 @@ function Home() {
             <button
               type="button"
               onClick={() => scrollPill("nav-tabs-pill", "right")}
-              className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md border border-white/15 transition cursor-pointer"
+              className={`relative z-20 shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.scrollArrowBtn} ${themeStyles.focusRing}`}
               title="Scroll Right"
               aria-label="Scroll navigation right"
             >
@@ -1330,6 +1540,7 @@ function Home() {
                     <span>{greetingText}</span>
                   </p>
                 )}
+                {/* Semantic Kids Safe status indicator */}
                 {kidsLocked && (
                   <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0">
                     🧒 Kids Safe Mode
@@ -1341,9 +1552,11 @@ function Home() {
                 <button
                   type="button"
                   onClick={handleSurpriseMe}
-                  className={`inline-flex items-center gap-1.5 rounded-xl bg-black/55 hover:bg-white/15 border border-white/15 px-3.5 ${
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 ${
                     largeButtons ? "py-2 text-xs" : "py-1.5 text-[11px]"
-                  } font-extrabold text-amber-300 hover:text-white shadow transition hover:scale-105 active:scale-95 cursor-pointer shrink-0`}
+                  } font-extrabold shadow transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                    themeStyles.btnSecondary
+                  } ${themeStyles.focusRing}`}
                   title="Pick a random title for me"
                 >
                   <span>🎲 Surprise Me</span>
@@ -1352,17 +1565,17 @@ function Home() {
             </div>
           )}
 
-          {/* Clean Split Hero Card: Unobstructed Cover Art Above + Glass Details Panel Below */}
+          {/* Clean Split Hero Card: Unobstructed Cover Art Above + Theme-Matched Details Panel Below */}
           {activeHeroItem && heroDetailsSearch ? (
             <div
               data-tour="hero-banner"
-              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-slate-950/95 border border-white/15 ${themeStyles.borderGlow} shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col group`}
+              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] flex flex-col group ${themeStyles.heroContainer}`}
             >
-              {/* Top: Pure, Unobstructed Cover Art (No Overlaid Text or Buttons) */}
+              {/* Top: Pure, Unobstructed Cover Art (Zero Overlaid Text, Theme-Matched Focus Ring & Edge Fade) */}
               <Link
                 to="/details"
                 search={heroDetailsSearch}
-                className="relative block w-full h-[240px] sm:h-[320px] md:h-[380px] overflow-hidden bg-black focus:outline-none focus:ring-4"
+                className={`relative block w-full h-[240px] sm:h-[320px] md:h-[380px] overflow-hidden bg-black focus:outline-none focus:ring-4 ${themeStyles.focusRing}`}
               >
                 <img
                   src={optimizePosterUrl(
@@ -1373,25 +1586,33 @@ function Home() {
                   decoding="async"
                   className="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
                 />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-slate-950/80 to-transparent" />
+                <div
+                  className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t ${themeStyles.heroImageFade} to-transparent`}
+                />
               </Link>
 
-              {/* Bottom: Clean Glass Details Panel (Matches Below-Card Catalog Style) */}
-              <div className="p-4 sm:p-6 md:p-7 bg-slate-950/95 border-t border-white/10 text-left space-y-3">
+              {/* Bottom: Clean Theme-Matched Glass Details Panel */}
+              <div
+                className={`p-4 sm:p-6 md:p-7 text-left space-y-3 ${themeStyles.heroPanelBg}`}
+              >
                 {/* Metadata Badges */}
                 <div className="flex items-center flex-wrap gap-2">
                   <span
-                    className={`rounded-full bg-white/10 border border-white/15 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.16em] leading-snug ${themeStyles.accentText}`}
+                    className={`rounded-full px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.16em] leading-snug ${themeStyles.accentBadge}`}
                   >
                     {activeHeroItem.genre ?? "Featured"}
                   </span>
                   {activeHeroItem.rating && (
-                    <span className="rounded-full bg-amber-500/20 border border-amber-400/30 px-2.5 py-0.5 text-amber-300 text-[11px] font-bold">
-                      ⭐ {activeHeroItem.rating}
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${themeStyles.ratingBadge}`}
+                    >
+                      ★ {activeHeroItem.rating}
                     </span>
                   )}
                   {activeHeroItem.year && (
-                    <span className="rounded-full bg-black/60 border border-white/10 px-2.5 py-0.5 text-[11px] text-slate-200 font-semibold">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${themeStyles.subtleBadge}`}
+                    >
                       {activeHeroItem.year}
                     </span>
                   )}
@@ -1401,16 +1622,18 @@ function Home() {
                 <Link
                   to="/details"
                   search={heroDetailsSearch}
-                  className="block focus:outline-none"
+                  className={`block rounded-lg focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
                 >
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight hover:text-slate-200 transition line-clamp-2">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight transition line-clamp-2">
                     {activeHeroItem.title}
                   </h2>
                 </Link>
 
                 {/* Synopsis */}
                 {activeHeroItem.description && (
-                  <p className="text-xs sm:text-sm leading-relaxed text-slate-300 line-clamp-2 sm:line-clamp-3 max-w-3xl">
+                  <p
+                    className={`text-xs sm:text-sm leading-relaxed line-clamp-2 sm:line-clamp-3 max-w-3xl ${themeStyles.mutedText}`}
+                  >
                     {activeHeroItem.description}
                   </p>
                 )}
@@ -1426,9 +1649,9 @@ function Home() {
                         largeButtons
                           ? "px-6 py-3 text-sm"
                           : "px-5 py-2.5 text-xs"
-                      } rounded-xl font-bold uppercase tracking-wider ${getPrimaryBgColor(
-                        appTheme
-                      )} transition hover:scale-[1.03] active:scale-95`}
+                      } rounded-xl font-bold uppercase tracking-wider transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${
+                        themeStyles.btnActive
+                      } ${themeStyles.focusRing}`}
                     >
                       ▶ Watch Now
                     </Link>
@@ -1439,15 +1662,21 @@ function Home() {
                         largeButtons
                           ? "px-5 py-3 text-sm"
                           : "px-4 py-2.5 text-xs"
-                      } rounded-xl font-bold text-white bg-white/10 hover:bg-white/20 border border-white/15 transition`}
+                      } rounded-xl font-bold transition focus:outline-none focus:ring-2 ${
+                        themeStyles.btnSecondary
+                      } ${themeStyles.focusRing}`}
                     >
                       ⓘ Details
                     </Link>
                   </div>
 
                   {heroItems.length > 1 && (
-                    <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t border-white/10 sm:border-t-0">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:hidden">
+                    <div
+                      className={`flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 ${themeStyles.dividerBorder}`}
+                    >
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider sm:hidden ${themeStyles.subMutedText}`}
+                      >
                         Featured {currentHeroIndex + 1} / {heroItems.length}
                       </span>
 
@@ -1460,7 +1689,7 @@ function Home() {
                                 (prev - 1 + heroItems.length) % heroItems.length
                             )
                           }
-                          className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white text-sm font-bold flex items-center justify-center transition cursor-pointer"
+                          className={`h-8 w-8 rounded-full text-sm font-bold flex items-center justify-center transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.scrollArrowBtn} ${themeStyles.focusRing}`}
                           aria-label="Previous featured title"
                         >
                           ‹
@@ -1473,10 +1702,10 @@ function Home() {
                               type="button"
                               onClick={() => setCurrentHeroIndex(idx)}
                               aria-label={`Show featured title ${idx + 1}`}
-                              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer focus:outline-none ${
                                 idx === currentHeroIndex % 8
                                   ? `w-5 sm:w-6 ${themeStyles.accentBar}`
-                                  : "w-1.5 bg-white/30 hover:bg-white/60"
+                                  : `w-1.5 ${themeStyles.dotInactive}`
                               }`}
                             />
                           ))}
@@ -1489,7 +1718,7 @@ function Home() {
                               (prev) => (prev + 1) % heroItems.length
                             )
                           }
-                          className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white text-sm font-bold flex items-center justify-center transition cursor-pointer"
+                          className={`h-8 w-8 rounded-full text-sm font-bold flex items-center justify-center transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.scrollArrowBtn} ${themeStyles.focusRing}`}
                           aria-label="Next featured title"
                         >
                           ›
@@ -1502,9 +1731,9 @@ function Home() {
             </div>
           ) : (
             <section
-              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-gradient-to-br ${themeStyles.cardGradient} border border-white/10 shadow-2xl relative h-[280px] sm:h-[340px] flex flex-col items-center justify-center`}
+              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-gradient-to-br ${themeStyles.cardGradient} border ${themeStyles.dividerBorder} shadow-2xl relative h-[280px] sm:h-[340px] flex flex-col items-center justify-center`}
             >
-              <div className="text-slate-300 text-center px-4">
+              <div className={`text-center px-4 ${themeStyles.mutedText}`}>
                 {loading
                   ? `Loading ${activeTab}...`
                   : error ?? "No media found in this section."}
@@ -1528,7 +1757,9 @@ function Home() {
                         key={prov.name}
                         type="button"
                         onClick={() => handleProviderSelect(prov.name)}
-                        className={`relative group h-14 sm:h-20 rounded-2xl p-2 sm:p-3 transition-all duration-300 cursor-pointer flex items-center justify-center overflow-hidden backdrop-blur-xl ${
+                        className={`relative group h-14 sm:h-20 rounded-2xl p-2 sm:p-3 transition-all duration-300 cursor-pointer flex items-center justify-center overflow-hidden backdrop-blur-xl focus:outline-none focus:ring-2 ${
+                          themeStyles.focusRing
+                        } ${
                           isActive
                             ? themeStyles.activeTile
                             : themeStyles.inactiveTile
@@ -1553,13 +1784,15 @@ function Home() {
                 </div>
               </div>
 
-              {/* Sleek Frameless Glass Genre Ribbon (Non-Overlapping Scroll Controls) */}
+              {/* Sleek Theme-Matched Glass Genre Ribbon (Non-Overlapping Scroll Controls) */}
               <div data-tour="genre-filter" className="flex justify-center w-full px-1">
-                <div className="relative w-full flex items-center gap-1.5 rounded-2xl bg-slate-950/65 backdrop-blur-xl border border-white/10 shadow-lg overflow-hidden px-2 py-2">
+                <div
+                  className={`relative w-full flex items-center gap-1.5 rounded-2xl backdrop-blur-xl overflow-hidden px-2 py-2 ${themeStyles.surfacePanel}`}
+                >
                   <button
                     type="button"
                     onClick={() => scrollPill("genre-pill", "left")}
-                    className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/15 shadow-md transition cursor-pointer"
+                    className={`relative z-20 shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.scrollArrowBtn} ${themeStyles.focusRing}`}
                     title="Scroll Left"
                     aria-label="Scroll genres left"
                   >
@@ -1582,12 +1815,12 @@ function Home() {
                               largeButtons
                                 ? "px-4 py-2 text-sm"
                                 : "px-3.5 py-1.5 text-xs"
-                            } rounded-xl font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 ${
+                            } rounded-xl font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                              themeStyles.focusRing
+                            } ${
                               isActive
-                                ? `${getPrimaryBgColor(
-                                    appTheme
-                                  )} text-white shadow-md scale-[1.03]`
-                                : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 border border-white/5"
+                                ? `${themeStyles.btnActive} scale-[1.03]`
+                                : themeStyles.pillInactive
                             }`}
                           >
                             {genre}
@@ -1599,7 +1832,7 @@ function Home() {
                   <button
                     type="button"
                     onClick={() => scrollPill("genre-pill", "right")}
-                    className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/15 shadow-md transition cursor-pointer"
+                    className={`relative z-20 shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.scrollArrowBtn} ${themeStyles.focusRing}`}
                     title="Scroll Right"
                     aria-label="Scroll genres right"
                   >
@@ -1612,11 +1845,13 @@ function Home() {
 
           {activeTab === "My List" && (
             <section className="mb-6 flex justify-center w-full max-w-4xl px-1">
-              <div className="relative w-full flex items-center gap-1.5 rounded-2xl bg-slate-950/65 backdrop-blur-xl border border-white/10 shadow-xl overflow-hidden px-2 py-2">
+              <div
+                className={`relative w-full flex items-center gap-1.5 rounded-2xl backdrop-blur-xl overflow-hidden px-2 py-2 ${themeStyles.surfacePanel}`}
+              >
                 <button
                   type="button"
                   onClick={() => scrollPill("mylist-pill", "left")}
-                  className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/15 shadow-md transition cursor-pointer"
+                  className={`relative z-20 shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.scrollArrowBtn} ${themeStyles.focusRing}`}
                   title="Scroll Left"
                   aria-label="Scroll list tabs left"
                 >
@@ -1631,12 +1866,12 @@ function Home() {
                     <button
                       type="button"
                       onClick={() => setMyListSubTab("all")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                        themeStyles.focusRing
+                      } ${
                         myListSubTab === "all"
-                          ? `${getPrimaryBgColor(
-                              appTheme
-                            )} text-white shadow-md scale-[1.03]`
-                          : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
+                          ? `${themeStyles.btnActive} scale-[1.03]`
+                          : themeStyles.pillInactive
                       }`}
                     >
                       All Saved (
@@ -1649,12 +1884,12 @@ function Home() {
                     <button
                       type="button"
                       onClick={() => setMyListSubTab("in_progress")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                        themeStyles.focusRing
+                      } ${
                         myListSubTab === "in_progress"
-                          ? `${getPrimaryBgColor(
-                              appTheme
-                            )} text-white shadow-md scale-[1.03]`
-                          : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
+                          ? `${themeStyles.btnActive} scale-[1.03]`
+                          : themeStyles.pillInactive
                       }`}
                     >
                       ⏳ In Progress ({inProgressHistory.length})
@@ -1663,12 +1898,12 @@ function Home() {
                     <button
                       type="button"
                       onClick={() => setMyListSubTab("mylist")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                        themeStyles.focusRing
+                      } ${
                         myListSubTab === "mylist"
-                          ? `${getPrimaryBgColor(
-                              appTheme
-                            )} text-white shadow-md scale-[1.03]`
-                          : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
+                          ? `${themeStyles.btnActive} scale-[1.03]`
+                          : themeStyles.pillInactive
                       }`}
                     >
                       🔖 Watch Later ({savedMyList.length})
@@ -1677,12 +1912,12 @@ function Home() {
                     <button
                       type="button"
                       onClick={() => setMyListSubTab("favorites")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                        themeStyles.focusRing
+                      } ${
                         myListSubTab === "favorites"
-                          ? `${getPrimaryBgColor(
-                              appTheme
-                            )} text-white shadow-md scale-[1.03]`
-                          : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
+                          ? `${themeStyles.btnActive} scale-[1.03]`
+                          : themeStyles.pillInactive
                       }`}
                     >
                       ⭐ Favorites ({savedFavorites.length})
@@ -1692,7 +1927,7 @@ function Home() {
                 <button
                   type="button"
                   onClick={() => scrollPill("mylist-pill", "right")}
-                  className="relative z-20 shrink-0 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/15 shadow-md transition cursor-pointer"
+                  className={`relative z-20 shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.scrollArrowBtn} ${themeStyles.focusRing}`}
                   title="Scroll Right"
                   aria-label="Scroll list tabs right"
                 >
@@ -1719,7 +1954,7 @@ function Home() {
                 </h3>
               </div>
               <span
-                className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.05] border border-white/10 ${themeStyles.accentText}`}
+                className={`text-xs font-semibold px-3 py-1 rounded-full ${themeStyles.accentBadge}`}
               >
                 {filteredItems.length} titles available
               </span>
@@ -1740,8 +1975,10 @@ function Home() {
                 ))}
               </div>
             ) : (
-              <div className="rounded-2xl bg-slate-950/70 border border-white/10 backdrop-blur-xl p-8 text-center mx-1">
-                <p className="text-sm text-slate-300">
+              <div
+                className={`rounded-2xl backdrop-blur-xl p-8 text-center mx-1 ${themeStyles.surfacePanel}`}
+              >
+                <p className={`text-sm ${themeStyles.mutedText}`}>
                   {activeTab === "My List"
                     ? "No saved titles in this section yet. Open any movie or show to save it!"
                     : loading
@@ -1769,14 +2006,14 @@ function Home() {
                   animation: flashTwice 8s ease-in-out forwards;
                 }
               `}</style>
-              <div className="flex flex-col items-center gap-0.5 bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
+              <div
+                className={`flex flex-col items-center gap-0.5 backdrop-blur-md px-4 py-2 rounded-xl shadow-2xl ${themeStyles.surfacePanel}`}
+              >
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
                   More Content Below
                 </span>
                 <span
-                  className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(
-                    appTheme
-                  )} opacity-100`}
+                  className={`text-xl font-black animate-slow-glow ${themeStyles.scrollReminderArrow} opacity-100`}
                 >
                   ⌄
                 </span>
@@ -1785,7 +2022,9 @@ function Home() {
           )}
 
           {activeTab === "My List" && suggestedItems.length > 0 && (
-            <section className="mb-8 px-1 pt-6 border-t border-white/10 w-full max-w-6xl">
+            <section
+              className={`mb-8 px-1 pt-6 border-t w-full max-w-6xl ${themeStyles.dividerBorder}`}
+            >
               <div className="mb-4 flex items-center justify-between px-1">
                 <div className="flex items-center gap-2.5">
                   <span
@@ -1818,7 +2057,7 @@ function Home() {
           {activeTab !== "My List" && totalPages > 1 && (
             <div
               data-tour="load-more"
-              className="mb-4 flex items-center justify-center gap-4 rounded-2xl bg-slate-950/75 border border-white/10 backdrop-blur-xl p-3 mx-2 w-full max-w-sm shadow-xl"
+              className={`mb-4 flex items-center justify-center gap-4 rounded-2xl backdrop-blur-xl p-3 mx-2 w-full max-w-sm shadow-xl ${themeStyles.surfacePanel}`}
             >
               <button
                 type="button"
@@ -1827,9 +2066,11 @@ function Home() {
                   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
                 }}
                 disabled={page <= 1 || loading}
-                className={`rounded-xl bg-white/10 ${
+                className={`rounded-xl ${
                   largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
-                } font-bold text-white transition hover:bg-white/20 disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer`}
+                } font-bold transition disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer ${
+                  themeStyles.btnSecondary
+                } ${themeStyles.focusRing}`}
               >
                 ◀ Prev
               </button>
@@ -1847,7 +2088,9 @@ function Home() {
                 disabled={page >= totalPages || loading}
                 className={`rounded-xl ${themeStyles.btnActive} ${
                   largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
-                } font-bold shadow transition disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer`}
+                } font-bold shadow transition disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer ${
+                  themeStyles.focusRing
+                }`}
               >
                 Next ▶
               </button>
