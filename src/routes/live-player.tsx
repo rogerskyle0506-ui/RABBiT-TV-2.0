@@ -1,12 +1,26 @@
 // src/routes/live-player.tsx
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { AppTheme, getSavedTheme } from '@/lib/settings';
 import {
-  fetchLiveCategories,
-  fetchChannelsByCategory,
+  AppTheme,
+  StreamQuality,
+  getSavedTheme,
+  getHardwareLimits,
+  getDefaultPlayerVolume,
+  getSavedStreamQuality,
+  getLargeButtons,
+  getReducedMotion,
+  getGlowIntensity,
+  getClockFormat,
+  formatAppTime,
+  getSleepTimerMinutes,
+  isFavoriteChannel,
+  toggleFavoriteChannel,
+  MAX_FAVORITE_CHANNELS,
+} from '@/lib/settings';
+import {
   fetchAllChannels,
-  LiveChannel,
+  type LiveChannel,
 } from '@/lib/live-feed-service';
 import { logLiveChannelWatch } from '@/lib/watch-history';
 import { getChannelDescription } from '@/lib/channel-descriptions';
@@ -20,6 +34,7 @@ export const Route = createFileRoute('/live-player')({
       url: (search.url as string) || '',
       title: (search.title as string) || 'Live Stream',
       logo: (search.logo as string) || '',
+      channelId: (search.channelId as string) || '',
     };
   },
 });
@@ -31,36 +46,89 @@ interface QualityLevel {
 }
 
 type StreamStatus = 'checking' | 'live' | 'offline';
+type AspectMode = 'contain' | 'cover' | 'fill';
 
-// 1x1 transparent GIF prevents Android WebView / Android TV 14 from rendering the giant ugly default play icon poster
+// 1x1 transparent GIF prevents Android WebView / Android TV 14 from rendering the giant default play icon poster
 const TRANSPARENT_POSTER =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 function LivePlayerComponent() {
-  const { url: streamUrl, title, logo } = Route.useSearch();
+  const {
+    url: streamUrl,
+    title,
+    logo,
+    channelId: searchChannelId,
+  } = Route.useSearch();
   const navigate = useNavigate();
 
-  const [appTheme, setAppTheme] = useState<AppTheme>('violet');
-  const [suggestedChannels, setSuggestedChannels] = useState<LiveChannel[]>([]);
+  // Live settings from settings.ts
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => getSavedTheme());
+  const [largeButtons, setLargeButtons] = useState<boolean>(() =>
+    getLargeButtons()
+  );
+  const [reducedMotion, setReducedMotion] = useState<boolean>(() =>
+    getReducedMotion()
+  );
+  const [glowOff, setGlowOff] = useState<boolean>(
+    () => getGlowIntensity() === 'off'
+  );
+  const [isLowRam, setIsLowRam] = useState<boolean>(
+    () => getHardwareLimits().effectiveMode === 'low'
+  );
+  const [preferredQuality, setPreferredQuality] = useState<StreamQuality>(() =>
+    getSavedStreamQuality()
+  );
+  const [sleepTimerMin, setSleepTimerMin] = useState<number>(() =>
+    getSleepTimerMinutes()
+  );
+  const [hudClock, setHudClock] = useState<string>(() =>
+    formatAppTime(new Date(), getClockFormat())
+  );
+
+  // Channel list for Prev/Next surfing & suggestions
+  const [allChannels, setAllChannels] = useState<LiveChannel[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+
+  // Playback & HUD state
   const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([]);
   const [selectedQuality, setSelectedQuality] = useState<number>(-1);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>('checking');
   const [retryNonce, setRetryNonce] = useState<number>(0);
+  const [aspectMode, setAspectMode] = useState<AspectMode>('contain');
 
-  const [volume, setVolume] = useState(1.0);
+  const [volume, setVolume] = useState<number>(() => getDefaultPlayerVolume());
   const [isMuted, setIsMuted] = useState(false);
-  const [previousVolume, setPreviousVolume] = useState(1.0);
+  const [previousVolume, setPreviousVolume] = useState<number>(() =>
+    getDefaultPlayerVolume() > 0 ? getDefaultPlayerVolume() : 0.85
+  );
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [pinFeedback, setPinFeedback] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
+
+  // Resolve canonical channelId (supports both new and legacy links)
+  const resolvedChannelId = useMemo(() => {
+    if (searchChannelId) return searchChannelId;
+    const match = allChannels.find(
+      (c) => (c.streamUrl || c.url) === streamUrl
+    );
+    return match?.channelId || streamUrl || title;
+  }, [searchChannelId, allChannels, streamUrl, title]);
+
+  const [isPinned, setIsPinned] = useState<boolean>(() =>
+    isFavoriteChannel(searchChannelId || streamUrl || title)
+  );
+
+  useEffect(() => {
+    setIsPinned(isFavoriteChannel(resolvedChannelId));
+  }, [resolvedChannelId]);
 
   // Halt background radio audio to prevent clashing audio and free audio decoder RAM
   useEffect(() => {
@@ -74,83 +142,130 @@ function LivePlayerComponent() {
       title: title || 'Live Channel',
       logo: logo || '',
       streamUrl,
-      channelId: streamUrl,
+      channelId: resolvedChannelId || streamUrl,
     });
-  }, [streamUrl, title, logo]);
+  }, [streamUrl, title, logo, resolvedChannelId]);
 
+  // Sync live settings updates
   useEffect(() => {
-    const handler = () => setAppTheme(getSavedTheme());
-    handler();
-    window.addEventListener('rabtv_settings_updated', handler);
-    return () => window.removeEventListener('rabtv_settings_updated', handler);
+    const syncSettings = () => {
+      setAppTheme(getSavedTheme());
+      setLargeButtons(getLargeButtons());
+      setReducedMotion(getReducedMotion());
+      setGlowOff(getGlowIntensity() === 'off');
+      setIsLowRam(getHardwareLimits().effectiveMode === 'low');
+      setPreferredQuality(getSavedStreamQuality());
+      setSleepTimerMin(getSleepTimerMinutes());
+      setHudClock(formatAppTime(new Date(), getClockFormat()));
+      setIsPinned(isFavoriteChannel(resolvedChannelId));
+    };
+
+    syncSettings();
+    window.addEventListener('rabtv_settings_updated', syncSettings);
+    window.addEventListener('rabtv_ram_mode_updated', syncSettings);
+    return () => {
+      window.removeEventListener('rabtv_settings_updated', syncSettings);
+      window.removeEventListener('rabtv_ram_mode_updated', syncSettings);
+    };
+  }, [resolvedChannelId]);
+
+  // Keep HUD clock updated every 15s
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHudClock(formatAppTime(new Date(), getClockFormat()));
+    }, 15000);
+    return () => window.clearInterval(timer);
   }, []);
 
-  // Load deduplicated suggested channels without triggering background network probes (protects 2GB RAM sticks)
+  // Load deduplicated channel list without probing (fast & RAM-safe)
   useEffect(() => {
     let cancelled = false;
     setLoadingSuggestions(true);
 
-    const loadSuggestions = async () => {
+    const loadChannels = async () => {
       try {
-        const categories = await fetchLiveCategories();
+        const rawList = await fetchAllChannels({
+          probe: false,
+          hideOffline: false,
+        });
         if (cancelled) return;
 
-        let rawList: LiveChannel[] = [];
-        if (categories && categories.length > 0) {
-          const firstCat = categories[0] as any;
-          const categoryKey =
-            typeof firstCat === 'string' ? firstCat : firstCat?.id || 'Nz';
-          rawList = await fetchChannelsByCategory(categoryKey, {
-            probe: false,
-            hideOffline: false,
-          });
-        } else {
-          rawList = await fetchAllChannels({
-            probe: false,
-            hideOffline: false,
-          });
-        }
-
-        if (cancelled) return;
-
-        // Deduplicate by title and stream URL, and exclude the currently playing stream
-        const seenNames = new Set<string>();
         const seenUrls = new Set<string>();
-        const uniqueSuggestions: LiveChannel[] = [];
-
+        const unique: LiveChannel[] = [];
         for (const ch of rawList) {
-          const targetUrl = (ch.streamUrl || ch.url || '').trim();
-          const normTitle = (ch.title || '').trim().toLowerCase();
-          if (!targetUrl || !normTitle) continue;
-          if (targetUrl === streamUrl || normTitle === (title || '').trim().toLowerCase()) {
-            continue;
-          }
-          if (seenNames.has(normTitle) || seenUrls.has(targetUrl)) {
-            continue;
-          }
-          seenNames.add(normTitle);
-          seenUrls.add(targetUrl);
-          uniqueSuggestions.push(ch);
-          if (uniqueSuggestions.length >= 6) break;
+          const u = (ch.streamUrl || ch.url || '').trim();
+          if (!u || seenUrls.has(u)) continue;
+          seenUrls.add(u);
+          unique.push(ch);
         }
-
-        setSuggestedChannels(uniqueSuggestions);
+        setAllChannels(unique);
       } catch {
-        if (!cancelled) {
-          setSuggestedChannels([]);
-        }
+        if (!cancelled) setAllChannels([]);
       } finally {
-        if (!cancelled) {
-          setLoadingSuggestions(false);
-        }
+        if (!cancelled) setLoadingSuggestions(false);
       }
     };
 
-    void loadSuggestions();
+    void loadChannels();
     return () => {
       cancelled = true;
     };
-  }, [streamUrl, title]);
+  }, []);
+
+  // Compute Prev/Next channels for instant cable-box surfing + 6 suggestions
+  const { prevChannel, nextChannel, suggestedChannels } = useMemo(() => {
+    if (!allChannels.length) {
+      return {
+        prevChannel: null as LiveChannel | null,
+        nextChannel: null as LiveChannel | null,
+        suggestedChannels: [] as LiveChannel[],
+      };
+    }
+
+    const currentIdx = allChannels.findIndex(
+      (c) => (c.streamUrl || c.url) === streamUrl
+    );
+    const prev =
+      currentIdx >= 0
+        ? allChannels[(currentIdx - 1 + allChannels.length) % allChannels.length]
+        : allChannels[allChannels.length - 1];
+    const next =
+      currentIdx >= 0
+        ? allChannels[(currentIdx + 1) % allChannels.length]
+        : allChannels[0];
+
+    const suggestions: LiveChannel[] = [];
+    const seenTitles = new Set<string>([(title || '').trim().toLowerCase()]);
+    const startIdx = currentIdx >= 0 ? currentIdx + 1 : 0;
+
+    for (let offset = 0; offset < allChannels.length; offset++) {
+      const ch = allChannels[(startIdx + offset) % allChannels.length];
+      const u = (ch.streamUrl || ch.url || '').trim();
+      const normTitle = (ch.title || '').trim().toLowerCase();
+      if (!u || u === streamUrl || seenTitles.has(normTitle)) continue;
+      seenTitles.add(normTitle);
+      suggestions.push(ch);
+      if (suggestions.length >= 6) break;
+    }
+
+    return { prevChannel: prev, nextChannel: next, suggestedChannels: suggestions };
+  }, [allChannels, streamUrl, title]);
+
+  const surfToChannel = useCallback(
+    (ch: LiveChannel | null) => {
+      if (!ch) return;
+      navigate({
+        to: '/live-player',
+        search: {
+          url: ch.streamUrl || ch.url,
+          title: ch.title,
+          logo: ch.logo || '',
+          channelId: ch.channelId || '',
+        },
+      });
+    },
+    [navigate]
+  );
 
   useEffect(() => {
     if (videoRef.current) {
@@ -166,7 +281,7 @@ function LivePlayerComponent() {
     controlsTimeoutRef.current = window.setTimeout(() => {
       setShowControls(false);
       setShowVolumeSlider(false);
-    }, 4000);
+    }, 4500);
   }, []);
 
   useEffect(() => {
@@ -187,7 +302,7 @@ function LivePlayerComponent() {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!playerContainerRef.current) return;
     if (!document.fullscreenElement) {
       playerContainerRef.current.requestFullscreen().catch((err) => {
@@ -198,9 +313,9 @@ function LivePlayerComponent() {
         console.error('Error attempting to exit fullscreen:', err);
       });
     }
-  };
+  }, []);
 
-  const togglePlayPause = () => {
+  const togglePlayPause = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     revealControlsTemporarily();
@@ -213,7 +328,99 @@ function LivePlayerComponent() {
       video.pause();
       setIsPlaying(false);
     }
+  }, [revealControlsTemporarily]);
+
+  const toggleMute = useCallback(() => {
+    revealControlsTemporarily();
+    if (isMuted) {
+      setVolume(previousVolume || 0.8);
+      setIsMuted(false);
+    } else {
+      setPreviousVolume(volume > 0 ? volume : 0.8);
+      setVolume(0);
+      setIsMuted(true);
+    }
+  }, [isMuted, previousVolume, volume, revealControlsTemporarily]);
+
+  const cycleAspectMode = useCallback(() => {
+    revealControlsTemporarily();
+    setAspectMode((prev) =>
+      prev === 'contain' ? 'cover' : prev === 'cover' ? 'fill' : 'contain'
+    );
+  }, [revealControlsTemporarily]);
+
+  const handleTogglePiP = useCallback(async () => {
+    const video = videoRef.current as any;
+    if (!video || !document.pictureInPictureEnabled) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (typeof video.requestPictureInPicture === 'function') {
+        await video.requestPictureInPicture();
+      }
+    } catch {
+      // Ignore PiP errors on unsupported TV WebViews
+    }
+  }, []);
+
+  const handleTogglePin = () => {
+    const result = toggleFavoriteChannel(resolvedChannelId);
+    setIsPinned(result.added);
+    if (result.limitReached) {
+      setPinFeedback(
+        `Max ${MAX_FAVORITE_CHANNELS} pinned channels reached — unpin one first.`
+      );
+    } else {
+      setPinFeedback(
+        result.added
+          ? `⭐ Pinned "${title}" to your Live TV Favorites!`
+          : `Removed "${title}" from Pinned Favorites.`
+      );
+    }
+    window.setTimeout(() => setPinFeedback(null), 3000);
   };
+
+  // TV Remote & Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+      if (e.key === ' ') {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        toggleMute();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        setRetryNonce((n) => n + 1);
+      } else if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        cycleAspectMode();
+      } else if (e.key === 'PageUp' && nextChannel) {
+        e.preventDefault();
+        surfToChannel(nextChannel);
+      } else if (e.key === 'PageDown' && prevChannel) {
+        e.preventDefault();
+        surfToChannel(prevChannel);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    togglePlayPause,
+    toggleMute,
+    toggleFullscreen,
+    cycleAspectMode,
+    nextChannel,
+    prevChannel,
+    surfToChannel,
+  ]);
 
   const destroyHls = useCallback(() => {
     if (hlsRef.current) {
@@ -229,23 +436,39 @@ function LivePlayerComponent() {
   }, []);
 
   /**
-   * 2GB RAM Streaming Stick Optimization:
-   * Prefer 720p or 1080p by default instead of 2160p (4K) so low-RAM Android TV sticks
-   * don't crash from MSE buffer exhaustion. Users can still manually pick 4K in the dropdown.
+   * Honors the user's Preferred Stream Resolution from settings.ts
+   * while still protecting 1-2GB sticks from 4K MSE buffer exhaustion.
    */
-  const pickPreferredQualityIndex = (levels: QualityLevel[]) => {
-    if (!levels.length) return -1;
-    const preferredHeights = [1080, 720, 480, 360];
-    for (const target of preferredHeights) {
-      const match = levels.find(
-        (level) =>
-          level.height === target ||
-          (level.label && level.label.replace(/\D+/g, '') === String(target))
-      );
-      if (match) return match.index;
-    }
-    return -1; // Default to Hls.js ABR auto-level
-  };
+  const pickPreferredQualityIndex = useCallback(
+    (levels: QualityLevel[]) => {
+      if (!levels.length || preferredQuality === 'auto') return -1;
+
+      const targetHeight =
+        preferredQuality === '1080p'
+          ? 1080
+          : preferredQuality === '720p'
+            ? 720
+            : 480;
+
+      const order =
+        targetHeight === 1080
+          ? [1080, 720, 480, 360]
+          : targetHeight === 720
+            ? [720, 480, 1080, 360]
+            : [480, 360, 720, 1080];
+
+      for (const target of order) {
+        const match = levels.find(
+          (level) =>
+            level.height === target ||
+            (level.label && level.label.replace(/\D+/g, '') === String(target))
+        );
+        if (match) return match.index;
+      }
+      return -1;
+    },
+    [preferredQuality]
+  );
 
   useEffect(() => {
     const video = videoRef.current;
@@ -304,19 +527,20 @@ function LivePlayerComponent() {
       if (cancelled) return;
 
       const HlsClass = (window as any).Hls;
+      const limits = getHardwareLimits();
 
-      // Use Hls.js with strict 2GB RAM Stick memory caps when supported
+      // Dynamic RAM-aware Hls.js configuration (15MB on 1-2GB sticks, 35MB on 4GB+ devices)
       if (HlsClass && HlsClass.isSupported() && streamUrl.includes('.m3u8')) {
         const hlsInstance = new HlsClass({
-          enableWorker: true, // Offloads demuxing to Web Worker so main UI thread never freezes
+          enableWorker: true,
           lowLatencyMode: false,
           liveSyncDurationCount: 3,
           liveMaxLatencyDurationCount: 5,
-          maxBufferLength: 6, // Keep only 6s forward buffer in RAM
-          maxMaxBufferLength: 12, // Hard cap at 12s
-          backBufferLength: 2, // Immediately purge watched segments older than 2s from RAM!
-          maxBufferSize: 15 * 1000 * 1000, // Strict 15MB memory ceiling (down from 60MB default)
-          capLevelToPlayerSize: true, // Never decode 4K segments into a 1080p/720p box
+          maxBufferLength: limits.hlsMaxBufferLengthSec,
+          maxMaxBufferLength: limits.hlsMaxBufferLengthSec * 2,
+          backBufferLength: limits.hlsBackBufferLengthSec,
+          maxBufferSize: limits.hlsMaxBufferSizeBytes,
+          capLevelToPlayerSize: true,
           startLevel: -1,
         });
 
@@ -365,7 +589,6 @@ function LivePlayerComponent() {
               }
             })
             .catch(() => {
-              // If autoplay with sound is blocked, try muted autoplay or show controls
               if (!cancelled) {
                 setIsPlaying(false);
                 setShowControls(true);
@@ -459,7 +682,7 @@ function LivePlayerComponent() {
       video.removeAttribute('src');
       video.load();
     };
-  }, [streamUrl, retryNonce, destroyHls]);
+  }, [streamUrl, retryNonce, destroyHls, pickPreferredQualityIndex]);
 
   const handleQualityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const levelIndex = Number(e.target.value);
@@ -471,18 +694,6 @@ function LivePlayerComponent() {
 
   const handleResyncStream = () => {
     setRetryNonce((n) => n + 1);
-  };
-
-  const toggleMute = () => {
-    revealControlsTemporarily();
-    if (isMuted) {
-      setVolume(previousVolume || 0.8);
-      setIsMuted(false);
-    } else {
-      setPreviousVolume(volume > 0 ? volume : 0.8);
-      setVolume(0);
-      setIsMuted(true);
-    }
   };
 
   const themeStyles = useMemo(() => {
@@ -579,12 +790,27 @@ function LivePlayerComponent() {
     qualityLevels.find((level) => level.index === selectedQuality)?.label ??
     (selectedQuality === -1 ? 'Auto HD' : 'Auto');
 
+  const aspectLabel =
+    aspectMode === 'contain' ? 'Fit' : aspectMode === 'cover' ? 'Fill' : 'Stretch';
+
+  const videoFitClass =
+    aspectMode === 'cover'
+      ? 'object-cover'
+      : aspectMode === 'fill'
+        ? 'object-fill'
+        : 'object-contain';
+
   const channelDescription = useMemo(
     () =>
       getChannelDescription(title || 'Live Channel') ||
       'Live broadcast feed streaming in real time.',
     [title]
   );
+
+  const hudBtnSize = largeButtons ? 'h-12 w-12' : 'h-10 w-10';
+  const canUsePiP =
+    typeof document !== 'undefined' &&
+    Boolean((document as any).pictureInPictureEnabled);
 
   return (
     <div
@@ -602,17 +828,21 @@ function LivePlayerComponent() {
       `}</style>
 
       <AppWallpaper />
-      <div
-        className={`absolute inset-x-0 -top-10 h-[28rem] bg-gradient-to-b ${themeStyles.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
-      />
+      {!isLowRam && !reducedMotion && !glowOff && (
+        <div
+          className={`absolute inset-x-0 -top-10 h-[28rem] bg-gradient-to-b ${themeStyles.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
+        />
+      )}
 
       <div className="w-full max-w-6xl mx-auto space-y-5 box-border relative z-10">
-        {/* Top Navigation Row: Sleek Side-by-Side Neon Glass Capsules */}
+        {/* Top Navigation Row: Neon Glass Capsules + Channel Surfing + Pin Favorite */}
         <div className="w-full flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               to="/live-tv"
-              className="group inline-flex items-center gap-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-3.5 pr-2 py-1.5 border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all duration-300 transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50"
+              className={`group inline-flex items-center gap-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-3.5 pr-2 ${
+                largeButtons ? 'py-2.5' : 'py-1.5'
+              } border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50`}
             >
               <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
                 ‹
@@ -620,26 +850,46 @@ function LivePlayerComponent() {
               <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-100 group-hover:text-white">
                 Live TV Guide
               </span>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600/50 via-pink-500/40 to-cyan-400/50 border border-purple-300/50 text-[11px] text-white shadow-[0_0_12px_rgba(217,70,239,0.7)]">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600/50 via-pink-500/40 to-cyan-400/50 border border-purple-300/50 text-[11px] text-white">
                 📡
               </span>
             </Link>
 
             <Link
               to="/"
-              className="group inline-flex items-center gap-2 rounded-full bg-slate-900/65 hover:bg-slate-900/90 backdrop-blur-xl px-3.5 py-1.5 border border-white/10 hover:border-white/25 text-xs font-semibold text-slate-300 hover:text-white transition"
+              className={`group inline-flex items-center gap-2 rounded-full bg-slate-900/65 hover:bg-slate-900/90 backdrop-blur-xl px-3.5 ${
+                largeButtons ? 'py-2.5 text-sm' : 'py-1.5 text-xs'
+              } border border-white/10 hover:border-white/25 font-semibold text-slate-300 hover:text-white transition`}
             >
               <span>⌂ Home</span>
             </Link>
           </div>
 
-          {/* Right Live Telemetry Pill */}
-          <div className="flex items-center gap-2">
+          {/* Right Live Telemetry & Quick Channel Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Pin / Unpin Favorite Channel */}
+            <button
+              type="button"
+              onClick={handleTogglePin}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 ${
+                largeButtons ? 'py-2 text-sm' : 'py-1.5 text-xs'
+              } font-extrabold shadow transition cursor-pointer ${
+                isPinned
+                  ? 'bg-amber-500/25 border-amber-400/60 text-amber-300'
+                  : 'bg-slate-900/80 hover:bg-slate-800 border-white/15 text-slate-200 hover:text-white'
+              }`}
+              title={isPinned ? 'Unpin from Favorites' : 'Pin to Live TV Favorites'}
+            >
+              <span>{isPinned ? '★ Pinned' : '☆ Pin'}</span>
+            </button>
+
             <button
               type="button"
               onClick={handleResyncStream}
-              className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-white/15 px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white shadow transition cursor-pointer"
-              title="Reload & Resync Live Stream"
+              className={`inline-flex items-center gap-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-white/15 px-3 ${
+                largeButtons ? 'py-2 text-sm' : 'py-1.5 text-xs'
+              } font-bold text-slate-200 hover:text-white shadow transition cursor-pointer`}
+              title="Reload & Resync Live Stream (R)"
             >
               <span>↻ Resync</span>
             </button>
@@ -671,12 +921,21 @@ function LivePlayerComponent() {
           </div>
         </div>
 
-        {/* Theater-Grade Live Video Player Stage (Placed First for Instant Viewing) */}
+        {/* Pin Feedback Banner */}
+        {pinFeedback && (
+          <div className="rounded-2xl bg-amber-950/80 border border-amber-400/45 px-4 py-2 text-center text-xs font-extrabold text-amber-200 shadow-lg">
+            {pinFeedback}
+          </div>
+        )}
+
+        {/* Theater-Grade Live Video Player Stage */}
         <div
           ref={playerContainerRef}
           onMouseMove={revealControlsTemporarily}
           onTouchStart={revealControlsTemporarily}
-          className={`w-full relative flex items-center justify-center rounded-2xl sm:rounded-3xl overflow-hidden bg-black border border-white/20 aspect-video box-border group select-none ${themeStyles.playerGlow}`}
+          className={`w-full relative flex items-center justify-center rounded-2xl sm:rounded-3xl overflow-hidden bg-black border border-white/20 aspect-video box-border group select-none ${
+            glowOff ? 'shadow-2xl' : themeStyles.playerGlow
+          }`}
         >
           {streamUrl ? (
             <video
@@ -686,7 +945,7 @@ function LivePlayerComponent() {
               playsInline
               controls={false}
               onClick={togglePlayPause}
-              className="w-full h-full object-contain bg-black cursor-pointer"
+              className={`w-full h-full ${videoFitClass} bg-black cursor-pointer`}
             />
           ) : (
             <div className="text-center text-slate-400 p-6 rounded-2xl bg-slate-950/80 border border-white/10">
@@ -696,25 +955,38 @@ function LivePlayerComponent() {
             </div>
           )}
 
-          {/* Subtle Top-Left Channel Watermark Badge inside Player HUD */}
+          {/* Top HUD Overlay: Channel Watermark (Left) + Live Clock & Sleep Badge (Right) */}
           <div
-            className={`absolute top-3.5 left-3.5 z-20 flex items-center gap-2.5 rounded-2xl bg-slate-950/75 backdrop-blur-xl border border-white/15 px-3 py-1.5 shadow-xl pointer-events-none transition-opacity duration-300 ${
+            className={`absolute inset-x-3.5 top-3.5 z-20 flex items-center justify-between gap-2 pointer-events-none transition-opacity duration-300 ${
               showControls ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            {logo && (
-              <img
-                src={logo}
-                alt=""
-                className="h-6 w-auto max-w-[70px] object-contain drop-shadow"
-              />
-            )}
-            <span className="text-xs font-extrabold text-white tracking-wide truncate max-w-[180px] sm:max-w-xs">
-              {title}
-            </span>
+            <div className="flex items-center gap-2.5 rounded-2xl bg-slate-950/80 backdrop-blur-xl border border-white/15 px-3 py-1.5 shadow-xl min-w-0">
+              {logo && (
+                <img
+                  src={logo}
+                  alt=""
+                  className="h-6 w-auto max-w-[70px] object-contain drop-shadow shrink-0"
+                />
+              )}
+              <span className="text-xs font-extrabold text-white tracking-wide truncate max-w-[160px] sm:max-w-xs">
+                {title}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {sleepTimerMin > 0 && (
+                <span className="rounded-xl bg-amber-950/85 border border-amber-400/40 px-2.5 py-1 text-[10px] font-extrabold text-amber-300 shadow">
+                  🌙 Sleep: {sleepTimerMin}m
+                </span>
+              )}
+              <span className="rounded-xl bg-slate-950/80 border border-white/15 px-2.5 py-1 text-[11px] font-extrabold text-slate-100 shadow">
+                🕒 {hudClock}
+              </span>
+            </div>
           </div>
 
-          {/* Connecting / Buffering Shimmer Overlay (Replaces Android's ugly default play graphic) */}
+          {/* Connecting / Buffering Shimmer Overlay */}
           {streamStatus === 'checking' && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm pointer-events-none gap-3">
               {logo && (
@@ -741,14 +1013,26 @@ function LivePlayerComponent() {
                 : 'opacity-0 pointer-events-none'
             }`}
           >
-            <div className="flex items-center justify-between gap-2 sm:gap-4 rounded-2xl bg-slate-950/85 backdrop-blur-2xl border border-white/15 px-3 sm:px-4 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.85)]">
-              {/* Left Controls: Play/Pause + Live Pulse Indicator + Resync */}
-              <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 rounded-2xl bg-slate-950/85 backdrop-blur-2xl border border-white/15 px-3 sm:px-4 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.85)]">
+              {/* Left Controls: Prev / Play-Pause / Next + Live Edge + Quality */}
+              <div className="flex items-center gap-1.5 sm:gap-2.5">
+                {prevChannel && (
+                  <button
+                    type="button"
+                    onClick={() => surfToChannel(prevChannel)}
+                    className={`flex ${hudBtnSize} items-center justify-center rounded-xl bg-white/[0.06] hover:bg-white/[0.15] border border-white/15 text-slate-100 hover:text-white text-xs font-black transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400`}
+                    title={`Previous Channel: ${prevChannel.title}`}
+                    aria-label="Previous Channel"
+                  >
+                    ⏮
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={togglePlayPause}
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition transform active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400 ${themeStyles.primaryBtn}`}
-                  title={isPlaying ? 'Pause' : 'Play'}
+                  className={`flex ${hudBtnSize} items-center justify-center rounded-xl transition transform active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400 ${themeStyles.primaryBtn}`}
+                  title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
                   aria-label={isPlaying ? 'Pause' : 'Play'}
                 >
                   {isPlaying ? (
@@ -771,26 +1055,21 @@ function LivePlayerComponent() {
                   )}
                 </button>
 
-                {/* Live Edge Badge */}
-                <button
-                  type="button"
-                  onClick={handleResyncStream}
-                  className="hidden xs:inline-flex items-center gap-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white transition cursor-pointer"
-                  title="Click to jump to live edge"
-                >
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      streamStatus === 'live'
-                        ? 'bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.9)]'
-                        : 'bg-amber-400'
-                    }`}
-                  />
-                  <span>LIVE</span>
-                </button>
+                {nextChannel && (
+                  <button
+                    type="button"
+                    onClick={() => surfToChannel(nextChannel)}
+                    className={`flex ${hudBtnSize} items-center justify-center rounded-xl bg-white/[0.06] hover:bg-white/[0.15] border border-white/15 text-slate-100 hover:text-white text-xs font-black transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400`}
+                    title={`Next Channel: ${nextChannel.title}`}
+                    aria-label="Next Channel"
+                  >
+                    ⏭
+                  </button>
+                )}
 
                 {/* Quality Selector Pill */}
                 {qualityLevels.length > 0 && (
-                  <div className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.1] px-2.5 sm:px-3 py-2 transition">
+                  <div className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.1] px-2.5 py-2 transition">
                     <span className="hidden sm:inline text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
                       HD:
                     </span>
@@ -816,8 +1095,18 @@ function LivePlayerComponent() {
                 )}
               </div>
 
-              {/* Right Controls: Clean Vector Volume + Inline Slider + Fullscreen + Hide HUD */}
-              <div className="flex items-center gap-2 sm:gap-2.5">
+              {/* Right Controls: Aspect Ratio + Volume + PiP + Fullscreen + Hide HUD */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Aspect Ratio / Zoom Mode Button */}
+                <button
+                  type="button"
+                  onClick={cycleAspectMode}
+                  className="hidden sm:inline-flex items-center gap-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.15] border border-white/15 px-2.5 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-200 hover:text-white transition cursor-pointer"
+                  title="Cycle Aspect Ratio: Fit / Fill / Stretch (A)"
+                >
+                  <span>⛶ {aspectLabel}</span>
+                </button>
+
                 {/* Volume Control Group */}
                 <div
                   className="relative flex items-center gap-2 rounded-xl bg-white/[0.06] border border-white/10 px-2 py-1.5"
@@ -828,7 +1117,7 @@ function LivePlayerComponent() {
                     type="button"
                     onClick={toggleMute}
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-200 hover:text-white hover:bg-white/10 transition cursor-pointer focus:outline-none"
-                    title={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
+                    title={isMuted || volume === 0 ? 'Unmute (M)' : 'Mute (M)'}
                     aria-label="Toggle Mute"
                   >
                     {isMuted || volume === 0 ? (
@@ -883,12 +1172,25 @@ function LivePlayerComponent() {
                   />
                 </div>
 
+                {/* Picture-in-Picture Button (when supported) */}
+                {canUsePiP && (
+                  <button
+                    type="button"
+                    onClick={() => void handleTogglePiP()}
+                    className={`hidden md:flex ${hudBtnSize} items-center justify-center rounded-xl bg-white/[0.06] hover:bg-white/[0.15] border border-white/15 text-slate-200 hover:text-white text-xs font-bold transition cursor-pointer`}
+                    title="Picture-in-Picture"
+                    aria-label="Picture-in-Picture"
+                  >
+                    ⧉
+                  </button>
+                )}
+
                 {/* Fullscreen Vector Button */}
                 <button
                   type="button"
                   onClick={toggleFullscreen}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06] hover:bg-white/[0.15] border border-white/15 text-slate-100 hover:text-white transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                  title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                  className={`flex ${hudBtnSize} items-center justify-center rounded-xl bg-white/[0.06] hover:bg-white/[0.15] border border-white/15 text-slate-100 hover:text-white transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400`}
+                  title={isFullscreen ? 'Exit Fullscreen (F)' : 'Enter Fullscreen (F)'}
                   aria-label="Fullscreen Toggle"
                 >
                   {isFullscreen ? (
@@ -924,7 +1226,7 @@ function LivePlayerComponent() {
                   )}
                 </button>
 
-                {/* Hide HUD / Exit Fullscreen Button */}
+                {/* Hide HUD Button */}
                 <button
                   type="button"
                   onClick={() => {
@@ -933,7 +1235,7 @@ function LivePlayerComponent() {
                     }
                     setShowControls(false);
                   }}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06] hover:bg-red-600/80 border border-white/15 hover:border-red-400 text-slate-300 hover:text-white transition cursor-pointer focus:outline-none"
+                  className={`flex ${hudBtnSize} items-center justify-center rounded-xl bg-white/[0.06] hover:bg-red-600/80 border border-white/15 hover:border-red-400 text-slate-300 hover:text-white transition cursor-pointer focus:outline-none`}
                   title="Hide Controls"
                   aria-label="Hide Controls"
                 >
@@ -975,20 +1277,28 @@ function LivePlayerComponent() {
                 >
                   ↻ Retry Stream Now
                 </button>
+                {nextChannel && (
+                  <button
+                    type="button"
+                    onClick={() => surfToChannel(nextChannel)}
+                    className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-5 py-2.5 text-xs font-bold text-white transition cursor-pointer"
+                  >
+                    ⏭ Next Channel
+                  </button>
+                )}
                 <Link
                   to="/live-tv"
                   className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-5 py-2.5 text-xs font-bold text-white transition"
                 >
-                  Return to Live TV Guide
+                  Live TV Guide
                 </Link>
               </div>
             </div>
           )}
         </div>
 
-        {/* Unified Cinema Broadcast Deck (Combines Logo Showcase + Channel Title + Live Metadata + Synopsis) */}
+        {/* Unified Cinema Broadcast Deck */}
         <div className="relative overflow-hidden w-full rounded-3xl border border-white/15 bg-slate-950/85 backdrop-blur-2xl p-5 sm:p-7 shadow-[0_16px_50px_rgba(0,0,0,0.75)] flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
-          {/* Upfront High-Contrast Channel Logo Stage */}
           <div className="relative w-32 h-24 sm:w-40 sm:h-28 shrink-0 rounded-2xl bg-gradient-to-b from-slate-900 via-black to-slate-950 border border-white/15 flex items-center justify-center p-3.5 shadow-inner overflow-hidden">
             <div
               className="absolute inset-0 pointer-events-none"
@@ -1010,7 +1320,6 @@ function LivePlayerComponent() {
             )}
           </div>
 
-          {/* Channel Details & Status Pills */}
           <div className="flex-1 min-w-0 space-y-2.5">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               <span
@@ -1031,6 +1340,9 @@ function LivePlayerComponent() {
                   ? 'Feed Unavailable'
                   : `Quality: ${qualityLabel}`}
               </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                {isLowRam ? '📟 15MB Stick Cap' : '🚀 35MB High RAM'}
+              </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white truncate">
@@ -1042,13 +1354,14 @@ function LivePlayerComponent() {
             </p>
           </div>
 
-          {/* Neon Bottom Laser Accent Line */}
-          <div
-            className={`absolute inset-x-6 bottom-0 h-[2px] bg-gradient-to-r ${themeStyles.laserLine} opacity-85 shadow-[0_0_15px_rgba(236,72,153,0.9)]`}
-          />
+          {!glowOff && (
+            <div
+              className={`absolute inset-x-6 bottom-0 h-[2px] bg-gradient-to-r ${themeStyles.laserLine} opacity-85 shadow-[0_0_15px_rgba(236,72,153,0.9)]`}
+            />
+          )}
         </div>
 
-        {/* More Live Channels Section (Deduplicated & Upfront Logos) */}
+        {/* More Live Channels Section */}
         <div className="w-full pt-2 space-y-4">
           <div className="flex items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-2.5">
@@ -1085,6 +1398,7 @@ function LivePlayerComponent() {
                       url: targetUrl,
                       title: channel.title,
                       logo: channel.logo || '',
+                      channelId: channel.channelId || '',
                     }}
                     className={`group relative flex flex-col justify-between rounded-3xl border border-white/15 ${themeStyles.borderHover} bg-slate-950/85 backdrop-blur-xl p-3.5 transition-all duration-300 hover:-translate-y-1.5 shadow-xl overflow-hidden text-center`}
                   >
@@ -1102,6 +1416,7 @@ function LivePlayerComponent() {
                           alt={channel.title}
                           className="relative z-10 max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow"
                           loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <span className="relative z-10 text-xs font-black text-slate-300">
