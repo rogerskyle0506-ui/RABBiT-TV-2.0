@@ -5,9 +5,14 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -16,6 +21,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js (Node 22 Required for TanStack Start)
         uses: actions/setup-node@v4
@@ -28,6 +35,16 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+
+      - name: Cache Gradle Dependencies (Safe Without Pre-existing Android Folder)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-cap6-${{ hashFiles('package-lock.json', 'capacitor.config.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-cap6-
 
       - name: Install dependencies
         run: npm install
@@ -202,12 +219,16 @@ jobs:
       - name: Sync Package.json Version to Android Build.gradle
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          MAJOR=$(echo $VERSION | cut -d. -f1)
-          MINOR=$(echo $VERSION | cut -d. -f2)
-          PATCH=$(echo $VERSION | cut -d. -f3)
-          BUILD=$(echo $VERSION | cut -d. -f4)
+          CLEAN_VER="${VERSION%%-*}"
+          MAJOR=$(echo "$CLEAN_VER" | cut -d. -f1)
+          MINOR=$(echo "$CLEAN_VER" | cut -d. -f2)
+          PATCH=$(echo "$CLEAN_VER" | cut -d. -f3)
+          BUILD=$(echo "$CLEAN_VER" | cut -d. -f4)
+          [ -z "$MAJOR" ] && MAJOR=1
+          [ -z "$MINOR" ] && MINOR=0
+          [ -z "$PATCH" ] && PATCH=0
           [ -z "$BUILD" ] && BUILD=0
-          VERSION_CODE=$((MAJOR * 1000000 + MINOR * 10000 + PATCH * 100 + BUILD))
+          VERSION_CODE=$((10#$MAJOR * 1000000 + 10#$MINOR * 10000 + 10#$PATCH * 100 + 10#$BUILD))
 
           echo "Updating Android build.gradle with Version Name: $VERSION and Version Code: $VERSION_CODE"
 
@@ -224,7 +245,7 @@ jobs:
 
       - name: Install Pillow & Convert HeaderFamily.jpg to True PNG TV Banner
         run: |
-          pip install Pillow
+          pip install --quiet --no-cache-dir Pillow
           python3 -c "
           import os
           from PIL import Image
@@ -277,13 +298,17 @@ jobs:
           fi
 
       - name: Build Signed Release APK with Custom Keystore
+        env:
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD || 'RABBITV34688643' }}
+          KEY_ALIAS_NAME: ${{ secrets.KEY_ALIAS || 'RABBITV34688643' }}
+          KEY_PASS: ${{ secrets.KEY_PASSWORD || 'RABBITV34688643' }}
         run: |
           cd android
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file=$(pwd)/app/rabbittv.keystore \
-            -Pandroid.injected.signing.store.password=RABBITV34688643 \
-            -Pandroid.injected.signing.key.alias=RABBITV34688643 \
-            -Pandroid.injected.signing.key.password=RABBITV34688643
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASS" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS_NAME" \
+            -Pandroid.injected.signing.key.password="$KEY_PASS"
 
       - name: Save APK Artifact Locally for Workflow Run
         run: |
@@ -292,16 +317,23 @@ jobs:
           echo "Successfully saved APK as updates/${{ steps.version-extractor.outputs.apk_filename }}"
 
       - name: Commit Version Bump & Manifest (Excluding APK Binary)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.io"
           # Only commit config changes and package version bumps—never commit the raw APK binary to prevent token revocation
           git add package.json capacitor.config.json android/app/build.gradle src/lib/version.ts
-          git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} [skip ci]" || echo "No changes to commit"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} [skip ci]"
+            git pull --rebase origin "${{ github.ref_name }}"
+            git push
+          else
+            echo "No changes to commit"
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.version-extractor.outputs.artifact_name }}
           path: updates/${{ steps.version-extractor.outputs.apk_filename }}
+          retention-days: 14
