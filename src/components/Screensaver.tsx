@@ -1,48 +1,107 @@
 // src/components/Screensaver.tsx
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { bgAudio } from "@/lib/background-audio";
+import {
+  AppTheme,
+  SCREENSAVER_TIMEOUT_OPTIONS,
+  getSavedTheme,
+  getSavedScreensaverTimeout,
+  saveScreensaverTimeout,
+  getClockFormat,
+  formatAppTime,
+  getReducedMotion,
+  getHardwareLimits,
+  getProfileMascot,
+} from "@/lib/settings";
 
-const TIMEOUT_STORAGE_KEY = "rabtv_screensaver_timeout_ms";
-const DEFAULT_TIMEOUT = 2.5 * 60 * 60 * 1000; // 2.5 hours in milliseconds
+// Re-export options so sidebar.tsx and other components stay 100% compatible
+export const TIMEOUT_OPTIONS = SCREENSAVER_TIMEOUT_OPTIONS;
 
-// Options: 3 hours, 2 hours, 1 hour, 30 mins, 20 mins, 5 mins
-export const TIMEOUT_OPTIONS = [
-  { label: "3 Hours", value: 3 * 60 * 60 * 1000 },
-  { label: "2.5 Hours (Default)", value: 2.5 * 60 * 60 * 1000 },
-  { label: "2 Hours", value: 2 * 60 * 60 * 1000 },
-  { label: "1 Hour", value: 1 * 60 * 60 * 1000 },
-  { label: "30 Minutes", value: 30 * 60 * 1000 },
-  { label: "20 Minutes", value: 20 * 60 * 1000 },
-  { label: "5 Minutes", value: 5 * 60 * 1000 },
-];
-
-const LOGO_URL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
+const LOGO_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
 
 export function Screensaver() {
   const [isActive, setIsActive] = useState(false);
-  const [timeoutMs, setTimeoutMs] = useState<number>(() => {
-    if (typeof window === "undefined") return DEFAULT_TIMEOUT;
-    const saved = localStorage.getItem(TIMEOUT_STORAGE_KEY);
-    return saved ? Number(saved) : DEFAULT_TIMEOUT;
-  });
-
+  const [sleepReason, setSleepReason] = useState<string | null>(null);
+  const [timeoutMs, setTimeoutMs] = useState<number>(() =>
+    getSavedScreensaverTimeout()
+  );
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => getSavedTheme());
+  const [lowPowerMode, setLowPowerMode] = useState<boolean>(
+    () => getReducedMotion() || getHardwareLimits().effectiveMode === "low"
+  );
+  const [mascot, setMascot] = useState<string>(() => getProfileMascot());
+  const [clockText, setClockText] = useState<string>(() =>
+    formatAppTime(new Date(), getClockFormat())
+  );
   const [currentStationName, setCurrentStationName] = useState<string>("");
 
   const idleTimerRef = useRef<number | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
   // Position and velocity for the bouncing logo (slow speed to prevent burn-in)
-  const posRef = useRef({ x: 100, y: 100 });
-  const velRef = useRef({ vx: 0.75, vy: 0.75 });
+  const posRef = useRef({ x: 80, y: 80 });
+  const velRef = useRef({ vx: 0.7, vy: 0.7 });
   const logoRef = useRef<HTMLDivElement>(null);
 
-  // Save timeout setting
+  // Sync live settings whenever user updates Sidebar preferences
+  useEffect(() => {
+    const syncSettings = () => {
+      const nextTimeout = getSavedScreensaverTimeout();
+      setTimeoutMs(nextTimeout);
+      setAppTheme(getSavedTheme());
+      setLowPowerMode(
+        getReducedMotion() || getHardwareLimits().effectiveMode === "low"
+      );
+      setMascot(getProfileMascot());
+      setClockText(formatAppTime(new Date(), getClockFormat()));
+    };
+
+    syncSettings();
+    window.addEventListener("rabtv_settings_updated", syncSettings);
+    window.addEventListener("rabtv_ram_mode_updated", syncSettings);
+    window.addEventListener("storage", syncSettings);
+
+    return () => {
+      window.removeEventListener("rabtv_settings_updated", syncSettings);
+      window.removeEventListener("rabtv_ram_mode_updated", syncSettings);
+      window.removeEventListener("storage", syncSettings);
+    };
+  }, []);
+
+  // Listen for Couch Sleep Timer trigger from __root.tsx
+  useEffect(() => {
+    const handleSleepTrigger = () => {
+      setSleepReason("Sleep Timer Activated");
+      setCurrentStationName("");
+      setClockText(formatAppTime(new Date(), getClockFormat()));
+      setIsActive(true);
+    };
+
+    window.addEventListener("rabtv_sleep_timer_triggered", handleSleepTrigger);
+    return () =>
+      window.removeEventListener(
+        "rabtv_sleep_timer_triggered",
+        handleSleepTrigger
+      );
+  }, []);
+
+  // Keep clock updated while screensaver is active
+  useEffect(() => {
+    if (!isActive) return;
+    setClockText(formatAppTime(new Date(), getClockFormat()));
+    const clockInterval = window.setInterval(() => {
+      setClockText(formatAppTime(new Date(), getClockFormat()));
+    }, 15000);
+    return () => window.clearInterval(clockInterval);
+  }, [isActive]);
+
+  // Helper kept for backwards compatibility if ever called internally
   const updateTimeout = (newMs: number) => {
     setTimeoutMs(newMs);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(TIMEOUT_STORAGE_KEY, String(newMs));
-    }
+    saveScreensaverTimeout(newMs);
   };
+  void updateTimeout;
 
   // Check if media is currently playing or fullscreen is active
   const isMediaActive = useCallback(() => {
@@ -53,13 +112,11 @@ export function Screensaver() {
       return true;
     }
 
-    // 2. Check all video/audio elements across the DOM (excluding background music player if desired, or general media)
+    // 2. Check all video/audio elements across the DOM (skip background lobby radio)
     const mediaElements = document.querySelectorAll("video, audio");
     for (const el of mediaElements) {
       const media = el as HTMLMediaElement;
-      // Skip background audio element if tracked, but check standard media/video streams
       if (!media.paused && !media.ended && media.readyState > 2) {
-        // If it's part of the background audio system, we allow screensaver
         if (media.dataset && media.dataset.bgAudio === "true") {
           continue;
         }
@@ -101,12 +158,11 @@ export function Screensaver() {
     }
 
     idleTimerRef.current = window.setTimeout(() => {
-      // Before activating, verify no media or fullscreen is active
       if (!isMediaActive()) {
-        // Update current radio station label if background audio is playing
         try {
           const station = bgAudio.getCurrentStation();
-          if (station && station.name) {
+          const isBgPlaying = localStorage.getItem("rabtv_bg_music_state") !== "muted";
+          if (isBgPlaying && station && station.name) {
             setCurrentStationName(station.name);
           } else {
             setCurrentStationName("");
@@ -115,9 +171,10 @@ export function Screensaver() {
           setCurrentStationName("");
         }
 
+        setSleepReason(null);
+        setClockText(formatAppTime(new Date(), getClockFormat()));
         setIsActive(true);
       } else {
-        // Delay again if media is currently playing
         resetIdleTimer();
       }
     }, timeoutMs);
@@ -127,10 +184,18 @@ export function Screensaver() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const events = ["mousedown", "mousemove", "keydown", "touchstart", "scroll", "click"];
+    const events = [
+      "mousedown",
+      "mousemove",
+      "keydown",
+      "touchstart",
+      "scroll",
+      "click",
+    ];
     const handleActivity = () => {
       if (isActive) {
         setIsActive(false);
+        setSleepReason(null);
       }
       resetIdleTimer();
     };
@@ -149,25 +214,37 @@ export function Screensaver() {
     };
   }, [isActive, resetIdleTimer]);
 
-  // Bouncing animation loop
+  // Movement Loop: Low-RAM / Reduced Motion uses zero-GPU 8s step jumps; High-RAM floats smoothly
   useEffect(() => {
     if (!isActive || typeof window === "undefined") {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       return;
     }
 
-    const logoWidth = 280;
-    const logoHeight = 150; // Extra height accounted for radio station label
+    const logoWidth = 290;
+    const logoHeight = 185;
 
-    // Initialize random starting position within bounds
-    posRef.current = {
-      x: Math.random() * Math.max(50, window.innerWidth - logoWidth - 50),
-      y: Math.random() * Math.max(50, window.innerHeight - logoHeight - 50),
+    const placeRandomly = () => {
+      const maxX = Math.max(20, window.innerWidth - logoWidth - 20);
+      const maxY = Math.max(20, window.innerHeight - logoHeight - 20);
+      posRef.current = {
+        x: Math.round(Math.random() * maxX),
+        y: Math.round(Math.random() * maxY),
+      };
+      if (logoRef.current) {
+        logoRef.current.style.transform = `translate3d(${posRef.current.x}px, ${posRef.current.y}px, 0)`;
+      }
     };
 
-    // Randomize initial direction (slow linear movement)
+    placeRandomly();
+
+    if (lowPowerMode) {
+      const jumpInterval = window.setInterval(placeRandomly, 8000);
+      return () => window.clearInterval(jumpInterval);
+    }
+
     const angle = Math.random() * Math.PI * 2;
-    const speed = 0.7; // Slow movement to prevent burn-in
+    const speed = 0.65; // Slow linear movement to prevent OLED/projector burn-in
     velRef.current = {
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
@@ -179,10 +256,9 @@ export function Screensaver() {
       posRef.current.x += velRef.current.vx;
       posRef.current.y += velRef.current.vy;
 
-      const maxX = window.innerWidth - logoWidth;
-      const maxY = window.innerHeight - logoHeight;
+      const maxX = Math.max(0, window.innerWidth - logoWidth);
+      const maxY = Math.max(0, window.innerHeight - logoHeight);
 
-      // Bounce off walls
       if (posRef.current.x <= 0) {
         posRef.current.x = 0;
         velRef.current.vx *= -1;
@@ -208,41 +284,110 @@ export function Screensaver() {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isActive]);
+  }, [isActive, lowPowerMode]);
+
+  const themeAccent = useMemo(() => {
+    switch (appTheme) {
+      case "red":
+        return {
+          border: "border-red-500/40",
+          glow: "shadow-[0_0_35px_rgba(239,68,68,0.4)]",
+          text: "text-red-300",
+        };
+      case "midnight":
+        return {
+          border: "border-sky-500/40",
+          glow: "shadow-[0_0_35px_rgba(56,189,248,0.4)]",
+          text: "text-sky-300",
+        };
+      case "emerald":
+        return {
+          border: "border-emerald-500/40",
+          glow: "shadow-[0_0_35px_rgba(16,185,129,0.4)]",
+          text: "text-emerald-300",
+        };
+      case "amber":
+        return {
+          border: "border-amber-500/40",
+          glow: "shadow-[0_0_35px_rgba(245,158,11,0.4)]",
+          text: "text-amber-300",
+        };
+      case "cyan":
+        return {
+          border: "border-cyan-500/40",
+          glow: "shadow-[0_0_35px_rgba(34,211,238,0.4)]",
+          text: "text-cyan-300",
+        };
+      case "violet":
+      default:
+        return {
+          border: "border-violet-500/40",
+          glow: "shadow-[0_0_35px_rgba(168,85,247,0.4)]",
+          text: "text-violet-300",
+        };
+    }
+  }, [appTheme]);
 
   if (!isActive) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[99999] bg-black overflow-hidden cursor-none select-none"
-      onClick={() => setIsActive(false)}
-      onKeyDown={() => setIsActive(false)}
+      className="rabtv-vidsrc-protected fixed inset-0 z-[99999] bg-black overflow-hidden cursor-none select-none"
+      onClick={() => {
+        setIsActive(false);
+        setSleepReason(null);
+      }}
+      onKeyDown={() => {
+        setIsActive(false);
+        setSleepReason(null);
+      }}
     >
       <div
         ref={logoRef}
-        className="absolute flex flex-col items-center w-[280px] pointer-events-none"
+        className="absolute flex flex-col items-center w-[290px] pointer-events-none"
         style={{ willChange: "transform" }}
       >
-        <div className="w-full h-[120px] rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_35px_rgba(192,132,252,0.35)] relative">
+        <div
+          className={`w-full h-[126px] rounded-2xl overflow-hidden border ${themeAccent.border} ${themeAccent.glow} relative bg-slate-950`}
+        >
           <img
             src={LOGO_URL}
             alt="RABBiT TV Screensaver"
-            className="w-full h-full object-cover opacity-90"
+            className="w-full h-full object-cover opacity-85"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center pb-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-violet-400 drop-shadow-md">
-              RABBiT TV
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col items-center justify-end pb-2.5 px-3">
+            <span className="text-xl font-black tracking-wider text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+              {clockText}
+            </span>
+            <span
+              className={`text-[10px] font-extrabold uppercase tracking-[0.25em] ${themeAccent.text} drop-shadow-md`}
+            >
+              {mascot} RABBiT TV
             </span>
           </div>
         </div>
 
-        {/* Current Radio Station Playing Sub-Label */}
-        {currentStationName && (
-          <div className="mt-2 px-3 py-1 rounded-xl bg-black/80 border border-violet-500/30 backdrop-blur-md shadow-lg text-center max-w-full">
-            <span className="text-[10px] font-bold text-violet-300 truncate block drop-shadow">
+        {/* Sleep Timer Notice or Current Radio Station Playing Sub-Label */}
+        {sleepReason ? (
+          <div className="mt-2 px-3 py-1 rounded-xl bg-black/85 border border-amber-400/40 shadow-lg text-center max-w-full">
+            <span className="text-[10px] font-extrabold text-amber-300 block">
+              🌙 {sleepReason} • Tap or press any key to wake
+            </span>
+          </div>
+        ) : currentStationName ? (
+          <div
+            className={`mt-2 px-3 py-1 rounded-xl bg-black/85 border ${themeAccent.border} shadow-lg text-center max-w-full`}
+          >
+            <span
+              className={`text-[10px] font-bold ${themeAccent.text} truncate block drop-shadow`}
+            >
               🎵 Playing: {currentStationName}
             </span>
           </div>
+        ) : (
+          <span className="mt-2 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+            Tap or press any key to wake
+          </span>
         )}
       </div>
     </div>
