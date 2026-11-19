@@ -1,24 +1,38 @@
 // src/routes/details.tsx
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { AppTheme, getSavedTheme, CardSize, getSavedCardSize } from "@/lib/settings";
+import {
+  AppTheme,
+  CardSize,
+  PosterAppearanceClasses,
+  getSavedTheme,
+  getSavedCardSize,
+  getSavedUserAge,
+  isAllowedForAge,
+  getPosterAppearanceClasses,
+  getOptimalTmdbImageWidth,
+  getHardwareLimits,
+  getReducedMotion,
+  getLargeButtons,
+  getClockFormat,
+  formatAppTime,
+  getKidsModeLocked,
+} from "@/lib/settings";
 import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
 import { MediaCard } from "@/routes/index";
 import type { MediaItem } from "@/lib/tmdb-scraper";
-import { saveWatchProgress, getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
+import {
+  saveWatchProgress,
+  getRawWatchHistory,
+  isTitleDisliked,
+} from "@/lib/watch-history";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { bgAudio } from "@/lib/background-audio";
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
-const RABBIT_HEADER_PILL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
-const RABBIT_PANEL_ALT = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
-const PLAY = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/play.png";
-const MYFAV = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/MyFav.png";
-const SAVEFORLATER = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/SaveForLater.png";
-const REPORTBROKEN = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/ReportBroken.png";
-const BACK_TO_HOME = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/BackToHome.png";
-const CLICK_FOR_TRAILER = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/ClickForTrailer.png";
+const RABBIT_PANEL_ALT =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
 
 export const Route = createFileRoute("/details")({
   component: DetailsPage,
@@ -33,11 +47,13 @@ export function DetailsPage() {
   const navigate = useNavigate();
 
   const rawId = String(search.id || "").trim();
-  const inferredType: "tv" | "movie" | null = rawId.toLowerCase().startsWith("tv-")
+  const inferredType: "tv" | "movie" | null = rawId
+    .toLowerCase()
+    .startsWith("tv-")
     ? "tv"
     : rawId.toLowerCase().startsWith("movie-")
-    ? "movie"
-    : null;
+      ? "movie"
+      : null;
 
   const mediaId = rawId.replace(/^(movie|tv)-/i, "").trim();
   const urlType: "movie" | "tv" =
@@ -48,8 +64,29 @@ export function DetailsPage() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [appTheme, setAppTheme] = useState<AppTheme>("violet");
-  const [cardSize, setCardSize] = useState<CardSize>("large");
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => getSavedTheme());
+  const [cardSize, setCardSize] = useState<CardSize>(() => getSavedCardSize());
+  const [userAge, setUserAge] = useState<number>(() => getSavedUserAge());
+  const [kidsLocked, setKidsLocked] = useState<boolean>(() =>
+    getKidsModeLocked()
+  );
+  const [posterAppearance, setPosterAppearance] =
+    useState<PosterAppearanceClasses>(() =>
+      getPosterAppearanceClasses(getSavedTheme())
+    );
+  const [posterWidth, setPosterWidth] = useState<"w342" | "w500">(() =>
+    getOptimalTmdbImageWidth()
+  );
+  const [reducedMotion, setReducedMotion] = useState<boolean>(() =>
+    getReducedMotion()
+  );
+  const [largeButtons, setLargeButtons] = useState<boolean>(() =>
+    getLargeButtons()
+  );
+  const [isLowRam, setIsLowRam] = useState<boolean>(
+    () => getHardwareLimits().effectiveMode === "low"
+  );
+  const [clockFormat, setClockFormat] = useState(() => getClockFormat());
 
   const [inMyList, setInMyList] = useState(false);
   const [inFavorites, setInFavorites] = useState(false);
@@ -86,6 +123,18 @@ export function DetailsPage() {
     setTrailerKey(null);
   }, [mediaId, urlType]);
 
+  // Allow Escape key to exit trailer flip cleanly on TV remotes / keyboards
+  useEffect(() => {
+    if (!isFlipped) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsFlipped(false);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isFlipped]);
+
   // Manage background audio mute/resume during trailer playback
   useEffect(() => {
     if (isFlipped) {
@@ -112,7 +161,10 @@ export function DetailsPage() {
       } else if (typeof (bgAudio as any)?.setMuted === "function") {
         (bgAudio as any).setMuted(false);
       }
-      if (wasAudioPlayingRef.current && typeof (bgAudio as any)?.play === "function") {
+      if (
+        wasAudioPlayingRef.current &&
+        typeof (bgAudio as any)?.play === "function"
+      ) {
         try {
           (bgAudio as any).play();
         } catch {
@@ -127,7 +179,7 @@ export function DetailsPage() {
     if (castScrollRef.current) {
       castScrollRef.current.scrollBy({
         left: direction === "left" ? -350 : 350,
-        behavior: "smooth",
+        behavior: reducedMotion ? "auto" : "smooth",
       });
     }
   };
@@ -149,11 +201,11 @@ export function DetailsPage() {
   }, [recommendations, loading]);
 
   useEffect(() => {
-    let inactivityTimer: NodeJS.Timeout;
+    let inactivityTimer: ReturnType<typeof setTimeout>;
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
       setShowScrollReminder(false);
-      if (canScrollDown) {
+      if (canScrollDown && !reducedMotion) {
         inactivityTimer = setTimeout(() => setShowScrollReminder(true), 30000);
       }
     };
@@ -161,7 +213,9 @@ export function DetailsPage() {
     window.addEventListener("scroll", resetInactivityTimer, { passive: true });
     window.addEventListener("click", resetInactivityTimer);
     window.addEventListener("keydown", resetInactivityTimer);
-    window.addEventListener("touchstart", resetInactivityTimer, { passive: true });
+    window.addEventListener("touchstart", resetInactivityTimer, {
+      passive: true,
+    });
     return () => {
       clearTimeout(inactivityTimer);
       window.removeEventListener("scroll", resetInactivityTimer);
@@ -169,14 +223,20 @@ export function DetailsPage() {
       window.removeEventListener("keydown", resetInactivityTimer);
       window.removeEventListener("touchstart", resetInactivityTimer);
     };
-  }, [canScrollDown]);
+  }, [canScrollDown, reducedMotion]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (seasonRef.current && !seasonRef.current.contains(event.target as Node)) {
+      if (
+        seasonRef.current &&
+        !seasonRef.current.contains(event.target as Node)
+      ) {
         setIsSeasonOpen(false);
       }
-      if (episodeRef.current && !episodeRef.current.contains(event.target as Node)) {
+      if (
+        episodeRef.current &&
+        !episodeRef.current.contains(event.target as Node)
+      ) {
         setIsEpisodeOpen(false);
       }
     };
@@ -186,15 +246,26 @@ export function DetailsPage() {
 
   useEffect(() => {
     const loadSettings = () => {
-      setAppTheme(getSavedTheme());
+      const nextTheme = getSavedTheme();
+      setAppTheme(nextTheme);
       setCardSize(getSavedCardSize());
+      setUserAge(getSavedUserAge());
+      setKidsLocked(getKidsModeLocked());
+      setPosterAppearance(getPosterAppearanceClasses(nextTheme));
+      setPosterWidth(getOptimalTmdbImageWidth());
+      setReducedMotion(getReducedMotion());
+      setLargeButtons(getLargeButtons());
+      setIsLowRam(getHardwareLimits().effectiveMode === "low");
+      setClockFormat(getClockFormat());
     };
     loadSettings();
     window.addEventListener("storage", loadSettings);
-    window.addEventListener("rabtv_settings_updated" as any, loadSettings);
+    window.addEventListener("rabtv_settings_updated", loadSettings);
+    window.addEventListener("rabtv_ram_mode_updated", loadSettings);
     return () => {
       window.removeEventListener("storage", loadSettings);
-      window.removeEventListener("rabtv_settings_updated" as any, loadSettings);
+      window.removeEventListener("rabtv_settings_updated", loadSettings);
+      window.removeEventListener("rabtv_ram_mode_updated", loadSettings);
     };
   }, []);
 
@@ -218,7 +289,9 @@ export function DetailsPage() {
         if (!active) return;
         const videos = data.results || [];
         const trailer =
-          videos.find((v: any) => v.type === "Trailer" && v.site === "YouTube") ||
+          videos.find(
+            (v: any) => v.type === "Trailer" && v.site === "YouTube"
+          ) ||
           videos.find((v: any) => v.site === "YouTube") ||
           videos[0];
 
@@ -229,13 +302,14 @@ export function DetailsPage() {
         console.error("Failed to fetch trailer from TMDB", err);
       }
     }
-    fetchTrailer();
+    void fetchTrailer();
     return () => {
       active = false;
     };
   }, [mediaId, mediaType]);
 
   useEffect(() => {
+    let active = true;
     async function fetchSeasonEpisodes() {
       if (mediaType !== "tv" || !mediaId) return;
       try {
@@ -244,13 +318,18 @@ export function DetailsPage() {
           `https://api.themoviedb.org/3/tv/${mediaId}/season/${season}?api_key=${apiKey}`
         );
         const data = await res.json();
-        setSeasonEpisodes(data.episodes || []);
+        if (active) {
+          setSeasonEpisodes(data.episodes || []);
+        }
       } catch (err) {
         console.error("Failed to load season episodes", err);
-        setSeasonEpisodes([]);
+        if (active) setSeasonEpisodes([]);
       }
     }
-    fetchSeasonEpisodes();
+    void fetchSeasonEpisodes();
+    return () => {
+      active = false;
+    };
   }, [season, mediaId, mediaType]);
 
   const getPageBackground = (theme: AppTheme) => {
@@ -498,17 +577,25 @@ export function DetailsPage() {
   useEffect(() => {
     if (!mediaId || !mediaDetails) return;
     try {
-      const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
-      setInMyList(
-        myList.some(
-          (item: any) => item.id === prefixedId || String(item.mediaId) === mediaId
-        )
+      const myList = JSON.parse(
+        localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]"
       );
-      const favs = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
+      setInMyList(
+        Array.isArray(myList) &&
+          myList.some(
+            (item: any) =>
+              item.id === prefixedId || String(item.mediaId) === mediaId
+          )
+      );
+      const favs = JSON.parse(
+        localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]"
+      );
       setInFavorites(
-        favs.some(
-          (item: any) => item.id === prefixedId || String(item.mediaId) === mediaId
-        )
+        Array.isArray(favs) &&
+          favs.some(
+            (item: any) =>
+              item.id === prefixedId || String(item.mediaId) === mediaId
+          )
       );
     } catch (err) {
       console.error("Error reading saved catalog lists", err);
@@ -571,10 +658,14 @@ export function DetailsPage() {
             !!(data?.seasons || data?.number_of_seasons) ||
             activeFetchType === "tv";
           setMediaType(isTv ? "tv" : "movie");
-          localStorage.setItem(
-            `rabtv_cache_${activeFetchType}_${mediaId}`,
-            JSON.stringify({ data, timestamp: Date.now() })
-          );
+          try {
+            localStorage.setItem(
+              `rabtv_cache_${activeFetchType}_${mediaId}`,
+              JSON.stringify({ data, timestamp: Date.now() })
+            );
+          } catch {
+            // Ignore storage quota errors on 1-2GB sticks
+          }
           setMediaDetails(data);
         } else {
           setMediaDetails(null);
@@ -589,7 +680,9 @@ export function DetailsPage() {
             recData.results.filter(
               (item: any) =>
                 !isTitleBroken(String(item.id)) &&
-                !isTitleBroken(`${activeFetchType}-${item.id}`)
+                !isTitleBroken(`${activeFetchType}-${item.id}`) &&
+                !isTitleDisliked(String(item.id)) &&
+                !isTitleDisliked(`${activeFetchType}-${item.id}`)
             )
           );
         }
@@ -601,7 +694,7 @@ export function DetailsPage() {
       }
     }
 
-    fetchDetailsWithCache();
+    void fetchDetailsWithCache();
     return () => {
       cancelled = true;
     };
@@ -631,6 +724,19 @@ export function DetailsPage() {
     }
   }, [mediaDetails]);
 
+  const runtimeSummary = useMemo(() => {
+    const mins =
+      inferredMediaType === "movie"
+        ? mediaDetails?.runtime
+        : mediaDetails?.episode_run_time?.[0];
+    if (!mins || typeof mins !== "number" || mins <= 0) return null;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const durationText = h > 0 ? `${h}h ${m}m` : `${m}m`;
+    const endsAtText = formatAppTime(Date.now() + mins * 60 * 1000, clockFormat);
+    return { durationText, endsAtText };
+  }, [mediaDetails, inferredMediaType, clockFormat]);
+
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
       return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 sm:gap-4 justify-items-center";
@@ -642,33 +748,41 @@ export function DetailsPage() {
   }, [cardSize]);
 
   const mappedRecommendations: MediaItem[] = useMemo(() => {
-    return recommendations.map((rec: any) => {
-      const recId = String(rec.id);
-      const recTitle = rec.title || rec.name || "Untitled";
-      const recPoster = rec.poster_path
-        ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
-        : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
-      const recType: "movie" | "tv" =
-        rec.media_type === "tv" || rec.name || !rec.title ? "tv" : "movie";
-      const releaseDate = rec.release_date || rec.first_air_date || "";
-      const year = releaseDate.split("-")[0];
-      const rating = rec.vote_average
-        ? rec.vote_average.toFixed(1)
-        : undefined;
+    return recommendations
+      .filter((rec: any) =>
+        isAllowedForAge(
+          rec.adult ? "R" : undefined,
+          rec.media_type === "tv" ? "TV SHOW" : "MOVIE",
+          userAge
+        )
+      )
+      .map((rec: any) => {
+        const recId = String(rec.id);
+        const recTitle = rec.title || rec.name || "Untitled";
+        const recPoster = rec.poster_path
+          ? `https://image.tmdb.org/t/p/${posterWidth}${rec.poster_path}`
+          : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
+        const recType: "movie" | "tv" =
+          rec.media_type === "tv" || rec.name || !rec.title ? "tv" : "movie";
+        const releaseDate = rec.release_date || rec.first_air_date || "";
+        const year = releaseDate.split("-")[0];
+        const rating = rec.vote_average
+          ? rec.vote_average.toFixed(1)
+          : undefined;
 
-      return {
-        id: `${recType}-${recId}`,
-        title: recTitle,
-        description: rec.overview || "",
-        image: recPoster,
-        href: `/details?id=${recId}&type=${recType}`,
-        genre: recType === "tv" ? "TV SHOW" : "MOVIE",
-        year: year || undefined,
-        rating,
-        mediaType: recType,
-      };
-    });
-  }, [recommendations]);
+        return {
+          id: `${recType}-${recId}`,
+          title: recTitle,
+          description: rec.overview || "",
+          image: recPoster,
+          href: `/details?id=${recId}&type=${recType}`,
+          genre: recType === "tv" ? "TV SHOW" : "MOVIE",
+          year: year || undefined,
+          rating,
+          mediaType: recType,
+        };
+      });
+  }, [recommendations, posterWidth, userAge, kidsLocked]);
 
   const buildCatalogItem = () => ({
     id: `${inferredMediaType}-${mediaId}`,
@@ -676,12 +790,14 @@ export function DetailsPage() {
     title: mediaDetails?.title || mediaDetails?.name || "Untitled",
     description: mediaDetails?.overview || "",
     image: mediaDetails?.poster_path
-      ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
+      ? `https://image.tmdb.org/t/p/${posterWidth}${mediaDetails.poster_path}`
       : "",
     href: `/details?id=${mediaId}&type=${inferredMediaType}`,
-    year: (mediaDetails?.release_date || mediaDetails?.first_air_date || "").split(
-      "-"
-    )[0],
+    year: (
+      mediaDetails?.release_date ||
+      mediaDetails?.first_air_date ||
+      ""
+    ).split("-")[0],
     rating: mediaDetails?.vote_average
       ? mediaDetails.vote_average.toFixed(1)
       : undefined,
@@ -726,7 +842,9 @@ export function DetailsPage() {
     if (!mediaDetails) return;
     const item = buildCatalogItem();
     try {
-      const myList = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
+      const myList = JSON.parse(
+        localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]"
+      );
       let updatedList;
       if (inMyList) {
         updatedList = myList.filter(
@@ -755,7 +873,9 @@ export function DetailsPage() {
     if (!mediaDetails) return;
     const item = buildCatalogItem();
     try {
-      const favs = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
+      const favs = JSON.parse(
+        localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]"
+      );
       let updatedFavs;
       if (inFavorites) {
         updatedFavs = favs.filter(
@@ -784,7 +904,7 @@ export function DetailsPage() {
     if (!mediaId) return;
     const result = reportBrokenLink(String(mediaId));
     triggerFeedback(result.message);
-    setTimeout(() => {
+    window.setTimeout(() => {
       window.location.href = "/";
     }, 1500);
   };
@@ -801,10 +921,14 @@ export function DetailsPage() {
   if (loading) {
     return (
       <div
-        className={`flex min-h-screen items-center justify-center ${getPageBackground(appTheme)} text-white relative`}
+        className={`flex min-h-screen items-center justify-center ${getPageBackground(
+          appTheme
+        )} text-white relative rounded-3xl`}
       >
         <AppWallpaper />
-        <p className={`text-xl font-medium animate-pulse ${activeTheme.text} relative z-10`}>
+        <p
+          className={`text-xl font-medium animate-pulse ${activeTheme.text} relative z-10`}
+        >
           Loading title details...
         </p>
       </div>
@@ -815,10 +939,12 @@ export function DetailsPage() {
   const overview =
     mediaDetails?.overview || "No description available for this title.";
   const poster = mediaDetails?.poster_path
-    ? `https://image.tmdb.org/t/p/w500${mediaDetails.poster_path}`
+    ? `https://image.tmdb.org/t/p/${posterWidth}${mediaDetails.poster_path}`
     : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
   const backdropUrl = mediaDetails?.backdrop_path
-    ? `https://image.tmdb.org/t/p/original${mediaDetails.backdrop_path}`
+    ? `https://image.tmdb.org/t/p/${isLowRam ? "w780" : "original"}${
+        mediaDetails.backdrop_path
+      }`
     : null;
   const releaseYear = (
     mediaDetails?.release_date ||
@@ -832,8 +958,13 @@ export function DetailsPage() {
     mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
 
   const castList = mediaDetails?.credits?.cast || [];
-  const budget = mediaDetails?.budget && mediaDetails.budget > 0 ? `$${mediaDetails.budget.toLocaleString()}` : "N/A";
-  const productionCompanies = mediaDetails?.production_companies?.map((c: any) => c.name).join(", ") || "N/A";
+  const budget =
+    mediaDetails?.budget && mediaDetails.budget > 0
+      ? `$${mediaDetails.budget.toLocaleString()}`
+      : "N/A";
+  const productionCompanies =
+    mediaDetails?.production_companies?.map((c: any) => c.name).join(", ") ||
+    "N/A";
 
   const currentSeasonObj = mediaDetails?.seasons?.find(
     (s: any) => s.season_number === season
@@ -842,9 +973,14 @@ export function DetailsPage() {
     (e: any) => e.episode_number === episode
   );
 
+  const heroPosterRadius = posterAppearance.radiusClass;
+  const actionBtnHeight = largeButtons ? "h-14 sm:h-16" : "h-12 sm:h-14";
+
   return (
     <div
-      className={`min-h-screen w-full ${getPageBackground(appTheme)} p-3 sm:p-6 md:p-10 text-white overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative rounded-3xl`}
+      className={`min-h-screen w-full ${getPageBackground(
+        appTheme
+      )} p-3 sm:p-6 md:p-10 text-white overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative rounded-3xl`}
     >
       <style>{`
         @keyframes heartbeatSlow {
@@ -865,17 +1001,21 @@ export function DetailsPage() {
 
       {/* Layered cinematic glass overlays for Ambient backdrop depths */}
       <AppWallpaper backdropUrl={backdropUrl} />
-      <div
-        className={`absolute inset-x-0 -top-12 h-[34rem] bg-gradient-to-b ${activeTheme.ambient} animate-ambient-pulse z-0 pointer-events-none rounded-t-3xl`}
-      />
+      {!isLowRam && !reducedMotion && (
+        <div
+          className={`absolute inset-x-0 -top-12 h-[34rem] bg-gradient-to-b ${activeTheme.ambient} animate-ambient-pulse z-0 pointer-events-none rounded-t-3xl`}
+        />
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none z-0" />
 
       <div className="relative z-10 max-w-5xl mx-auto">
-        {/* Mockup Top-Left Neon Glass "Back to Home" Capsule Pill */}
+        {/* Top-Left Neon Glass "Back to Home" Capsule Pill */}
         <div className="mb-4 flex items-center justify-start">
           <Link
             to="/"
-            className="group inline-flex items-center gap-3 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-4 pr-2 py-1.5 border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all duration-300 transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50"
+            className={`group inline-flex items-center gap-3 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-4 pr-2 ${
+              largeButtons ? "py-2.5" : "py-1.5"
+            } border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all duration-300 transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50`}
           >
             <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
               ‹
@@ -897,7 +1037,7 @@ export function DetailsPage() {
             onClick={() => !isFlipped && setIsFlipped(true)}
           >
             <div
-              className="relative h-full w-full rounded-3xl transition-all duration-700 ease-out"
+              className={`relative h-full w-full ${heroPosterRadius} transition-all duration-700 ease-out`}
               style={{
                 transformStyle: "preserve-3d",
                 transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
@@ -905,12 +1045,13 @@ export function DetailsPage() {
             >
               {/* Front: Cover Art with Floating Bottom Metadata Pill & Neon ClickForTrailer Square Badge */}
               <div
-                className="absolute inset-0 h-full w-full rounded-3xl overflow-hidden border border-white/20 bg-black shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_25px_rgba(168,85,247,0.2)]"
+                className={`absolute inset-0 h-full w-full ${heroPosterRadius} overflow-hidden border border-white/20 bg-black shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_25px_rgba(168,85,247,0.2)]`}
                 style={{ backfaceVisibility: "hidden" }}
               >
                 <img
                   src={poster}
                   alt={title}
+                  decoding="async"
                   className="h-full w-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent pointer-events-none" />
@@ -922,7 +1063,9 @@ export function DetailsPage() {
                   <div className="inline-flex items-center flex-wrap gap-1.5 rounded-full bg-black/75 backdrop-blur-xl border border-white/15 px-3.5 py-1.5 text-[11px] font-bold text-slate-200 shadow-xl">
                     {rating !== "N/A" && (
                       <>
-                        <span className="text-amber-400 font-extrabold">★ {rating}</span>
+                        <span className="text-amber-400 font-extrabold">
+                          ★ {rating}
+                        </span>
                         <span className="text-white/25">|</span>
                       </>
                     )}
@@ -946,7 +1089,9 @@ export function DetailsPage() {
                       e.stopPropagation();
                       setIsFlipped(true);
                     }}
-                    className="pointer-events-auto group flex flex-col items-center justify-center gap-1 rounded-2xl bg-slate-950/80 hover:bg-slate-900/95 backdrop-blur-xl border border-purple-400/50 hover:border-cyan-400 px-3 py-2 shadow-[0_0_20px_rgba(168,85,247,0.45)] hover:shadow-[0_0_25px_rgba(56,189,248,0.7)] transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50 shrink-0 animate-heartbeat-slow"
+                    className={`pointer-events-auto group flex flex-col items-center justify-center gap-1 rounded-2xl bg-slate-950/80 hover:bg-slate-900/95 backdrop-blur-xl border border-purple-400/50 hover:border-cyan-400 px-3 py-2 shadow-[0_0_20px_rgba(168,85,247,0.45)] hover:shadow-[0_0_25px_rgba(56,189,248,0.7)] transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50 shrink-0 ${
+                      reducedMotion ? "" : "animate-heartbeat-slow"
+                    }`}
                   >
                     <span className="flex h-7 w-7 items-center justify-center rounded-full border border-cyan-300/70 bg-gradient-to-tr from-purple-600/50 to-cyan-400/50 text-[10px] text-white shadow-[0_0_10px_rgba(56,189,248,0.6)] group-hover:scale-110 transition-transform">
                       ▶
@@ -962,7 +1107,7 @@ export function DetailsPage() {
 
               {/* Back: Trailer Player inside Transparent Rabbit Alternate Panel Wrapper */}
               <div
-                className={`absolute inset-0 h-full w-full rounded-3xl overflow-hidden flex flex-col border ${activeTheme.border}/40 bg-black/95 shadow-2xl`}
+                className={`absolute inset-0 h-full w-full ${heroPosterRadius} overflow-hidden flex flex-col border ${activeTheme.border}/40 bg-black/95 shadow-2xl`}
                 style={{
                   backfaceVisibility: "hidden",
                   transform: "rotateY(180deg)",
@@ -978,12 +1123,16 @@ export function DetailsPage() {
                   }}
                 />
                 <div
-                  className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(appTheme)} opacity-40 pointer-events-none z-0`}
+                  className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(
+                    appTheme
+                  )} opacity-40 pointer-events-none z-0`}
                 />
 
                 {/* Header / Close bar */}
                 <div className="relative z-10 flex items-center justify-between p-3.5 border-b border-white/10 bg-black/75 backdrop-blur-md">
-                  <span className={`text-xs font-bold truncate max-w-[200px] sm:max-w-[280px] ${activeTheme.text}`}>
+                  <span
+                    className={`text-xs font-bold truncate max-w-[200px] sm:max-w-[280px] ${activeTheme.text}`}
+                  >
                     Official Trailer • {title}
                   </span>
                   <button
@@ -992,7 +1141,7 @@ export function DetailsPage() {
                       e.stopPropagation();
                       setIsFlipped(false);
                     }}
-                    className={`w-7 h-7 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center text-xs font-bold border ${activeTheme.border}/50 hover:scale-105 active:scale-95 transition cursor-pointer shadow-md`}
+                    className={`w-8 h-8 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center text-xs font-bold border ${activeTheme.border}/50 hover:scale-105 active:scale-95 transition cursor-pointer shadow-md`}
                     title="Close Trailer & Return to Cover"
                     aria-label="Close Trailer"
                   >
@@ -1011,7 +1160,9 @@ export function DetailsPage() {
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-4 text-center gap-2">
-                      <div className={`w-8 h-8 rounded-full border-2 border-t-transparent ${activeTheme.border} animate-spin`} />
+                      <div
+                        className={`w-8 h-8 rounded-full border-2 border-t-transparent ${activeTheme.border} animate-spin`}
+                      />
                       <span className="text-xs text-slate-400">
                         Loading official trailer from TMDB...
                       </span>
@@ -1022,9 +1173,11 @@ export function DetailsPage() {
             </div>
           </div>
 
-          {/* Media Details Card (Styled directly after the Mockup's Right/Details Panel) */}
+          {/* Media Details Card */}
           <div
-            className={`flex flex-col items-start text-left gap-4 w-full rounded-3xl border p-5 sm:p-7 md:p-8 backdrop-blur-2xl transition-colors duration-300 ${getSmokeWrapperStyle(appTheme)}`}
+            className={`flex flex-col items-start text-left gap-4 w-full rounded-3xl border p-5 sm:p-7 md:p-8 backdrop-blur-2xl transition-colors duration-300 ${getSmokeWrapperStyle(
+              appTheme
+            )}`}
           >
             {/* Genre Capsule */}
             <span
@@ -1038,7 +1191,7 @@ export function DetailsPage() {
               {title}
             </h1>
 
-            {/* Single-Line Mockup Metadata Subtitle */}
+            {/* Single-Line Metadata Subtitle + Live Finish Time */}
             <div className="flex items-center flex-wrap gap-2 text-xs sm:text-sm font-medium text-slate-300">
               <span>Content {releaseYear || "2026"}</span>
               <span className="text-white/30">|</span>
@@ -1050,6 +1203,17 @@ export function DetailsPage() {
               <span className="uppercase font-bold tracking-wider text-slate-200">
                 {inferredMediaType}
               </span>
+              {runtimeSummary && (
+                <>
+                  <span className="text-white/30">•</span>
+                  <span className="text-slate-200 font-semibold">
+                    {runtimeSummary.durationText}
+                  </span>
+                  <span className="rounded-full bg-emerald-500/15 border border-emerald-400/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
+                    ⏱️ Ends {runtimeSummary.endsAtText}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Overview Paragraph */}
@@ -1060,7 +1224,9 @@ export function DetailsPage() {
             {/* TV Season & Episode Selector Dropdowns */}
             {inferredMediaType === "tv" && mediaDetails?.seasons && (
               <div
-                className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(appTheme)} p-4 backdrop-blur-md shadow-xl my-1 w-full`}
+                className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(
+                  appTheme
+                )} p-4 backdrop-blur-md shadow-xl my-1 w-full`}
               >
                 <div className="relative flex-1 min-w-[180px]" ref={seasonRef}>
                   <label className="block text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 pl-1">
@@ -1069,7 +1235,11 @@ export function DetailsPage() {
                   <button
                     type="button"
                     onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                    className={`flex items-center justify-between w-full gap-4 rounded-xl border border-white/15 bg-black/60 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring} transition`}
+                    className={`flex items-center justify-between w-full gap-4 rounded-xl border border-white/15 bg-black/60 px-4 ${
+                      largeButtons ? "py-3.5 text-sm" : "py-2.5 text-xs sm:text-sm"
+                    } font-bold text-white shadow-lg focus:outline-none focus:ring-4 ${
+                      activeTheme.ring
+                    } transition cursor-pointer`}
                   >
                     <span className="truncate">
                       {currentSeasonObj
@@ -1091,7 +1261,7 @@ export function DetailsPage() {
                               setEpisode(1);
                               setIsSeasonOpen(false);
                             }}
-                            className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition ${
+                            className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition cursor-pointer ${
                               season === s.season_number
                                 ? `${activeTheme.bg} text-white font-black`
                                 : "text-slate-200 hover:bg-white/10"
@@ -1111,7 +1281,11 @@ export function DetailsPage() {
                   <button
                     type="button"
                     onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                    className={`flex items-center justify-between w-full gap-4 rounded-xl border border-white/15 bg-black/60 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg focus:outline-none focus:ring-4 ${activeTheme.ring} transition`}
+                    className={`flex items-center justify-between w-full gap-4 rounded-xl border border-white/15 bg-black/60 px-4 ${
+                      largeButtons ? "py-3.5 text-sm" : "py-2.5 text-xs sm:text-sm"
+                    } font-bold text-white shadow-lg focus:outline-none focus:ring-4 ${
+                      activeTheme.ring
+                    } transition cursor-pointer`}
                   >
                     <span className="truncate">
                       {currentEpisodeObj
@@ -1131,7 +1305,7 @@ export function DetailsPage() {
                               setEpisode(ep.episode_number);
                               setIsEpisodeOpen(false);
                             }}
-                            className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition ${
+                            className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition cursor-pointer ${
                               episode === ep.episode_number
                                 ? `${activeTheme.bg} text-white font-black`
                                 : "text-slate-200 hover:bg-white/10"
@@ -1151,25 +1325,27 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* Mockup 2x2 Neon Glass Action Buttons Grid */}
+            {/* 2x2 Neon Glass Action Buttons Grid */}
             <div className="mt-2 grid grid-cols-2 gap-3 sm:gap-4 w-full">
-              {/* 1. Play Button (Glowing Cyan-to-Purple Neon Gradient) */}
+              {/* 1. Play Button */}
               <button
                 type="button"
                 onClick={handlePlay}
-                className={`group relative flex items-center justify-center gap-2.5 h-12 sm:h-14 rounded-2xl font-extrabold text-sm sm:text-base tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-cyan-400 ${activeTheme.playBtn}`}
+                className={`group relative flex items-center justify-center gap-2.5 ${actionBtnHeight} rounded-2xl font-extrabold text-sm sm:text-base tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-cyan-400 ${activeTheme.playBtn}`}
               >
                 <span className="text-base sm:text-lg">▶</span>
                 <span>
-                  {inferredMediaType === "tv" ? `Play S${season}:E${episode}` : "Play"}
+                  {inferredMediaType === "tv"
+                    ? `Play S${season}:E${episode}`
+                    : "Play"}
                 </span>
               </button>
 
-              {/* 2. Report Broken Button (Sleek Dark Glass with Warning Icon) */}
+              {/* 2. Report Broken Button */}
               <button
                 type="button"
                 onClick={handleReportBroken}
-                className="group relative flex items-center justify-center gap-2 h-12 sm:h-14 rounded-2xl bg-slate-900/85 hover:bg-red-950/60 backdrop-blur-xl border border-white/15 hover:border-red-400/70 text-slate-200 hover:text-white font-bold text-xs sm:text-sm tracking-wide shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(239,68,68,0.35)] transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500/50"
+                className={`group relative flex items-center justify-center gap-2 ${actionBtnHeight} rounded-2xl bg-slate-900/85 hover:bg-red-950/60 backdrop-blur-xl border border-white/15 hover:border-red-400/70 text-slate-200 hover:text-white font-bold text-xs sm:text-sm tracking-wide shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(239,68,68,0.35)] transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500/50`}
                 title="Report link as broken and hide globally"
               >
                 <span className="text-sm sm:text-base text-slate-300 group-hover:text-red-400 transition-colors">
@@ -1178,11 +1354,11 @@ export function DetailsPage() {
                 <span>Report Broken</span>
               </button>
 
-              {/* 3. My Favs Button (Dark Glass with Glowing Purple/Magenta Neon Border) */}
+              {/* 3. My Favs Button */}
               <button
                 type="button"
                 onClick={toggleFavorites}
-                className={`group relative flex items-center justify-center gap-2 h-12 sm:h-14 rounded-2xl backdrop-blur-xl border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-500/50 ${
+                className={`group relative flex items-center justify-center gap-2 ${actionBtnHeight} rounded-2xl backdrop-blur-xl border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-500/50 ${
                   inFavorites
                     ? "bg-purple-950/75 border-purple-400 text-white shadow-[0_0_25px_rgba(168,85,247,0.55)]"
                     : "bg-slate-900/85 hover:bg-purple-950/40 border-purple-500/45 hover:border-purple-400 text-slate-200 hover:text-white shadow-[0_0_15px_rgba(168,85,247,0.2)]"
@@ -1198,11 +1374,11 @@ export function DetailsPage() {
                 <span>{inFavorites ? "Favorited" : "My Favs"}</span>
               </button>
 
-              {/* 4. Save for Later Button (Dark Glass with Glowing Cyan/Blue Neon Border) */}
+              {/* 4. Save for Later Button */}
               <button
                 type="button"
                 onClick={toggleMyList}
-                className={`group relative flex items-center justify-center gap-2 h-12 sm:h-14 rounded-2xl backdrop-blur-xl border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-cyan-400/50 ${
+                className={`group relative flex items-center justify-center gap-2 ${actionBtnHeight} rounded-2xl backdrop-blur-xl border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-cyan-400/50 ${
                   inMyList
                     ? "bg-cyan-950/75 border-cyan-400 text-white shadow-[0_0_25px_rgba(34,211,238,0.55)]"
                     : "bg-slate-900/85 hover:bg-cyan-950/40 border-cyan-500/45 hover:border-cyan-400 text-slate-200 hover:text-white shadow-[0_0_15px_rgba(34,211,238,0.2)]"
@@ -1228,7 +1404,7 @@ export function DetailsPage() {
             )}
           </div>
 
-          {/* Cast Section (Frameless with Glowing Dual-Tone Neon Avatar Rings like Mockup) */}
+          {/* Cast Section */}
           {castList.length > 0 && (
             <div className="mt-2 pt-2 pb-1 w-full space-y-3.5">
               <div className="flex items-center justify-between px-1">
@@ -1239,16 +1415,20 @@ export function DetailsPage() {
                   <button
                     type="button"
                     onClick={() => scrollCast("left")}
-                    className="w-7 h-7 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/15 flex items-center justify-center text-xs font-bold text-white shadow-md transition cursor-pointer"
-                    aria-label="Scroll left"
+                    className={`${
+                      largeButtons ? "w-9 h-9 text-sm" : "w-7 h-7 text-xs"
+                    } rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/15 flex items-center justify-center font-bold text-white shadow-md transition cursor-pointer`}
+                    aria-label="Scroll cast left"
                   >
                     ◀
                   </button>
                   <button
                     type="button"
                     onClick={() => scrollCast("right")}
-                    className="w-7 h-7 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/15 flex items-center justify-center text-xs font-bold text-white shadow-md transition cursor-pointer"
-                    aria-label="Scroll right"
+                    className={`${
+                      largeButtons ? "w-9 h-9 text-sm" : "w-7 h-7 text-xs"
+                    } rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/15 flex items-center justify-center font-bold text-white shadow-md transition cursor-pointer`}
+                    aria-label="Scroll cast right"
                   >
                     ▶
                   </button>
@@ -1264,7 +1444,6 @@ export function DetailsPage() {
                     key={actor.id}
                     className="group flex flex-col items-center text-center shrink-0 w-20 sm:w-24"
                   >
-                    {/* Glowing Neon Gradient Ring */}
                     <div
                       className={`p-[2.5px] rounded-full bg-gradient-to-tr ${activeTheme.avatarRing} shadow-[0_0_18px_rgba(168,85,247,0.35)] group-hover:shadow-[0_0_25px_rgba(56,189,248,0.65)] transition-all duration-300 mb-2 group-hover:scale-105`}
                     >
@@ -1278,6 +1457,7 @@ export function DetailsPage() {
                           alt={actor.name}
                           className="w-full h-full object-cover"
                           loading="lazy"
+                          decoding="async"
                         />
                       </div>
                     </div>
@@ -1293,7 +1473,7 @@ export function DetailsPage() {
             </div>
           )}
 
-          {/* Budget, Production, & Language Cards (3-Column Row with Neon Bottom Laser Glow) */}
+          {/* Budget, Production, & Language Cards */}
           <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mt-1 w-full">
             <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-slate-950/75 p-3 sm:p-4 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-left group hover:border-purple-400/50 transition duration-300">
               <span className="block text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
@@ -1340,7 +1520,9 @@ export function DetailsPage() {
             <div className="mt-6 pt-5 border-t border-white/10 space-y-4 w-full">
               <div className="mb-3 flex items-center justify-between px-1 text-left w-full">
                 <div className="flex items-center gap-2.5">
-                  <span className={`w-1.5 h-6 rounded-full ${activeTheme.accentBar}`} />
+                  <span
+                    className={`w-1.5 h-6 rounded-full ${activeTheme.accentBar}`}
+                  />
                   <h3 className="text-base sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
                     <span>✨ Similar Recommended Titles</span>
                   </h3>
@@ -1357,6 +1539,9 @@ export function DetailsPage() {
                     item={item}
                     cardSize={cardSize}
                     appTheme={appTheme}
+                    posterAppearance={posterAppearance}
+                    posterWidth={posterWidth}
+                    largeButtons={largeButtons}
                     key={item.id}
                   />
                 ))}
@@ -1387,7 +1572,9 @@ export function DetailsPage() {
                 More Content Details
               </span>
               <span
-                className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)}`}
+                className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(
+                  appTheme
+                )}`}
               >
                 ⌄
               </span>
