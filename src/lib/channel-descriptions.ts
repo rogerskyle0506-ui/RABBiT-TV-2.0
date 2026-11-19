@@ -1,44 +1,61 @@
+// src/lib/channel-descriptions.ts
+import { getChannelCategory, getCategoryMeta } from "./channel-categories";
+
+export type BroadcastRating = "TV-Y" | "TV-G" | "TV-PG" | "TV-14" | "TV-MA";
+
+export interface ChannelRichMeta {
+  name: string;
+  category: string;
+  categoryIcon: string;
+  description: string;
+  shortTagline: string;
+  contentRating: BroadcastRating;
+  vibeTags: string[];
+  isRadioFeed: boolean;
+  isKidsSafe: boolean;
+}
+
 export const channelDescriptions: Record<string, string> = {
   "ThreeNow Sport 2": "Live sports coverage, high-energy athletic competitions, and tournament highlights.",
-  "HGTV": "Home remodeling, interior design, property renovation, and real estate showcases.",
+  HGTV: "Home remodeling, interior design, property renovation, and real estate showcases.",
   "CNN Headlines International": "Global news updates, breaking international headlines, and 24/7 current affairs coverage.",
-  "MovieSphere": "Feature-length cinema, blockbuster films, indie masterpieces, and curated movie collections.",
+  MovieSphere: "Feature-length cinema, blockbuster films, indie masterpieces, and curated movie collections.",
   "Below Deck Vault": "Reality drama following luxury charter yacht crews, guest demands, and high-seas adventures.",
-  "MythBusters": "Popular science experimentation testing urban legends, myths, and scientific theories.",
+  MythBusters: "Popular science experimentation testing urban legends, myths, and scientific theories.",
   "Warner Bros TV True Crime": "Gripping true crime investigations, forensic mysteries, and criminal justice documentaries.",
   "Warner Bros TV Paranormal": "Investigative series tracking supernatural anomalies, ghost hunts, and unexplained phenomena.",
   "Warner Bros TV Motorheads": "High-octane automotive builds, custom vehicle engineering, and racing culture.",
   "Warner Bros TV Deadliest Catch": "High-stakes commercial fishing docuseries battling treacherous open ocean conditions.",
   "Warner Bros TV House Hunters": "Global real estate hunting, home buying decisions, and property tours.",
-  "JuiceTV": "Music video hits, artist interviews, and round-the-clock pop culture entertainment.",
-  "J2": "Alternative music video blocks, indie tracks, and underground artist showcases.",
+  JuiceTV: "Music video hits, artist interviews, and round-the-clock pop culture entertainment.",
+  J2: "Alternative music video blocks, indie tracks, and underground artist showcases.",
   "Big Rig": "Heavy-duty trucking adventures, transport documentaries, and highway journeys.",
-  "Melo": "Relaxed ambient music videos, smooth acoustic sessions, and visual soundscapes.",
+  Melo: "Relaxed ambient music videos, smooth acoustic sessions, and visual soundscapes.",
   "The Groat": "Classic alternative music tracks, retro video blocks, and nostalgic hits.",
   "TVNZ 1": "Premier national news broadcasts, hit entertainment, documentary programming, and prestige drama.",
   "TVNZ 2": "Hit comedy series, reality television, youth programming, and popular films.",
-  "Three": "General entertainment network featuring hit reality formats, investigative journalism, and drama.",
-  "Bravo": "Lifestyle programming, reality docuseries, fashion, and pop culture entertainment.",
+  Three: "General entertainment network featuring hit reality formats, investigative journalism, and drama.",
+  Bravo: "Lifestyle programming, reality docuseries, fashion, and pop culture entertainment.",
   "Whakaata Maori": "Cultural programming, bilingual features, community news, and documentary specials.",
-  "DUKE": "Action-packed entertainment, sports blocks, cult comedy series, and late-night features.",
+  DUKE: "Action-packed entertainment, sports blocks, cult comedy series, and late-night features.",
   "Sky Open": "Free-to-air sports broadcasts, documentary features, and family entertainment.",
-  "RUSH": "High-energy action sports, motor racing, and extreme outdoor competition series.",
+  RUSH: "High-energy action sports, motor racing, and extreme outdoor competition series.",
   "Te Reo": "Indigenous language programming, cultural documentaries, and historical features.",
-  "ThreePlus1": "Timeshifted broadcast replay of primary entertainment and prime-time lineups.",
+  ThreePlus1: "Timeshifted broadcast replay of primary entertainment and prime-time lineups.",
   "Bravo PLUS 1": "One-hour delayed broadcast of reality series and lifestyle programming.",
-  "eden": "Nature documentaries, premium drama series, and high-quality factual entertainment.",
+  eden: "Nature documentaries, premium drama series, and high-quality factual entertainment.",
   "Al Jazeera": "Independent international news coverage, political discourse, and documentary reports.",
   "Trackside 1": "Live horse racing coverage, race previews, and thoroughbred racing events.",
   "Trackside 2": "Secondary harness and greyhound racing tracks, odds analysis, and live race feeds.",
   "Shine TV": "Inspirational family programming, faith-based broadcasts, and uplifting specials.",
-  "Firstlight": "Independent documentary features, cultural showcases, and morning broadcast feeds.",
+  Firstlight: "Independent documentary features, cultural showcases, and morning broadcast feeds.",
   "Hope Channel": "Wholesome lifestyle programming, community health features, and spiritual enrichment.",
   "Parliament TV": "Live legislative proceedings, government debates, and civic committee coverage.",
   "Wairarapa TV": "Regional community stories, local event coverage, and regional features.",
-  "CH200": "Specialty broadcast test card, channel guides, and system feeds.",
+  CH200: "Specialty broadcast test card, channel guides, and system feeds.",
   "Trackside Premier": "Elite championship racing fixtures, expert panels, and live race day analysis.",
   "TVSN Shopping": "Home shopping network featuring jewelry, electronics, homewares, and fashion items.",
-  "Seven": "Live national news, prime-time drama series, popular entertainment, and major sports.",
+  Seven: "Live national news, prime-time drama series, popular entertainment, and major sports.",
   "7two": "Classic television series, nostalgic drama blocks, lifestyle shows, and movies.",
   "7mate": "Action entertainment, comedy classics, rugged trade shows, and sports programming.",
   "7flix": "Feature films, lighthearted comedy series, and casual afternoon movie blocks.",
@@ -51,12 +68,12 @@ export const channelDescriptions: Record<string, string> = {
   "Channel 9 (Newcastle)": "Regional news feeds, local current affairs, and entertainment broadcasts.",
   "ABC TV": "Comprehensive national news, educational programming, arts, and drama series.",
   "10": "Popular light entertainment, comedy panels, reality hits, and contemporary drama.",
-  "suspension": "Classic dramatic storytelling, legal investigations, and crime mystery series.",
   "10 Drama": "Binge-worthy dramatic series, suspense thrillers, and mystery programming.",
   "10 Comedy": "Hit comedy series, stand-up specials, and lighthearted sitcoms.",
-  "Nickelodeon": "Family animation, classic children's cartoon blocks, and youth entertainment.",
+  Nickelodeon: "Family animation, classic children's cartoon blocks, and youth entertainment.",
   "Snowy Mountains Television": "Alpine lifestyle features, outdoor adventure guides, and regional programming.",
   "Channel 31": "Independent community television, local arts, and cultural features.",
+  "Channel 44": "Independent community media, local artistic productions, and cultural showcases.",
   "Seven Cairns": "Tropical regional news, local community features, and broadcast feeds.",
   "7flix Regional": "Regional movie blocks, comedy series, and light entertainment feeds.",
   "7two Regional": "Regional classic television series, drama programming, and lifestyle shows.",
@@ -76,7 +93,7 @@ export const channelDescriptions: Record<string, string> = {
   "Hardcore Pawn": "Pawn shop reality series following high-stakes negotiations and unique customer items.",
   "Racing WA": "Western regional racing fixtures, track coverage, and harness racing updates.",
   "All Saints": "Medical drama series following hospital staff, patient care, and emergency response.",
-  "Mythbusters": "Science entertainment series debunking popular myths through large-scale experiments.",
+  Mythbusters: "Science entertainment series debunking popular myths through large-scale experiments.",
   "Travel Australia": "Scenic travel adventures, road trip guides, and remote destination exploring.",
   "Air Crash Investigations": "Aviation disaster documentation, safety analysis, and NTSB investigation breakdowns.",
   "Better Homes And Gardens": "Home styling advice, gardening tutorials, cooking recipes, and DIY projects.",
@@ -108,17 +125,16 @@ export const channelDescriptions: Record<string, string> = {
   "Antiques Road Trip": "Antique hunting adventure across the countryside searching for valuable collectibles.",
   "7Bravo": "Reality entertainment, compelling docuseries, and popular lifestyle television.",
   "Hells Kitchen": "High-pressure culinary competition putting aspiring chefs through intense kitchen challenges.",
-  "Below Deck Vault": "Mariner lifestyle reality series focusing on luxury charter service and crew dynamics.",
-  "TVSN": "Live home shopping broadcast featuring designer products, electronics, and home goods.",
+  TVSN: "Live home shopping broadcast featuring designer products, electronics, and home goods.",
   "Escape to the Country": "Property search show helping families relocate from city living to rural estates.",
   "The Real Housewives VAULT": "Glamorous reality docuseries following affluent social circles and high-society drama.",
   "Cricket Gold": "Classic cricket match replays, historic test series, and legendary sporting moments.",
   "Botched VAULT": "Plastic surgery reality series documenting corrective medical procedures.",
-  "NCIS": "Naval criminal investigative service solving military-related crimes and conspiracies.",
+  NCIS: "Naval criminal investigative service solving military-related crimes and conspiracies.",
   "24 Hours in A&E": "Observational documentary capturing high-pressure moments inside a major hospital unit.",
   "Million Dollar Listing VAULT": "Luxury real estate market docuseries showcasing high-end multi-million dollar properties.",
   "Bondi Rescue": "Lifeguard reality docuseries monitoring beach safety, water rescues, and ocean conditions.",
-  "Seinfeld": "Legendary observational sitcom following the daily misadventures of four friends.",
+  Seinfeld: "Legendary observational sitcom following the daily misadventures of four friends.",
   "9Crime": "Gripping crime investigation series, forensic science, and mystery documentaries.",
   "The Block 24/7": "Continuous renovation reality series tracking couples competing to overhaul properties.",
   "Taronga 24/7": "Wildlife conservation docuseries following zoo keepers, animal care, and veterinary teams.",
@@ -127,9 +143,9 @@ export const channelDescriptions: Record<string, string> = {
   "Married At First Sight": "Social experiment reality series matching singles who meet at the altar.",
   "BBC Top Gear": "Automotive entertainment series testing high-performance supercars and wild challenges.",
   "Dance Moms 24/7": "Competitive dance training docuseries following young dancers and studio dynamics.",
-  "LMN": "Suspenseful thriller films, dramatic mysteries, and edge-of-your-seat entertainment.",
+  LMN: "Suspenseful thriller films, dramatic mysteries, and edge-of-your-seat entertainment.",
   "Real Emergency": "Fast-paced emergency services docuseries tracking paramedics, fire rescue, and police.",
-  "H2": "Historical documentaries, archaeological discoveries, and factual series.",
+  H2: "Historical documentaries, archaeological discoveries, and factual series.",
   "60 Minutes Australia": "Investigative journalism program covering major international stories and profiles.",
   "BBC Antiques Roadshow": "Valuation experts assessing family heirlooms, collectibles, and historic treasures.",
   "BBC Comedy": "Classic British sitcoms, sketch comedy blocks, and humor programming.",
@@ -140,26 +156,26 @@ export const channelDescriptions: Record<string, string> = {
   "MTV The Shores": "Reality television series following dynamic social groups and vacation culture.",
   "Thank God You're Here": "Improvisational comedy panel show testing quick-witted guest actors.",
   "Diagnosis Murder": "Medical mystery detective series solving complex homicides.",
-  "Becker": "Cynical medical sitcom following a sharp-tongued neighborhood doctor.",
+  Becker: "Cynical medical sitcom following a sharp-tongued neighborhood doctor.",
   "8 Out Of 10 Cats": "Comedic panel show discussing current events, polls, and pop culture statistics.",
   "MTV Ridiculousness": "Viral internet video clip show featuring funny stunts, fails, and commentary.",
   "Have You Been Paying Attention?": "Comedic news quiz panel show testing contestant knowledge of weekly events.",
   "The Cheap Seats": "Satirical news comedy show reviewing weird and wonderful global headlines.",
   "Adult Animation": "Late-night animated comedy series tailored for mature audiences.",
-  "Rush": "Tactical police drama series following emergency response and tactical operations.",
+  Rush: "Tactical police drama series following emergency response and tactical operations.",
   "rookie-blue": "Police drama series tracking ambitious rookie officers finding their footing.",
-  "Heartland": "Family drama series centered around a rural horse ranch and generational bonds.",
+  Heartland: "Family drama series centered around a rural horse ranch and generational bonds.",
   "Prisoner: Cell Block H": "Classic dramatic series set within a women's correctional facility.",
   "Dallas Cowboy Cheerleaders: Making The Team": "Audition docuseries tracking dancers vying for a spot on the elite squad.",
   "Next Top Model": "Modeling competition series testing aspiring models through high-fashion challenges.",
   "Project Runway": "Fashion design competition series challenging designers with creative briefs.",
-  "MasterChef": "Culinary competition searching for top amateur cooking talent through intense challenges.",
+  MasterChef: "Culinary competition searching for top amateur cooking talent through intense challenges.",
   "World Of Survivor": "Strategic endurance reality game show testing outdoor survival and social alliances.",
   "The Only Way Is Essex": "Scripted reality series following glam lifestyles and social drama.",
-  "UndercoverBoss": "Corporate reality series where executives work undercover inside their own companies.",
+  "Undercover Boss": "Corporate reality series where executives work undercover inside their own companies.",
   "Embarrassing Bodies": "Medical education series examining unusual health conditions and patient treatments.",
   "Highway Thru Hell": "Heavy recovery towing docuseries working in extreme winter mountain conditions.",
-  "COPS": "Observational law enforcement docuseries riding along with active police patrols.",
+  COPS: "Observational law enforcement docuseries riding along with active police patrols.",
   "Medical Emergency": "Paramedic response docuseries handling urgent trauma and accident care.",
   "Deadly Women": "True crime documentary series profiling female murderers and criminal psychology.",
   "Crime Time": "Investigative true crime series exploring mysteries, interrogations, and forensics.",
@@ -167,31 +183,30 @@ export const channelDescriptions: Record<string, string> = {
   "48 Hours": "Investigative journalism series focusing on gripping real-life mystery cases.",
   "True Stories": "Documentary series sharing powerful personal narratives and extraordinary events.",
   "Haunt TV": "Paranormal exploration series visiting haunted historical sites and spirits.",
-  "Ghost Hunters": "Ghost-hunting team investigating anomalous phenomena and haunted locations.",
   "Jamie Oliver": "Gourmet cooking shows featuring fast weeknight meals and creative recipes.",
   "Anthony Bourdain: Parts Unknown": "Travel and culinary documentary exploring diverse global cultures and kitchens.",
-  "Wildest": "Wildlife documentary series capturing untamed animal behaviors and habitats.",
-  "Shockwave": "Action compilation series featuring thrilling near-misses, rescues, and phenomena.",
+  Wildest: "Wildlife documentary series capturing untamed animal behaviors and habitats.",
+  Shockwave: "Action compilation series featuring thrilling near-misses, rescues, and phenomena.",
   "History & Warfare": "Military history documentary series detailing major conflicts, battles, and strategy.",
   "Thriller Movies": "Suspenseful cinematic thrillers, edge-of-your-seat mysteries, and dramatic films.",
-  "Moviesphere": "Curated independent cinema, classic films, and theatrical entertainment.",
+  Moviesphere: "Curated independent cinema, classic films, and theatrical entertainment.",
   "Nick Jr Club": "Educational children's programming, toddler shows, and playful animation.",
   "SpongeBob SquarePants": "Animated comedy series following an enthusiastic sea sponge and marine friends.",
-  "NickToons": "Classic animated cartoon blocks, slapstick humor, and family shows.",
+  NickToons: "Classic animated cartoon blocks, slapstick humor, and family shows.",
   "NickToons 90s": "Nostalgic cartoon hits from the golden era of 90s animation.",
-  "NickTeen": "Youth-oriented sitcoms, teen drama series, and live-action entertainment.",
+  NickTeen: "Youth-oriented sitcoms, teen drama series, and live-action entertainment.",
   "Gecko TV": "Regional lifestyle broadcasts, community features, and family programming.",
-  "YouTV": "Entertainment network featuring lifestyle shows, reality series, and talk formats.",
-  "SBS": "Multicultural news broadcasts, international feature films, and documentary specials.",
-  "SBS2": "Alternative youth programming, international music, and cutting-edge culture.",
+  YouTV: "Entertainment network featuring lifestyle shows, reality series, and talk formats.",
+  SBS: "Multicultural news broadcasts, international feature films, and documentary specials.",
+  SBS2: "Alternative youth programming, international music, and cutting-edge culture.",
   "SBS Food": "Global culinary journeys, international cooking shows, and food culture.",
-  "NITV": "Indigenous Australian storytelling, cultural features, news, and sports.",
+  NITV: "Indigenous Australian storytelling, cultural features, news, and sports.",
   "SBS World Movies": "Acclaimed international cinema, foreign language masterpieces, and indie films.",
   "Koori Knockout": "Annual Indigenous rugby league tournament coverage and community sports.",
   "France 24": "International news network broadcasting global perspectives and current affairs.",
-  "euronews": "Multilingual European news service providing continuous headline updates.",
-  "Insight": "Current affairs panel discussion exploring personal stories and social issues.",
-  "Dateline": "International investigative journalism reporting on global human stories.",
+  euronews: "Multilingual European news service providing continuous headline updates.",
+  Insight: "Current affairs panel discussion exploring personal stories and social issues.",
+  Dateline: "International investigative journalism reporting on global human stories.",
   "FIFA+": "Global football documentation, match archives, player profiles, and tournament feeds.",
   "The Cook Up": "Daily culinary show featuring guest chefs whipping up quick, creative dishes.",
   "Planet Luke Nguyen": "Culinary travel adventure exploring exotic food markets and regional dishes.",
@@ -217,12 +232,167 @@ export const channelDescriptions: Record<string, string> = {
   "Bloomberg TV": "Global financial market analysis, business news, and economic forecasting.",
   "Sky News Now": "Live breaking news reporting, political commentary, and current events.",
   "GOOD.": "Uplifting lifestyle programming, inspiring community stories, and positive features.",
-  "BBC News": "Global news network delivering verified international news stories.",
   "Redbull TV": "Extreme sports action, adventure sports, and high-octane documentary series.",
   "Channel News Asia (CNA)": "Asian economic updates, regional current affairs, and global news reporting.",
-  "DW English": "European international news channel covering politics, culture, and global tech."
+  "DW English": "European international news channel covering politics, culture, and global tech.",
 };
 
+function normalizeKey(name: string): string {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+// Pre-computed O(1) normalized description map
+const NORMALIZED_DESC_INDEX: Map<string, string> = (() => {
+  const map = new Map<string, string>();
+  for (const [k, v] of Object.entries(channelDescriptions)) {
+    const norm = normalizeKey(k);
+    if (norm && !map.has(norm)) {
+      map.set(norm, v);
+    }
+  }
+  return map;
+})();
+
+const MATURE_RATING_PATTERNS = [
+  "adult",
+  "deadly women",
+  "true crime",
+  "crime time",
+  "crime hunters",
+  "9crime",
+  "48 hours",
+  "csi",
+  "cops",
+  "botched",
+  "embarrassing bodies",
+  "hells kitchen",
+  "kitchen nightmares",
+  "prisoner",
+  "ridiculousness",
+  "24 hours in a&e",
+  "medical emergency",
+  "real emergency",
+  "surveillance",
+  "warfare",
+  "paranormal",
+  "ghost",
+  "haunt",
+  "thriller",
+];
+
+function estimateBroadcastRating(name: string, category: string): BroadcastRating {
+  const lower = String(name || "").toLowerCase();
+  if (lower.includes("nick jr") || lower.includes("abc kids")) return "TV-Y";
+  if (category === "Kids & Family" || lower.includes("hope") || lower.includes("shine")) {
+    return "TV-G";
+  }
+  if (lower.includes("adult animation")) return "TV-MA";
+  if (MATURE_RATING_PATTERNS.some((p) => lower.includes(p))) return "TV-14";
+  if (category === "News" || category === "Sports" || category === "Shopping & Special") {
+    return "TV-G";
+  }
+  return "TV-PG";
+}
+
+function buildVibeTags(name: string, category: string, isRadio: boolean): string[] {
+  const lower = String(name || "").toLowerCase();
+  const tags: string[] = [];
+
+  if (isRadio) tags.push("Audio Stream");
+  else tags.push("Live HD");
+
+  if (lower.includes("24/7") || lower.includes("vault")) tags.push("24/7 Marathon");
+  else if (lower.includes("90 seconds")) tags.push("Quick Brief");
+  else if (lower.includes("movie") || lower.includes("cinema")) tags.push("Cinema");
+  else if (lower.includes("crime") || lower.includes("cops") || lower.includes("csi")) {
+    tags.push("True Crime");
+  } else if (lower.includes("racing") || lower.includes("trackside")) {
+    tags.push("Live Racing");
+  } else if (lower.includes("food") || lower.includes("cook") || lower.includes("chef") || lower.includes("kitchen")) {
+    tags.push("Culinary");
+  } else if (lower.includes("news") || lower.includes("cnn") || lower.includes("bbc") || lower.includes("bloomberg")) {
+    tags.push("Breaking News");
+  } else if (category === "Kids & Family") {
+    tags.push("Family Safe");
+  } else {
+    tags.push(getCategoryMeta(category).shortLabel);
+  }
+
+  if (lower.includes("regional") || lower.includes("gold coast") || lower.includes("newcastle")) {
+    tags.push("Regional");
+  } else if (lower.includes("world") || lower.includes("international") || lower.includes("asia") || lower.includes("france")) {
+    tags.push("Global");
+  }
+
+  return Array.from(new Set(tags)).slice(0, 3);
+}
+
+/**
+ * Fast O(1) description lookup (case & punctuation insensitive, with smart category fallback).
+ */
 export function getChannelDescription(name: string): string {
-  return channelDescriptions[name] || "Live broadcast feed, entertainment, and on-demand programming.";
+  if (!name) {
+    return "Live broadcast feed, entertainment, and on-demand programming.";
+  }
+  const exact = channelDescriptions[name];
+  if (exact) return exact;
+
+  const normalized = NORMALIZED_DESC_INDEX.get(normalizeKey(name));
+  if (normalized) return normalized;
+
+  const category = getChannelCategory(name);
+  return getCategoryMeta(category).description;
+}
+
+/**
+ * Returns full enriched metadata for any channel (synopsis, tagline, rating, vibe tags, kids-safety).
+ */
+export function getChannelRichMeta(name: string): ChannelRichMeta {
+  const cleanName = String(name || "Live Channel").trim();
+  const category = getChannelCategory(cleanName);
+  const catMeta = getCategoryMeta(category);
+  const description = getChannelDescription(cleanName);
+  const lower = cleanName.toLowerCase();
+
+  const isRadioFeed =
+    lower.includes("radio") ||
+    lower.includes("sbs chill") ||
+    lower.includes("sbs arabic") ||
+    lower.includes("sbs south asian");
+
+  const contentRating = estimateBroadcastRating(cleanName, category);
+  const isKidsSafe = contentRating === "TV-Y" || contentRating === "TV-G" || contentRating === "TV-PG";
+  const shortTagline =
+    description.length > 68
+      ? `${description.slice(0, 65).trim()}…`
+      : description;
+
+  return {
+    name: cleanName,
+    category,
+    categoryIcon: catMeta.icon,
+    description,
+    shortTagline,
+    contentRating,
+    vibeTags: buildVibeTags(cleanName, category, isRadioFeed),
+    isRadioFeed,
+    isKidsSafe,
+  };
+}
+
+/**
+ * Matches a search query against both a channel's title AND its description/tags.
+ */
+export function matchesChannelSearch(channelName: string, query: string): boolean {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return true;
+  if (channelName.toLowerCase().includes(q)) return true;
+  const meta = getChannelRichMeta(channelName);
+  return (
+    meta.description.toLowerCase().includes(q) ||
+    meta.category.toLowerCase().includes(q) ||
+    meta.vibeTags.some((t) => t.toLowerCase().includes(q))
+  );
 }
