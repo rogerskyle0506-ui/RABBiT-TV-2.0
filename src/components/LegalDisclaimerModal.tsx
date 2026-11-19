@@ -8,17 +8,19 @@ import {
   getHardwareLimits,
 } from "@/lib/settings";
 
-export const LEGAL_DISCLAIMER_VERSION = "2.1";
+export const LEGAL_DISCLAIMER_VERSION = "2.2";
 const LEGAL_ACCEPTED_META_KEY = "rabtv_disclaimer_meta_v2";
 
-type LegalTab = "disclaimer" | "privacy" | "terms";
+export type LegalTab = "disclaimer" | "privacy" | "terms" | "loopholes";
 
 export function hasAcceptedCurrentDisclaimer(): boolean {
   if (typeof window === "undefined") return true;
   try {
     const flagAccepted = localStorage.getItem(DISCLAIMER_ACCEPTED_KEY) === "true";
     const metaRaw = localStorage.getItem(LEGAL_ACCEPTED_META_KEY) || "";
-    return flagAccepted && metaRaw.includes('"version":"2.1"');
+    return (
+      flagAccepted && metaRaw.includes(`"version":"${LEGAL_DISCLAIMER_VERSION}"`)
+    );
   } catch {
     return false;
   }
@@ -43,7 +45,7 @@ export function recordDisclaimerAcceptance(): void {
 
 interface LegalDisclaimerModalProps {
   isOpen: boolean;
-  /** When true (first launch), user must check the box & accept to proceed */
+  /** When true (first launch or policy bump), user must check the box & accept to proceed */
   requireAcceptance?: boolean;
   initialTab?: LegalTab;
   onAccept?: () => void;
@@ -152,12 +154,13 @@ export function LegalDisclaimerModal({
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             {(
               [
                 { id: "disclaimer", label: "⚖️ Disclaimer" },
-                { id: "privacy", label: "🛡️ Privacy Policy" },
-                { id: "terms", label: "📜 Terms of Service" },
+                { id: "privacy", label: "🛡️ Privacy" },
+                { id: "terms", label: "📜 Terms" },
+                { id: "loopholes", label: "🔒 Loopholes" },
               ] as { id: LegalTab; label: string }[]
             ).map((t) => (
               <button
@@ -179,7 +182,7 @@ export function LegalDisclaimerModal({
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs sm:text-[13px] text-slate-200 leading-relaxed scrollbar-none">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 text-xs sm:text-[13px] text-slate-200 leading-relaxed scrollbar-none">
           {activeTab === "disclaimer" && (
             <>
               <div className="rounded-2xl border border-white/10 bg-black/55 p-3.5 space-y-1">
@@ -187,42 +190,72 @@ export function LegalDisclaimerModal({
                   1. Entertainment & Educational Purpose Only
                 </h3>
                 <p>
-                  RABBiT TV is an independent software interface built strictly
+                  RABBiT TV is an independent software client created strictly
                   for personal <strong>entertainment and educational purposes</strong>
-                  . It is provided &ldquo;as is&rdquo; without warranties of any
-                  kind, express or implied.
+                  . Nothing in this application constitutes legal advice, a
+                  content license, a public performance authorization, or a
+                  guarantee of availability or accuracy. The software is provided
+                  &ldquo;as is&rdquo; and &ldquo;as available&rdquo; without
+                  warranties of any kind, whether express, implied, or
+                  statutory.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-black/55 p-3.5 space-y-1">
                 <h3 className="font-black text-cyan-300 uppercase text-[11px] tracking-wider">
-                  2. No Media Hosting — Publicly Available Indexing Only
+                  2. Zero Media Hosting — Public Web Indexing Only
                 </h3>
                 <p>
                   RABBiT TV and its developer <strong>do not host, upload, store,
-                  broadcast, or distribute</strong> any video, audio, or copyrighted
-                  media files on any server. The app acts solely as a client
-                  interface indexing metadata and streams already publicly
-                  available online on third-party sites. We do not control or
-                  endorse external third-party sources.
+                  cache for redistribution, broadcast, re-stream, or
+                  transcode</strong> any video, movie, television episode, live
+                  channel feed, or audio track on any owned server. The
+                  application operates solely as a client-side user interface that
+                  retrieves metadata and references streams already publicly
+                  accessible online on independent third-party websites and
+                  public internet sources. We have no ownership, control,
+                  endorsement, or editorial oversight over third-party external
+                  hosts.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-amber-400/35 bg-amber-950/20 p-3.5 space-y-1">
+              <div className="rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3.5 space-y-1">
                 <h3 className="font-black text-amber-300 uppercase text-[11px] tracking-wider">
-                  3. Sole User Responsibility & Law Compliance
+                  3. Sole User Responsibility & Jurisdictional Compliance
                 </h3>
                 <p>
                   <strong>
-                    What any user does with this software is strictly their own
-                    legal responsibility.
+                    Every action, stream selection, or use of this software is
+                    100% the sole legal responsibility of the individual user.
                   </strong>{" "}
-                  Every user must independently check and comply with their{" "}
+                  Before installing, opening, or using RABBiT TV, you must
+                  independently verify and obey all applicable{" "}
                   <strong>
-                    local bylaws, provincial or state laws, and federal laws
+                    local municipal bylaws, provincial or state laws, and
+                    federal laws
                   </strong>{" "}
-                  to confirm whether using this application or accessing any
-                  online stream is permitted where they live.
+                  (including copyright, broadcast, telecom, and age-restriction
+                  laws) in your current location to confirm whether your usage is
+                  lawful. The developer is not responsible for and assumes zero
+                  liability for user conduct, network usage, or local law
+                  violations.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/55 p-3.5 space-y-1">
+                <h3 className="font-black text-cyan-300 uppercase text-[11px] tracking-wider">
+                  4. Disclaimer of Liability & Indemnification
+                </h3>
+                <p>
+                  To the maximum extent permitted by applicable law, the
+                  developer is not liable for any direct, indirect, incidental,
+                  special, consequential, or punitive damages—including loss of
+                  data, device issues, service interruptions, ISP/carrier
+                  actions, or legal claims—arising from your use of or inability
+                  to use the software. By using RABBiT TV, you agree to hold
+                  harmless and indemnify the developer against claims,
+                  complaints, or disputes arising out of your misuse or breach
+                  of applicable laws.
                 </p>
               </div>
             </>
@@ -232,38 +265,60 @@ export function LegalDisclaimerModal({
             <>
               <div className="rounded-2xl border border-emerald-400/40 bg-emerald-950/20 p-3.5 space-y-1">
                 <h3 className="font-black text-emerald-300 uppercase text-[11px] tracking-wider">
-                  1. Zero Advertising & Zero Partner Data
+                  1. Strict No-Ads, No-Partners & No-Sale Promise
                 </h3>
                 <p>
-                  We <strong>do not collect, save, profile, share, transmit, or
-                  sell</strong> any user information for any form of advertising,
-                  ad targeting, analytics brokers, data resellers, or external
-                  business partners.
+                  We <strong>do not save, collect, profile, share, send out,
+                  license, rent, or sell</strong> any user information for any
+                  form of advertising, behavioral ad targeting, retargeting,
+                  data brokering, or third-party commercial partners. There are
+                  no ad-tech trackers, ad-network data profiles, or partner
+                  data sales built into this app.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-cyan-400/35 bg-black/55 p-3.5 space-y-1">
                 <h3 className="font-black text-cyan-300 uppercase text-[11px] tracking-wider">
-                  2. Stored Strictly for App Functionality
+                  2. Saved Strictly for Core App Functionality
                 </h3>
                 <p>
-                  Information is saved <strong>only when needed for the app to
-                  function</strong>—such as your local themes, card layout, watch
-                  history, pinned channels, parental PIN settings, or optional
-                  bug reports and referral/payout records that you choose to
-                  submit. Local preferences stay on your device unless you export
-                  a backup file or use a feature that syncs your submitted
-                  entry.
+                  Information is saved <strong>only when required for app
+                  functionality</strong> or when you explicitly submit an entry
+                  for a feature you initiate:
                 </p>
+                <ul className="list-disc pl-5 space-y-1 pt-1 text-slate-300">
+                  <li>
+                    <strong>Device Preferences & State:</strong> Saved locally in
+                    your browser/device storage (such as theme, poster layout,
+                    accessibility options, watch history, pinned channels,
+                    parental PIN hash, and device ID) so the interface works as
+                    configured.
+                  </li>
+                  <li>
+                    <strong>User-Submitted Feature Records:</strong> If you
+                    submit a bug report, enter or share a referral code, or
+                    provide optional payout details for referral tracking, that
+                    information is stored solely to operate that requested
+                    feature and verify records.
+                  </li>
+                  <li>
+                    <strong>Backups & Cache Purging:</strong> Exported backup
+                    files are generated only when you request an export, and
+                    local caches can be cleared anytime from settings.
+                  </li>
+                </ul>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-black/55 p-3.5 space-y-1">
                 <h3 className="font-black text-cyan-300 uppercase text-[11px] tracking-wider">
-                  3. No Data Sales or Third-Party Monetization
+                  3. Direct Third-Party Network Connections
                 </h3>
                 <p>
-                  No personal details, device identifiers, viewing history, or
-                  usage records are ever sold, rented, or traded to third parties.
+                  When your device loads external metadata, filter lists, or
+                  third-party media URLs/iframes, your device connects directly to
+                  those remote endpoints over the internet. Those independent
+                  third-party services operate under their own privacy and
+                  network policies outside our control.
                 </p>
               </div>
             </>
@@ -273,39 +328,96 @@ export function LegalDisclaimerModal({
             <>
               <div className="rounded-2xl border border-white/10 bg-black/55 p-3.5 space-y-1">
                 <h3 className="font-black text-cyan-300 uppercase text-[11px] tracking-wider">
-                  1. Software Interface Scope & Fees
+                  1. Software Interface Fee vs. Third-Party Media
                 </h3>
                 <p>
-                  Any unlock code or subscription fee applies strictly to the
-                  RABBiT TV software interface and client features—not to
-                  third-party media streams, which may change or become
-                  unavailable at any time outside our control.
+                  Any unlock code, activation key, or subscription fee applies
+                  strictly to access and use of the{" "}
+                  <strong>RABBiT TV software interface and client tools</strong>
+                  —never as a payment for copyrighted media ownership or
+                  third-party streaming rights. Third-party feeds or embeds may
+                  change, buffer, geoblock, or go offline at any time without
+                  refund or liability from the app developer.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-amber-400/35 bg-amber-950/20 p-3.5 space-y-1">
                 <h3 className="font-black text-amber-300 uppercase text-[11px] tracking-wider">
-                  2. Jurisdictional & Legal Responsibility
+                  2. Referral Program Rules & Payout Conditions
                 </h3>
                 <p>
-                  By using RABBiT TV, you agree that you are solely responsible
-                  for following all applicable{" "}
-                  <strong>
-                    local bylaws, provincial/state laws, and federal laws
-                  </strong>{" "}
-                  and that the app creator bears no legal liability for how you
-                  use the software or access third-party web content.
+                  Where a referral program is active, lifetime access is priced
+                  at <strong>$20</strong> per referred user. Referral payout
+                  eligibility requires a minimum of{" "}
+                  <strong>5 referred friends whose payments are confirmed</strong>
+                  , after which confirmed qualifying referrals beyond the first 5
+                  are tracked at <strong>$5 per qualifying friend</strong>{" "}
+                  subject to anti-fraud review (no self-referrals, duplicate
+                  device abuse, chargebacks, or unconfirmed entries). Payout
+                  terms may be modified, paused, or discontinued prospectively if
+                  required by law, payment rules, or program abuse.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-black/55 p-3.5 space-y-1">
                 <h3 className="font-black text-cyan-300 uppercase text-[11px] tracking-wider">
-                  3. Link Removal & Updates
+                  3. Acceptable Use, Takedowns & Updates
                 </h3>
                 <p>
-                  We may update features, security rules, or indexed links at
-                  any time and promptly review reports of broken or unwanted
-                  references.
+                  You agree not to use the software for unlawful activities,
+                  harassment, unauthorized commercial redistribution, or attacks
+                  on third-party infrastructure. Because RABBiT TV does not host
+                  media files, rightsholders should address content removal to
+                  the originating third-party host, and may also report
+                  references for interface review. We may modify features,
+                  security controls, or terms at any time.
+                </p>
+              </div>
+            </>
+          )}
+
+          {activeTab === "loopholes" && (
+            <>
+              <div className="rounded-2xl border border-white/10 bg-black/55 p-3.5 space-y-1">
+                <h3 className="font-black text-cyan-300 uppercase text-[11px] tracking-wider">
+                  1. User-Added Streams, Playlists & External Links
+                </h3>
+                <p>
+                  If you manually enter custom stream URLs, import playlists, or
+                  open external links or embedded players, you are solely
+                  responsible for the legality, safety, and rights associated
+                  with those sources. Nothing in the app authorizes bypassing
+                  paywalls, regional blocks, DRM, or access controls.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/55 p-3.5 space-y-1">
+                <h3 className="font-black text-cyan-300 uppercase text-[11px] tracking-wider">
+                  2. Public Filter Lists, Ad Blocking & Security Tools
+                </h3>
+                <p>
+                  Built-in blocking or filter rules rely on community/public
+                  lists and client-side rules and cannot guarantee 100% blocking
+                  of all third-party scripts, popups, or external web content.
+                  Client-side protections are provided strictly for personal
+                  browsing convenience and do not create a legal duty or
+                  warranty against third-party web behavior.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/55 p-3.5 space-y-1">
+                <h3 className="font-black text-cyan-300 uppercase text-[11px] tracking-wider">
+                  3. No Implied Warranties, Translations & Severability
+                </h3>
+                <p>
+                  Informal labels, descriptions, translations, or UI phrasing
+                  (including &ldquo;lifetime&rdquo; software access terms, which
+                  apply for the supported lifespan of the software/service and do
+                  not guarantee perpetual third-party streams) do not create
+                  hidden obligations. If any clause is held unenforceable under a
+                  local bylaw, provincial/state law, or federal law, the
+                  remaining provisions remain in full force, and failure to
+                  enforce any right is not a waiver.
                 </p>
               </div>
             </>
@@ -324,10 +436,11 @@ export function LegalDisclaimerModal({
                   className="mt-0.5 h-4 w-4 rounded border-amber-400 accent-amber-400 shrink-0 cursor-pointer"
                 />
                 <span className="text-xs font-bold text-slate-200 leading-snug">
-                  I agree to the Legal Disclaimer, Privacy Policy (no ad/partner
-                  data saving or selling), and Terms of Service, and accept sole
-                  responsibility under my local bylaws, provincial/state laws,
-                  and federal laws.
+                  I agree to the Legal Disclaimer, Privacy Policy (zero data
+                  saved or sold for ads or partners; saved strictly for app
+                  functionality), Terms of Service, and Loophole provisions, and
+                  accept sole responsibility under my local bylaws,
+                  provincial/state laws, and federal laws.
                 </span>
               </label>
 
