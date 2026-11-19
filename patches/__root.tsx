@@ -18,6 +18,16 @@ import { HolidayOverlay } from "@/components/HolidayOverlay";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { ActivationModal } from "@/components/ActivationModal";
 import {
+  InteractiveWalkthrough,
+  SIDEBAR_TOGGLE_EVENT,
+  triggerRabbitWalkthrough,
+} from "@/components/InteractiveWalkthrough";
+import {
+  TermsOfServiceModal,
+  TOS_OPEN_EVENT,
+  hasAcceptedTos,
+} from "@/components/TermsOfServiceModal";
+import {
   Sidebar,
   GlobalFeedOption,
   getDefaultHeartbeatStationUrl,
@@ -203,6 +213,11 @@ function RootComponent() {
   const [showBugModal, setShowBugModal] = useState(false);
   const [showBugFeedModal, setShowBugFeedModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showTosModal, setShowTosModal] = useState(false);
+  const [tosRequireAccept, setTosRequireAccept] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState<boolean>(() =>
+    hasAcceptedTos()
+  );
 
   const [cardSize, setCardSize] = useState<CardSize>("large");
   const [streamQuality, setStreamQuality] = useState<StreamQuality>("1080p");
@@ -414,6 +429,13 @@ function RootComponent() {
     if (!authorized) {
       setShowFirstStartModal(true);
     } else {
+      if (!hasAcceptedTos()) {
+        setTosAccepted(false);
+        setTosRequireAccept(true);
+        setShowTosModal(true);
+      } else {
+        setTosAccepted(true);
+      }
       const status = localStorage.getItem("rabtv_access_status");
       if (status === "trial") {
         setIsTrialActive(true);
@@ -496,13 +518,31 @@ function RootComponent() {
       }
     };
 
+    const handleSidebarToggleEvent = (event: Event) => {
+      const custom = event as CustomEvent<{ open?: boolean }>;
+      if (typeof custom.detail?.open === "boolean") {
+        setShowProfileMenu(custom.detail.open);
+      }
+    };
+
+    const handleOpenTosEvent = (event: Event) => {
+      const custom = event as CustomEvent<{ requireAcceptance?: boolean }>;
+      setTosRequireAccept(Boolean(custom.detail?.requireAcceptance));
+      setShowTosModal(true);
+    };
+
     syncRootStateFromSettings();
     window.addEventListener("rabtv_settings_updated", syncRootStateFromSettings);
-    return () =>
+    window.addEventListener(SIDEBAR_TOGGLE_EVENT, handleSidebarToggleEvent);
+    window.addEventListener(TOS_OPEN_EVENT, handleOpenTosEvent);
+    return () => {
       window.removeEventListener(
         "rabtv_settings_updated",
         syncRootStateFromSettings
       );
+      window.removeEventListener(SIDEBAR_TOGGLE_EVENT, handleSidebarToggleEvent);
+      window.removeEventListener(TOS_OPEN_EVENT, handleOpenTosEvent);
+    };
   }, [navigate]);
 
   const handleSizeChange = (newSize: CardSize) => {
@@ -736,6 +776,7 @@ function RootComponent() {
           )}
 
           <header
+            data-tour="app-header"
             className={`rabtv-vidsrc-protected sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(
               appTheme
             )} ${getThemeGlowClass(appTheme)}`}
@@ -755,6 +796,7 @@ function RootComponent() {
               <div className="flex items-center shrink-0">
                 <Link
                   to="/"
+                  data-tour="home-logo"
                   className={`flex items-center gap-2 w-[110px] sm:w-[150px] md:w-[170px] h-10 sm:h-11 px-2.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/25 text-white focus:outline-none transition-all ${getThemeGlowClass(
                     appTheme
                   )}`}
@@ -773,6 +815,7 @@ function RootComponent() {
               {!showFirstStartModal && (
                 <form
                   onSubmit={handleHeaderSearchSubmit}
+                  data-tour="header-search"
                   className="relative flex items-center flex-1 max-w-xl mx-2"
                 >
                   <span className="absolute left-3.5 z-10 text-slate-400 text-xs sm:text-sm pointer-events-none">
@@ -780,6 +823,7 @@ function RootComponent() {
                   </span>
                   <input
                     type="text"
+                    data-tour="global-search-input"
                     value={headerSearchInput}
                     onChange={(e) => setHeaderSearchInput(e.target.value)}
                     placeholder="Search movies, TV shows..."
@@ -802,6 +846,7 @@ function RootComponent() {
 
                   <button
                     type="button"
+                    data-tour="sidebar-toggle"
                     onClick={() => setShowProfileMenu((prev) => !prev)}
                     className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition cursor-pointer group relative overflow-hidden border border-white/20 ${
                       activeHeader.btnBg
@@ -868,6 +913,15 @@ function RootComponent() {
             onOpenBugModal={() => setShowBugModal(true)}
             onOpenBugFeedModal={() => setShowBugFeedModal(true)}
             onTriggerFirstStartModal={() => setShowFirstStartModal(true)}
+            onOpenTosModal={() => {
+              setShowProfileMenu(false);
+              setTosRequireAccept(false);
+              setShowTosModal(true);
+            }}
+            onStartWalkthrough={() => {
+              setShowProfileMenu(false);
+              triggerRabbitWalkthrough(0);
+            }}
             headerIconUrl={HEADER_ICON_URL}
             allThemesList={allThemesList}
             getPrimaryBgColor={getPrimaryBgColor}
@@ -875,15 +929,81 @@ function RootComponent() {
           />
 
           {/* Main Route Container with TV Overscan Safe-Zone & Crash Shield */}
-          <main className="rabtv-vidsrc-protected rabtv-overscan-shell mx-auto max-w-7xl px-4 py-4 sm:px-6 md:py-6 overflow-x-hidden pb-20">
+          <main
+            data-tour="app-main"
+            className="rabtv-vidsrc-protected rabtv-overscan-shell mx-auto max-w-7xl px-4 py-4 sm:px-6 md:py-6 overflow-x-hidden pb-10"
+          >
             <AppErrorBoundary>
               <Outlet />
             </AppErrorBoundary>
           </main>
 
+          {/* Global Attribution Footer: Official TMDB Link, Terms of Service, Tour & Version */}
+          {!showFirstStartModal && (
+            <footer
+              data-tour="app-footer"
+              className="rabtv-vidsrc-protected rabtv-overscan-shell mx-auto max-w-7xl px-4 sm:px-6 pb-10"
+            >
+              <div className="rounded-2xl border border-white/10 bg-black/45 backdrop-blur-xl px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                <div className="space-y-1">
+                  <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
+                    Metadata, posters & trailers powered by{" "}
+                    <a
+                      href="https://www.themoviedb.org"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-tour="tmdb-link"
+                      onClick={(e) =>
+                        void handleOpenExternal("https://www.themoviedb.org", e)
+                      }
+                      className="inline-flex items-center gap-1 font-extrabold text-cyan-300 hover:text-cyan-200 underline underline-offset-2 transition cursor-pointer"
+                    >
+                      TMDB (themoviedb.org) ↗
+                    </a>
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    This product uses the TMDB API but is not endorsed or
+                    certified by TMDB.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 flex-wrap shrink-0">
+                  <button
+                    type="button"
+                    data-tour="footer-tos"
+                    onClick={() => {
+                      setTosRequireAccept(false);
+                      setShowTosModal(true);
+                    }}
+                    className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-[11px] font-bold text-slate-200 transition cursor-pointer"
+                  >
+                    📜 Terms of Service
+                  </button>
+                  <button
+                    type="button"
+                    data-tour="footer-walkthrough"
+                    onClick={() => triggerRabbitWalkthrough(0)}
+                    className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-[11px] font-bold text-cyan-200 transition cursor-pointer"
+                  >
+                    🧭 App Tour
+                  </button>
+                  <span
+                    data-tour="app-version"
+                    className="rounded-xl bg-black/60 border border-white/10 px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400"
+                  >
+                    RABBiT TV v2.8
+                  </span>
+                </div>
+              </div>
+            </footer>
+          )}
+
           {/* Optional Couch Corner Clock */}
           {showCornerClock && cornerClockText && !showFirstStartModal && (
-            <div className="rabtv-vidsrc-protected fixed bottom-4 left-4 z-30 pointer-events-none rounded-xl bg-black/65 border border-white/15 px-3 py-1.5 shadow-xl backdrop-blur-md">
+            <div
+              data-tour="corner-clock"
+              className="rabtv-vidsrc-protected fixed bottom-4 left-4 z-30 pointer-events-none rounded-xl bg-black/65 border border-white/15 px-3 py-1.5 shadow-xl backdrop-blur-md"
+            >
               <span className="text-xs font-extrabold tracking-wider text-slate-100">
                 🕒 {cornerClockText}
               </span>
@@ -910,7 +1030,16 @@ function RootComponent() {
           {/* FIRST-START ACTIVATION MODAL CALL */}
           <ActivationModal
             isOpen={showFirstStartModal}
-            onAuthorized={() => setShowFirstStartModal(false)}
+            onAuthorized={() => {
+              setShowFirstStartModal(false);
+              if (!hasAcceptedTos()) {
+                setTosAccepted(false);
+                setTosRequireAccept(true);
+                setShowTosModal(true);
+              } else {
+                setTosAccepted(true);
+              }
+            }}
             appTheme={appTheme}
             cardSize={cardSize}
             streamQuality={streamQuality}
@@ -924,6 +1053,33 @@ function RootComponent() {
             getCardBackground={getCardBackground}
             getPrimaryAccentColor={getPrimaryAccentColor}
             getPrimaryBgColor={getPrimaryBgColor}
+          />
+
+          {/* TERMS OF SERVICE & LEGAL DISCLAIMER MODAL */}
+          <TermsOfServiceModal
+            isOpen={showTosModal && !showFirstStartModal}
+            requireAcceptance={tosRequireAccept}
+            appTheme={appTheme}
+            onAccept={() => {
+              setTosAccepted(true);
+              setTosRequireAccept(false);
+              setShowTosModal(false);
+            }}
+            onClose={() => {
+              if (!tosRequireAccept) {
+                setShowTosModal(false);
+              }
+            }}
+            onOpenExternal={handleOpenExternal}
+          />
+
+          {/* FULL INTERACTIVE APP WALKTHROUGH (Starts after Activation & ToS) */}
+          <InteractiveWalkthrough
+            autoStartOnFirstLaunch={
+              !showFirstStartModal && !showTosModal && tosAccepted
+            }
+            onNavigate={(path) => navigate({ to: path as any })}
+            onToggleSidebar={(open) => setShowProfileMenu(open)}
           />
         </AuthProvider>
         <Scripts />
