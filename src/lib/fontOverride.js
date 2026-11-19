@@ -1,64 +1,38 @@
-// lib/fontOverride.js
-import React from 'react';
-import { Text, StyleSheet } from 'react-native';
-import { FONTS } from './fonts';
+// src/lib/fontOverride.js
+// Safe Web / Capacitor DOM font controller (replaces legacy react-native Text.render patch)
+import { FONT_STACKS, getResolvedFontStack } from "./fonts";
 
-const oldRender = Text.render;
-
-Text.render = function (...args) {
-  const origin = oldRender.call(this, ...args);
-
-  if (!origin || !origin.props) {
-    return origin;
+/**
+ * Applies RABBiT TV font CSS custom properties to documentElement while
+ * automatically honoring Senior Easy Mode & XL Text accessibility settings.
+ */
+export function applyDocumentFontOverrides() {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return;
   }
 
-  const originalStyle = origin.props.style;
-  const props = origin.props;
+  const root = document.documentElement;
+  const seniorMode =
+    localStorage.getItem("rabtv_senior_easy_mode") === "true" ||
+    root.getAttribute("data-text-scale") === "xl";
 
-  // 1. Deeply flatten styles to handle arrays, nested styles, and StyleSheet objects
-  const flattenedStyle = StyleSheet.flatten(originalStyle) || {};
+  root.style.setProperty(
+    "--rabtv-font-header",
+    getResolvedFontStack("header", seniorMode)
+  );
+  root.style.setProperty(
+    "--rabtv-font-body",
+    getResolvedFontStack("body", seniorMode)
+  );
+  root.style.setProperty(
+    "--rabtv-font-media",
+    getResolvedFontStack("media", seniorMode)
+  );
+  root.style.setProperty("--rabtv-font-accessible", FONT_STACKS.accessible);
+}
 
-  // 2. Escape Hatch: If a font family is explicitly defined locally, do not override
-  if (flattenedStyle.fontFamily) {
-    return origin;
-  }
-
-  let targetFont = FONTS.dancingmajesty; // Default baseline (Sidebar menu / general body text)
-
-  // 3. Detect Headers, Titles, and Buttons -> Aresink
-  const isHeaderRole = 
-    props.accessibilityRole === 'header' || 
-    props.role === 'header' ||
-    flattenedStyle.isHeader || 
-    flattenedStyle.isTitle || 
-    flattenedStyle.isButton ||
-    flattenedStyle.fontWeight === 'bold' || 
-    flattenedStyle.fontWeight === '700' || 
-    (flattenedStyle.fontSize && flattenedStyle.fontSize >= 18);
-
-  // 4. Detect Media Details -> Cayu
-  const isMediaRole = 
-    flattenedStyle.isMediaDetail || 
-    flattenedStyle.isMedia || 
-    flattenedStyle.mediaContext ||
-    props.isMediaDetail ||
-    props.isMedia;
-
-  if (isHeaderRole) {
-    targetFont = FONTS.aresink;
-  } else if (isMediaRole) {
-    targetFont = FONTS.cayu;
-  } else {
-    targetFont = FONTS.dancingmajesty;
-  }
-
-  // 5. Prevent infinite rendering loops by checking if the exact style is already applied
-  if (flattenedStyle.fontFamily === targetFont) {
-    return origin;
-  }
-
-  // 6. Clone and safely inject the resolved font alongside original styling
-  return React.cloneElement(origin, {
-    style: [originalStyle, { fontFamily: targetFont }],
-  });
-};
+// Keep font variables synced if settings change dynamically
+if (typeof window !== "undefined") {
+  applyDocumentFontOverrides();
+  window.addEventListener("rabtv_settings_updated", applyDocumentFontOverrides);
+}
