@@ -1,23 +1,38 @@
 // src/routes/index.tsx
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, memo } from "react";
+import React, { useEffect, useMemo, useState, memo } from "react";
 import type { MediaItem } from "@/lib/tmdb-scraper";
 import { scrapeCategoryContent } from "@/lib/tmdb-scraper";
 import {
   CardSize,
   AppTheme,
+  PosterAppearanceClasses,
   getSavedCardSize,
   getSavedTheme,
   getSavedUserAge,
   isAllowedForAge,
   getPosterDimensions,
+  getPosterAppearanceClasses,
+  getOptimalTmdbImageWidth,
+  getHardwareLimits,
+  getReducedMotion,
+  getLargeButtons,
+  getGreetingStyle,
+  getPersonalizedGreeting,
+  getProfileMascot,
+  getKidsModeLocked,
 } from "@/lib/settings";
 import { getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
 import { isTitleBroken } from "@/lib/broken-links";
-import { AppWallpaper } from "@/components/AppWallpaper";
-import React from "react";
 
-const navTabs = ["Home", "TV Shows", "Movies", "In Theaters", "Live TV & Sports", "My List"] as const;
+const navTabs = [
+  "Home",
+  "TV Shows",
+  "Movies",
+  "In Theaters",
+  "Live TV & Sports",
+  "My List",
+] as const;
 type NavTab = (typeof navTabs)[number];
 
 const genreCategories = [
@@ -53,10 +68,22 @@ const genreCategories = [
 ];
 
 const providerCategories = [
-  { name: "All (Default)", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/AllDefault.jpg" },
-  { name: "Netflix", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/netflix-.png" },
-  { name: "Prime", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Prime.png" },
-  { name: "Disney+", logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/disney-plus-logo-white.png" },
+  {
+    name: "All (Default)",
+    logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/AllDefault.jpg",
+  },
+  {
+    name: "Netflix",
+    logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/netflix-.png",
+  },
+  {
+    name: "Prime",
+    logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Prime.png",
+  },
+  {
+    name: "Disney+",
+    logo: "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/disney-plus-logo-white.png",
+  },
 ];
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
@@ -64,11 +91,8 @@ const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY as string;
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 
-// Background asset matching the console pill bar and side menu style
-const RABBIT_HEADER_PILL = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
-const RABBIT_PANEL       = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
-const RABBIT_PANEL_ALT   = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
-const RABBIT_DIVIDER     = "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
+const RABBIT_HEADER_PILL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
 
 function getDetailsSearch(item: MediaItem): { id: string; type: "movie" | "tv" } {
   const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
@@ -79,169 +103,344 @@ function getDetailsSearch(item: MediaItem): { id: string; type: "movie" | "tv" }
   return { id: cleanId, type };
 }
 
+function optimizePosterUrl(url: string, width: "w342" | "w500"): string {
+  if (!url) return url;
+  if (width === "w342" && url.includes("image.tmdb.org/t/p/w500")) {
+    return url.replace("image.tmdb.org/t/p/w500", "image.tmdb.org/t/p/w342");
+  }
+  return url;
+}
+
 export function MediaCard({
   item,
   cardSize: propCardSize,
   appTheme: propAppTheme,
+  posterAppearance: propPosterAppearance,
+  posterWidth: propPosterWidth,
+  largeButtons: propLargeButtons,
 }: {
   item: MediaItem;
   cardSize?: CardSize;
   appTheme?: AppTheme;
+  posterAppearance?: PosterAppearanceClasses;
+  posterWidth?: "w342" | "w500";
+  largeButtons?: boolean;
 }) {
-  const [internalCardSize, setInternalCardSize] = useState<CardSize>(() => getSavedCardSize());
-  const [internalAppTheme, setInternalAppTheme] = useState<AppTheme>(() => getSavedTheme());
+  const [internalCardSize, setInternalCardSize] = useState<CardSize>(() =>
+    getSavedCardSize()
+  );
+  const [internalAppTheme, setInternalAppTheme] = useState<AppTheme>(() =>
+    getSavedTheme()
+  );
+  const [internalAppearance, setInternalAppearance] =
+    useState<PosterAppearanceClasses>(() =>
+      getPosterAppearanceClasses(getSavedTheme())
+    );
+  const [internalPosterWidth, setInternalPosterWidth] = useState<
+    "w342" | "w500"
+  >(() => getOptimalTmdbImageWidth());
+  const [internalLargeButtons, setInternalLargeButtons] = useState<boolean>(
+    () => getLargeButtons()
+  );
 
   useEffect(() => {
-    // Only attach window listener if parent didn't pass reactive props (e.g. Details/Player pages)
-    if (propCardSize !== undefined && propAppTheme !== undefined) return;
+    // Skip per-card listeners when parent provides reactive props (protects 1-2GB sticks)
+    if (
+      propCardSize !== undefined &&
+      propAppTheme !== undefined &&
+      propPosterAppearance !== undefined
+    ) {
+      return;
+    }
 
-    setInternalCardSize(getSavedCardSize());
-    setInternalAppTheme(getSavedTheme());
-
-    const handleSettingsUpdate = () => {
+    const syncLocal = () => {
+      const nextTheme = getSavedTheme();
       setInternalCardSize(getSavedCardSize());
-      setInternalAppTheme(getSavedTheme());
+      setInternalAppTheme(nextTheme);
+      setInternalAppearance(getPosterAppearanceClasses(nextTheme));
+      setInternalPosterWidth(getOptimalTmdbImageWidth());
+      setInternalLargeButtons(getLargeButtons());
     };
 
-    window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);
+    syncLocal();
+    window.addEventListener("rabtv_settings_updated", syncLocal);
     return () =>
-      window.removeEventListener("rabtv_settings_updated", handleSettingsUpdate);
-  }, [propCardSize, propAppTheme]);
+      window.removeEventListener("rabtv_settings_updated", syncLocal);
+  }, [propCardSize, propAppTheme, propPosterAppearance]);
 
   const cardSize = propCardSize ?? internalCardSize;
   const appTheme = propAppTheme ?? internalAppTheme;
+  const appearance = propPosterAppearance ?? internalAppearance;
+  const posterWidth = propPosterWidth ?? internalPosterWidth;
+  const largeButtons = propLargeButtons ?? internalLargeButtons;
 
   const cardThemeStyles = useMemo(() => {
     switch (appTheme) {
       case "red":
         return {
-          bg: "bg-zinc-950/90",
-          border: "border-white/10 group-hover:border-red-500/70",
           glow: "group-hover:shadow-[0_8px_28px_rgba(239,68,68,0.28)]",
           ring: "focus-within:ring-red-400 focus:ring-red-400",
-          accentBadge: "text-red-300 border-red-500/30 bg-red-950/70",
+          accentBadge: "text-red-300 border-red-500/30 bg-red-950/75",
+          laser: "from-transparent via-red-500 to-amber-400",
         };
       case "midnight":
         return {
-          bg: "bg-slate-950/90",
-          border: "border-white/10 group-hover:border-blue-400/70",
           glow: "group-hover:shadow-[0_8px_28px_rgba(59,130,246,0.28)]",
           ring: "focus-within:ring-blue-400 focus:ring-blue-400",
-          accentBadge: "text-sky-300 border-blue-500/30 bg-blue-950/70",
+          accentBadge: "text-sky-300 border-blue-500/30 bg-blue-950/75",
+          laser: "from-transparent via-sky-400 to-blue-500",
         };
       case "emerald":
         return {
-          bg: "bg-slate-950/90",
-          border: "border-white/10 group-hover:border-emerald-400/70",
           glow: "group-hover:shadow-[0_8px_28px_rgba(16,185,129,0.28)]",
           ring: "focus-within:ring-emerald-400 focus:ring-emerald-400",
-          accentBadge: "text-emerald-300 border-emerald-500/30 bg-emerald-950/70",
+          accentBadge: "text-emerald-300 border-emerald-500/30 bg-emerald-950/75",
+          laser: "from-transparent via-emerald-400 to-cyan-400",
         };
       case "amber":
         return {
-          bg: "bg-stone-950/90",
-          border: "border-white/10 group-hover:border-amber-400/70",
           glow: "group-hover:shadow-[0_8px_28px_rgba(245,158,11,0.28)]",
           ring: "focus-within:ring-amber-400 focus:ring-amber-400",
-          accentBadge: "text-amber-300 border-amber-500/30 bg-amber-950/70",
+          accentBadge: "text-amber-300 border-amber-500/30 bg-amber-950/75",
+          laser: "from-transparent via-amber-400 to-orange-500",
         };
       case "cyan":
         return {
-          bg: "bg-slate-950/90",
-          border: "border-white/10 group-hover:border-cyan-400/70",
           glow: "group-hover:shadow-[0_8px_28px_rgba(6,182,212,0.28)]",
           ring: "focus-within:ring-cyan-400 focus:ring-cyan-400",
-          accentBadge: "text-cyan-300 border-cyan-500/30 bg-cyan-950/70",
+          accentBadge: "text-cyan-300 border-cyan-500/30 bg-cyan-950/75",
+          laser: "from-transparent via-cyan-400 to-sky-500",
         };
       case "violet":
       default:
         return {
-          bg: "bg-slate-950/90",
-          border: "border-white/10 group-hover:border-violet-400/70",
           glow: "group-hover:shadow-[0_8px_28px_rgba(139,92,246,0.28)]",
           ring: "focus-within:ring-violet-400 focus:ring-violet-400",
-          accentBadge: "text-violet-300 border-violet-500/30 bg-purple-950/70",
+          accentBadge: "text-violet-300 border-violet-500/30 bg-purple-950/75",
+          laser: "from-transparent via-pink-500 to-cyan-400",
         };
     }
   }, [appTheme]);
 
   const dimensions = getPosterDimensions(cardSize);
   const detailsSearch = getDetailsSearch(item);
+  const optimizedImage = optimizePosterUrl(item.image, posterWidth);
+  const isCollector = appearance.cardStyle === "collector-showcase";
+  const layout = appearance.infoLayout;
 
+  // SMALL CARD MODE (3-6 columns)
   if (cardSize === "small") {
+    const isBelow = layout === "below-card";
+    const isClean = layout === "clean-poster";
+    const isHoverReveal = layout === "hover-reveal";
+    const isDetailed = layout === "detailed-badges";
+
     return (
       <Link
         to="/details"
         search={detailsSearch}
-        className={`group flex ${dimensions.card} ${cardThemeStyles.bg} border ${cardThemeStyles.border} ${cardThemeStyles.glow} focus:outline-none focus:ring-4 ${cardThemeStyles.ring} hover:-translate-y-1 overflow-hidden relative rounded-2xl transition-all duration-300 w-full shadow-lg bg-black`}
+        className={`group flex flex-col ${
+          isBelow ? "w-full" : `${dimensions.card} w-full`
+        } ${appearance.radiusClass} ${appearance.cardFrameClass} ${
+          cardThemeStyles.glow
+        } focus:outline-none focus:ring-4 ${
+          cardThemeStyles.ring
+        } hover:-translate-y-1 overflow-hidden relative transition-all duration-300`}
       >
-        <img
-          src={item.image}
-          alt={item.title}
-          className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
-        {item.rating && (
-          <div className="absolute top-2 right-2 z-10 rounded-md bg-black/75 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-amber-300 border border-white/10 shadow">
-            ★ {item.rating}
-          </div>
-        )}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-8 pb-2 px-2 text-left z-10">
-          <p className="text-[11px] font-bold text-white leading-tight line-clamp-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-            {item.title}
-          </p>
-          {item.year && (
-            <p className="text-[9px] text-slate-400 font-medium mt-0.5">{item.year}</p>
+        <div
+          className={`relative w-full ${
+            isBelow ? "aspect-[2/3]" : "flex-1 h-full"
+          } overflow-hidden bg-black ${isCollector ? appearance.innerRadiusClass : ""}`}
+        >
+          <img
+            src={optimizedImage}
+            alt={item.title}
+            className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+            decoding="async"
+          />
+
+          {/* Top Badges */}
+          {appearance.showBadges && item.rating && (
+            <div className="absolute top-1.5 right-1.5 z-10 rounded-md bg-black/80 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-bold text-amber-300 border border-white/10 shadow">
+              ★ {item.rating}
+            </div>
+          )}
+
+          {appearance.showBadges && isDetailed && (
+            <div className="absolute top-1.5 left-1.5 z-10 rounded-md bg-black/80 backdrop-blur-md px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider text-slate-200 border border-white/10">
+              {item.mediaType === "tv" ? "TV" : "MOV"}
+            </div>
+          )}
+
+          {/* Overlay / Hover-Reveal / Detailed Footer inside Poster */}
+          {!isBelow && !isClean && (
+            <div
+              className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent pt-8 pb-2 px-2 text-left z-10 transition-opacity duration-200 ${
+                isHoverReveal
+                  ? "opacity-0 group-hover:opacity-100 group-focus:opacity-100"
+                  : "opacity-100"
+              }`}
+            >
+              <p className="text-[11px] font-bold text-white leading-tight line-clamp-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                {item.title}
+              </p>
+              {item.year && (
+                <p className="text-[9px] text-slate-300 font-medium mt-0.5">
+                  {item.year}
+                </p>
+              )}
+            </div>
           )}
         </div>
+
+        {/* Below-Card Clean Glass Footer */}
+        {isBelow && (
+          <div className="px-2 py-1.5 bg-slate-950/95 border-t border-white/10 text-left">
+            <p className="text-[11px] font-bold text-white leading-tight line-clamp-1">
+              {item.title}
+            </p>
+            <div className="flex items-center justify-between gap-1 mt-0.5 text-[9px] text-slate-400 font-semibold">
+              <span>{item.year || (item.mediaType === "tv" ? "Series" : "Movie")}</span>
+              {appearance.showBadges && item.rating && (
+                <span className="text-amber-300">★ {item.rating}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Theater Marquee Bottom Laser Line */}
+        {appearance.showLaserBar && (
+          <div
+            className={`absolute inset-x-2 bottom-0 h-[2px] bg-gradient-to-r ${cardThemeStyles.laser} opacity-90 z-20`}
+          />
+        )}
       </Link>
     );
   }
 
+  // MEDIUM & LARGE CARD MODES
+  const isBelow = layout === "below-card";
+  const isClean = layout === "clean-poster";
+  const isHoverReveal = layout === "hover-reveal";
+  const isDetailed = layout === "detailed-badges";
+
   return (
     <div
-      className={`group relative flex w-full flex-col overflow-hidden rounded-2xl ${cardThemeStyles.bg} border ${cardThemeStyles.border} ${cardThemeStyles.glow} shadow-xl transition-all duration-300 hover:-translate-y-1.5 ${cardThemeStyles.ring} ${dimensions.card}`}
+      className={`group relative flex w-full flex-col overflow-hidden ${appearance.radiusClass} ${appearance.cardFrameClass} ${cardThemeStyles.glow} transition-all duration-300 hover:-translate-y-1.5 ${cardThemeStyles.ring} ${
+        isBelow ? "h-auto" : dimensions.card
+      }`}
     >
       <Link
         to="/details"
         search={detailsSearch}
-        className="block relative overflow-hidden flex-1 focus:outline-none w-full h-full bg-black flex items-center justify-center"
+        className={`block relative overflow-hidden focus:outline-none w-full bg-black flex items-center justify-center ${
+          isBelow ? "aspect-[2/3]" : "flex-1 h-full"
+        } ${isCollector ? appearance.innerRadiusClass : ""}`}
       >
         <img
-          src={item.image}
+          src={optimizedImage}
           alt={item.title}
           className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
+          decoding="async"
         />
-        {item.rating && (
-          <div className="absolute top-2.5 right-2.5 z-10 rounded-lg bg-black/75 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-white/15 shadow-md">
+
+        {/* Top-Right Rating Badge */}
+        {appearance.showBadges && item.rating && (
+          <div className="absolute top-2.5 right-2.5 z-10 rounded-lg bg-black/80 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-white/15 shadow-md">
             ⭐ {item.rating}
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-12 pb-3 px-3 z-10 text-left">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <span className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider truncate max-w-[72%] backdrop-blur-md border ${cardThemeStyles.accentBadge}`}>
-              {item.genre ?? "TV"}
-            </span>
-            {item.year ? (
-              <span className="text-[10px] text-slate-300 font-semibold shrink-0">{item.year}</span>
-            ) : null}
+
+        {/* Top-Left Media Type Badge (Detailed Layout) */}
+        {appearance.showBadges && isDetailed && (
+          <div className="absolute top-2.5 left-2.5 z-10 rounded-lg bg-black/80 backdrop-blur-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white border border-white/15 shadow-md">
+            {item.mediaType === "tv" ? "TV SERIES" : "MOVIE"}
           </div>
-          <h4 className={`font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] truncate ${dimensions.text}`}>
-            {item.title}
-          </h4>
-        </div>
+        )}
+
+        {/* Overlay / Hover-Reveal / Detailed Bottom Scrim */}
+        {!isBelow && !isClean && (
+          <div
+            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent pt-14 pb-3 px-3 z-10 text-left transition-all duration-300 ${
+              isHoverReveal
+                ? "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0"
+                : "opacity-100"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span
+                className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider truncate max-w-[72%] backdrop-blur-md border ${cardThemeStyles.accentBadge}`}
+              >
+                {item.genre ?? "TV"}
+              </span>
+              {item.year ? (
+                <span className="text-[10px] text-slate-300 font-semibold shrink-0">
+                  {item.year}
+                </span>
+              ) : null}
+            </div>
+            <h4
+              className={`font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] truncate ${dimensions.text}`}
+            >
+              {item.title}
+            </h4>
+          </div>
+        )}
       </Link>
 
-      <div className="p-2 bg-black/95 border-t border-white/10 flex items-center justify-between z-20">
-        <Link
-          to="/details"
-          search={detailsSearch}
-          className={`w-full text-center rounded-xl bg-white/[0.06] hover:bg-white/[0.15] border border-white/10 py-1.5 text-[10px] font-bold tracking-wider uppercase text-white transition focus:outline-none focus:ring-2 ${cardThemeStyles.ring}`}
-        >
-          ▶ Watch Now
-        </Link>
-      </div>
+      {/* Below-Poster Clean Unobstructed Info Panel */}
+      {isBelow && (
+        <div className="p-3 bg-slate-950/95 border-t border-white/10 text-left space-y-1.5 z-20">
+          <h4 className={`font-bold text-white truncate ${dimensions.text}`}>
+            {item.title}
+          </h4>
+          <div className="flex items-center justify-between gap-2 text-[10px] font-semibold text-slate-300">
+            <span
+              className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider truncate max-w-[68%] border ${cardThemeStyles.accentBadge}`}
+            >
+              {item.genre ?? (item.mediaType === "tv" ? "TV SHOW" : "MOVIE")}
+            </span>
+            {item.year && <span className="shrink-0">{item.year}</span>}
+          </div>
+          <Link
+            to="/details"
+            search={detailsSearch}
+            className={`mt-1 block w-full text-center rounded-xl bg-white/[0.07] hover:bg-white/[0.16] border border-white/15 ${
+              largeButtons ? "py-2.5 text-xs" : "py-1.5 text-[10px]"
+            } font-bold tracking-wider uppercase text-white transition focus:outline-none focus:ring-2 ${
+              cardThemeStyles.ring
+            }`}
+          >
+            ▶ Watch Now
+          </Link>
+        </div>
+      )}
+
+      {/* Standard Watch Bar (hidden in Pure Poster Wall & Hover-Reveal modes for cleaner art) */}
+      {!isBelow && !isClean && !isHoverReveal && (
+        <div className="p-2 bg-black/95 border-t border-white/10 flex items-center justify-between z-20">
+          <Link
+            to="/details"
+            search={detailsSearch}
+            className={`w-full text-center rounded-xl bg-white/[0.06] hover:bg-white/[0.15] border border-white/10 ${
+              largeButtons ? "py-2.5 text-xs" : "py-1.5 text-[10px]"
+            } font-bold tracking-wider uppercase text-white transition focus:outline-none focus:ring-2 ${
+              cardThemeStyles.ring
+            }`}
+          >
+            ▶ Watch Now
+          </Link>
+        </div>
+      )}
+
+      {/* Theater Marquee Bottom Laser Highlight */}
+      {appearance.showLaserBar && (
+        <div
+          className={`absolute inset-x-3 bottom-0 h-[2px] bg-gradient-to-r ${cardThemeStyles.laser} opacity-90 z-30`}
+        />
+      )}
     </div>
   );
 }
@@ -251,17 +450,41 @@ const MemoizedMediaCard = memo(
     item,
     cardSize,
     appTheme,
+    posterAppearance,
+    posterWidth,
+    largeButtons,
   }: {
     item: MediaItem;
     cardSize: CardSize;
     appTheme: AppTheme;
+    posterAppearance: PosterAppearanceClasses;
+    posterWidth: "w342" | "w500";
+    largeButtons: boolean;
   }) {
-    return <MediaCard item={item} cardSize={cardSize} appTheme={appTheme} />;
+    return (
+      <MediaCard
+        item={item}
+        cardSize={cardSize}
+        appTheme={appTheme}
+        posterAppearance={posterAppearance}
+        posterWidth={posterWidth}
+        largeButtons={largeButtons}
+      />
+    );
   },
   (prevProps, nextProps) =>
     prevProps.item.id === nextProps.item.id &&
     prevProps.cardSize === nextProps.cardSize &&
-    prevProps.appTheme === nextProps.appTheme
+    prevProps.appTheme === nextProps.appTheme &&
+    prevProps.posterWidth === nextProps.posterWidth &&
+    prevProps.largeButtons === nextProps.largeButtons &&
+    prevProps.posterAppearance.shape === nextProps.posterAppearance.shape &&
+    prevProps.posterAppearance.cardStyle ===
+      nextProps.posterAppearance.cardStyle &&
+    prevProps.posterAppearance.infoLayout ===
+      nextProps.posterAppearance.infoLayout &&
+    prevProps.posterAppearance.showBadges ===
+      nextProps.posterAppearance.showBadges
 );
 
 MemoizedMediaCard.displayName = "MemoizedMediaCard";
@@ -292,7 +515,7 @@ function Home() {
   }, [search.tab]);
 
   const [selectedGenre, setSelectedGenre] = useState<string>("Trending");
-  
+
   const [providerFilter, setProviderFilter] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("rabtv_provider_filter") || "All (Default)";
@@ -325,7 +548,10 @@ function Home() {
   const scrollPill = (elementId: string, direction: "left" | "right") => {
     const el = document.getElementById(elementId);
     if (el) {
-      el.scrollBy({ left: direction === "left" ? -240 : 240, behavior: "smooth" });
+      el.scrollBy({
+        left: direction === "left" ? -240 : 240,
+        behavior: "smooth",
+      });
     }
   };
 
@@ -333,9 +559,36 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [appTheme, setAppTheme] = useState<AppTheme>("violet");
-  const [userAge, setUserAge] = useState<number>(18);
-  const [myListSubTab, setMyListSubTab] = useState<"all" | "in_progress" | "mylist" | "favorites">("all");
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => getSavedTheme());
+  const [cardSize, setCardSize] = useState<CardSize>(() => getSavedCardSize());
+  const [userAge, setUserAge] = useState<number>(() => getSavedUserAge());
+  const [posterAppearance, setPosterAppearance] =
+    useState<PosterAppearanceClasses>(() =>
+      getPosterAppearanceClasses(getSavedTheme())
+    );
+  const [posterWidth, setPosterWidth] = useState<"w342" | "w500">(() =>
+    getOptimalTmdbImageWidth()
+  );
+  const [reducedMotion, setReducedMotion] = useState<boolean>(() =>
+    getReducedMotion()
+  );
+  const [largeButtons, setLargeButtons] = useState<boolean>(() =>
+    getLargeButtons()
+  );
+  const [kidsLocked, setKidsLocked] = useState<boolean>(() =>
+    getKidsModeLocked()
+  );
+  const [greetingText, setGreetingText] = useState<string>("");
+  const [profileMascot, setProfileMascot] = useState<string>(() =>
+    getProfileMascot()
+  );
+  const [isLowRam, setIsLowRam] = useState<boolean>(
+    () => getHardwareLimits().effectiveMode === "low"
+  );
+
+  const [myListSubTab, setMyListSubTab] = useState<
+    "all" | "in_progress" | "mylist" | "favorites"
+  >("all");
   const [savedMyList, setSavedMyList] = useState<MediaItem[]>([]);
   const [savedFavorites, setSavedFavorites] = useState<MediaItem[]>([]);
   const [historyItems, setHistoryItems] = useState<MediaItem[]>([]);
@@ -345,7 +598,6 @@ function Home() {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [cardSize, setCardSize] = useState<CardSize>("large");
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [showScrollReminder, setShowScrollReminder] = useState(false);
 
@@ -368,12 +620,12 @@ function Home() {
   }, [items, loading]);
 
   useEffect(() => {
-    let inactivityTimer: NodeJS.Timeout;
+    let inactivityTimer: ReturnType<typeof setTimeout>;
 
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
       setShowScrollReminder(false);
-      if (canScrollDown) {
+      if (canScrollDown && !reducedMotion) {
         inactivityTimer = setTimeout(() => {
           setShowScrollReminder(true);
         }, 30000);
@@ -385,7 +637,9 @@ function Home() {
     window.addEventListener("scroll", resetInactivityTimer, { passive: true });
     window.addEventListener("click", resetInactivityTimer);
     window.addEventListener("keydown", resetInactivityTimer);
-    window.addEventListener("touchstart", resetInactivityTimer, { passive: true });
+    window.addEventListener("touchstart", resetInactivityTimer, {
+      passive: true,
+    });
 
     return () => {
       clearTimeout(inactivityTimer);
@@ -394,23 +648,31 @@ function Home() {
       window.removeEventListener("keydown", resetInactivityTimer);
       window.removeEventListener("touchstart", resetInactivityTimer);
     };
-  }, [canScrollDown]);
+  }, [canScrollDown, reducedMotion]);
 
   const loadSavedListsAndTheme = () => {
     try {
-      const listData = JSON.parse(localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]");
-      const favData = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
+      const listData = JSON.parse(
+        localStorage.getItem(MY_LIST_STORAGE_KEY) || "[]"
+      );
+      const favData = JSON.parse(
+        localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]"
+      );
 
+      const nextPosterWidth = getOptimalTmdbImageWidth();
       const rawHistory = getRawWatchHistory();
       const mappedHistory: MediaItem[] = rawHistory.map((h) => {
-        const type = h.mediaType ?? h.media_type ?? (String(h.id).startsWith("tv-") ? "tv" : "movie");
+        const type =
+          h.mediaType ??
+          h.media_type ??
+          (String(h.id).startsWith("tv-") ? "tv" : "movie");
         const cleanId = String(h.mediaId ?? h.id).replace(/^(movie|tv)-/, "");
         const imagePath = h.posterPath ?? h.poster_path ?? h.image;
         const imageUrl = imagePath?.startsWith("http")
-          ? imagePath
+          ? optimizePosterUrl(imagePath, nextPosterWidth)
           : imagePath
-          ? `https://image.tmdb.org/t/p/w500${imagePath}`
-          : "/placeholder.png";
+            ? `https://image.tmdb.org/t/p/${nextPosterWidth}${imagePath}`
+            : "/placeholder.png";
 
         return {
           id: String(h.id),
@@ -430,12 +692,25 @@ function Home() {
         };
       });
 
-      setSavedMyList(listData);
-      setSavedFavorites(favData);
+      const nextTheme = getSavedTheme();
+      const savedName = localStorage.getItem("rabtv_profile_name") || "";
+
+      setSavedMyList(Array.isArray(listData) ? listData : []);
+      setSavedFavorites(Array.isArray(favData) ? favData : []);
       setHistoryItems(mappedHistory);
-      setAppTheme(getSavedTheme());
+      setAppTheme(nextTheme);
       setCardSize(getSavedCardSize());
       setUserAge(getSavedUserAge());
+      setPosterAppearance(getPosterAppearanceClasses(nextTheme));
+      setPosterWidth(nextPosterWidth);
+      setReducedMotion(getReducedMotion());
+      setLargeButtons(getLargeButtons());
+      setKidsLocked(getKidsModeLocked());
+      setProfileMascot(getProfileMascot());
+      setIsLowRam(getHardwareLimits().effectiveMode === "low");
+      setGreetingText(
+        savedName ? getPersonalizedGreeting(savedName, getGreetingStyle()) : ""
+      );
     } catch (err) {
       console.error("Error reading saved lists/theme/age", err);
     }
@@ -455,17 +730,41 @@ function Home() {
     };
 
     window.addEventListener("rabtv_catalog_updated", loadSavedListsAndTheme);
-    window.addEventListener("rabtv_watch_history_updated", loadSavedListsAndTheme);
+    window.addEventListener(
+      "rabtv_watch_history_updated",
+      loadSavedListsAndTheme
+    );
     window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);
-    window.addEventListener("rabtv_global_feed_updated", handleGlobalFeedUpdate as EventListener);
-    window.addEventListener("rabtv_broken_links_updated", loadSavedListsAndTheme);
+    window.addEventListener(
+      "rabtv_global_feed_updated",
+      handleGlobalFeedUpdate as EventListener
+    );
+    window.addEventListener(
+      "rabtv_broken_links_updated",
+      loadSavedListsAndTheme
+    );
 
     return () => {
-      window.removeEventListener("rabtv_catalog_updated", loadSavedListsAndTheme);
-      window.removeEventListener("rabtv_watch_history_updated", loadSavedListsAndTheme);
-      window.removeEventListener("rabtv_settings_updated", handleSettingsUpdate);
-      window.removeEventListener("rabtv_global_feed_updated", handleGlobalFeedUpdate as EventListener);
-      window.removeEventListener("rabtv_broken_links_updated", loadSavedListsAndTheme);
+      window.removeEventListener(
+        "rabtv_catalog_updated",
+        loadSavedListsAndTheme
+      );
+      window.removeEventListener(
+        "rabtv_watch_history_updated",
+        loadSavedListsAndTheme
+      );
+      window.removeEventListener(
+        "rabtv_settings_updated",
+        handleSettingsUpdate
+      );
+      window.removeEventListener(
+        "rabtv_global_feed_updated",
+        handleGlobalFeedUpdate as EventListener
+      );
+      window.removeEventListener(
+        "rabtv_broken_links_updated",
+        loadSavedListsAndTheme
+      );
     };
   }, []);
 
@@ -490,13 +789,22 @@ function Home() {
 
       const scraperCategory = activeTab === "TV Shows" ? "Series" : activeTab;
       const activeGlobalFeed =
-        globalFeedOverride && globalFeedOverride !== "All (Default)" ? globalFeedOverride : undefined;
-      
+        globalFeedOverride && globalFeedOverride !== "All (Default)"
+          ? globalFeedOverride
+          : undefined;
+
       const effectiveSubFeed =
-        providerFilter && providerFilter !== "All (Default)" ? providerFilter : activeGlobalFeed;
+        providerFilter && providerFilter !== "All (Default)"
+          ? providerFilter
+          : activeGlobalFeed;
 
       try {
-        const result = await scrapeCategoryContent(scraperCategory, page, selectedGenre, effectiveSubFeed);
+        const result = await scrapeCategoryContent(
+          scraperCategory,
+          page,
+          selectedGenre,
+          effectiveSubFeed
+        );
         if (!active) return;
 
         if (result?.items?.length) {
@@ -508,7 +816,9 @@ function Home() {
         }
       } catch (caught) {
         if (!active) return;
-        setError(caught instanceof Error ? caught.message : "Failed to load media");
+        setError(
+          caught instanceof Error ? caught.message : "Failed to load media"
+        );
       } finally {
         if (active) {
           setLoading(false);
@@ -531,7 +841,9 @@ function Home() {
         const seedItems = [
           ...savedFavorites,
           ...savedMyList,
-          ...historyItems.filter((h: any) => h.confirmedCompleted || (h.progressPercent ?? 0) > 20),
+          ...historyItems.filter(
+            (h: any) => h.confirmedCompleted || (h.progressPercent ?? 0) > 20
+          ),
         ];
 
         const genreCounts: Record<number, number> = {};
@@ -572,18 +884,21 @@ function Home() {
             isTitleDisliked(`movie-${tmdbId}`) ||
             isTitleBroken(tmdbId) ||
             isTitleBroken(`movie-${tmdbId}`)
-          )
+          ) {
             continue;
+          }
 
           pool.push({
             id: `movie-${tmdbId}`,
             title,
             description: item.overview || "",
-            image: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
+            image: `https://image.tmdb.org/t/p/${posterWidth}${item.poster_path}`,
             href: `/details?id=${tmdbId}&type=movie`,
             genre: "SUGGESTED FOR YOU",
             year: (item.release_date || "").split("-")[0],
-            rating: item.vote_average ? item.vote_average.toFixed(1) : undefined,
+            rating: item.vote_average
+              ? item.vote_average.toFixed(1)
+              : undefined,
             mediaType: "movie",
             releaseDate: item.release_date || item.first_air_date,
           });
@@ -593,7 +908,9 @@ function Home() {
 
         const watchedIds = new Set([
           ...historyItems.map((h) => String(h.id).replace(/^(movie|tv)-/, "")),
-          ...savedFavorites.map((f) => String(f.id).replace(/^(movie|tv)-/, "")),
+          ...savedFavorites.map((f) =>
+            String(f.id).replace(/^(movie|tv)-/, "")
+          ),
           ...savedMyList.map((m) => String(m.id).replace(/^(movie|tv)-/, "")),
         ]);
 
@@ -601,7 +918,15 @@ function Home() {
         for (const candidate of pool) {
           const cleanId = String(candidate.id).replace(/^(movie|tv)-/, "");
           if (watchedIds.has(cleanId)) continue;
-          if (!isAllowedForAge((candidate as any).certification, candidate.genre, userAge)) continue;
+          if (
+            !isAllowedForAge(
+              (candidate as any).certification,
+              candidate.genre,
+              userAge
+            )
+          ) {
+            continue;
+          }
           uniqueSuggestions.set(cleanId, candidate);
         }
 
@@ -615,10 +940,21 @@ function Home() {
     return () => {
       active = false;
     };
-  }, [activeTab, savedFavorites, savedMyList, historyItems, userAge]);
+  }, [
+    activeTab,
+    savedFavorites,
+    savedMyList,
+    historyItems,
+    userAge,
+    kidsLocked,
+    posterWidth,
+  ]);
 
   const inProgressHistory = useMemo(
-    () => historyItems.filter((i: any) => !i.confirmedCompleted && (i.progressPercent ?? 0) < 100),
+    () =>
+      historyItems.filter(
+        (i: any) => !i.confirmedCompleted && (i.progressPercent ?? 0) < 100
+      ),
     [historyItems]
   );
 
@@ -637,9 +973,14 @@ function Home() {
 
     for (const item of rawList) {
       if (isTitleDisliked(item.id) || isTitleBroken(item.id)) continue;
-      if (!isAllowedForAge((item as any).certification, item.genre, userAge)) continue;
+      if (!isAllowedForAge((item as any).certification, item.genre, userAge)) {
+        continue;
+      }
 
-      const releaseDateStr = (item as any).releaseDate || (item as any).release_date || (item as any).first_air_date;
+      const releaseDateStr =
+        (item as any).releaseDate ||
+        (item as any).release_date ||
+        (item as any).first_air_date;
       if (releaseDateStr) {
         const releaseTime = new Date(releaseDateStr).getTime();
         if (!isNaN(releaseTime) && releaseTime > now + oneWeekMs) {
@@ -655,7 +996,14 @@ function Home() {
       }
     }
     return Array.from(map.values());
-  }, [myListSubTab, savedMyList, savedFavorites, inProgressHistory, userAge]);
+  }, [
+    myListSubTab,
+    savedMyList,
+    savedFavorites,
+    inProgressHistory,
+    userAge,
+    kidsLocked,
+  ]);
 
   const filteredItems = useMemo(() => {
     const baseList = activeTab === "My List" ? savedCatalogItems : items;
@@ -664,9 +1012,14 @@ function Home() {
 
     return baseList.filter((item) => {
       if (isTitleDisliked(item.id) || isTitleBroken(item.id)) return false;
-      if (!isAllowedForAge((item as any).certification, item.genre, userAge)) return false;
+      if (!isAllowedForAge((item as any).certification, item.genre, userAge)) {
+        return false;
+      }
 
-      const releaseDateStr = (item as any).releaseDate || (item as any).release_date || (item as any).first_air_date;
+      const releaseDateStr =
+        (item as any).releaseDate ||
+        (item as any).release_date ||
+        (item as any).first_air_date;
       if (releaseDateStr) {
         const releaseTime = new Date(releaseDateStr).getTime();
         if (!isNaN(releaseTime) && releaseTime > now + oneWeekMs) {
@@ -676,7 +1029,7 @@ function Home() {
 
       return true;
     });
-  }, [items, activeTab, savedCatalogItems, userAge]);
+  }, [items, activeTab, savedCatalogItems, userAge, kidsLocked]);
 
   const heroSourceList = useMemo(() => {
     if (activeTab === "My List") {
@@ -687,7 +1040,9 @@ function Home() {
 
   const heroItems = useMemo(() => {
     const watchedIds = new Set(
-      historyItems.map((h) => String(h.mediaId ?? h.id).replace(/^(movie|tv)-/i, ""))
+      historyItems.map((h) =>
+        String((h as any).mediaId ?? h.id).replace(/^(movie|tv)-/i, "")
+      )
     );
     const now = Date.now();
     const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
@@ -696,8 +1051,15 @@ function Home() {
       const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
       if (watchedIds.has(cleanId)) return false;
       if (isTitleDisliked(item.id) || isTitleDisliked(cleanId)) return false;
+      if (isTitleBroken(item.id) || isTitleBroken(cleanId)) return false;
+      if (!isAllowedForAge((item as any).certification, item.genre, userAge)) {
+        return false;
+      }
 
-      const releaseDateStr = (item as any).releaseDate || (item as any).release_date || (item as any).first_air_date;
+      const releaseDateStr =
+        (item as any).releaseDate ||
+        (item as any).release_date ||
+        (item as any).first_air_date;
       if (releaseDateStr) {
         const releaseTime = new Date(releaseDateStr).getTime();
         if (!isNaN(releaseTime) && releaseTime > now + oneWeekMs) {
@@ -707,21 +1069,30 @@ function Home() {
 
       return true;
     });
-  }, [heroSourceList, historyItems]);
+  }, [heroSourceList, historyItems, userAge, kidsLocked]);
 
   useEffect(() => {
     setCurrentHeroIndex(0);
   }, [heroItems]);
 
+  // Auto-rotate Hero billboard (paused automatically when Reduced Motion is active)
   useEffect(() => {
-    if (heroItems.length <= 1) return;
+    if (heroItems.length <= 1 || reducedMotion) return;
 
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
       setCurrentHeroIndex((prevIndex) => (prevIndex + 1) % heroItems.length);
-    }, 5000);
+    }, 5500);
 
-    return () => clearInterval(interval);
-  }, [heroItems.length]);
+    return () => window.clearInterval(interval);
+  }, [heroItems.length, reducedMotion]);
+
+  const handleSurpriseMe = () => {
+    const pool = filteredItems.length > 0 ? filteredItems : heroItems;
+    if (!pool.length) return;
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    navigate({ to: "/details", search: getDetailsSearch(picked) });
+  };
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
@@ -863,14 +1234,19 @@ function Home() {
     }
   };
 
-  const activeHeroItem = heroItems.length > 0 ? heroItems[currentHeroIndex] : null;
-  const heroDetailsSearch = activeHeroItem ? getDetailsSearch(activeHeroItem) : null;
+  const activeHeroItem =
+    heroItems.length > 0 ? heroItems[currentHeroIndex] : null;
+  const heroDetailsSearch = activeHeroItem
+    ? getDetailsSearch(activeHeroItem)
+    : null;
 
   return (
-    <main className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 relative rounded-3xl`}>
+    <main
+      className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 relative rounded-3xl`}
+    >
       <div className="relative z-10">
         {/* Signature Neon Rabbit Top Navigation Bar */}
-        <div className="sticky top-0 z-30 mb-5 mt-1 px-2 sm:px-4 py-2 flex justify-center">
+        <div className="sticky top-0 z-30 mb-4 mt-1 px-2 sm:px-4 py-2 flex justify-center">
           <div
             className="relative max-w-6xl w-full flex items-center justify-center rounded-2xl shadow-2xl overflow-hidden border border-white/10"
             style={{
@@ -878,8 +1254,10 @@ function Home() {
               backgroundSize: "112% 380%",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
-              maskImage: "linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
-              WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
+              maskImage:
+                "linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
+              WebkitMaskImage:
+                "linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
             }}
           >
             <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] pointer-events-none rounded-2xl z-0" />
@@ -888,6 +1266,7 @@ function Home() {
               onClick={() => scrollPill("nav-tabs-pill", "left")}
               className="absolute left-1.5 z-20 w-7 h-7 bg-black/75 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md border border-white/10 transition cursor-pointer"
               title="Scroll Left"
+              aria-label="Scroll navigation left"
             >
               ‹
             </button>
@@ -903,9 +1282,13 @@ function Home() {
                       key={tab}
                       type="button"
                       onClick={() => handleTabSelect(tab)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 ${
+                      className={`${
+                        largeButtons ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-xs"
+                      } rounded-xl font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 ${
                         isActive
-                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-lg scale-105`
+                          ? `${getPrimaryBgColor(
+                              appTheme
+                            )} text-white shadow-lg scale-105`
                           : "bg-black/45 hover:bg-white/10 text-slate-200 border border-white/5"
                       }`}
                     >
@@ -920,6 +1303,7 @@ function Home() {
               onClick={() => scrollPill("nav-tabs-pill", "right")}
               className="absolute right-1.5 z-20 w-7 h-7 bg-black/75 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold shadow-md border border-white/10 transition cursor-pointer"
               title="Scroll Right"
+              aria-label="Scroll navigation right"
             >
               ›
             </button>
@@ -927,87 +1311,169 @@ function Home() {
         </div>
 
         <div className="mx-auto max-w-7xl px-2 sm:px-6 overflow-x-hidden flex flex-col items-center">
-          {/* Cinematic Netflix / Disney+ Hero Billboard */}
-          {activeHeroItem && heroDetailsSearch ? (
-            <Link
-              to="/details"
-              search={heroDetailsSearch}
-              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-black border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative h-[350px] sm:h-[420px] md:h-[460px] flex flex-col group focus:outline-none focus:ring-4`}
-            >
-              <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
-                <img
-                  src={activeHeroItem.image}
-                  alt={activeHeroItem.title}
-                  className="absolute inset-0 h-full w-full object-cover object-top opacity-90 transition-transform duration-700 ease-out group-hover:scale-105"
-                />
-                {/* Deep Cinema Bottom & Left Vignette Gradients */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050b16] via-[#050b16]/55 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#050b16]/90 via-[#050b16]/30 to-transparent" />
-              </div>
-
-              <div className="relative z-10 mt-auto p-5 sm:p-8 flex flex-col items-start text-left max-w-2xl space-y-2.5">
-                <div className="flex items-center flex-wrap gap-2">
-                  <span
-                    className={`rounded-full bg-white/10 backdrop-blur-md border border-white/15 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.2em] ${themeStyles.accentText}`}
-                  >
-                    {activeHeroItem.genre ?? "Featured"}
-                  </span>
-                  {activeHeroItem.rating && (
-                    <span className="rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-400/30 px-2.5 py-0.5 text-amber-300 text-[11px] font-bold">
-                      ⭐ {activeHeroItem.rating}
-                    </span>
-                  )}
-                  {activeHeroItem.year && (
-                    <span className="rounded-full bg-black/50 backdrop-blur-md border border-white/10 px-2.5 py-0.5 text-[11px] text-slate-200 font-semibold">
-                      {activeHeroItem.year}
-                    </span>
-                  )}
-                </div>
-
-                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] line-clamp-2">
-                  {activeHeroItem.title}
-                </h2>
-
-                {activeHeroItem.description && (
-                  <p className="text-xs sm:text-sm leading-relaxed text-slate-200/90 line-clamp-2 max-w-xl drop-shadow">
-                    {activeHeroItem.description}
+          {/* Personalized Greeting & Quick "Surprise Me" Bar */}
+          {(greetingText || filteredItems.length > 0) && (
+            <div className="mb-4 w-full max-w-6xl flex flex-wrap items-center justify-between gap-2.5 px-1">
+              <div className="flex items-center gap-2 min-w-0">
+                {greetingText && (
+                  <p className="text-sm sm:text-base font-black tracking-wide text-white truncate">
+                    <span className="mr-1.5">{profileMascot}</span>
+                    <span>{greetingText}</span>
                   </p>
                 )}
-
-                <div className="pt-1 flex items-center gap-3">
-                  <span
-                    className={`inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider ${getPrimaryBgColor(appTheme)} transition group-hover:scale-105`}
-                  >
-                    ▶ Watch Now
+                {kidsLocked && (
+                  <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0">
+                    🧒 Kids Safe Mode
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 transition">
-                    ⓘ Details
-                  </span>
-                </div>
+                )}
               </div>
 
-              {/* Hero Carousel Indicator Dots */}
-              {heroItems.length > 1 && (
-                <div className="absolute bottom-4 right-5 z-20 hidden sm:flex items-center gap-1.5">
-                  {heroItems.slice(0, 8).map((hItem, idx) => (
+              {(filteredItems.length > 0 || heroItems.length > 0) && (
+                <button
+                  type="button"
+                  onClick={handleSurpriseMe}
+                  className={`inline-flex items-center gap-1.5 rounded-xl bg-black/55 hover:bg-white/15 border border-white/15 px-3.5 ${
+                    largeButtons ? "py-2 text-xs" : "py-1.5 text-[11px]"
+                  } font-extrabold text-amber-300 hover:text-white shadow transition hover:scale-105 active:scale-95 cursor-pointer shrink-0`}
+                  title="Pick a random title for me"
+                >
+                  <span>🎲 Surprise Me</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Cinematic Netflix / Disney+ Hero Billboard */}
+          {activeHeroItem && heroDetailsSearch ? (
+            <div className="mb-6 w-full max-w-6xl relative group">
+              <Link
+                to="/details"
+                search={heroDetailsSearch}
+                className="w-full overflow-hidden rounded-[28px] bg-black border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative h-[350px] sm:h-[420px] md:h-[460px] flex flex-col focus:outline-none focus:ring-4"
+              >
+                <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
+                  <img
+                    src={optimizePosterUrl(
+                      activeHeroItem.image,
+                      isLowRam ? "w342" : "w500"
+                    )}
+                    alt={activeHeroItem.title}
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-cover object-top opacity-90 transition-transform duration-700 ease-out group-hover:scale-105"
+                  />
+                  {/* Deep Cinema Bottom & Left Vignette Gradients */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#050b16] via-[#050b16]/55 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#050b16]/90 via-[#050b16]/30 to-transparent" />
+                </div>
+
+                <div className="relative z-10 mt-auto p-5 sm:p-8 flex flex-col items-start text-left max-w-2xl space-y-2.5">
+                  <div className="flex items-center flex-wrap gap-2">
                     <span
-                      key={hItem.id}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
-                        idx === currentHeroIndex % 8
-                          ? `w-6 ${themeStyles.accentBar}`
-                          : "w-1.5 bg-white/30"
-                      }`}
-                    />
-                  ))}
+                      className={`rounded-full bg-white/10 backdrop-blur-md border border-white/15 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.2em] ${themeStyles.accentText}`}
+                    >
+                      {activeHeroItem.genre ?? "Featured"}
+                    </span>
+                    {activeHeroItem.rating && (
+                      <span className="rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-400/30 px-2.5 py-0.5 text-amber-300 text-[11px] font-bold">
+                        ⭐ {activeHeroItem.rating}
+                      </span>
+                    )}
+                    {activeHeroItem.year && (
+                      <span className="rounded-full bg-black/50 backdrop-blur-md border border-white/10 px-2.5 py-0.5 text-[11px] text-slate-200 font-semibold">
+                        {activeHeroItem.year}
+                      </span>
+                    )}
+                  </div>
+
+                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] line-clamp-2">
+                    {activeHeroItem.title}
+                  </h2>
+
+                  {activeHeroItem.description && (
+                    <p className="text-xs sm:text-sm leading-relaxed text-slate-200/90 line-clamp-2 max-w-xl drop-shadow">
+                      {activeHeroItem.description}
+                    </p>
+                  )}
+
+                  <div className="pt-1 flex items-center gap-3">
+                    <span
+                      className={`inline-flex items-center gap-2 ${
+                        largeButtons
+                          ? "px-6 py-3 text-sm"
+                          : "px-5 py-2 text-xs"
+                      } rounded-xl font-bold uppercase tracking-wider ${getPrimaryBgColor(
+                        appTheme
+                      )} transition group-hover:scale-105`}
+                    >
+                      ▶ Watch Now
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1.5 ${
+                        largeButtons
+                          ? "px-5 py-3 text-sm"
+                          : "px-4 py-2 text-xs"
+                      } rounded-xl font-bold text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 transition`}
+                    >
+                      ⓘ Details
+                    </span>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Hero Manual Controls + Indicator Dots (Great for TV Remotes & Steady Screen) */}
+              {heroItems.length > 1 && (
+                <div className="absolute bottom-4 right-4 sm:right-5 z-20 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentHeroIndex(
+                        (prev) =>
+                          (prev - 1 + heroItems.length) % heroItems.length
+                      )
+                    }
+                    className="h-7 w-7 rounded-full bg-black/70 hover:bg-black border border-white/20 text-white text-xs font-bold flex items-center justify-center transition cursor-pointer"
+                    aria-label="Previous featured title"
+                  >
+                    ‹
+                  </button>
+
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    {heroItems.slice(0, 8).map((hItem, idx) => (
+                      <button
+                        key={hItem.id}
+                        type="button"
+                        onClick={() => setCurrentHeroIndex(idx)}
+                        aria-label={`Show featured title ${idx + 1}`}
+                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                          idx === currentHeroIndex % 8
+                            ? `w-6 ${themeStyles.accentBar}`
+                            : "w-1.5 bg-white/30 hover:bg-white/60"
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentHeroIndex((prev) => (prev + 1) % heroItems.length)
+                    }
+                    className="h-7 w-7 rounded-full bg-black/70 hover:bg-black border border-white/20 text-white text-xs font-bold flex items-center justify-center transition cursor-pointer"
+                    aria-label="Next featured title"
+                  >
+                    ›
+                  </button>
                 </div>
               )}
-            </Link>
+            </div>
           ) : (
             <section
               className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-gradient-to-br ${themeStyles.cardGradient} border border-white/10 shadow-2xl relative h-[320px] sm:h-[380px] flex flex-col items-center justify-center`}
             >
               <div className="text-slate-300 text-center px-4">
-                {loading ? `Loading ${activeTab}...` : error ?? "No media found in this section."}
+                {loading
+                  ? `Loading ${activeTab}...`
+                  : error ?? "No media found in this section."}
               </div>
             </section>
           )}
@@ -1026,7 +1492,9 @@ function Home() {
                         type="button"
                         onClick={() => handleProviderSelect(prov.name)}
                         className={`relative group h-14 sm:h-20 rounded-2xl p-2 sm:p-3 transition-all duration-300 cursor-pointer flex items-center justify-center overflow-hidden backdrop-blur-xl ${
-                          isActive ? themeStyles.activeTile : themeStyles.inactiveTile
+                          isActive
+                            ? themeStyles.activeTile
+                            : themeStyles.inactiveTile
                         }`}
                         title={prov.name}
                       >
@@ -1034,6 +1502,8 @@ function Home() {
                         <img
                           src={prov.logo}
                           alt={prov.name}
+                          loading="lazy"
+                          decoding="async"
                           className={`relative z-10 transition-transform duration-300 group-hover:scale-110 ${
                             isDefault
                               ? "h-full w-full object-cover rounded-xl opacity-90"
@@ -1054,6 +1524,7 @@ function Home() {
                     onClick={() => scrollPill("genre-pill", "left")}
                     className="absolute left-1.5 z-20 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/10 shadow-md transition cursor-pointer"
                     title="Scroll Left"
+                    aria-label="Scroll genres left"
                   >
                     ‹
                   </button>
@@ -1069,9 +1540,15 @@ function Home() {
                             key={genre}
                             type="button"
                             onClick={() => setSelectedGenre(genre)}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 ${
+                            className={`${
+                              largeButtons
+                                ? "px-4 py-2 text-sm"
+                                : "px-3.5 py-1.5 text-xs"
+                            } rounded-xl font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 ${
                               isActive
-                                ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md scale-105`
                                 : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 border border-white/5"
                             }`}
                           >
@@ -1086,6 +1563,7 @@ function Home() {
                     onClick={() => scrollPill("genre-pill", "right")}
                     className="absolute right-1.5 z-20 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/10 shadow-md transition cursor-pointer"
                     title="Scroll Right"
+                    aria-label="Scroll genres right"
                   >
                     ›
                   </button>
@@ -1102,6 +1580,7 @@ function Home() {
                   onClick={() => scrollPill("mylist-pill", "left")}
                   className="absolute left-1.5 z-20 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/10 shadow-md transition cursor-pointer"
                   title="Scroll Left"
+                  aria-label="Scroll list tabs left"
                 >
                   ‹
                 </button>
@@ -1115,11 +1594,17 @@ function Home() {
                       onClick={() => setMyListSubTab("all")}
                       className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                         myListSubTab === "all"
-                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                          ? `${getPrimaryBgColor(
+                              appTheme
+                            )} text-white shadow-md scale-105`
                           : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
                       }`}
                     >
-                      All Saved ({savedMyList.length + savedFavorites.length + inProgressHistory.length})
+                      All Saved (
+                      {savedMyList.length +
+                        savedFavorites.length +
+                        inProgressHistory.length}
+                      )
                     </button>
 
                     <button
@@ -1127,7 +1612,9 @@ function Home() {
                       onClick={() => setMyListSubTab("in_progress")}
                       className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                         myListSubTab === "in_progress"
-                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                          ? `${getPrimaryBgColor(
+                              appTheme
+                            )} text-white shadow-md scale-105`
                           : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
                       }`}
                     >
@@ -1139,7 +1626,9 @@ function Home() {
                       onClick={() => setMyListSubTab("mylist")}
                       className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                         myListSubTab === "mylist"
-                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                          ? `${getPrimaryBgColor(
+                              appTheme
+                            )} text-white shadow-md scale-105`
                           : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
                       }`}
                     >
@@ -1151,7 +1640,9 @@ function Home() {
                       onClick={() => setMyListSubTab("favorites")}
                       className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                         myListSubTab === "favorites"
-                          ? `${getPrimaryBgColor(appTheme)} text-white shadow-md scale-105`
+                          ? `${getPrimaryBgColor(
+                              appTheme
+                            )} text-white shadow-md scale-105`
                           : "bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/5"
                       }`}
                     >
@@ -1164,6 +1655,7 @@ function Home() {
                   onClick={() => scrollPill("mylist-pill", "right")}
                   className="absolute right-1.5 z-20 w-7 h-7 bg-black/80 hover:bg-black text-amber-300 rounded-full flex items-center justify-center text-xs font-bold border border-white/10 shadow-md transition cursor-pointer"
                   title="Scroll Right"
+                  aria-label="Scroll list tabs right"
                 >
                   ›
                 </button>
@@ -1175,12 +1667,18 @@ function Home() {
           <section className="mb-8 px-1 w-full max-w-6xl">
             <div className="mb-4 flex items-center justify-between px-1">
               <div className="flex items-center gap-2.5">
-                <span className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`} />
+                <span
+                  className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`}
+                />
                 <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
-                  {activeTab === "My List" ? "Saved Catalog" : `${activeTab} Catalog`}
+                  {activeTab === "My List"
+                    ? "Saved Catalog"
+                    : `${activeTab} Catalog`}
                 </h3>
               </div>
-              <span className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.05] border border-white/10 ${themeStyles.accentText}`}>
+              <span
+                className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.05] border border-white/10 ${themeStyles.accentText}`}
+              >
                 {filteredItems.length} titles available
               </span>
             </div>
@@ -1192,20 +1690,21 @@ function Home() {
                     item={item}
                     cardSize={cardSize}
                     appTheme={appTheme}
+                    posterAppearance={posterAppearance}
+                    posterWidth={posterWidth}
+                    largeButtons={largeButtons}
                     key={item.id}
                   />
                 ))}
               </div>
             ) : (
-              <div
-                className={`rounded-2xl bg-slate-950/70 border border-white/10 backdrop-blur-xl p-8 text-center mx-1`}
-              >
+              <div className="rounded-2xl bg-slate-950/70 border border-white/10 backdrop-blur-xl p-8 text-center mx-1">
                 <p className="text-sm text-slate-300">
                   {activeTab === "My List"
                     ? "No saved titles in this section yet. Open any movie or show to save it!"
                     : loading
-                    ? `Loading ${activeTab} content...`
-                    : error ?? "No titles available in this view."}
+                      ? `Loading ${activeTab} content...`
+                      : error ?? "No titles available in this view."}
                 </p>
               </div>
             )}
@@ -1220,7 +1719,7 @@ function Home() {
                 @keyframes flashTwice {
                   0% { opacity: 0; }
                   25% { opacity: 1; }
-                  50% { opacity: 1; }
+                  50% { opacity: 0; }
                   75% { opacity: 1; }
                   100% { opacity: 0; }
                 }
@@ -1232,7 +1731,11 @@ function Home() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white opacity-100">
                   More Content Below
                 </span>
-                <span className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(appTheme)} opacity-100`}>
+                <span
+                  className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(
+                    appTheme
+                  )} opacity-100`}
+                >
                   ⌄
                 </span>
               </div>
@@ -1243,7 +1746,9 @@ function Home() {
             <section className="mb-8 px-1 pt-6 border-t border-white/10 w-full max-w-6xl">
               <div className="mb-4 flex items-center justify-between px-1">
                 <div className="flex items-center gap-2.5">
-                  <span className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`} />
+                  <span
+                    className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`}
+                  />
                   <h3 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
                     <span>✨ Suggested For You</span>
                   </h3>
@@ -1258,6 +1763,9 @@ function Home() {
                     item={item}
                     cardSize={cardSize}
                     appTheme={appTheme}
+                    posterAppearance={posterAppearance}
+                    posterWidth={posterWidth}
+                    largeButtons={largeButtons}
                     key={`suggested-${item.id}`}
                   />
                 ))}
@@ -1269,9 +1777,14 @@ function Home() {
             <div className="mb-6 flex items-center justify-center gap-4 rounded-2xl bg-slate-950/75 border border-white/10 backdrop-blur-xl p-3 mx-2 w-full max-w-sm shadow-xl">
               <button
                 type="button"
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                onClick={() => {
+                  setPage((prev) => Math.max(1, prev - 1));
+                  window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+                }}
                 disabled={page <= 1 || loading}
-                className="rounded-xl bg-white/10 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/20 disabled:opacity-40 focus:outline-none focus:ring-4"
+                className={`rounded-xl bg-white/10 ${
+                  largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
+                } font-bold text-white transition hover:bg-white/20 disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer`}
               >
                 ◀ Prev
               </button>
@@ -1282,9 +1795,14 @@ function Home() {
 
               <button
                 type="button"
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                onClick={() => {
+                  setPage((prev) => Math.min(totalPages, prev + 1));
+                  window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+                }}
                 disabled={page >= totalPages || loading}
-                className={`rounded-xl ${themeStyles.btnActive} px-4 py-2 text-xs font-bold shadow transition disabled:opacity-40 focus:outline-none focus:ring-4`}
+                className={`rounded-xl ${themeStyles.btnActive} ${
+                  largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
+                } font-bold shadow transition disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer`}
               >
                 Next ▶
               </button>
