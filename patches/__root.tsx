@@ -1,4 +1,5 @@
 // src/routes/__root.tsx
+import React, { useState, useEffect, useRef } from "react";
 import { BugReportModal } from "@/components/BugReportModal";
 import { PublicBugFeedModal } from "@/components/PublicBugFeedModal";
 import { UserNotifier } from "@/components/UserNotifier";
@@ -16,10 +17,13 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { HolidayOverlay } from "@/components/HolidayOverlay";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { ActivationModal } from "@/components/ActivationModal";
-import { Sidebar, GlobalFeedOption } from "@/components/sidebar";
-import { bgAudio, RADIO_STATIONS } from "@/lib/background-audio";
+import {
+  Sidebar,
+  GlobalFeedOption,
+  getDefaultHeartbeatStationUrl,
+} from "@/components/sidebar";
+import { bgAudio } from "@/lib/background-audio";
 import "@/styles.css";
-import { useState, useEffect } from "react";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { checkForAppUpdates } from "@/lib/updater";
 import {
@@ -27,6 +31,7 @@ import {
   StreamQuality,
   AppTheme,
   HistoryScale,
+  CursorStyle,
   DISCLAIMER_ACCEPTED_KEY,
   getSavedCardSize,
   saveCardSize,
@@ -39,12 +44,28 @@ import {
   getHistoryOverscale,
   getLargeButtons,
   setLargeButtons,
+  applyAllSettingsToDocument,
+  getOrCreateDeviceId,
+  getCursorStyle,
+  getCursorSvgDataUri,
+  getProfileMascot,
+  getShowCornerClock,
+  getClockFormat,
+  formatAppTime,
+  getSleepTimerMinutes,
+  setSleepTimerMinutes,
+  getUiClickSounds,
+  playSoftUiClick,
+  getKidsModeLocked,
+  getStartupTab,
+  getAgeLockPinSuffix,
+  purgeOldTmdbCaches,
 } from "@/lib/settings";
 
 export type { GlobalFeedOption };
 
 const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
-const AGE_LOCK_KEY = "rabtv_age_passcode";
+const STARTUP_ROUTED_KEY = "rabtv_startup_tab_applied";
 
 const HEADER_ICON_URL = "https://avatars.githubusercontent.com/u/330663733?v=4";
 
@@ -70,7 +91,7 @@ async function updateNativeStatusBar(theme: AppTheme) {
     await StatusBar.setBackgroundColor({ color: hex });
     await StatusBar.setStyle({ style: Style.Dark });
   } catch {
-    // ignore
+    // ignore outside native Capacitor shell
   }
 }
 
@@ -97,6 +118,74 @@ function verifyCurrentAccess(): boolean {
   return false;
 }
 
+/**
+ * Global Crash-Recovery Error Boundary so corrupted TMDB data or memory glitches
+ * never leave users stuck on a blank screen.
+ */
+class AppErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; errorMessage: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMessage: "" };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return {
+      hasError: true,
+      errorMessage: error?.message || "Unexpected rendering error",
+    };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("RABBiT TV caught route error:", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="mx-auto my-12 max-w-lg rounded-3xl border border-red-500/40 bg-slate-950/90 p-6 sm:p-8 text-center shadow-2xl space-y-4">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-600/20 border border-red-400/40 text-3xl">
+            🛠️
+          </div>
+          <h2 className="text-xl font-black text-white">
+            Oops — This Screen Hit a Bump
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Your saved lists, license, and watch history are completely safe.
+            Tap below to reload cleanly.
+          </p>
+          <p className="rounded-xl bg-black/60 border border-white/10 p-2 text-[10px] font-mono text-red-300 truncate">
+            {this.state.errorMessage}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 py-3 px-4 text-xs font-black text-white shadow-lg cursor-pointer"
+            >
+              🔄 Reload App
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                purgeOldTmdbCaches();
+                window.location.href = "/";
+              }}
+              className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 py-3 px-4 text-xs font-extrabold text-amber-300 cursor-pointer"
+            >
+              🧹 Clear Cache & Fix
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export const Route = createRootRoute({
   component: RootComponent,
   head: () => ({
@@ -119,9 +208,16 @@ function RootComponent() {
   const [streamQuality, setStreamQuality] = useState<StreamQuality>("1080p");
   const [appTheme, setAppTheme] = useState<AppTheme>("violet");
   const [helpfulMouse, setHelpfulMouseState] = useState(false);
+  const [cursorStyle, setCursorStyleState] = useState<CursorStyle>("white");
   const [historyOverscale, setHistoryOverscaleState] =
     useState<HistoryScale>("off");
   const [largeButtons, setLargeButtonsState] = useState(false);
+  const [profileMascot, setProfileMascotState] = useState<string>("🐰");
+  const [kidsLocked, setKidsLockedState] = useState<boolean>(false);
+  const [showCornerClock, setShowCornerClockState] = useState<boolean>(false);
+  const [cornerClockText, setCornerClockText] = useState<string>("");
+  const [isOffline, setIsOffline] = useState<boolean>(false);
+
   const [userAgeInput, setUserAgeInput] = useState<string>("");
   const [profileNameInput, setProfileNameInput] = useState<string>("");
   const [savedProfileName, setSavedProfileName] = useState<string>("");
@@ -137,6 +233,8 @@ function RootComponent() {
   const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [headerSearchInput, setHeaderSearchInput] = useState("");
+
+  const sleepTimerRef = useRef<number | null>(null);
 
   const handleHeaderSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,25 +267,28 @@ function RootComponent() {
     }
   };
 
+  // Delayed app update check
   useEffect(() => {
-    const updateTimer = setTimeout(() => {
+    const updateTimer = window.setTimeout(() => {
       void checkForAppUpdates(true);
     }, 3000);
-    return () => clearTimeout(updateTimer);
+    return () => window.clearTimeout(updateTimer);
   }, []);
 
+  // Ensure default radio station is Heartbeat Radio (2000s)
   useEffect(() => {
     if (
       typeof window !== "undefined" &&
       !localStorage.getItem("rabtv_radio_url")
     ) {
-      const default80s = RADIO_STATIONS["80s"]?.[0]?.url;
-      if (default80s) {
-        bgAudio.setStation(default80s);
+      const defaultHeartbeat = getDefaultHeartbeatStationUrl();
+      if (defaultHeartbeat) {
+        bgAudio.setStation(defaultHeartbeat);
       }
     }
   }, []);
 
+  // Background lobby audio lifecycle
   useEffect(() => {
     const startAudio = () => {
       if (bgMusicState === "playing") {
@@ -222,8 +323,83 @@ function RootComponent() {
     };
   }, [bgMusicState]);
 
+  // Global soft remote click sound (single delegated listener, zero per-button cost)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleGlobalClick = (e: MouseEvent) => {
+      if (!getUiClickSounds()) return;
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest("button, a, select, [role='button']")) {
+        playSoftUiClick();
+      }
+    };
+    window.addEventListener("click", handleGlobalClick, { passive: true });
+    return () => window.removeEventListener("click", handleGlobalClick);
+  }, []);
+
+  // Live Wi-Fi online/offline monitor for streaming sticks
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsOffline(!navigator.onLine);
+    const goOffline = () => setIsOffline(true);
+    const goOnline = () => setIsOffline(false);
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
+    };
+  }, []);
+
+  // Couch Corner Clock updater (runs only when user turns it on)
+  useEffect(() => {
+    if (!showCornerClock || typeof window === "undefined") return;
+    const refreshClock = () =>
+      setCornerClockText(formatAppTime(new Date(), getClockFormat()));
+    refreshClock();
+    const interval = window.setInterval(refreshClock, 15000);
+    return () => window.clearInterval(interval);
+  }, [showCornerClock]);
+
+  // Active Couch Sleep Timer Engine
+  useEffect(() => {
+    const armSleepTimer = () => {
+      if (sleepTimerRef.current) {
+        window.clearTimeout(sleepTimerRef.current);
+        sleepTimerRef.current = null;
+      }
+      const minutes = getSleepTimerMinutes();
+      if (minutes > 0 && typeof window !== "undefined") {
+        sleepTimerRef.current = window.setTimeout(() => {
+          // Pause all active media & lobby radio
+          bgAudio.pause();
+          document.querySelectorAll("video, audio").forEach((el) => {
+            try {
+              (el as HTMLMediaElement).pause();
+            } catch {
+              // ignore
+            }
+          });
+          setSleepTimerMinutes(0);
+          window.dispatchEvent(new Event("rabtv_sleep_timer_triggered"));
+        }, minutes * 60 * 1000);
+      }
+    };
+
+    armSleepTimer();
+    window.addEventListener("rabtv_settings_updated", armSleepTimer);
+    return () => {
+      if (sleepTimerRef.current) window.clearTimeout(sleepTimerRef.current);
+      window.removeEventListener("rabtv_settings_updated", armSleepTimer);
+    };
+  }, []);
+
+  // Initial boot, Fire OS detection, document attributes, and startup tab routing
   useEffect(() => {
     if (typeof window !== "undefined") {
+      getOrCreateDeviceId();
+      applyAllSettingsToDocument();
+
       const ua = navigator.userAgent.toLowerCase();
       if (
         ua.includes("silk") ||
@@ -234,7 +410,8 @@ function RootComponent() {
       }
     }
 
-    if (!verifyCurrentAccess()) {
+    const authorized = verifyCurrentAccess();
+    if (!authorized) {
       setShowFirstStartModal(true);
     } else {
       const status = localStorage.getItem("rabtv_access_status");
@@ -251,39 +428,55 @@ function RootComponent() {
           Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
         );
       }
+
+      // Route once per session to the user's chosen Favorite Startup Tab if landing on "/"
+      if (
+        typeof window !== "undefined" &&
+        window.location.pathname === "/" &&
+        !window.location.search &&
+        !sessionStorage.getItem(STARTUP_ROUTED_KEY)
+      ) {
+        sessionStorage.setItem(STARTUP_ROUTED_KEY, "true");
+        const prefTab = getStartupTab();
+        if (prefTab === "Live TV") {
+          navigate({ to: "/live-tv" });
+        } else if (prefTab === "Watch History") {
+          navigate({ to: "/watch-history" });
+        } else if (
+          prefTab === "Movies" ||
+          prefTab === "TV Shows" ||
+          prefTab === "My List"
+        ) {
+          navigate({ to: "/", search: { tab: prefTab } });
+        }
+      }
     }
 
-    setIsAdmin(localStorage.getItem("rabtv_is_admin") === "true");
-
-    const loadedTheme = getSavedTheme();
-    setCardSize(getSavedCardSize());
-    setStreamQuality(getSavedStreamQuality());
-    setAppTheme(loadedTheme);
-    setHelpfulMouseState(getHelpfulMouse());
-    setHistoryOverscaleState(getHistoryOverscale());
-    setLargeButtonsState(getLargeButtons());
-    void updateNativeStatusBar(loadedTheme);
-
-    const existingAge = localStorage.getItem("rabtv_user_age");
-    if (existingAge) setUserAgeInput(existingAge);
-
-    const existingName = localStorage.getItem("rabtv_profile_name");
-    if (existingName) {
-      setProfileNameInput(existingName);
-      setSavedProfileName(existingName);
-    }
-
-    const handleSettingsUpdate = () => {
+    const syncRootStateFromSettings = () => {
+      applyAllSettingsToDocument();
       const updatedTheme = getSavedTheme();
       setCardSize(getSavedCardSize());
       setStreamQuality(getSavedStreamQuality());
       setAppTheme(updatedTheme);
       setHelpfulMouseState(getHelpfulMouse());
+      setCursorStyleState(getCursorStyle());
       setHistoryOverscaleState(getHistoryOverscale());
       setLargeButtonsState(getLargeButtons());
+      setProfileMascotState(getProfileMascot());
+      setKidsLockedState(getKidsModeLocked());
+      setShowCornerClockState(getShowCornerClock());
+      setCornerClockText(formatAppTime(new Date(), getClockFormat()));
       void updateNativeStatusBar(updatedTheme);
+
+      const updatedAge = localStorage.getItem("rabtv_user_age");
+      if (updatedAge) setUserAgeInput(updatedAge);
+
       const updatedName = localStorage.getItem("rabtv_profile_name");
-      if (updatedName) setSavedProfileName(updatedName);
+      if (updatedName) {
+        setProfileNameInput(updatedName);
+        setSavedProfileName(updatedName);
+      }
+
       setIsAdmin(localStorage.getItem("rabtv_is_admin") === "true");
       const status = localStorage.getItem("rabtv_access_status");
       if (status === "trial") {
@@ -303,13 +496,14 @@ function RootComponent() {
       }
     };
 
-    window.addEventListener("rabtv_settings_updated", handleSettingsUpdate);
+    syncRootStateFromSettings();
+    window.addEventListener("rabtv_settings_updated", syncRootStateFromSettings);
     return () =>
       window.removeEventListener(
         "rabtv_settings_updated",
-        handleSettingsUpdate
+        syncRootStateFromSettings
       );
-  }, []);
+  }, [navigate]);
 
   const handleSizeChange = (newSize: CardSize) => {
     saveCardSize(newSize);
@@ -510,14 +704,16 @@ function RootComponent() {
     { id: "cyan", label: "🔷 Cyan / Sky" },
   ];
 
+  const activeCursorUri = helpfulMouse ? getCursorSvgDataUri(cursorStyle) : "";
+
   return (
     <html lang="en" data-theme={appTheme}>
       <head>
         <HeadContent />
-        {helpfulMouse && (
+        {helpfulMouse && activeCursorUri && (
           <style>{`
             *, button, a, select, input, [role="button"] {
-              cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 24 24' fill='%23ffffff' stroke='%23000000' stroke-width='2'%3E%3Cpath d='M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z'/%3E%3C/svg%3E"), auto !important;
+              cursor: ${activeCursorUri}, auto !important;
             }
           `}</style>
         )}
@@ -532,6 +728,13 @@ function RootComponent() {
         <AppWallpaper />
         <Screensaver />
         <AuthProvider>
+          {/* Live Wi-Fi Offline Warning Banner */}
+          {isOffline && (
+            <div className="rabtv-vidsrc-protected sticky top-0 z-50 w-full bg-red-700/95 border-b border-red-400/60 px-4 py-2 text-center text-xs font-extrabold text-white shadow-lg">
+              📡 No Internet Connection — Waiting for Wi-Fi to reconnect...
+            </div>
+          )}
+
           <header
             className={`rabtv-vidsrc-protected sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(
               appTheme
@@ -585,9 +788,18 @@ function RootComponent() {
                 </form>
               )}
 
-              {/* Far Right: Profile Pill */}
+              {/* Far Right: Profile Pill with Mascot & Kids Lock Indicator */}
               {savedProfileName && !showFirstStartModal && (
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {kidsLocked && (
+                    <span
+                      className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider"
+                      title="Kids Safe Mode Locked"
+                    >
+                      🧒 Kids
+                    </span>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => setShowProfileMenu((prev) => !prev)}
@@ -602,18 +814,20 @@ function RootComponent() {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-none text-xs">
+                    <span className="truncate max-w-[90px] sm:max-w-[140px] md:max-w-none text-xs">
+                      <span className="mr-1">{profileMascot}</span>
                       <strong className="text-white">{savedProfileName}</strong>{" "}
                       {isAdmin
                         ? "(Admin)"
                         : isTrialActive
-                        ? `(${trialDaysRemaining}d)`
-                        : ""}
+                          ? `(${trialDaysRemaining}d)`
+                          : ""}
                     </span>
                     <span className="text-[10px] text-slate-300 group-hover:translate-x-0.5 transition-transform">
                       ☰
                     </span>
                   </button>
+
                   {isTrialActive && (
                     <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
                       <span>⏳ {trialDaysRemaining}d</span>
@@ -660,9 +874,21 @@ function RootComponent() {
             getPrimaryAccentColor={getPrimaryAccentColor}
           />
 
-          <main className="rabtv-vidsrc-protected mx-auto max-w-7xl px-4 py-4 sm:px-6 md:py-6 overflow-x-hidden pb-20">
-            <Outlet />
+          {/* Main Route Container with TV Overscan Safe-Zone & Crash Shield */}
+          <main className="rabtv-vidsrc-protected rabtv-overscan-shell mx-auto max-w-7xl px-4 py-4 sm:px-6 md:py-6 overflow-x-hidden pb-20">
+            <AppErrorBoundary>
+              <Outlet />
+            </AppErrorBoundary>
           </main>
+
+          {/* Optional Couch Corner Clock */}
+          {showCornerClock && cornerClockText && !showFirstStartModal && (
+            <div className="rabtv-vidsrc-protected fixed bottom-4 left-4 z-30 pointer-events-none rounded-xl bg-black/65 border border-white/15 px-3 py-1.5 shadow-xl backdrop-blur-md">
+              <span className="text-xs font-extrabold tracking-wider text-slate-100">
+                🕒 {cornerClockText}
+              </span>
+            </div>
+          )}
 
           {/* USER NOTIFICATION LISTENER TOAST */}
           <UserNotifier appTheme={appTheme} />
@@ -672,11 +898,7 @@ function RootComponent() {
             isOpen={showBugModal}
             onClose={() => setShowBugModal(false)}
             userName={savedProfileName || "Friend"}
-            userUnlockCode={
-              typeof window !== "undefined"
-                ? localStorage.getItem(AGE_LOCK_KEY) || "0000"
-                : "0000"
-            }
+            userUnlockCode={getAgeLockPinSuffix()}
           />
 
           {/* PUBLIC COMMUNITY BUG FEED MODAL */}
