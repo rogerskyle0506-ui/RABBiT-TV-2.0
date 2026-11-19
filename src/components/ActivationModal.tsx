@@ -10,6 +10,11 @@ import {
   saveTheme,
   setHelpfulMouse,
   saveUserAge,
+  setRamMode,
+  getRamMode,
+  saveAgeLockPinSecure,
+  isValidAgeLockPin,
+  applyAllSettingsToDocument,
 } from "@/lib/settings";
 import { sendPermanentActivationAlert } from "@/lib/report";
 
@@ -21,16 +26,12 @@ const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
 const ADMIN_NAME = "Rabbit";
 const ADMIN_BIRTH_YEAR = 1988;
 const TRIAL_CODE = "9654";
-const AGE_LOCK_KEY = "rabtv_age_passcode";
-const RAM_MODE_STORAGE_KEY = "rabtv_ram_mode";
 const AUTH_LOCKOUT_KEY = "rabtv_activation_lockout_until";
 
 const BANNER_IMAGE_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/HeaderFamily.jpg";
 const RABBIT_HEADER_PILL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
-const RABBIT_PANEL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
@@ -47,7 +48,6 @@ function isAdminCredentials(name: string, age: number): boolean {
 
 /**
  * Checks remote `admin_config.json` on Gist to see if 7-day trials are currently allowed.
- * Defaults to true if `admin_config.json` does not exist yet.
  */
 async function checkRemoteTrialAllowed(): Promise<{
   allowed: boolean;
@@ -84,7 +84,6 @@ async function checkRemoteTrialAllowed(): Promise<{
 
 /**
  * Verifies and consumes a single-use unlock key from `keys.json` on Gist.
- * Also validates owner name & age binding if the key was generated for a specific user.
  */
 async function verifyUnlockCodeWithGitHub(
   name: string,
@@ -138,7 +137,6 @@ async function verifyUnlockCodeWithGitHub(
     });
 
     if (matchedIndex === -1) {
-      // Check if the key exists but was already claimed
       const alreadyUsed = keysList.some(
         (item: any) =>
           typeof item === "object" &&
@@ -161,7 +159,7 @@ async function verifyUnlockCodeWithGitHub(
 
     const matchedItem = keysList[matchedIndex];
 
-    // If the key has a specific owner assigned (e.g., "John (35)"), validate name & age match
+    // Validate owner name & age binding if key was generated for a specific user
     if (
       typeof matchedItem === "object" &&
       matchedItem !== null &&
@@ -198,7 +196,7 @@ async function verifyUnlockCodeWithGitHub(
       }
     }
 
-    // Single-use enforcement: Mark key as inactive upon use
+    // Single-use enforcement
     if (typeof matchedItem === "object" && matchedItem !== null) {
       keysList[matchedIndex] = {
         ...matchedItem,
@@ -297,16 +295,12 @@ export function ActivationModal({
   });
   const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
 
-  // Hardware RAM Mode optimization for 1-2GB Streaming Sticks
-  const [ramMode, setRamMode] = useState<"low" | "high">(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(RAM_MODE_STORAGE_KEY);
-      if (saved === "low" || saved === "high") return saved;
-    }
-    return "low";
+  // Hardware RAM Mode optimization synced cleanly through settings.ts
+  const [ramMode, setRamModeLocal] = useState<"low" | "high">(() => {
+    const saved = getRamMode();
+    return saved === "high" ? "high" : "low";
   });
 
-  // Countdown ticker when brute-force lockout is active
   useEffect(() => {
     if (!lockoutUntil || Date.now() >= lockoutUntil) {
       setLockoutSecondsLeft(0);
@@ -327,15 +321,8 @@ export function ActivationModal({
   if (!isOpen) return null;
 
   const handleRamModeSelect = (mode: "low" | "high") => {
+    setRamModeLocal(mode);
     setRamMode(mode);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(RAM_MODE_STORAGE_KEY, mode);
-      document.documentElement.setAttribute("data-ram-mode", mode);
-    }
-  };
-
-  const saveAgeLockCode = (code: string) => {
-    localStorage.setItem(AGE_LOCK_KEY, code);
   };
 
   const registerFailedAttempt = (msg: string) => {
@@ -361,7 +348,7 @@ export function ActivationModal({
     }
   };
 
-  const completePermanentLogin = (
+  const completePermanentLogin = async (
     finalName: string,
     parsedAge: number,
     ageLockCode: string,
@@ -370,13 +357,13 @@ export function ActivationModal({
     localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
     localStorage.setItem("rabtv_access_status", "permanent");
     localStorage.removeItem("rabtv_trial_start_timestamp");
-    localStorage.setItem(RAM_MODE_STORAGE_KEY, ramMode);
 
-    // Stamp session verification so session knows it's authorized
     sessionStorage.setItem("rabtv_session_verified", "true");
     sessionStorage.removeItem(AUTH_LOCKOUT_KEY);
 
-    saveAgeLockCode(ageLockCode);
+    // Save hashed PIN & RAM mode through settings.ts so memoryCache stays 100% synced
+    await saveAgeLockPinSecure(ageLockCode);
+    setRamMode(ramMode);
 
     if (options?.admin) {
       localStorage.setItem("rabtv_is_admin", "true");
@@ -394,6 +381,7 @@ export function ActivationModal({
 
     saveUserAge(parsedAge);
     localStorage.setItem("rabtv_profile_name", finalName);
+    applyAllSettingsToDocument();
 
     if (!options?.admin) {
       sendPermanentActivationAlert(finalName);
@@ -437,9 +425,9 @@ export function ActivationModal({
       return;
     }
 
-    // Support 4 to 6 digit PINs (fixes Fire TV Stick 5-digit PIN requirement)
+    // 4 to 6 digit PIN check (Fire TV Stick compatible)
     const ageLock = ageLockInput.trim();
-    if (!/^\d{4,6}$/.test(ageLock)) {
+    if (!isValidAgeLockPin(ageLock)) {
       setAgeLockError(true);
       setNameErrorNotice(false);
       setAgeErrorNotice(false);
@@ -451,7 +439,7 @@ export function ActivationModal({
 
     // 1. Admin Direct Authentication
     if (isAdminCredentials(cleanName, parsedAge)) {
-      completePermanentLogin(ADMIN_NAME, parsedAge, ageLock, {
+      await completePermanentLogin(ADMIN_NAME, parsedAge, ageLock, {
         admin: true,
         forceTheme: "red",
         forceSize: "small",
@@ -461,7 +449,7 @@ export function ActivationModal({
 
     setIsVerifying(true);
     try {
-      // 2. 7-Day Free Trial Flow (`9654`)
+      // 2. 7-Day Free Trial Flow (9654)
       if (enteredCode === TRIAL_CODE) {
         const trialAlreadyUsed =
           localStorage.getItem("rabtv_trial_used_flag") === "true";
@@ -485,19 +473,20 @@ export function ActivationModal({
         localStorage.setItem("rabtv_access_status", "trial");
         localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));
         localStorage.setItem("rabtv_trial_used_flag", "true");
-        localStorage.setItem(RAM_MODE_STORAGE_KEY, ramMode);
         localStorage.removeItem("rabtv_is_admin");
 
         sessionStorage.setItem("rabtv_session_verified", "true");
         sessionStorage.removeItem(AUTH_LOCKOUT_KEY);
 
-        saveAgeLockCode(ageLock);
+        await saveAgeLockPinSecure(ageLock);
+        setRamMode(ramMode);
         saveCardSize(cardSize);
         saveStreamQuality(streamQuality);
         saveTheme(appTheme);
         setHelpfulMouse(helpfulMouse);
         saveUserAge(parsedAge);
         localStorage.setItem("rabtv_profile_name", cleanName);
+        applyAllSettingsToDocument();
 
         window.dispatchEvent(new Event("rabtv_settings_updated"));
         onAuthorized();
@@ -511,7 +500,7 @@ export function ActivationModal({
         enteredCode
       );
       if (verification.valid) {
-        completePermanentLogin(cleanName, parsedAge, ageLock);
+        await completePermanentLogin(cleanName, parsedAge, ageLock);
         return;
       }
 
@@ -527,31 +516,27 @@ export function ActivationModal({
     <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-5 backdrop-blur-xl overflow-y-auto">
       <form
         onSubmit={handleFirstTimeAuthorize}
-        className={`relative w-full max-w-xl my-auto rounded-[32px] border border-white/20 text-white shadow-[0_25px_80px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] ${getCardBackground(
+        className={`relative w-full max-w-xl my-auto rounded-[28px] border-2 border-cyan-400/35 text-white shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_35px_rgba(56,189,248,0.2),0_0_25px_rgba(239,68,68,0.18)] ${getCardBackground(
           appTheme
         )} backdrop-blur-2xl max-h-[94dvh] overflow-hidden flex flex-col`}
       >
-        {/* Layered Splash Banner + Crystal Neon Frame Background */}
+        {/* Clean Top & Bottom Neon Laser Accents (Never Collides with Inner Elements) */}
+        <div className="absolute inset-x-10 top-0 h-[2px] bg-gradient-to-r from-cyan-400 via-violet-400 to-red-500 opacity-90 z-20 pointer-events-none" />
+        <div className="absolute inset-x-10 bottom-0 h-[2px] bg-gradient-to-r from-red-500 via-violet-400 to-cyan-400 opacity-90 z-20 pointer-events-none" />
+
+        {/* Subtle Splash Banner Background */}
         <div className="absolute inset-0 pointer-events-none z-0">
           <img
             src={BANNER_IMAGE_URL}
             alt="Splash Banner"
             className="w-full h-full object-cover opacity-20 filter blur-[2px] scale-105"
           />
-          <div className="absolute inset-0 bg-slate-950/80" />
-          <div
-            className="absolute inset-0 opacity-75 mix-blend-lighten"
-            style={{
-              backgroundImage: `url(${RABBIT_PANEL})`,
-              backgroundSize: "100% 100%",
-              backgroundRepeat: "no-repeat",
-            }}
-          />
+          <div className="absolute inset-0 bg-slate-950/85" />
         </div>
 
-        <div className="relative z-10 p-5 sm:p-7 space-y-4 overflow-y-auto scrollbar-none max-h-[94dvh]">
+        <div className="relative z-10 p-4 sm:p-7 space-y-4 overflow-y-auto scrollbar-none max-h-[94dvh]">
           {/* Header Identity */}
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-2.5">
             <div className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden border-2 border-cyan-400/50 shadow-[0_0_25px_rgba(56,189,248,0.35)] bg-black">
               <img
                 src={headerIconUrl}
@@ -560,18 +545,18 @@ export function ActivationModal({
               />
             </div>
 
-            <div className="relative inline-flex items-center justify-center px-6 py-1.5 rounded-2xl overflow-hidden">
+            <div className="relative inline-flex max-w-full items-center justify-center px-4 sm:px-6 py-1.5 rounded-2xl overflow-hidden border border-white/15">
               <div
-                className="absolute inset-0 pointer-events-none opacity-85"
+                className="absolute inset-0 pointer-events-none opacity-80"
                 style={{
                   backgroundImage: `url(${RABBIT_HEADER_PILL})`,
                   backgroundSize: "115% 360%",
                   backgroundPosition: "center center",
                 }}
               />
-              <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px]" />
+              <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" />
               <h2
-                className={`relative z-10 text-xl sm:text-2xl font-black tracking-wide drop-shadow ${getPrimaryAccentColor(
+                className={`relative z-10 whitespace-nowrap text-base sm:text-xl font-black tracking-wide drop-shadow ${getPrimaryAccentColor(
                   appTheme
                 )}`}
               >
@@ -579,17 +564,17 @@ export function ActivationModal({
               </h2>
             </div>
 
-            <p className="text-xs sm:text-sm font-medium text-slate-200 max-w-md mx-auto">
+            <p className="text-xs sm:text-sm font-medium text-slate-200 max-w-md mx-auto leading-relaxed">
               Top movies, trending series, and 280+ live TV channels—zero ads,
               zero recurring subscriptions.
             </p>
           </div>
 
-          {/* Soft-Launch & Trial Notice Banner */}
-          <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-500/15 via-black/60 to-amber-500/15 p-3 text-xs text-amber-200 shadow-inner space-y-1 text-center backdrop-blur-md">
+          {/* Trial Notice Banner */}
+          <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-500/15 via-black/65 to-amber-500/15 p-3 text-xs text-amber-200 shadow-inner text-center backdrop-blur-md">
             <p>
               <strong>⏳ Free 7-Day Trial:</strong> Enter{" "}
-              <strong className="text-white font-mono bg-black/60 px-1.5 py-0.5 rounded border border-amber-400/40">
+              <strong className="text-white font-mono bg-black/65 px-1.5 py-0.5 rounded border border-amber-400/40">
                 9654
               </strong>{" "}
               below for a one-time 7-day trial on this device, or enter your
@@ -615,7 +600,7 @@ export function ActivationModal({
                   if (nameErrorNotice) setNameErrorNotice(false);
                 }}
                 placeholder="Enter Name"
-                className="w-full rounded-xl border border-white/15 bg-black/70 px-3.5 py-2.5 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                className="w-full rounded-xl border border-white/15 bg-black/75 px-3.5 py-2.5 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
               />
               {nameErrorNotice && (
                 <p className="text-[11px] font-bold text-red-400">
@@ -638,7 +623,7 @@ export function ActivationModal({
                   if (ageErrorNotice) setAgeErrorNotice(false);
                 }}
                 placeholder="Age"
-                className="w-full rounded-xl border border-white/15 bg-black/70 px-3.5 py-2.5 text-center text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                className="w-full rounded-xl border border-white/15 bg-black/75 px-3.5 py-2.5 text-center text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
               />
               {ageErrorNotice && (
                 <p className="text-[11px] font-bold text-red-400">
@@ -650,19 +635,19 @@ export function ActivationModal({
 
           {/* 2. Mandatory 4 to 6 Digit Age-Lock PIN (Fire TV Stick Ready) */}
           <div className="space-y-1.5 border-t border-white/15 pt-3.5">
-            <div className="flex items-center justify-between">
-              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
-                Create Age-Lock PIN (4 to 6 Digits){" "}
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 truncate">
+                Age-Lock PIN (4–6 Digits){" "}
                 <span className="text-red-400">*</span>
               </label>
               <span
-                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
-                  /^\d{4,6}$/.test(ageLockInput)
+                className={`whitespace-nowrap shrink-0 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                  isValidAgeLockPin(ageLockInput)
                     ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-300"
                     : "bg-white/5 border-white/15 text-cyan-300"
                 }`}
               >
-                {ageLockInput.length}/6 Digits • Fire Stick Ready
+                {ageLockInput.length}/6 • Fire TV OK
               </span>
             </div>
 
@@ -684,12 +669,12 @@ export function ActivationModal({
                   if (ageLockError) setAgeLockError(false);
                 }}
                 placeholder="••••••"
-                className="w-full rounded-xl border border-white/15 bg-black/70 pl-10 pr-12 py-2.5 text-center text-lg font-black tracking-[0.35em] text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                className="w-full rounded-xl border border-white/15 bg-black/75 pl-14 pr-14 py-2.5 text-center text-lg font-black tracking-[0.3em] text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
               />
               <button
                 type="button"
                 onClick={() => setShowPinDigits((prev) => !prev)}
-                className="absolute right-2.5 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-bold text-slate-200 transition cursor-pointer"
+                className="absolute right-2.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-bold text-slate-200 transition cursor-pointer"
                 title={showPinDigits ? "Hide PIN" : "Show PIN"}
               >
                 {showPinDigits ? "Hide" : "Show"}
@@ -709,18 +694,18 @@ export function ActivationModal({
               <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
                 Select Neon Console Theme:
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {allThemesList.map((t) => (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => onThemeChange(t.id)}
-                    className={`rounded-xl border py-2 px-1.5 text-[11px] sm:text-xs font-bold transition-all cursor-pointer hover:scale-[1.03] focus:scale-[1.03] focus:outline-none ${
+                    className={`rounded-xl border py-2 px-2 text-xs font-bold whitespace-nowrap truncate transition-all cursor-pointer hover:scale-[1.03] focus:scale-[1.03] focus:outline-none ${
                       appTheme === t.id
                         ? `border-white/40 ${getPrimaryBgColor(
                             t.id
                           )} text-white shadow-lg`
-                        : "border-white/10 bg-black/55 text-slate-300 hover:bg-white/10"
+                        : "border-white/10 bg-black/60 text-slate-300 hover:bg-white/10"
                     }`}
                   >
                     {t.label}
@@ -734,24 +719,31 @@ export function ActivationModal({
                 Select Poster Grid Size:
               </label>
               <div className="grid grid-cols-3 gap-2">
-                {(["small", "medium", "large"] as CardSize[]).map((size) => (
+                {(
+                  [
+                    { id: "small", title: "Small", sub: "TV Grid" },
+                    { id: "medium", title: "Medium", sub: "Balanced" },
+                    { id: "large", title: "Large", sub: "Cinema" },
+                  ] as { id: CardSize; title: string; sub: string }[]
+                ).map((size) => (
                   <button
-                    key={size}
+                    key={size.id}
                     type="button"
-                    onClick={() => onSizeChange(size)}
-                    className={`rounded-xl border py-2 px-1.5 text-[11px] sm:text-xs font-bold transition-all cursor-pointer hover:scale-[1.03] focus:scale-[1.03] focus:outline-none ${
-                      cardSize === size
+                    onClick={() => onSizeChange(size.id)}
+                    className={`rounded-xl border py-2 px-1.5 text-center transition-all cursor-pointer hover:scale-[1.03] focus:scale-[1.03] focus:outline-none ${
+                      cardSize === size.id
                         ? `border-white/40 ${getPrimaryBgColor(
                             appTheme
                           )} text-white shadow-lg`
-                        : "border-white/10 bg-black/55 text-slate-300 hover:bg-white/10"
+                        : "border-white/10 bg-black/60 text-slate-300 hover:bg-white/10"
                     }`}
                   >
-                    {size === "small"
-                      ? "Small (TV/Grid)"
-                      : size === "medium"
-                        ? "Medium (Balanced)"
-                        : "Large (Cinema)"}
+                    <span className="block text-xs font-extrabold">
+                      {size.title}
+                    </span>
+                    <span className="block text-[9px] opacity-85">
+                      {size.sub}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -760,9 +752,8 @@ export function ActivationModal({
 
           {/* 4. Hardware Optimization & XL TV Mouse Pointer */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 border-t border-white/15 pt-3.5">
-            {/* Hardware RAM Profile */}
-            <div className="flex items-center justify-between rounded-xl bg-black/55 border border-white/10 px-3 py-2.5">
-              <div className="pr-2">
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/15 px-3 py-2.5">
+              <div className="min-w-0">
                 <span className="block text-[11px] font-extrabold uppercase tracking-wider text-cyan-300">
                   📟 Low RAM Stick Mode
                 </span>
@@ -787,9 +778,8 @@ export function ActivationModal({
               </button>
             </div>
 
-            {/* XL Mouse Pointer */}
-            <div className="flex items-center justify-between rounded-xl bg-black/55 border border-white/10 px-3 py-2.5">
-              <div className="pr-2">
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/15 px-3 py-2.5">
+              <div className="min-w-0">
                 <span className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
                   🖱️ XL Mouse Pointer
                 </span>
@@ -813,10 +803,10 @@ export function ActivationModal({
             </div>
           </div>
 
-          {/* 5. Unlock Code or Trial (`9654`) */}
+          {/* 5. Unlock Code or Trial (9654) */}
           <div className="space-y-2.5 border-t border-white/15 pt-3.5">
             <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
-              Lifetime Unlock Key or Trial Code (`9654`):
+              Lifetime Unlock Key or Trial Code (9654):
             </label>
             <input
               type="text"
@@ -827,12 +817,12 @@ export function ActivationModal({
                 setPasscodeInput(e.target.value);
                 if (passcodeError) setPasscodeError(false);
               }}
-              placeholder="Enter Unlock Key or 9654"
-              className="w-full rounded-xl border border-cyan-400/35 bg-black/80 px-4 py-3 text-center text-base sm:text-lg font-black tracking-widest text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50 transition"
+              placeholder="Unlock key or 9654"
+              className="w-full rounded-xl border border-cyan-400/40 bg-black/80 px-3 py-3 text-center text-sm sm:text-base font-black tracking-wider text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50 transition"
             />
 
             {passcodeError && (
-              <div className="rounded-xl bg-red-950/60 border border-red-500/40 p-2.5 space-y-1 text-center">
+              <div className="rounded-xl bg-red-950/70 border border-red-500/45 p-2.5 space-y-1 text-center">
                 <p className="text-xs font-bold text-red-300">
                   {passcodeErrorMsg}
                 </p>
@@ -864,7 +854,7 @@ export function ActivationModal({
             )}
 
             {/* Direct Contact Support Card */}
-            <div className="rounded-xl border border-white/10 bg-black/50 p-2.5 text-center text-xs text-slate-300 space-y-1 backdrop-blur-md">
+            <div className="rounded-xl border border-white/15 bg-black/60 p-2.5 text-center text-xs text-slate-300 space-y-1 backdrop-blur-md">
               <p className="font-bold text-white">
                 Need an activation code or support?
               </p>
