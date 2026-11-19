@@ -4,7 +4,12 @@ import {
   LIFETIME_PRICE_CAD,
   MIN_CONFIRMED_REFERRALS,
   PAYOUT_PER_EXTRA_REFERRAL_CAD,
+  STEP_UP_CONFIRMED_THRESHOLD,
+  STEP_UP_PAYOUT_CAD,
+  PAYOUT_METHODS,
+  type PayoutMethod,
   getOrCreateMyReferralCode,
+  getSavedPayoutMethod,
   getSavedPayoutInfo,
   getClaimedReferralCode,
   fetchReferralSystemData,
@@ -30,6 +35,18 @@ interface ReferralModalProps {
 
 type ModalTab = "my_code" | "claim_code" | "my_friends";
 
+function getPayoutPlaceholder(method: PayoutMethod): string {
+  if (method === "PayPal") return "PayPal email or @paypal.me username";
+  if (method === "Cash") return "Your phone # or meetup note for Cash payout";
+  return "e-Transfer email address or phone number";
+}
+
+function getPayoutMethodIcon(method: PayoutMethod): string {
+  if (method === "PayPal") return "🅿️";
+  if (method === "Cash") return "💵";
+  return "🏦";
+}
+
 export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
   const [activeTab, setActiveTab] = useState<ModalTab>("my_code");
   const [systemData, setSystemData] = useState<ReferralSystemData | null>(null);
@@ -42,6 +59,9 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
 
   const [profileName, setProfileName] = useState<string>("");
   const [myCode, setMyCode] = useState<string>("");
+  const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>(() =>
+    getSavedPayoutMethod()
+  );
   const [payoutInfo, setPayoutInfo] = useState<string>("");
   const [friendCodeInput, setFriendCodeInput] = useState<string>("");
   const [claimContactInput, setClaimContactInput] = useState<string>("");
@@ -73,27 +93,33 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
           ? localStorage.getItem("rabtv_profile_name")
           : "") || "Member";
       const code = getOrCreateMyReferralCode(savedName);
+      const savedMethod = getSavedPayoutMethod();
       const savedPayout = getSavedPayoutInfo();
 
       setProfileName(savedName);
       setMyCode(code);
+      setPayoutMethod(savedMethod);
       setPayoutInfo(savedPayout);
       setClaimedCode(getClaimedReferralCode());
 
       const data = await fetchReferralSystemData(force);
 
-      // Automatically register this user's referral code in Gist on first open
       if (!data.profiles[code]) {
         await registerOrUpdateMyReferrerProfile({
           name: savedName,
+          payoutMethod: savedMethod,
           payoutInfo: savedPayout,
         });
         const refreshed = await fetchReferralSystemData(true);
         setSystemData(refreshed);
       } else {
         setSystemData(data);
-        if (!savedPayout && data.profiles[code]?.payoutInfo) {
-          setPayoutInfo(data.profiles[code].payoutInfo || "");
+        const cloudProfile = data.profiles[code];
+        if (cloudProfile?.payoutMethod) {
+          setPayoutMethod(cloudProfile.payoutMethod);
+        }
+        if (!savedPayout && cloudProfile?.payoutInfo) {
+          setPayoutInfo(cloudProfile.payoutInfo);
         }
       }
     } catch (err) {
@@ -202,11 +228,15 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
     setBusy(true);
     const res = await registerOrUpdateMyReferrerProfile({
       name: profileName,
+      payoutMethod,
       payoutInfo,
     });
     setBusy(false);
     if (res.ok) {
-      showMessage("ok", "✓ Saved your payout details!");
+      showMessage(
+        "ok",
+        `✓ Saved ${payoutMethod} payout details for Admin!`
+      );
       void loadAll(true);
     } else {
       showMessage("err", res.error || "Could not sync payout details.");
@@ -234,9 +264,18 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
   };
 
   const confirmedCount = mySummary?.confirmedPaidCount || 0;
-  const progressSteps = Math.min(MIN_CONFIRMED_REFERRALS, confirmedCount);
-  const progressPct = Math.round(
-    (progressSteps / MIN_CONFIRMED_REFERRALS) * 100
+  const isUnlocked = Boolean(mySummary?.isPayoutUnlocked);
+  const isStepUp = Boolean(mySummary?.isStepUpTier);
+
+  const unlockPct = Math.round(
+    (Math.min(MIN_CONFIRMED_REFERRALS, confirmedCount) /
+      MIN_CONFIRMED_REFERRALS) *
+      100
+  );
+  const stepUpPct = Math.round(
+    (Math.min(STEP_UP_CONFIRMED_THRESHOLD, confirmedCount) /
+      STEP_UP_CONFIRMED_THRESHOLD) *
+      100
   );
 
   return (
@@ -248,7 +287,6 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
           isLowRam ? "" : "backdrop-blur-2xl"
         } text-white overflow-hidden max-h-[90dvh] flex flex-col ${themeTokens.border}`}
       >
-        {/* Top & Bottom Neon Laser Accent */}
         <div
           className={`absolute inset-x-10 top-0 h-[2px] bg-gradient-to-r ${themeTokens.laser} pointer-events-none z-20`}
         />
@@ -262,14 +300,18 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
             <div>
               <h3 className="text-base sm:text-lg font-black text-amber-300 flex items-center gap-2">
                 <span>💸</span>
-                <span>Refer Friends & Earn Cash</span>
+                <span>Refer Friends & Earn Unlimited Cash</span>
               </h3>
               <p className="text-[11px] text-slate-400">
-                ${LIFETIME_PRICE_CAD} Lifetime Access • Confirm {MIN_CONFIRMED_REFERRALS} paid friends, then earn{" "}
+                ${LIFETIME_PRICE_CAD} Lifetime • {MIN_CONFIRMED_REFERRALS} Paid
+                Unlock →{" "}
                 <strong className="text-emerald-300">
-                  ${PAYOUT_PER_EXTRA_REFERRAL_CAD} per friend
+                  ${PAYOUT_PER_EXTRA_REFERRAL_CAD}/friend
                 </strong>{" "}
-                afterwards!
+                • After {STEP_UP_CONFIRMED_THRESHOLD} Paid →{" "}
+                <strong className="text-amber-300">
+                  ${STEP_UP_PAYOUT_CAD}/friend (No Limit!)
+                </strong>
               </p>
             </div>
 
@@ -294,7 +336,6 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
             </div>
           </div>
 
-          {/* Feedback Toast */}
           {feedback && (
             <div
               className={`rounded-xl border px-3 py-2 text-xs font-bold ${
@@ -345,67 +386,140 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
             </div>
           ) : activeTab === "my_code" ? (
             <>
+              {/* Revoked Notice */}
+              {mySummary?.revoked && (
+                <div className="rounded-2xl border-2 border-red-500/60 bg-red-950/50 p-4 text-xs text-red-200 space-y-1">
+                  <p className="font-black text-red-300">
+                    🚫 Referral Code Deactivated
+                  </p>
+                  <p>
+                    Your referral link has been suspended by Admin and cannot
+                    accept new signups.
+                    {mySummary.revokedReason
+                      ? ` Reason: ${mySummary.revokedReason}`
+                      : ""}
+                  </p>
+                </div>
+              )}
+
               {/* Hero Code Card */}
               <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-br from-slate-900 via-black to-slate-950 p-4 sm:p-5 text-center space-y-3 shadow-xl">
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
-                  Your Personal Referral Code
-                </span>
-                <div className="font-mono text-2xl sm:text-3xl font-black tracking-widest text-amber-300 drop-shadow">
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
+                    Your Personal Referral Code
+                  </span>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase border ${
+                      isStepUp
+                        ? "bg-amber-500/25 border-amber-400/60 text-amber-300"
+                        : "bg-cyan-500/15 border-cyan-400/40 text-cyan-300"
+                    }`}
+                  >
+                    {isStepUp
+                      ? `🏆 VIP Tier: $${STEP_UP_PAYOUT_CAD}/Friend`
+                      : `Active Rate: $${PAYOUT_PER_EXTRA_REFERRAL_CAD}/Friend`}
+                  </span>
+                </div>
+
+                <div
+                  className={`font-mono text-2xl sm:text-3xl font-black tracking-widest drop-shadow ${
+                    mySummary?.revoked
+                      ? "text-red-400 line-through opacity-60"
+                      : "text-amber-300"
+                  }`}
+                >
                   {myCode}
                 </div>
+
                 <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                   <button
                     type="button"
+                    disabled={Boolean(mySummary?.revoked)}
                     onClick={() => void handleCopyCode()}
                     className={`rounded-xl px-4 ${
                       largeButtons ? "py-2.5 text-xs" : "py-2 text-xs"
-                    } font-extrabold cursor-pointer transition ${themeTokens.btn}`}
+                    } font-extrabold cursor-pointer transition disabled:opacity-40 ${themeTokens.btn}`}
                   >
                     {copiedCode ? "✓ Copied!" : "📋 Copy Code"}
                   </button>
                   <button
                     type="button"
+                    disabled={Boolean(mySummary?.revoked)}
                     onClick={handleWhatsAppShare}
                     className={`rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 ${
                       largeButtons ? "py-2.5 text-xs" : "py-2 text-xs"
-                    } font-extrabold text-white cursor-pointer transition`}
+                    } font-extrabold text-white cursor-pointer transition disabled:opacity-40`}
                   >
                     💬 Share on WhatsApp
                   </button>
                 </div>
               </div>
 
-              {/* 5-Friend Unlock Progress Tracker */}
+              {/* Dual-Stage Progress Tracker (5-Friend Unlock -> 100-Friend $10 Step-Up) */}
               <div className="rounded-2xl border border-white/10 bg-black/60 p-4 space-y-2.5">
-                <div className="flex items-center justify-between text-xs font-extrabold">
-                  <span className="text-white">
-                    {mySummary?.isPayoutUnlocked
-                      ? "🎉 Payouts Unlocked! Earning $5/friend now!"
-                      : `Unlock Progress: ${progressSteps} / ${MIN_CONFIRMED_REFERRALS} Paid Friends`}
-                  </span>
-                  <span className="text-emerald-400">{progressPct}%</span>
-                </div>
-
-                <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className={`h-full bg-gradient-to-r from-amber-400 via-emerald-400 to-cyan-400 ${
-                      reducedMotion ? "" : "transition-all duration-500"
-                    }`}
-                    style={{ width: `${Math.max(4, progressPct)}%` }}
-                  />
-                </div>
-
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  {mySummary?.isPayoutUnlocked
-                    ? `You have ${confirmedCount} confirmed paid friends (${mySummary.billableReferrals} past the ${MIN_CONFIRMED_REFERRALS}-friend minimum). Every new paid friend earns you $${PAYOUT_PER_EXTRA_REFERRAL_CAD}!`
-                    : `Invite ${
-                        mySummary?.remainingToUnlock ?? MIN_CONFIRMED_REFERRALS
-                      } more paid friend${
-                        (mySummary?.remainingToUnlock ?? MIN_CONFIRMED_REFERRALS) === 1
-                          ? ""
-                          : "s"
-                      } ($${LIFETIME_PRICE_CAD} lifetime each) to unlock $${PAYOUT_PER_EXTRA_REFERRAL_CAD} cash payouts on every friend after that.`}
-                </p>
+                {!isUnlocked ? (
+                  <>
+                    <div className="flex items-center justify-between text-xs font-extrabold">
+                      <span className="text-white">
+                        Unlock Progress: {confirmedCount} /{" "}
+                        {MIN_CONFIRMED_REFERRALS} Confirmed Paid Friends
+                      </span>
+                      <span className="text-emerald-400">{unlockPct}%</span>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className={`h-full bg-gradient-to-r from-amber-400 via-emerald-400 to-cyan-400 ${
+                          reducedMotion ? "" : "transition-all duration-500"
+                        }`}
+                        style={{ width: `${Math.max(4, unlockPct)}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Invite{" "}
+                      <strong className="text-white">
+                        {mySummary?.remainingToUnlock ?? MIN_CONFIRMED_REFERRALS}
+                      </strong>{" "}
+                      more paid friend
+                      {(mySummary?.remainingToUnlock ??
+                        MIN_CONFIRMED_REFERRALS) === 1
+                        ? ""
+                        : "s"}{" "}
+                      (${LIFETIME_PRICE_CAD} lifetime each) to unlock{" "}
+                      <strong className="text-emerald-300">
+                        ${PAYOUT_PER_EXTRA_REFERRAL_CAD}
+                      </strong>{" "}
+                      cash payouts—and step up to{" "}
+                      <strong className="text-amber-300">
+                        ${STEP_UP_PAYOUT_CAD}/friend
+                      </strong>{" "}
+                      after {STEP_UP_CONFIRMED_THRESHOLD} confirmed!
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-xs font-extrabold">
+                      <span className="text-white">
+                        {isStepUp
+                          ? `🏆 VIP Tier Active! Earning $${STEP_UP_PAYOUT_CAD}/friend (Unlimited!)`
+                          : `🚀 Step-Up to $${STEP_UP_PAYOUT_CAD}/Friend: ${confirmedCount} / ${STEP_UP_CONFIRMED_THRESHOLD} Confirmed`}
+                      </span>
+                      <span className="text-amber-300">{stepUpPct}%</span>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className={`h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-amber-400 ${
+                          reducedMotion ? "" : "transition-all duration-500"
+                        }`}
+                        style={{ width: `${Math.max(6, stepUpPct)}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      {isStepUp
+                        ? `You have ${confirmedCount} confirmed paid friends (${mySummary?.tier1BillableCount || 0} at $${PAYOUT_PER_EXTRA_REFERRAL_CAD} + ${mySummary?.tier2BillableCount || 0} at $${STEP_UP_PAYOUT_CAD}). Every new confirmed friend now pays $${STEP_UP_PAYOUT_CAD}!`
+                        : `Payouts unlocked! You earn $${PAYOUT_PER_EXTRA_REFERRAL_CAD}/friend now, and only ${mySummary?.remainingToStepUp || 0} more confirmed friends unlock $${STEP_UP_PAYOUT_CAD}/friend forever.`}
+                    </p>
+                  </>
+                )}
               </div>
 
               {/* Earnings Summary Cards */}
@@ -418,7 +532,7 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
                     {confirmedCount}
                   </strong>
                   <span className="block text-[10px] text-amber-300">
-                    {mySummary?.pendingCount || 0} pending
+                    {mySummary?.pendingCount || 0} awaiting
                   </span>
                 </div>
 
@@ -430,19 +544,19 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
                     ${(mySummary?.totalEarned || 0).toFixed(2)}
                   </strong>
                   <span className="block text-[10px] text-slate-400">
-                    {mySummary?.billableReferrals || 0} × ${PAYOUT_PER_EXTRA_REFERRAL_CAD}
+                    {mySummary?.billableReferrals || 0} billable
                   </span>
                 </div>
 
                 <div className="rounded-2xl bg-black/60 border border-white/10 p-3 text-center">
                   <span className="block text-[10px] font-bold uppercase text-slate-400">
-                    Paid Out
+                    Reimbursed
                   </span>
                   <strong className="text-lg font-black text-slate-200">
                     ${(mySummary?.totalPaidOut || 0).toFixed(2)}
                   </strong>
                   <span className="block text-[10px] text-slate-400">
-                    {mySummary?.payouts.length || 0} transfers
+                    {mySummary?.reimbursedCount || 0} paid off
                   </span>
                 </div>
 
@@ -454,33 +568,52 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
                     ${(mySummary?.balanceOwed || 0).toFixed(2)}
                   </strong>
                   <span className="block text-[10px] text-emerald-200/80">
-                    Ready for payout
+                    {mySummary?.unreimbursedCount || 0} unpaid
                   </span>
                 </div>
               </div>
 
-              {/* Payout Contact Info Form */}
+              {/* Payout Method & Details Selector Form */}
               <form
                 onSubmit={handleSavePayoutDetails}
-                className="rounded-2xl border border-white/10 bg-black/55 p-4 space-y-2.5"
+                className="rounded-2xl border border-white/10 bg-black/55 p-4 space-y-3"
               >
-                <label className="block text-xs font-extrabold text-slate-200">
-                  💳 Where should we send your payouts? (e-Transfer email or phone)
-                </label>
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-200 mb-2">
+                    💳 Preferred Payout Method (Sent straight to Admin):
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PAYOUT_METHODS.map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setPayoutMethod(method)}
+                        className={`rounded-xl py-2 px-2 text-xs font-extrabold transition cursor-pointer ${
+                          payoutMethod === method
+                            ? `${themeTokens.btn} shadow-md ring-1 ring-white/40`
+                            : "bg-slate-950 border border-white/15 text-slate-300 hover:bg-white/10"
+                        }`}
+                      >
+                        {getPayoutMethodIcon(method)} {method}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={payoutInfo}
                     onChange={(e) => setPayoutInfo(e.target.value)}
-                    placeholder="e.g. yourname@email.com or Cash"
-                    className="flex-1 rounded-xl border border-white/15 bg-slate-950 px-3 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    placeholder={getPayoutPlaceholder(payoutMethod)}
+                    className="flex-1 rounded-xl border border-white/15 bg-slate-950 px-3 py-2.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                   />
                   <button
                     type="submit"
                     disabled={busy}
-                    className="rounded-xl bg-white/15 hover:bg-white/25 border border-white/15 px-4 py-2 text-xs font-extrabold text-white cursor-pointer disabled:opacity-50"
+                    className="rounded-xl bg-white/15 hover:bg-white/25 border border-white/15 px-4 py-2.5 text-xs font-extrabold text-white cursor-pointer disabled:opacity-50"
                   >
-                    {busy ? "Saving..." : "💾 Save"}
+                    {busy ? "Saving..." : "💾 Save Payout Info"}
                   </button>
                 </div>
               </form>
@@ -498,7 +631,8 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
                     <strong className="font-mono text-amber-300">
                       {claimedCode}
                     </strong>
-                    . Once your ${LIFETIME_PRICE_CAD} lifetime payment is confirmed, your friend receives credit automatically.
+                    . Once your ${LIFETIME_PRICE_CAD} lifetime payment is
+                    confirmed, your friend receives credit automatically.
                   </p>
                 </div>
               ) : (
@@ -511,7 +645,9 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
                       Did a friend invite you to RABBiT TV?
                     </h4>
                     <p className="text-xs text-slate-400 mt-1">
-                      Enter their referral code below so they get credit once your ${LIFETIME_PRICE_CAD} lifetime subscription is confirmed.
+                      Enter their referral code below so they get credit once
+                      your ${LIFETIME_PRICE_CAD} lifetime subscription is
+                      confirmed.
                     </p>
                   </div>
 
@@ -564,41 +700,65 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
                 {!mySummary || mySummary.referrals.length === 0 ? (
                   <div className="rounded-2xl border border-white/10 bg-black/50 p-6 text-center text-xs text-slate-400">
                     No friends have used your code yet. Share{" "}
-                    <strong className="font-mono text-amber-300">{myCode}</strong>{" "}
-                    to start building toward your {MIN_CONFIRMED_REFERRALS}-friend unlock!
+                    <strong className="font-mono text-amber-300">
+                      {myCode}
+                    </strong>{" "}
+                    to start building toward your {MIN_CONFIRMED_REFERRALS}
+                    -friend unlock!
                   </div>
                 ) : (
-                  mySummary.referrals.map((r) => (
-                    <div
-                      key={r.id}
-                      className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-xs"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-extrabold text-white truncate">
-                          👤 {r.referredName}
-                        </p>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(r.createdAt).toLocaleDateString()} •{" "}
-                          {formatAppTime(r.createdAt, clockFormat)}
-                        </span>
-                      </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase border ${
-                          r.status === "confirmed_paid"
-                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/40"
-                            : r.status === "rejected"
-                              ? "bg-red-500/20 text-red-300 border-red-400/40"
-                              : "bg-amber-500/20 text-amber-300 border-amber-400/40"
-                        }`}
+                  mySummary.referrals.map((r) => {
+                    const isScam =
+                      r.status === "scam_attempt" || r.status === "rejected";
+                    return (
+                      <div
+                        key={r.id}
+                        className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-xs"
                       >
-                        {r.status === "confirmed_paid"
-                          ? "✓ Confirmed Paid"
-                          : r.status === "rejected"
-                            ? "✕ Rejected"
-                            : "⏳ Pending $20"}
-                      </span>
-                    </div>
-                  ))
+                        <div className="min-w-0">
+                          <p className="font-extrabold text-white truncate">
+                            👤 {r.referredName}
+                            {r.confirmedSlotNumber !== null && (
+                              <span className="ml-1.5 text-[10px] font-mono text-slate-400">
+                                #{r.confirmedSlotNumber}
+                              </span>
+                            )}
+                          </p>
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(r.createdAt).toLocaleDateString()} •{" "}
+                            {formatAppTime(r.createdAt, clockFormat)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {r.status === "confirmed_paid" ? (
+                            r.payoutTier === "unlock_threshold" ? (
+                              <span className="rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase border bg-slate-800/80 text-slate-200 border-white/20">
+                                🔓 Unlock #{r.confirmedSlotNumber}/
+                                {MIN_CONFIRMED_REFERRALS}
+                              </span>
+                            ) : r.isReimbursed ? (
+                              <span className="rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase border bg-cyan-500/20 text-cyan-200 border-cyan-400/45">
+                                ✓ Reimbursed (${r.payoutRate})
+                              </span>
+                            ) : (
+                              <span className="rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase border bg-emerald-500/20 text-emerald-300 border-emerald-400/45">
+                                ✓ Paid (+${r.payoutRate} Owed)
+                              </span>
+                            )
+                          ) : isScam ? (
+                            <span className="rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase border bg-red-500/20 text-red-300 border-red-400/40">
+                              🚫 Unpayable
+                            </span>
+                          ) : (
+                            <span className="rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase border bg-amber-500/20 text-amber-300 border-amber-400/40">
+                              ⏳ Awaiting $20
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
 
@@ -617,6 +777,14 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
                         <strong className="text-emerald-300">
                           +${p.amount.toFixed(2)} ({p.method})
                         </strong>
+                        {Array.isArray(p.reimbursedReferralIds) &&
+                          p.reimbursedReferralIds.length > 0 && (
+                            <span className="ml-2 text-[10px] text-cyan-300 font-bold">
+                              • {p.reimbursedReferralIds.length} account
+                              {p.reimbursedReferralIds.length === 1 ? "" : "s"}{" "}
+                              reimbursed
+                            </span>
+                          )}
                         {p.note && (
                           <p className="text-[10px] text-slate-300">{p.note}</p>
                         )}
