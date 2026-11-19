@@ -4,7 +4,7 @@ import {
   getHardwareLimits,
   getRamMode,
 } from "./settings";
-import { APP_VERSION, BUILD_TYPE } from "./version";
+import { APP_VERSION } from "./version";
 
 // Full email base64 encoded
 const ENCODED_ALERT_DESTINATION = "cm9nZXJza3lsZTA1MDZAZ21haWwuY29t";
@@ -53,6 +53,17 @@ function sanitizeText(raw: unknown, maxLen = 100): string {
     .slice(0, maxLen);
 }
 
+function getActiveBuildTrack(): string {
+  if (typeof window === "undefined") return "nightly";
+  try {
+    return localStorage.getItem("rabtv_update_channel") === "stable"
+      ? "stable"
+      : "nightly";
+  } catch {
+    return "nightly";
+  }
+}
+
 /**
  * Decodes the base64-protected destination email at runtime
  */
@@ -74,6 +85,7 @@ export function getDeviceDetails(): DeviceDiagnostics {
   const deviceId = getOrCreateDeviceId();
   const limits = getHardwareLimits();
   const ramMode = getRamMode();
+  const buildType = getActiveBuildTrack();
 
   if (typeof window === "undefined") {
     return {
@@ -83,7 +95,7 @@ export function getDeviceDetails(): DeviceDiagnostics {
       ramMode,
       effectiveRamTier: limits.effectiveMode,
       appVersion: APP_VERSION || "1.0.0",
-      buildType: BUILD_TYPE || "nightly",
+      buildType,
       screen: "0x0",
       isTvDevice: false,
       online: true,
@@ -115,7 +127,11 @@ export function getDeviceDetails(): DeviceDiagnostics {
     lowerUa.includes("bravia") ||
     lowerUa.includes("shield");
 
-  if (lowerUa.includes("silk/") || lowerUa.includes("firetv") || lowerUa.includes("aft")) {
+  if (
+    lowerUa.includes("silk/") ||
+    lowerUa.includes("firetv") ||
+    lowerUa.includes("aft")
+  ) {
     model = "Amazon Fire TV Stick / Fire OS";
   } else if (lowerUa.includes("smarttv") || lowerUa.includes("android tv")) {
     model = "Android TV / Streaming Stick";
@@ -137,7 +153,7 @@ export function getDeviceDetails(): DeviceDiagnostics {
     ramMode,
     effectiveRamTier: limits.effectiveMode,
     appVersion: APP_VERSION || "1.0.0",
-    buildType: BUILD_TYPE || "nightly",
+    buildType,
     screen: `${window.screen?.width || window.innerWidth}x${
       window.screen?.height || window.innerHeight
     }`,
@@ -197,7 +213,10 @@ export function logSecurityEvent(
 
   if (typeof window !== "undefined") {
     try {
-      const next = [entry, ...getSecurityAuditLog()].slice(0, MAX_AUDIT_ENTRIES);
+      const next = [entry, ...getSecurityAuditLog()].slice(
+        0,
+        MAX_AUDIT_ENTRIES
+      );
       localStorage.setItem(AUDIT_LOG_STORAGE_KEY, JSON.stringify(next));
     } catch {
       // ignore quota issues
