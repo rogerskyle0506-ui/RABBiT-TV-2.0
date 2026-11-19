@@ -1,7 +1,14 @@
 // src/components/AdminPanel.tsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { AdminBugInbox } from "@/components/AdminBugInbox";
-import { AppTheme } from "@/lib/settings";
+import {
+  AppTheme,
+  verifyAgeLockPin,
+  getPinLockoutState,
+  recordPinFailure,
+  resetPinFailures,
+  isValidAgeLockPin,
+} from "@/lib/settings";
 
 interface AdminPanelProps {
   appTheme: AppTheme;
@@ -9,17 +16,11 @@ interface AdminPanelProps {
   getPrimaryAccentColor: (theme: AppTheme) => string;
 }
 
-// Background images for the admin menu sections matching Crystal Console sidebar layout
 const RABBIT_HEADER_PILL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
-const RABBIT_PANEL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
-const RABBIT_PANEL_ALT =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
-const AGE_LOCK_KEY = "rabtv_age_passcode";
 const BROKEN_LINKS_STORAGE_KEY = "rabtv_broken_links";
 const ADMIN_VAULT_LOCKED_KEY = "rabtv_admin_vault_locked";
 
@@ -40,6 +41,10 @@ export function AdminPanel({
   getPrimaryBgColor,
   getPrimaryAccentColor,
 }: AdminPanelProps) {
+  void appTheme;
+  void getPrimaryBgColor;
+  void getPrimaryAccentColor;
+
   // Admin Security Vault Lock States
   const [isVaultLocked, setIsVaultLocked] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -48,8 +53,6 @@ export function AdminPanel({
     return false;
   });
   const [vaultPinInput, setVaultPinInput] = useState("");
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lockoutUntil, setLockoutUntil] = useState<number>(0);
   const [vaultError, setVaultError] = useState<string | null>(null);
 
   // Key Generator & Manager States
@@ -82,7 +85,6 @@ export function AdminPanel({
   const [fleetSyncStatus, setFleetSyncStatus] = useState<string | null>(null);
   const [brokenLinksCount, setBrokenLinksCount] = useState<number>(0);
 
-  // Accordion state matching sidebar menu layout
   const [activeAdminSection, setActiveAdminSection] =
     useState<AdminSection>(null);
 
@@ -140,17 +142,17 @@ export function AdminPanel({
     setLoadingKeys(true);
     setLoadingNotifs(true);
     try {
-      const res = await fetch(GIST_API_URL, {
+      const res = await fetch(`${GIST_API_URL}?t=${Date.now()}`, {
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
           "User-Agent": "RabbitTV-App",
         },
+        cache: "no-store",
       });
       if (res.ok) {
         const gistData = await res.json();
 
-        // 1. Parse keys.json
         const rawKeys = gistData.files?.["keys.json"]?.content;
         if (rawKeys) {
           try {
@@ -164,11 +166,10 @@ export function AdminPanel({
               setRemoteKeys(normalized);
             }
           } catch {
-            // ignore malformed JSON
+            // ignore
           }
         }
 
-        // 2. Parse notifications.json
         const rawNotifs = gistData.files?.["notifications.json"]?.content;
         if (rawNotifs) {
           try {
@@ -181,7 +182,6 @@ export function AdminPanel({
           }
         }
 
-        // 3. Parse admin_config.json (if present)
         const rawConfig = gistData.files?.["admin_config.json"]?.content;
         if (rawConfig) {
           try {
@@ -258,7 +258,7 @@ export function AdminPanel({
     });
   }, [remoteKeys, keyFilterMode, keySearchQuery]);
 
-  // Vault Lock & Unlock Handlers
+  // Vault Lock & 4-6 Digit Hashed PIN Unlock Handlers
   const handleLockVault = () => {
     setIsVaultLocked(true);
     setVaultPinInput("");
@@ -268,41 +268,40 @@ export function AdminPanel({
     }
   };
 
-  const handleUnlockVault = (e: React.FormEvent) => {
+  const handleUnlockVault = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (Date.now() < lockoutUntil) {
-      const waitSec = Math.ceil((lockoutUntil - Date.now()) / 1000);
-      setVaultError(`⏳ Too many failed attempts. Wait ${waitSec}s.`);
+    const lockState = getPinLockoutState();
+    if (lockState.isLocked) {
+      setVaultError(
+        `⏳ Too many failed attempts. Wait ${lockState.remainingSeconds}s.`
+      );
       return;
     }
 
-    const savedPin =
-      (typeof window !== "undefined"
-        ? localStorage.getItem(AGE_LOCK_KEY)
-        : "") || "";
+    if (!isValidAgeLockPin(vaultPinInput)) {
+      setVaultError("⚠️ Enter your 4 to 6 digit security PIN.");
+      return;
+    }
 
-    if (
-      (savedPin && vaultPinInput.trim() === savedPin) ||
-      (!savedPin && vaultPinInput.trim().length === 4)
-    ) {
+    const valid = await verifyAgeLockPin(vaultPinInput);
+    if (valid) {
+      resetPinFailures();
       setIsVaultLocked(false);
-      setFailedAttempts(0);
       setVaultPinInput("");
       setVaultError(null);
       if (typeof window !== "undefined") {
         sessionStorage.removeItem(ADMIN_VAULT_LOCKED_KEY);
       }
     } else {
-      const nextFailures = failedAttempts + 1;
-      setFailedAttempts(nextFailures);
+      const next = recordPinFailure();
       setVaultPinInput("");
-      if (nextFailures >= 3) {
-        const lockTime = Date.now() + 30000;
-        setLockoutUntil(lockTime);
-        setVaultError("🚨 Vault locked for 30s due to 3 failed PIN attempts.");
+      if (next.isLocked) {
+        setVaultError(
+          `🚨 Vault locked for ${next.remainingSeconds}s due to failed PIN attempts.`
+        );
       } else {
         setVaultError(
-          `❌ Incorrect Admin PIN (${3 - nextFailures} attempts remaining).`
+          `❌ Incorrect Admin PIN (${next.attemptsLeft} attempts left).`
         );
       }
     }
@@ -318,9 +317,9 @@ export function AdminPanel({
     try {
       await navigator.clipboard.writeText(keyStr);
       setCopiedKeyId(keyStr);
-      setTimeout(() => setCopiedKeyId(null), 2000);
+      window.setTimeout(() => setCopiedKeyId(null), 2000);
     } catch {
-      // fallback ignore
+      // ignore clipboard errors on TV WebViews
     }
   };
 
@@ -355,7 +354,6 @@ export function AdminPanel({
       return;
     }
 
-    // Cryptographically stronger salted 8-to-10 digit numeric key
     const randomEntropy =
       typeof window !== "undefined" && window.crypto
         ? window.crypto.getRandomValues(new Uint32Array(1))[0]
@@ -381,10 +379,10 @@ export function AdminPanel({
           Accept: "application/vnd.github+json",
           "User-Agent": "RabbitTV-App",
         },
+        cache: "no-store",
       });
 
       let keysList: any[] = [];
-
       if (getRes.ok) {
         const gistData = await getRes.json();
         const rawContent = gistData.files?.["keys.json"]?.content;
@@ -405,8 +403,6 @@ export function AdminPanel({
       };
       keysList.push(newKeyObj);
 
-      const updatedContent = JSON.stringify(keysList, null, 2);
-
       const patchRes = await fetch(GIST_API_URL, {
         method: "PATCH",
         headers: {
@@ -418,7 +414,7 @@ export function AdminPanel({
         body: JSON.stringify({
           files: {
             "keys.json": {
-              content: updatedContent,
+              content: JSON.stringify(keysList, null, 2),
             },
           },
         }),
@@ -427,7 +423,7 @@ export function AdminPanel({
       const patchData = await patchRes.json();
 
       if (patchRes.ok) {
-        setKeygenResult(`✅ Key [${stringKey}] Committed & Activated on Gist!`);
+        setKeygenResult(`✅ Key [${stringKey}] Committed & Activated!`);
         setKeygenName("");
         setKeygenAge("");
         void fetchRemoteAdminData();
@@ -459,6 +455,7 @@ export function AdminPanel({
           Accept: "application/vnd.github+json",
           "User-Agent": "RabbitTV-App",
         },
+        cache: "no-store",
       });
       if (!res.ok) return;
       const gistData = await res.json();
@@ -467,7 +464,7 @@ export function AdminPanel({
       keysList = keysList
         .map((item: any) => {
           const kVal = typeof item === "object" ? item.key : item;
-          if (kVal === targetKey) {
+          if (String(kVal) === String(targetKey)) {
             if (action === "delete") return null;
             const currentActive =
               typeof item === "object" ? item.active : true;
@@ -482,7 +479,6 @@ export function AdminPanel({
         })
         .filter(Boolean);
 
-      const updatedContent = JSON.stringify(keysList, null, 2);
       const patchRes = await fetch(GIST_API_URL, {
         method: "PATCH",
         headers: {
@@ -494,7 +490,7 @@ export function AdminPanel({
         body: JSON.stringify({
           files: {
             "keys.json": {
-              content: updatedContent,
+              content: JSON.stringify(keysList, null, 2),
             },
           },
         }),
@@ -519,12 +515,12 @@ export function AdminPanel({
     }
     if (!targetQuery.trim() || !targetMessage.trim()) {
       setToastPushStatus(
-        "⚠️ Provide target identifier (ALL / Name / PIN / Age) and message."
+        "⚠️ Provide target (ALL / Name / PIN / Age) and message."
       );
       return;
     }
 
-    setToastPushStatus("Pushing target notification toast...");
+    setToastPushStatus("Pushing notification toast...");
     try {
       const getRes = await fetch(GIST_API_URL, {
         headers: {
@@ -532,6 +528,7 @@ export function AdminPanel({
           Accept: "application/vnd.github+json",
           "User-Agent": "RabbitTV-App",
         },
+        cache: "no-store",
       });
 
       let currentFiles: any = {};
@@ -585,12 +582,10 @@ export function AdminPanel({
       });
 
       if (patchRes.ok) {
-        setToastPushStatus(
-          `✅ Toast pushed to target: [${targetQuery.trim()}]`
-        );
+        setToastPushStatus(`✅ Toast pushed to [${targetQuery.trim()}]`);
         setTargetMessage("");
         setActiveNotifs(notifsList);
-        setTimeout(() => setToastPushStatus(null), 4000);
+        window.setTimeout(() => setToastPushStatus(null), 4000);
       } else {
         setToastPushStatus("⚠️ Failed to push toast notification.");
       }
@@ -600,7 +595,10 @@ export function AdminPanel({
     }
   };
 
-  const handleDeleteNotification = async (toastId?: string, clearAll = false) => {
+  const handleDeleteNotification = async (
+    toastId?: string,
+    clearAll = false
+  ) => {
     resetInactivityTimer();
     const { GIST_ID, GITHUB_TOKEN, GIST_API_URL } = getGistCredentials();
     if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return;
@@ -632,7 +630,7 @@ export function AdminPanel({
         setToastPushStatus(
           clearAll ? "🗑️ Cleared all queued toasts!" : "✓ Removed toast."
         );
-        setTimeout(() => setToastPushStatus(null), 2500);
+        window.setTimeout(() => setToastPushStatus(null), 2500);
       }
     } catch (err) {
       console.error("Failed to clear notification", err);
@@ -673,8 +671,8 @@ export function AdminPanel({
       });
 
       if (patchRes.ok) {
-        setFleetSyncStatus("✅ Fleet Configuration Synced to Gist!");
-        setTimeout(() => setFleetSyncStatus(null), 3500);
+        setFleetSyncStatus("✅ Fleet Policies Synced to Gist!");
+        window.setTimeout(() => setFleetSyncStatus(null), 3500);
       } else {
         setFleetSyncStatus("⚠️ Failed to sync fleet config.");
       }
@@ -690,11 +688,15 @@ export function AdminPanel({
     window.dispatchEvent(new Event("rabtv_broken_links_updated"));
     window.dispatchEvent(new Event("rabtv_catalog_updated"));
     setFleetSyncStatus("✓ Restored all locally reported broken titles!");
-    setTimeout(() => setFleetSyncStatus(null), 3000);
+    window.setTimeout(() => setFleetSyncStatus(null), 3000);
   };
 
+  // Clean Crystal Crimson Glass Panel class (no distorted stretched JPG lines cutting across text)
+  const crimsonSubPanelClass =
+    "relative w-full p-3.5 sm:p-4 rounded-2xl mt-2 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(239,68,68,0.12)] overflow-hidden box-border backdrop-blur-xl bg-slate-950/85 border border-red-500/40 space-y-3";
+
   /**
-   * Renders a Crystal Crimson Admin Accordion Pill with 3D mouse hover & D-pad focus pop-out physics.
+   * Renders a Crystal Crimson Admin Accordion Pill with concise non-truncating title & 3D hover/focus pop-out.
    */
   const renderCrimsonAccordionButton = (
     sectionId: AdminSection,
@@ -710,20 +712,14 @@ export function AdminPanel({
           resetInactivityTimer();
           setActiveAdminSection(isActive ? null : sectionId);
         }}
-        className={`crystal-admin-pill w-full flex items-center justify-between px-6 py-3.5 text-left text-xs font-extrabold text-red-100 relative overflow-hidden rounded-2xl cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.04] focus:scale-[1.05] hover:-translate-y-0.5 focus:-translate-y-0.5 active:scale-[0.98] focus:outline-none ${
+        className={`crystal-admin-pill w-full flex items-center justify-between gap-2 px-4 py-3 text-left text-xs font-extrabold text-red-100 relative overflow-hidden rounded-2xl border border-red-500/35 cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.03] focus:scale-[1.04] hover:-translate-y-0.5 focus:-translate-y-0.5 active:scale-[0.98] focus:outline-none ${
           isActive
-            ? "ring-2 ring-red-400 shadow-[0_0_28px_rgba(239,68,68,0.55),0_0_16px_rgba(245,158,11,0.3)] scale-[1.02]"
-            : "hover:shadow-[0_10px_26px_rgba(239,68,68,0.4)] focus:ring-2 focus:ring-red-400"
+            ? "ring-2 ring-red-400 shadow-[0_0_24px_rgba(239,68,68,0.5)]"
+            : "hover:border-red-400/70 hover:shadow-[0_8px_22px_rgba(239,68,68,0.35)] focus:ring-2 focus:ring-red-400"
         }`}
-        style={{
-          WebkitMaskImage:
-            "linear-gradient(to right, rgba(0,0,0,0.12) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 90%, rgba(0,0,0,0.12) 100%)",
-          maskImage:
-            "linear-gradient(to right, rgba(0,0,0,0.12) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 90%, rgba(0,0,0,0.12) 100%)",
-        }}
       >
         <div
-          className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden z-0 opacity-90"
+          className="absolute inset-0 pointer-events-none z-0 opacity-85"
           style={{
             backgroundImage: `url(${RABBIT_HEADER_PILL})`,
             backgroundSize: "130% 100%",
@@ -731,17 +727,17 @@ export function AdminPanel({
             backgroundPosition: "center center",
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-red-950/75 via-red-900/45 to-red-950/75 backdrop-blur-[4px] w-full h-full" />
+          <div className="absolute inset-0 bg-gradient-to-r from-red-950/80 via-red-900/50 to-red-950/80 backdrop-blur-[3px] w-full h-full" />
         </div>
 
-        <span className="relative z-10 flex items-center gap-2.5 truncate pr-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
+        <span className="relative z-10 flex items-center gap-2 min-w-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
           <span className="text-sm shrink-0">{icon}</span>
           <span className="truncate">{title}</span>
         </span>
 
-        <div className="relative z-10 flex items-center gap-2 shrink-0">
+        <div className="relative z-10 flex items-center gap-1.5 shrink-0">
           {badgeText && (
-            <span className="rounded-full bg-black/65 border border-red-400/40 px-2 py-0.5 text-[9px] font-black text-amber-300 backdrop-blur-md">
+            <span className="rounded-full bg-black/70 border border-red-400/40 px-2 py-0.5 text-[9px] font-black text-amber-300">
               {badgeText}
             </span>
           )}
@@ -759,17 +755,17 @@ export function AdminPanel({
 
   return (
     <div className="space-y-3 w-full box-border">
-      {/* Executive Command Header & Security Controls */}
-      <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-red-950/70 via-black/75 to-red-950/70 border border-red-500/40 px-3.5 py-2.5 shadow-[0_0_20px_rgba(239,68,68,0.25)] backdrop-blur-xl">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-600/30 border border-red-400/50 text-xs shadow-[0_0_10px_rgba(239,68,68,0.6)]">
+      {/* Executive Command Header — Stacked cleanly so title NEVER truncates */}
+      <div className="rounded-2xl bg-gradient-to-r from-red-950/80 via-black/85 to-red-950/80 border border-red-500/45 p-3 shadow-[0_0_20px_rgba(239,68,68,0.25)] backdrop-blur-xl space-y-2.5">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-600/30 border border-red-400/50 text-sm shadow-[0_0_10px_rgba(239,68,68,0.6)]">
             🔐
           </span>
-          <div className="min-w-0">
-            <h3 className="text-[11px] font-black uppercase tracking-wider text-red-300 truncate">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs font-black uppercase tracking-wider text-red-300">
               Admin Command Center
             </h3>
-            <span className="block text-[9px] text-amber-300/90 font-bold">
+            <span className="block text-[10px] text-amber-300/95 font-bold">
               {isVaultLocked
                 ? "● Vault Locked"
                 : `● ${keyStats.active} Active Keys • ${activeNotifs.length} Toasts`}
@@ -777,125 +773,94 @@ export function AdminPanel({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {!isVaultLocked && (
+        <div className="grid grid-cols-2 gap-2">
+          {!isVaultLocked ? (
             <button
               type="button"
               onClick={handleLockVault}
-              className="px-2.5 py-1 rounded-lg bg-red-950/80 hover:bg-red-800 border border-red-400/40 text-[10px] font-extrabold text-red-100 transition hover:scale-105 cursor-pointer"
+              className="py-1.5 px-2.5 rounded-xl bg-red-950/85 hover:bg-red-800 border border-red-400/40 text-[11px] font-extrabold text-red-100 transition cursor-pointer"
               title="Lock Admin Controls with PIN"
             >
-              🔒 Lock
+              🔒 Lock Vault
             </button>
+          ) : (
+            <div className="py-1.5 px-2.5 rounded-xl bg-black/60 border border-red-500/30 text-[10px] font-bold text-red-300 text-center">
+              🛡️ Locked
+            </div>
           )}
           <button
             type="button"
             onClick={handleStepDownAdmin}
-            className="px-2 py-1 rounded-lg bg-black/70 hover:bg-red-600 border border-white/15 hover:border-red-300 text-[10px] font-bold text-slate-300 hover:text-white transition hover:scale-105 cursor-pointer"
+            className="py-1.5 px-2.5 rounded-xl bg-black/75 hover:bg-red-600 border border-white/15 hover:border-red-300 text-[11px] font-bold text-slate-200 hover:text-white transition cursor-pointer"
             title="Exit Admin Mode on this device"
           >
-            🚪 Exit
+            🚪 Exit Admin
           </button>
         </div>
       </div>
 
-      {/* SECURITY VAULT PIN GATE */}
+      {/* SECURITY VAULT PIN GATE (Supports 4–6 Digit Fire Stick PINs) */}
       {isVaultLocked ? (
-        <div className="relative w-full px-5 py-5 rounded-2xl shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/75 border border-red-500/40 space-y-3 text-center">
-          <div
-            className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-            style={{
-              backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-              backgroundSize: "100% 100%",
-              backgroundRepeat: "no-repeat",
-            }}
-          />
-          <div className="relative z-10 space-y-2.5">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-red-600/25 border border-red-400/50 text-lg shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-              🛡️
-            </div>
-            <h4 className="text-xs font-black uppercase tracking-wider text-red-200">
-              Admin Vault Locked
-            </h4>
-            <p className="text-[10px] text-slate-300 leading-relaxed">
-              Enter your 4-digit security PIN to unlock Gist Keygen, Toast
-              Broadcasts, and Fleet Controls.
-            </p>
-            <form onSubmit={handleUnlockVault} className="space-y-2 pt-1">
-              <input
-                type="password"
-                inputMode="numeric"
-                maxLength={4}
-                placeholder="••••"
-                value={vaultPinInput}
-                onChange={(e) =>
-                  setVaultPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))
-                }
-                className="w-36 mx-auto block text-center rounded-xl border border-red-500/40 bg-black/80 px-3 py-2 text-sm font-black text-white tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-red-400"
-              />
-              <button
-                type="submit"
-                className="w-full py-2 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white text-xs font-extrabold shadow-lg shadow-red-600/30 transition hover:scale-[1.02] cursor-pointer"
-              >
-                🔓 Unlock Command Center
-              </button>
-            </form>
-            {vaultError && (
-              <p className="text-[10px] font-bold text-amber-300">
-                {vaultError}
-              </p>
-            )}
+        <div className={`${crimsonSubPanelClass} text-center py-5`}>
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-red-600/25 border border-red-400/50 text-lg shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+            🛡️
           </div>
+          <h4 className="text-xs font-black uppercase tracking-wider text-red-200">
+            Admin Vault Locked
+          </h4>
+          <p className="text-[11px] text-slate-300 leading-relaxed">
+            Enter your 4–6 digit security PIN to unlock Keygen, Broadcasts, and
+            Fleet Controls.
+          </p>
+          <form onSubmit={handleUnlockVault} className="space-y-2.5 pt-1">
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="••••••"
+              value={vaultPinInput}
+              onChange={(e) =>
+                setVaultPinInput(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              className="w-40 mx-auto block text-center rounded-xl border border-red-500/40 bg-black/80 px-3 py-2 text-sm font-black text-white tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+            <button
+              type="submit"
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white text-xs font-extrabold shadow-lg shadow-red-600/30 transition hover:scale-[1.02] cursor-pointer"
+            >
+              🔓 Unlock Command Center
+            </button>
+          </form>
+          {vaultError && (
+            <p className="text-[11px] font-bold text-amber-300">{vaultError}</p>
+          )}
         </div>
       ) : (
         <div className="space-y-2.5 w-full box-border">
-          {/* 1. BUG REPORTS INBOX SUBMENU */}
+          {/* 1. BUG REPORTS INBOX */}
           <div className="w-full box-border">
-            {renderCrimsonAccordionButton(
-              "inbox",
-              "🐞",
-              "Bug Reports Inbox"
-            )}
+            {renderCrimsonAccordionButton("inbox", "🐞", "Bug Reports Inbox")}
             {activeAdminSection === "inbox" && (
-              <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/60 border border-red-500/35">
-                <div
-                  className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                  style={{
-                    backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                    backgroundSize: "100% 100%",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                />
-                <div className="relative z-10 w-full box-border">
-                  <AdminBugInbox />
-                </div>
+              <div className={crimsonSubPanelClass}>
+                <AdminBugInbox />
               </div>
             )}
           </div>
 
-          {/* 2. PUSH TOAST & GLOBAL BROADCAST CENTER */}
+          {/* 2. PUSH TOAST & BROADCASTS */}
           <div className="w-full box-border">
             {renderCrimsonAccordionButton(
               "toast",
               "📢",
-              "Push Toast & Broadcasts",
-              activeNotifs.length > 0 ? `${activeNotifs.length} Live` : undefined
+              "Push Toasts & Alerts",
+              activeNotifs.length > 0 ? `${activeNotifs.length}` : undefined
             )}
             {activeAdminSection === "toast" && (
-              <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/60 border border-red-500/35 space-y-3.5">
-                <div
-                  className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                  style={{
-                    backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                    backgroundSize: "100% 100%",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                />
-                <div className="relative z-10 space-y-3 w-full box-border">
-                  {/* Quick Preset: Broadcast to ALL vs Specific User */}
-                  <div className="flex items-center justify-between gap-2">
+              <div className={crimsonSubPanelClass}>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-red-300">
-                      Target Recipient:
+                      Target Recipient
                     </span>
                     <button
                       type="button"
@@ -903,10 +868,10 @@ export function AdminPanel({
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition cursor-pointer ${
                         targetQuery.toUpperCase() === "ALL"
                           ? "bg-red-600 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)]"
-                          : "bg-red-950/70 border border-red-500/35 text-red-200 hover:bg-red-900/70"
+                          : "bg-red-950/80 border border-red-500/40 text-red-200 hover:bg-red-900/80"
                       }`}
                     >
-                      🌐 Broadcast to ALL Users
+                      🌐 All Users
                     </button>
                   </div>
 
@@ -915,46 +880,42 @@ export function AdminPanel({
                     className="space-y-2.5 w-full box-border"
                   >
                     {uniqueUsers.length > 0 && (
-                      <div className="w-full box-border">
-                        <select
-                          value={
-                            uniqueUsers.includes(targetQuery) ? targetQuery : ""
-                          }
-                          onChange={(e) => setTargetQuery(e.target.value)}
-                          className="w-full rounded-xl border border-red-500/35 bg-black/75 px-3 py-2 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-red-400 cursor-pointer box-border"
-                        >
-                          <option value="">
-                            -- Or Pick Registered User ({uniqueUsers.length}) --
+                      <select
+                        value={
+                          uniqueUsers.includes(targetQuery) ? targetQuery : ""
+                        }
+                        onChange={(e) => setTargetQuery(e.target.value)}
+                        className="w-full rounded-xl border border-red-500/35 bg-black/80 px-3 py-2 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-red-400 cursor-pointer box-border"
+                      >
+                        <option value="">
+                          Pick user ({uniqueUsers.length})...
+                        </option>
+                        {uniqueUsers.map((user) => (
+                          <option
+                            key={user}
+                            value={user}
+                            className="bg-slate-950 text-white"
+                          >
+                            👤 {user}
                           </option>
-                          {uniqueUsers.map((user) => (
-                            <option
-                              key={user}
-                              value={user}
-                              className="bg-slate-950 text-white"
-                            >
-                              👤 {user}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        ))}
+                      </select>
                     )}
 
-                    <div className="w-full box-border">
-                      <input
-                        type="text"
-                        placeholder="Target (ALL, User Name, 4-digit PIN, or Age)..."
-                        value={targetQuery}
-                        onChange={(e) => setTargetQuery(e.target.value)}
-                        className="w-full rounded-xl border border-red-500/35 bg-black/75 px-3 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 box-border"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      placeholder="Target: ALL, Name, PIN, or Age"
+                      value={targetQuery}
+                      onChange={(e) => setTargetQuery(e.target.value)}
+                      className="w-full rounded-xl border border-red-500/35 bg-black/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 box-border"
+                    />
 
                     {/* Alert Severity Level */}
                     <div className="grid grid-cols-3 gap-1.5">
                       {(
                         [
-                          { id: "info", label: "🔔 Standard" },
-                          { id: "warning", label: "⚠️ Warning" },
+                          { id: "info", label: "🔔 Info" },
+                          { id: "warning", label: "⚠️ Warn" },
                           { id: "critical", label: "🚨 Urgent" },
                         ] as { id: ToastSeverity; label: string }[]
                       ).map((sev) => (
@@ -962,10 +923,10 @@ export function AdminPanel({
                           key={sev.id}
                           type="button"
                           onClick={() => setToastSeverity(sev.id)}
-                          className={`py-1.5 rounded-xl text-[10px] font-extrabold transition cursor-pointer ${
+                          className={`py-1.5 px-1 rounded-xl text-[10px] font-extrabold transition cursor-pointer ${
                             toastSeverity === sev.id
                               ? "bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-md"
-                              : "bg-black/60 border border-red-500/25 text-red-200 hover:bg-red-950/60"
+                              : "bg-black/70 border border-red-500/30 text-red-200 hover:bg-red-950/70"
                           }`}
                         >
                           {sev.label}
@@ -973,15 +934,13 @@ export function AdminPanel({
                       ))}
                     </div>
 
-                    <div className="w-full box-border">
-                      <textarea
-                        rows={2}
-                        placeholder="Enter notification message (e.g. New v2.6 update available)..."
-                        value={targetMessage}
-                        onChange={(e) => setTargetMessage(e.target.value)}
-                        className="w-full rounded-xl border border-red-500/35 bg-black/75 px-3 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none box-border"
-                      />
-                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder="Type announcement message..."
+                      value={targetMessage}
+                      onChange={(e) => setTargetMessage(e.target.value)}
+                      className="w-full rounded-xl border border-red-500/35 bg-black/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none box-border leading-relaxed"
+                    />
 
                     <button
                       type="submit"
@@ -992,7 +951,7 @@ export function AdminPanel({
                   </form>
 
                   {toastPushStatus && (
-                    <div className="rounded-xl bg-black/80 border border-red-500/40 p-2 text-center box-border">
+                    <div className="rounded-xl bg-black/80 border border-red-500/40 p-2 text-center">
                       <p className="text-[11px] font-bold text-amber-300">
                         {toastPushStatus}
                       </p>
@@ -1020,18 +979,18 @@ export function AdminPanel({
 
                     {loadingNotifs ? (
                       <p className="text-[10px] text-slate-400 text-center py-1">
-                        Loading notification queue...
+                        Loading queue...
                       </p>
                     ) : activeNotifs.length === 0 ? (
                       <p className="text-[10px] text-slate-400 text-center py-1">
                         No active toasts queued on Gist.
                       </p>
                     ) : (
-                      <div className="max-h-28 overflow-y-auto space-y-1.5 pr-1 scrollbar-none">
+                      <div className="max-h-32 overflow-y-auto space-y-1.5 pr-1 scrollbar-none">
                         {activeNotifs.map((n) => (
                           <div
                             key={n.id || n.timestamp}
-                            className="flex items-center justify-between gap-2 rounded-xl bg-black/70 border border-red-500/25 px-2.5 py-1.5 text-[10px]"
+                            className="flex items-center justify-between gap-2 rounded-xl bg-black/75 border border-red-500/25 px-2.5 py-1.5 text-[10px]"
                           >
                             <div className="min-w-0 flex-1 truncate">
                               <span className="font-extrabold text-amber-300">
@@ -1059,311 +1018,313 @@ export function AdminPanel({
             )}
           </div>
 
-          {/* 3. KEY GENERATOR & LICENSE MANAGER SUBMENU */}
+          {/* 3. KEY GENERATOR & LICENSES */}
           <div className="w-full box-border">
             {renderCrimsonAccordionButton(
               "keygen",
               "🔑",
-              "Key Generator & Licenses",
+              "Key Manager",
               `${keyStats.total} Keys`
             )}
             {activeAdminSection === "keygen" && (
-              <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/60 border border-red-500/35 space-y-3.5">
-                <div
-                  className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                  style={{
-                    backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-                    backgroundSize: "100% 100%",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                />
-                <div className="relative z-10 space-y-3 w-full box-border">
-                  <form
-                    onSubmit={handleKeygen}
-                    className="space-y-2 w-full box-border"
+              <div className={crimsonSubPanelClass}>
+                <form
+                  onSubmit={handleKeygen}
+                  className="space-y-2 w-full box-border"
+                >
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      placeholder="User name"
+                      value={keygenName}
+                      onChange={(e) => setKeygenName(e.target.value)}
+                      className="col-span-2 rounded-xl border border-red-500/35 bg-black/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 box-border"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={120}
+                      placeholder="Age"
+                      value={keygenAge}
+                      onChange={(e) => setKeygenAge(e.target.value)}
+                      className="col-span-1 rounded-xl border border-red-500/35 bg-black/80 px-2 py-2 text-center text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 box-border"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white text-xs font-extrabold shadow-lg shadow-red-600/35 transition hover:scale-[1.02] active:scale-95 cursor-pointer"
                   >
-                    <div className="grid grid-cols-3 gap-2">
-                      <input
-                        type="text"
-                        placeholder="User name"
-                        value={keygenName}
-                        onChange={(e) => setKeygenName(e.target.value)}
-                        className="col-span-2 rounded-xl border border-red-500/35 bg-black/75 px-3 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 box-border"
-                      />
-                      <input
-                        type="number"
-                        min={1}
-                        max={120}
-                        placeholder="Age"
-                        value={keygenAge}
-                        onChange={(e) => setKeygenAge(e.target.value)}
-                        className="col-span-1 rounded-xl border border-red-500/35 bg-black/75 px-2.5 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 box-border"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white text-xs font-extrabold shadow-lg shadow-red-600/35 transition hover:scale-[1.02] active:scale-95 cursor-pointer"
-                    >
-                      ⚡ Generate & Push Key to Gist
-                    </button>
-                  </form>
+                    ⚡ Generate & Push Key to Gist
+                  </button>
+                </form>
 
-                  {keygenResult && (
-                    <div className="rounded-xl bg-black/80 border border-red-500/40 p-2.5 text-center space-y-1.5 box-border">
-                      <p className="text-[11px] font-bold text-amber-300">
-                        {keygenResult}
-                      </p>
-                      {lastGeneratedKey && (
-                        <button
-                          type="button"
-                          onClick={() => void handleCopyKey(lastGeneratedKey)}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-red-600/40 hover:bg-red-600 border border-red-400/50 px-3 py-1 text-[10px] font-extrabold text-white transition cursor-pointer"
-                        >
-                          <span>
-                            {copiedKeyId === lastGeneratedKey
-                              ? "✓ Copied to Clipboard!"
-                              : `📋 Copy Key [${lastGeneratedKey}]`}
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                {keygenResult && (
+                  <div className="rounded-xl bg-black/80 border border-red-500/40 p-2.5 text-center space-y-1.5">
+                    <p className="text-[11px] font-bold text-amber-300 break-words">
+                      {keygenResult}
+                    </p>
+                    {lastGeneratedKey && (
+                      <button
+                        type="button"
+                        onClick={() => void handleCopyKey(lastGeneratedKey)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-red-600/45 hover:bg-red-600 border border-red-400/50 px-3 py-1 text-[10px] font-extrabold text-white transition cursor-pointer"
+                      >
+                        {copiedKeyId === lastGeneratedKey
+                          ? "✓ Copied!"
+                          : `📋 Copy [${lastGeneratedKey}]`}
+                      </button>
+                    )}
+                  </div>
+                )}
 
-                  {/* Key List & Management Section */}
-                  <div className="pt-2.5 border-t border-red-500/25 space-y-2 w-full box-border">
-                    <div className="flex items-center justify-between gap-1.5 w-full">
-                      <span className="text-[11px] font-extrabold text-slate-200">
-                        Keys ({keyStats.active} Active • {keyStats.used} Used)
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={handleExportKeysBackup}
-                          className="px-2 py-1 rounded-lg bg-black/70 border border-red-500/30 hover:bg-red-950 text-[9px] font-bold text-amber-300 transition cursor-pointer"
-                          title="Download Keys JSON Backup"
-                        >
-                          💾 Backup
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void fetchRemoteAdminData()}
-                          className="px-2 py-1 rounded-lg bg-red-950/70 border border-red-500/35 hover:bg-red-900/80 text-[9px] font-bold text-red-200 transition cursor-pointer"
-                        >
-                          {loadingKeys ? "..." : "🔄 Sync"}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Search & Filter Keys Bar */}
+                {/* Key List Header & Stacked Search + 3-Col Filter Row (Zero Clipping!) */}
+                <div className="pt-2.5 border-t border-red-500/25 space-y-2 w-full box-border">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] font-extrabold text-slate-200">
+                      {keyStats.active} Active • {keyStats.used} Used
+                    </span>
                     <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        value={keySearchQuery}
-                        onChange={(e) => setKeySearchQuery(e.target.value)}
-                        placeholder="Search user or key..."
-                        className="flex-1 rounded-lg border border-red-500/30 bg-black/70 px-2.5 py-1 text-[10px] font-bold text-white placeholder-slate-500 focus:outline-none"
-                      />
-                      {(["all", "active", "used"] as KeyFilterMode[]).map(
-                        (mode) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => setKeyFilterMode(mode)}
-                            className={`px-2 py-1 rounded-lg text-[9px] font-extrabold uppercase transition cursor-pointer ${
-                              keyFilterMode === mode
-                                ? "bg-red-600 text-white"
-                                : "bg-black/60 text-slate-400 hover:text-white border border-white/10"
-                            }`}
-                          >
-                            {mode}
-                          </button>
-                        )
-                      )}
+                      <button
+                        type="button"
+                        onClick={handleExportKeysBackup}
+                        className="px-2.5 py-1 rounded-lg bg-black/75 border border-red-500/35 hover:bg-red-950 text-[10px] font-bold text-amber-300 transition cursor-pointer"
+                      >
+                        💾 Backup
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void fetchRemoteAdminData()}
+                        className="px-2.5 py-1 rounded-lg bg-red-950/80 border border-red-500/40 hover:bg-red-900/80 text-[10px] font-bold text-red-100 transition cursor-pointer"
+                      >
+                        {loadingKeys ? "..." : "🔄 Sync"}
+                      </button>
                     </div>
+                  </div>
 
-                    <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1 w-full box-border scrollbar-none">
-                      {filteredKeys.length === 0 ? (
-                        <p className="text-[10px] text-slate-400 text-center py-2">
-                          No keys match your current filter.
-                        </p>
-                      ) : (
-                        filteredKeys.map((kObj, idx) => (
-                          <div
-                            key={`${kObj.key}-${idx}`}
-                            className="flex items-center justify-between bg-black/75 p-2.5 rounded-xl border border-red-500/25 text-[11px] w-full box-border hover:border-red-400/50 transition"
-                          >
-                            <div className="truncate pr-2 space-y-0.5 min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => void handleCopyKey(String(kObj.key))}
-                                  className="font-mono font-bold text-amber-300 hover:underline cursor-pointer"
-                                  title="Click to copy key"
-                                >
-                                  {kObj.key}
-                                </button>
-                                {copiedKeyId === String(kObj.key) && (
-                                  <span className="text-[9px] text-emerald-400 font-bold">
-                                    ✓ Copied
-                                  </span>
-                                )}
-                                <span
-                                  className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase ${
-                                    kObj.active
-                                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                                      : "bg-red-500/20 text-red-300 border border-red-500/30"
-                                  }`}
-                                >
-                                  {kObj.active ? "Active" : "Claimed"}
-                                </span>
-                              </div>
-                              <div className="text-[10px] text-slate-300 truncate">
-                                👤{" "}
-                                <strong>
-                                  {kObj.owner || kObj.usedBy || "Unassigned"}
-                                </strong>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handleModifyKeyStatus(kObj.key, "toggle")
-                                }
-                                className={`px-2 py-1 rounded-lg text-[9px] font-extrabold transition cursor-pointer ${
-                                  kObj.active
-                                    ? "bg-amber-600/35 hover:bg-amber-600/60 text-amber-200"
-                                    : "bg-emerald-600/35 hover:bg-emerald-600/60 text-emerald-200"
-                                }`}
-                              >
-                                {kObj.active ? "Revoke" : "Activate"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handleModifyKeyStatus(kObj.key, "delete")
-                                }
-                                className="px-2 py-1 rounded-lg bg-red-600/40 hover:bg-red-600 text-red-100 text-[9px] font-extrabold cursor-pointer"
-                                title="Delete Key Permanently"
-                              >
-                                ✕
-                              </button>
-                            </div>
+                  {/* Full-width Search Input */}
+                  <input
+                    type="text"
+                    value={keySearchQuery}
+                    onChange={(e) => setKeySearchQuery(e.target.value)}
+                    placeholder="Search user or key..."
+                    className="w-full rounded-xl border border-red-500/35 bg-black/80 px-3 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-400 box-border"
+                  />
+
+                  {/* Clean 3-Column Filter Pills (ALL / ACTIVE / USED all visible!) */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(
+                      [
+                        { id: "all", label: `All (${keyStats.total})` },
+                        { id: "active", label: `Active (${keyStats.active})` },
+                        { id: "used", label: `Used (${keyStats.used})` },
+                      ] as { id: KeyFilterMode; label: string }[]
+                    ).map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setKeyFilterMode(mode.id)}
+                        className={`py-1.5 rounded-xl text-[10px] font-extrabold transition cursor-pointer ${
+                          keyFilterMode === mode.id
+                            ? "bg-red-600 text-white shadow"
+                            : "bg-black/70 text-slate-300 hover:text-white border border-white/10"
+                        }`}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Clean Multi-Row Key Cards (Zero Clipped Badges!) */}
+                  <div className="max-h-52 overflow-y-auto space-y-2 pr-0.5 w-full box-border scrollbar-none">
+                    {filteredKeys.length === 0 ? (
+                      <p className="text-[11px] text-slate-400 text-center py-3">
+                        No keys match your current filter.
+                      </p>
+                    ) : (
+                      filteredKeys.map((kObj, idx) => (
+                        <div
+                          key={`${kObj.key}-${idx}`}
+                          className="bg-black/80 p-2.5 rounded-xl border border-red-500/30 space-y-2 w-full box-border"
+                        >
+                          {/* Row 1: Key Number + Status Badge */}
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleCopyKey(String(kObj.key))
+                              }
+                              className="font-mono text-xs font-black text-amber-300 hover:underline truncate cursor-pointer text-left"
+                              title="Tap to copy key"
+                            >
+                              {kObj.key}
+                            </button>
+                            <span
+                              className={`shrink-0 px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase ${
+                                kObj.active
+                                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/35"
+                                  : "bg-red-500/20 text-red-300 border border-red-500/35"
+                              }`}
+                            >
+                              {kObj.active ? "Active" : "Claimed"}
+                            </span>
                           </div>
-                        ))
-                      )}
-                    </div>
+
+                          {/* Row 2: Owner Name */}
+                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
+                            <span className="truncate">
+                              👤 <strong>{kObj.owner || kObj.usedBy || "Unassigned"}</strong>
+                            </span>
+                            {copiedKeyId === String(kObj.key) && (
+                              <span className="text-[10px] text-emerald-400 font-bold shrink-0">
+                                ✓ Copied
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Row 3: Clean Action Bar */}
+                          <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleCopyKey(String(kObj.key))
+                              }
+                              className="py-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-100 text-[10px] font-bold transition cursor-pointer"
+                            >
+                              📋 Copy
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleModifyKeyStatus(kObj.key, "toggle")
+                              }
+                              className={`py-1 rounded-lg text-[10px] font-extrabold transition cursor-pointer ${
+                                kObj.active
+                                  ? "bg-amber-600/35 hover:bg-amber-600/60 text-amber-200"
+                                  : "bg-emerald-600/35 hover:bg-emerald-600/60 text-emerald-200"
+                              }`}
+                            >
+                              {kObj.active ? "Revoke" : "Activate"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleModifyKeyStatus(kObj.key, "delete")
+                              }
+                              className="py-1 rounded-lg bg-red-600/45 hover:bg-red-600 text-red-100 text-[10px] font-extrabold transition cursor-pointer"
+                            >
+                              🗑️ Del
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* 4. FLEET COMMAND & SYSTEM CONTROLS (New!) */}
+          {/* 4. FLEET COMMAND & QUARANTINE */}
           <div className="w-full box-border">
             {renderCrimsonAccordionButton(
               "fleet",
               "🛡️",
-              "Fleet Command & Quarantine"
+              "Fleet & Quarantine"
             )}
             {activeAdminSection === "fleet" && (
-              <div className="relative w-full px-5 py-4 rounded-2xl mt-2 shadow-2xl overflow-hidden box-border backdrop-blur-xl bg-slate-950/60 border border-red-500/35 space-y-3.5">
-                <div
-                  className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-                  style={{
-                    backgroundImage: `url(${RABBIT_PANEL})`,
-                    backgroundSize: "100% 100%",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                />
-                <div className="relative z-10 space-y-3 w-full box-border">
-                  <form onSubmit={handleSyncFleetConfig} className="space-y-2.5">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-red-300">
-                      🌐 Remote Fleet Policies (admin_config.json)
-                    </p>
+              <div className={crimsonSubPanelClass}>
+                <form onSubmit={handleSyncFleetConfig} className="space-y-2.5">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-red-300">
+                    🌐 Remote Policies (admin_config.json)
+                  </p>
 
-                    <div className="flex items-center justify-between rounded-xl bg-black/70 border border-red-500/25 px-3 py-2">
-                      <div>
-                        <p className="text-xs font-bold text-white">
-                          Allow New 7-Day Free Trials
-                        </p>
-                        <p className="text-[9px] text-slate-400">
-                          Disable to require a key on all new installs.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFleetConfig((prev) => ({
-                            ...prev,
-                            allowTrials: !prev.allowTrials,
-                          }))
-                        }
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                  <div className="flex items-center justify-between gap-2 rounded-xl bg-black/75 border border-red-500/30 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white">
+                        Allow 7-Day Free Trials
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        Disable to require a key on new installs.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFleetConfig((prev) => ({
+                          ...prev,
+                          allowTrials: !prev.allowTrials,
+                        }))
+                      }
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                        fleetConfig.allowTrials
+                          ? "bg-emerald-600"
+                          : "bg-slate-700"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                           fleetConfig.allowTrials
-                            ? "bg-emerald-600"
-                            : "bg-red-900"
+                            ? "translate-x-6"
+                            : "translate-x-1"
                         }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            fleetConfig.allowTrials
-                              ? "translate-x-6"
-                              : "translate-x-1"
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between rounded-xl bg-black/70 border border-red-500/25 px-3 py-2">
-                      <div>
-                        <p className="text-xs font-bold text-white">
-                          System Maintenance Banner
-                        </p>
-                        <p className="text-[9px] text-slate-400">
-                          Displays an admin notice across active clients.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFleetConfig((prev) => ({
-                            ...prev,
-                            maintenanceMode: !prev.maintenanceMode,
-                          }))
-                        }
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                          fleetConfig.maintenanceMode
-                            ? "bg-red-600"
-                            : "bg-slate-700"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            fleetConfig.maintenanceMode
-                              ? "translate-x-6"
-                              : "translate-x-1"
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Global MOTD Banner Text..."
-                        value={fleetConfig.motdBanner}
-                        onChange={(e) =>
-                          setFleetConfig((prev) => ({
-                            ...prev,
-                            motdBanner: e.target.value,
-                          }))
-                        }
-                        className="col-span-2 rounded-xl border border-red-500/35 bg-black/75 px-2.5 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
                       />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 rounded-xl bg-black/75 border border-red-500/30 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white">
+                        Maintenance Banner
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        Shows an admin notice across active apps.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFleetConfig((prev) => ({
+                          ...prev,
+                          maintenanceMode: !prev.maintenanceMode,
+                        }))
+                      }
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                        fleetConfig.maintenanceMode
+                          ? "bg-red-600"
+                          : "bg-slate-700"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          fleetConfig.maintenanceMode
+                            ? "translate-x-6"
+                            : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Stacked inputs so placeholder text NEVER clips */}
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Global MOTD Banner Message..."
+                      value={fleetConfig.motdBanner}
+                      onChange={(e) =>
+                        setFleetConfig((prev) => ({
+                          ...prev,
+                          motdBanner: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-red-500/35 bg-black/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-red-400"
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-slate-300 shrink-0">
+                        Min App Ver:
+                      </span>
                       <input
                         type="text"
-                        placeholder="Min Ver (1.2.0)"
+                        placeholder="1.2.0"
                         value={fleetConfig.minAppVersion}
                         onChange={(e) =>
                           setFleetConfig((prev) => ({
@@ -1371,46 +1332,46 @@ export function AdminPanel({
                             minAppVersion: e.target.value,
                           }))
                         }
-                        className="col-span-1 rounded-xl border border-red-500/35 bg-black/75 px-2.5 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
+                        className="flex-1 rounded-xl border border-red-500/35 bg-black/80 px-3 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-400"
                       />
                     </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-2 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white text-xs font-extrabold shadow-lg shadow-red-600/30 transition hover:scale-[1.02] cursor-pointer"
-                    >
-                      ⚡ Sync Fleet Policies to Gist
-                    </button>
-                  </form>
-
-                  {/* Broken Links Quarantine Reset */}
-                  <div className="pt-2.5 border-t border-red-500/25 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-[11px] font-bold text-white">
-                        Quarantined Broken Titles ({brokenLinksCount})
-                      </p>
-                      <p className="text-[9px] text-slate-400">
-                        Restore hidden titles reported broken on this device.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleClearQuarantinedBrokenLinks}
-                      disabled={brokenLinksCount === 0}
-                      className="px-3 py-1.5 rounded-xl bg-red-950/80 hover:bg-red-700 disabled:opacity-40 border border-red-500/40 text-[10px] font-extrabold text-red-100 transition cursor-pointer shrink-0"
-                    >
-                      ↺ Restore All
-                    </button>
                   </div>
 
-                  {fleetSyncStatus && (
-                    <div className="rounded-xl bg-black/80 border border-red-500/40 p-2 text-center">
-                      <p className="text-[11px] font-bold text-amber-300">
-                        {fleetSyncStatus}
-                      </p>
-                    </div>
-                  )}
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white text-xs font-extrabold shadow-lg shadow-red-600/30 transition hover:scale-[1.02] cursor-pointer"
+                  >
+                    ⚡ Sync Fleet Policies to Gist
+                  </button>
+                </form>
+
+                {/* Broken Links Quarantine Reset — Clean Stacked Card */}
+                <div className="pt-2.5 border-t border-red-500/25 space-y-2">
+                  <div>
+                    <p className="text-xs font-bold text-white">
+                      Quarantined Broken Titles ({brokenLinksCount})
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      Restore hidden titles reported broken on this device.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearQuarantinedBrokenLinks}
+                    disabled={brokenLinksCount === 0}
+                    className="w-full py-2 rounded-xl bg-red-950/85 hover:bg-red-700 disabled:opacity-40 border border-red-500/40 text-xs font-extrabold text-red-100 transition cursor-pointer"
+                  >
+                    ↺ Restore All Quarantined Titles
+                  </button>
                 </div>
+
+                {fleetSyncStatus && (
+                  <div className="rounded-xl bg-black/80 border border-red-500/40 p-2 text-center">
+                    <p className="text-[11px] font-bold text-amber-300">
+                      {fleetSyncStatus}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1418,7 +1379,7 @@ export function AdminPanel({
       )}
 
       {/* Subtle Neon Divider */}
-      <div className="pt-2 text-center w-full box-border">
+      <div className="pt-1 text-center w-full box-border">
         <img
           src={RABBIT_DIVIDER}
           alt=""
