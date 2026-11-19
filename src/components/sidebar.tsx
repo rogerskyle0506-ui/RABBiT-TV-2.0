@@ -1,11 +1,23 @@
 // src/components/sidebar.tsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "@tanstack/react-router";
 import { AdminPanel } from "@/components/AdminPanel";
+import { ReferralModal } from "@/components/ReferralModal";
 import { TIMEOUT_OPTIONS } from "@/components/Screensaver";
 import { bgAudio, RADIO_STATIONS } from "@/lib/background-audio";
 import { sendPermanentActivationAlert } from "@/lib/report";
 import { checkForAppUpdates } from "@/lib/updater";
+import {
+  getHolidayPreviewOverride,
+  setHolidayPreviewOverride,
+  getAllHolidayOptions,
+  type HolidayOverrideMode,
+} from "@/lib/holiday-theme";
+import {
+  MIN_CONFIRMED_REFERRALS,
+  PAYOUT_PER_EXTRA_REFERRAL_CAD,
+} from "@/lib/referrals";
 import {
   CardSize,
   StreamQuality,
@@ -144,20 +156,17 @@ export function getDefaultHeartDanceStationUrl(): string {
     RADIO_STATIONS["00s"] ||
     [];
 
-  // 1. Exact match for "Heart Dance" inside 2000s
   const exactIn2000s = stations2000s.find((s) => {
     const n = s.name.toLowerCase();
     return n.includes("heart dance") || n.includes("heartdance");
   });
   if (exactIn2000s?.url) return exactIn2000s.url;
 
-  // 2. Fallback match for "Heart" inside 2000s
   const heartIn2000s = stations2000s.find((s) =>
     s.name.toLowerCase().includes("heart")
   );
   if (heartIn2000s?.url) return heartIn2000s.url;
 
-  // 3. Scan all categories for "Heart Dance"
   for (const list of Object.values(RADIO_STATIONS)) {
     const match = list.find((s) => {
       const n = s.name.toLowerCase();
@@ -166,7 +175,6 @@ export function getDefaultHeartDanceStationUrl(): string {
     if (match?.url) return match.url;
   }
 
-  // 4. First station in 2000s or 80s fallback
   if (stations2000s[0]?.url) return stations2000s[0].url;
   return RADIO_STATIONS["80s"]?.[0]?.url || "";
 }
@@ -257,6 +265,8 @@ export function Sidebar({
 
   const [activeSection, setActiveSection] =
     useState<ConsolidatedSection>(null);
+  const [isReferralModalOpen, setIsReferralModalOpen] =
+    useState<boolean>(false);
 
   // Synced Settings States
   const [screensaverTimeoutMs, setScreensaverTimeoutMs] = useState<number>(() =>
@@ -272,7 +282,7 @@ export function Sidebar({
     getShowCornerClock()
   );
 
-  // Poster Appearance & Layout States
+  // Poster Appearance, Holiday & Layout States
   const [posterShape, setPosterShapeState] = useState<PosterShape>(() =>
     getPosterShape()
   );
@@ -287,6 +297,8 @@ export function Sidebar({
   const [glowIntensity, setGlowIntensityState] = useState<GlowIntensity>(() =>
     getGlowIntensity()
   );
+  const [holidayOverride, setHolidayOverrideState] =
+    useState<HolidayOverrideMode>(() => getHolidayPreviewOverride());
   const [visualResetMsg, setVisualResetMsg] = useState<string | null>(null);
 
   // Senior, TV & Personalization States
@@ -433,6 +445,7 @@ export function Sidebar({
     setPosterInfoLayoutState(getPosterInfoLayout());
     setShowPosterBadgesState(getShowPosterBadges());
     setGlowIntensityState(getGlowIntensity());
+    setHolidayOverrideState(getHolidayPreviewOverride());
     setSeniorEasyModeState(getSeniorEasyMode());
     setTextScaleState(getTextScale());
     setCursorStyleState(getCursorStyle());
@@ -458,8 +471,11 @@ export function Sidebar({
     if (!isOpen) return;
     syncLocalControls();
     window.addEventListener("rabtv_settings_updated", syncLocalControls);
-    return () =>
+    window.addEventListener("rabtv_holiday_updated", syncLocalControls);
+    return () => {
       window.removeEventListener("rabtv_settings_updated", syncLocalControls);
+      window.removeEventListener("rabtv_holiday_updated", syncLocalControls);
+    };
   }, [isOpen, syncLocalControls]);
 
   useEffect(() => {
@@ -505,9 +521,9 @@ export function Sidebar({
     }
   }, []);
 
-  // Close sidebar if main window scrolls significantly
+  // Close sidebar if main window scrolls significantly (paused while ReferralModal is open)
   useEffect(() => {
-    if (!isOpen || typeof window === "undefined") return;
+    if (!isOpen || isReferralModalOpen || typeof window === "undefined") return;
     lastScrollYRef.current = window.scrollY;
 
     const handleWindowScroll = () => {
@@ -519,11 +535,11 @@ export function Sidebar({
 
     window.addEventListener("scroll", handleWindowScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleWindowScroll);
-  }, [isOpen, onClose]);
+  }, [isOpen, isReferralModalOpen, onClose]);
 
   // D-pad / Arrow Key navigation handler with smooth scroll-into-view
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isReferralModalOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!sidebarContentRef.current) return;
@@ -567,12 +583,13 @@ export function Sidebar({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, isReferralModalOpen, onClose]);
 
   if (!isOpen) return null;
 
   const handleCloseSidebar = () => {
     setActiveSection(null);
+    setIsReferralModalOpen(false);
     onClose();
   };
 
@@ -636,6 +653,8 @@ export function Sidebar({
 
   const handleResetVisualDefaults = () => {
     resetVisualSettings();
+    setHolidayPreviewOverride("auto");
+    setHolidayOverrideState("auto");
     setVisualResetMsg("✓ Visual & poster styles restored to defaults!");
     window.setTimeout(() => setVisualResetMsg(null), 3000);
   };
@@ -924,7 +943,6 @@ export function Sidebar({
           localStorage.setItem("rabtv_favorites", data.favorites);
         }
 
-        // Security rule: Always require fresh activation/PIN confirmation after restore
         localStorage.removeItem(DISCLAIMER_ACCEPTED_KEY);
         localStorage.removeItem("rabtv_access_status");
         localStorage.removeItem("rabtv_is_admin");
@@ -941,7 +959,6 @@ export function Sidebar({
     reader.readAsText(file);
   };
 
-  // Solid active toggle track color per theme (fixes invisible toggle bug!)
   const getToggleActiveBg = (theme: AppTheme) => {
     switch (theme) {
       case "red":
@@ -980,7 +997,6 @@ export function Sidebar({
 
   const toggleActiveClass = getToggleActiveBg(appTheme);
 
-  // Clean Crystal Glass inner panel class (no distorted stretched JPG lines cutting across controls)
   const crystalSubPanelClass =
     "relative w-full p-3.5 sm:p-4 rounded-2xl mt-2 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(56,189,248,0.08)] overflow-hidden box-border backdrop-blur-xl bg-slate-950/85 border border-white/15 space-y-3.5";
 
@@ -988,7 +1004,6 @@ export function Sidebar({
     setActiveSection((prev) => (prev === section ? null : section));
   };
 
-  // Find active station name for the radio badge
   let activeStationName = "Heart Dance";
   for (const stations of Object.values(RADIO_STATIONS)) {
     const match = stations.find(
@@ -1002,10 +1017,8 @@ export function Sidebar({
     }
   }
 
-  /**
-   * Renders a Crystal Neon Accordion Header using RABBIT_HEADER_PILL
-   * with full unclipped titles & 3D mouse hover / D-pad focus pop-out physics.
-   */
+  const holidayOptions = getAllHolidayOptions();
+
   const renderCrystalAccordionButton = (
     sectionId: ConsolidatedSection,
     icon: string,
@@ -1269,7 +1282,7 @@ export function Sidebar({
                 )}
               </div>
 
-              {/* 2. THEMES, POSTER STYLES & GRID LAYOUT */}
+              {/* 2. THEMES, POSTER STYLES & HOLIDAY OVERLAY */}
               <div className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "themesAndScale",
@@ -1483,6 +1496,34 @@ export function Sidebar({
                       </div>
                     </div>
 
+                    {/* 3D Seasonal Holiday Overlay Mode */}
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                        ✨ 3D Seasonal Holiday Overlay:
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {holidayOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setHolidayPreviewOverride(opt.id);
+                              setHolidayOverrideState(opt.id);
+                            }}
+                            className={`rounded-xl py-1.5 px-2 text-[10px] font-bold transition-all cursor-pointer hover:scale-[1.03] ${
+                              holidayOverride === opt.id
+                                ? `${getPrimaryBgColor(
+                                    appTheme
+                                  )} text-white shadow-md`
+                                : getSubtlePillBg(appTheme)
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Neon Glow Intensity + Safe Visual Reset */}
                     <div className="pt-2.5 border-t border-white/10 space-y-2.5">
                       <div>
@@ -1529,7 +1570,7 @@ export function Sidebar({
                 )}
               </div>
 
-              {/* 3. BACKGROUND LOBBY RADIO (Default: Heart Dance in 2000s @ 25% Vol) */}
+              {/* 3. BACKGROUND LOBBY RADIO */}
               <div className="w-full box-border">
                 {renderCrystalAccordionButton(
                   "audio",
@@ -1871,7 +1912,6 @@ export function Sidebar({
                         ♿ TV, Projector & Accessibility
                       </p>
 
-                      {/* Text Size */}
                       <div>
                         <p className="text-[11px] text-slate-300 font-bold mb-1">
                           Text Size:
@@ -1901,7 +1941,6 @@ export function Sidebar({
                         </div>
                       </div>
 
-                      {/* XL Mouse Pointer + Color Picker */}
                       <div className="flex items-center justify-between gap-2 pt-1">
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white">
@@ -1950,7 +1989,6 @@ export function Sidebar({
                         </div>
                       )}
 
-                      {/* Enlarged Action Buttons */}
                       <div className="flex items-center justify-between gap-2 pt-1">
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white">
@@ -1975,7 +2013,6 @@ export function Sidebar({
                         </button>
                       </div>
 
-                      {/* Bright TV Focus Spotlight */}
                       <div className="flex items-center justify-between gap-2 pt-1">
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white">
@@ -2006,7 +2043,6 @@ export function Sidebar({
                         </button>
                       </div>
 
-                      {/* Steady Screen (Reduced Motion) */}
                       <div className="flex items-center justify-between gap-2 pt-1">
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white">
@@ -2035,7 +2071,6 @@ export function Sidebar({
                         </button>
                       </div>
 
-                      {/* Soft Remote Click Sounds */}
                       <div className="flex items-center justify-between gap-2 pt-1">
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white">
@@ -2064,7 +2099,6 @@ export function Sidebar({
                         </button>
                       </div>
 
-                      {/* TV Overscan Safe-Zone */}
                       <div className="pt-1">
                         <p className="text-[11px] text-slate-300 font-bold mb-1">
                           TV / Projector Screen Safe-Zone:
@@ -2092,7 +2126,6 @@ export function Sidebar({
                         </div>
                       </div>
 
-                      {/* Subtitle Defaults (Size, Color & Background Box Opacity) */}
                       <div className="pt-1">
                         <p className="text-[11px] text-slate-300 font-bold mb-1">
                           Caption / Subtitle Style:
@@ -2334,7 +2367,6 @@ export function Sidebar({
 
                 {activeSection === "hardwareAndStream" && (
                   <div className={crystalSubPanelClass}>
-                    {/* RAM Profile */}
                     <div>
                       <p className="text-[11px] text-slate-300 font-bold mb-1">
                         Device Memory Allocation Profile:
@@ -2370,7 +2402,6 @@ export function Sidebar({
                       </div>
                     </div>
 
-                    {/* Data Saver Toggle */}
                     <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/10">
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-white">
@@ -2399,7 +2430,6 @@ export function Sidebar({
                       </button>
                     </div>
 
-                    {/* Default Stream Quality */}
                     <div className="pt-2.5 border-t border-white/10">
                       <p className="text-[11px] text-slate-300 font-bold mb-1.5">
                         Preferred Stream Resolution:
@@ -2426,7 +2456,6 @@ export function Sidebar({
                       </div>
                     </div>
 
-                    {/* Default Player Volume */}
                     <div className="pt-2.5 border-t border-white/10 space-y-1.5">
                       <div className="flex items-center justify-between">
                         <p className="text-[11px] text-slate-300 font-bold">
@@ -2451,7 +2480,6 @@ export function Sidebar({
                       />
                     </div>
 
-                    {/* Auto-Play Next Episode */}
                     <div className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-white">
@@ -2480,7 +2508,6 @@ export function Sidebar({
                       </button>
                     </div>
 
-                    {/* Live WebView Storage Meter & Cache Cleaner */}
                     <div className="pt-2.5 border-t border-white/10 space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-bold">
                         <span className="text-slate-300">
@@ -2549,7 +2576,6 @@ export function Sidebar({
 
                 {activeSection === "screensaverAndBackup" && (
                   <div className={crystalSubPanelClass}>
-                    {/* Couch Sleep Timer */}
                     <div>
                       <p className="text-[11px] text-slate-300 font-bold mb-1.5">
                         🌙 Couch Sleep Timer (Auto-Pause & Dark Screen):
@@ -2577,7 +2603,6 @@ export function Sidebar({
                       </div>
                     </div>
 
-                    {/* Screensaver Timeout */}
                     <div className="pt-2.5 border-t border-white/10">
                       <p className="text-[11px] text-slate-300 font-bold mb-1.5">
                         Start Screensaver After:
@@ -2610,7 +2635,6 @@ export function Sidebar({
                       </div>
                     </div>
 
-                    {/* Validated Backup & Restore */}
                     <div className="pt-2.5 border-t border-white/10 space-y-2">
                       <p className="text-[11px] text-slate-300 font-bold">
                         Profile, Poster Styles & Watchlist Backup:
@@ -2652,6 +2676,35 @@ export function Sidebar({
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* REFER FRIENDS & EARN CASH LAUNCHER */}
+            <div className="pt-2 w-full box-border">
+              <button
+                type="button"
+                onClick={() => setIsReferralModalOpen(true)}
+                className="w-full rounded-2xl border border-amber-400/50 bg-gradient-to-r from-amber-950/75 via-emerald-950/60 to-amber-950/75 hover:from-amber-900/80 hover:to-emerald-900/75 p-3 text-left shadow-[0_10px_28px_rgba(245,158,11,0.22)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 border border-amber-400/50 text-base">
+                      💸
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-amber-300 truncate">
+                        Refer Friends & Earn Cash
+                      </p>
+                      <p className="text-[10px] text-emerald-200/90 font-semibold truncate">
+                        ${PAYOUT_PER_EXTRA_REFERRAL_CAD}/friend after{" "}
+                        {MIN_CONFIRMED_REFERRALS} paid invites
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-emerald-500/20 border border-emerald-400/45 px-2.5 py-0.5 text-[10px] font-black text-emerald-300">
+                    Open ↗
+                  </span>
+                </div>
+              </button>
             </div>
 
             {/* ADMIN PANEL (IF ADMIN) */}
@@ -2810,6 +2863,17 @@ export function Sidebar({
           ▼
         </button>
       </div>
+
+      {/* Full-Screen Portal for User Refer & Earn Dashboard */}
+      {isReferralModalOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <ReferralModal
+            isOpen={isReferralModalOpen}
+            onClose={() => setIsReferralModalOpen(false)}
+          />,
+          document.body
+        )}
     </div>
   );
 }
