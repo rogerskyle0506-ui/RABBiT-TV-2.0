@@ -6,6 +6,11 @@ import { UserNotifier } from "@/components/UserNotifier";
 import { Screensaver } from "@/components/Screensaver";
 import { SplashIntro } from "@/components/SplashIntro";
 import { ProfileSwitcherModal } from "@/components/ProfileSwitcherModal";
+import { MascotAvatar } from "@/components/MascotAvatar";
+import {
+  getActiveMascotBadge,
+  MASCOT_UPDATED_EVENT,
+} from "@/lib/mascots";
 import {
   ensurePrimaryProfileInitialized,
   OPEN_PROFILE_SWITCHER_EVENT,
@@ -66,7 +71,6 @@ import {
   getOrCreateDeviceId,
   getCursorStyle,
   getCursorSvgDataUri,
-  getProfileMascot,
   getShowCornerClock,
   getClockFormat,
   formatAppTime,
@@ -570,7 +574,9 @@ function RootComponent() {
   const [historyOverscale, setHistoryOverscaleState] =
     useState<HistoryScale>("off");
   const [largeButtons, setLargeButtonsState] = useState(false);
-  const [profileMascot, setProfileMascotState] = useState<string>("🐰");
+  const [profileMascot, setProfileMascotState] = useState<string>(() =>
+    getActiveMascotBadge()
+  );
   const [kidsLocked, setKidsLockedState] = useState<boolean>(false);
   const [showCornerClock, setShowCornerClockState] = useState<boolean>(false);
   const [cornerClockText, setCornerClockText] = useState<string>("");
@@ -831,7 +837,7 @@ function RootComponent() {
       setCursorStyleState(getCursorStyle());
       setHistoryOverscaleState(getHistoryOverscale());
       setLargeButtonsState(getLargeButtons());
-      setProfileMascotState(getProfileMascot());
+      setProfileMascotState(getActiveMascotBadge());
       setKidsLockedState(getKidsModeLocked());
       setShowCornerClockState(getShowCornerClock());
       setCornerClockText(formatAppTime(new Date(), getClockFormat()));
@@ -886,6 +892,7 @@ function RootComponent() {
     syncRootStateFromSettings();
     window.addEventListener("rabtv_settings_updated", syncRootStateFromSettings);
     window.addEventListener(PROFILES_UPDATED_EVENT, syncRootStateFromSettings);
+    window.addEventListener(MASCOT_UPDATED_EVENT, syncRootStateFromSettings);
     window.addEventListener(SIDEBAR_TOGGLE_EVENT, handleSidebarToggleEvent);
     window.addEventListener(TOS_OPEN_EVENT, handleOpenTosEvent);
     window.addEventListener(OPEN_PROFILE_SWITCHER_EVENT, handleOpenSwitcherEvent);
@@ -895,6 +902,7 @@ function RootComponent() {
         syncRootStateFromSettings
       );
       window.removeEventListener(PROFILES_UPDATED_EVENT, syncRootStateFromSettings);
+      window.removeEventListener(MASCOT_UPDATED_EVENT, syncRootStateFromSettings);
       window.removeEventListener(SIDEBAR_TOGGLE_EVENT, handleSidebarToggleEvent);
       window.removeEventListener(TOS_OPEN_EVENT, handleOpenTosEvent);
       window.removeEventListener(
@@ -1077,17 +1085,14 @@ function RootComponent() {
                     onClick={() => setShowProfileMenu((prev) => !prev)}
                     className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition cursor-pointer group relative overflow-hidden border focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.glowClass} ${tokens.focusRing}`}
                   >
-                    <div
-                      className={`w-5 h-5 rounded-full overflow-hidden border shrink-0 ${tokens.avatarFrame}`}
-                    >
-                      <img
-                        src={HEADER_ICON_URL}
-                        alt="Avatar"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <MascotAvatar
+                      mascot={profileMascot}
+                      size="sm"
+                      rounded="full"
+                      className={`border ${tokens.avatarFrame}`}
+                      alt={savedProfileName}
+                    />
                     <span className="truncate max-w-[105px] sm:max-w-[145px] md:max-w-none text-xs">
-                      <span className="mr-1">{profileMascot}</span>
                       <strong className="text-white">{savedProfileName}</strong>{" "}
                       {isAdmin
                         ? "(Admin)"
