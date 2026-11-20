@@ -5,14 +5,17 @@ import {
   saveTheme,
   getSavedUserAge,
   saveUserAge,
-  getProfileMascot,
-  setProfileMascot,
   getKidsModeLocked,
   setKidsModeLocked,
   applyAllSettingsToDocument,
   purgeOldTmdbCaches,
-  PROFILE_MASCOT_OPTIONS,
 } from "@/lib/settings";
+import {
+  MASCOT_UPDATED_EVENT,
+  sanitizeMascotId,
+  getActiveMascotBadge,
+  setActiveMascotBadge,
+} from "@/lib/mascots";
 import {
   CUSTOM_SHELVES_STORAGE_KEY,
   CUSTOM_SHELVES_EVENT,
@@ -68,8 +71,7 @@ function sanitizeProfileName(raw: string): string {
 }
 
 function sanitizeMascot(raw: string): string {
-  const cleaned = String(raw || "").trim().slice(0, 8);
-  return cleaned || PROFILE_MASCOT_OPTIONS[0]?.id || "🐰";
+  return sanitizeMascotId(raw);
 }
 
 function sanitizeTheme(raw: unknown): AppTheme {
@@ -140,6 +142,7 @@ function broadcastProfileChange(): void {
   if (typeof window === "undefined") return;
   applyAllSettingsToDocument();
   window.dispatchEvent(new Event(PROFILES_UPDATED_EVENT));
+  window.dispatchEvent(new Event(MASCOT_UPDATED_EVENT));
   window.dispatchEvent(new Event("rabtv_settings_updated"));
   window.dispatchEvent(new Event("rabtv_catalog_updated"));
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
@@ -171,7 +174,7 @@ export function ensurePrimaryProfileInitialized(): HouseholdProfile[] {
   const primary: HouseholdProfile = {
     id: `prof-${now}`,
     name: currentName,
-    mascot: sanitizeMascot(getProfileMascot()),
+    mascot: sanitizeMascot(getActiveMascotBadge()),
     theme: sanitizeTheme(getSavedTheme()),
     age: sanitizeAge(getSavedUserAge(), isKids),
     isKids,
@@ -249,7 +252,7 @@ export function snapshotActiveProfile(): HouseholdProfile[] {
       ? {
           ...p,
           name: liveName || p.name,
-          mascot: sanitizeMascot(getProfileMascot()),
+          mascot: sanitizeMascot(getActiveMascotBadge()),
           theme: sanitizeTheme(getSavedTheme()),
           age: sanitizeAge(getSavedUserAge(), getKidsModeLocked()),
           isKids: getKidsModeLocked(),
@@ -322,7 +325,7 @@ export function switchHouseholdProfile(profileId: string): boolean {
   localStorage.setItem("rabtv_profile_name", target.name);
   localStorage.setItem(ACTIVE_PROFILE_ID_KEY, target.id);
   saveTheme(target.theme);
-  setProfileMascot(target.mascot);
+  setActiveMascotBadge(target.mascot);
   saveUserAge(target.age);
   setKidsModeLocked(target.isKids);
 
