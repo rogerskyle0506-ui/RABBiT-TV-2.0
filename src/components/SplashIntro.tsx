@@ -252,15 +252,6 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
             </button>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={completeSplash}
-          className={`pointer-events-auto inline-flex items-center gap-1.5 rounded-full border backdrop-blur-xl px-4 py-2 text-xs font-extrabold tracking-wide shadow-xl transition active:scale-95 cursor-pointer ${theme.bg} ${theme.border} ${theme.text}`}
-          aria-label="Skip intro animation"
-        >
-          <span>Skip Intro ›</span>
-        </button>
       </div>
     </div>
   );
