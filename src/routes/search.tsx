@@ -1,6 +1,6 @@
 // src/routes/search.tsx
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
 import type { MediaItem } from "@/lib/tmdb-scraper";
 import {
   CardSize,
@@ -224,6 +224,359 @@ function mapRawItem(
   };
 }
 
+interface SearchThemeTokens {
+  bg: string;
+  baseText: string;
+  mutedText: string;
+  subMutedText: string;
+  accentText: string;
+  accentBar: string;
+  accentBadge: string;
+  surfacePanel: string;
+  controlBox: string;
+  dividerBorder: string;
+  inputClass: string;
+  optionBg: string;
+  btn: string;
+  btnSecondary: string;
+  backCapsule: string;
+  backBadge: string;
+  pillIdle: string;
+  recentChip: string;
+  personBanner: string;
+  liveCard: string;
+  avatarFrame: string;
+  avatarRing: string;
+  spinner: string;
+  focusRing: string;
+  ambient: string;
+  arrow: string;
+}
+
+function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
+  switch (theme) {
+    case "red":
+      return {
+        bg: "bg-gradient-to-br from-zinc-950/85 via-red-950/40 to-black/95",
+        baseText: "text-zinc-100",
+        mutedText: "text-zinc-300",
+        subMutedText: "text-zinc-400",
+        accentText: "text-red-400",
+        accentBar: "bg-red-500 shadow-[0_0_14px_rgba(239,68,68,0.95)]",
+        accentBadge: "bg-red-950/80 border border-red-500/40 text-red-200",
+        surfacePanel:
+          "bg-zinc-950/88 border-red-500/35 shadow-[0_16px_50px_rgba(239,68,68,0.18)]",
+        controlBox: "bg-black/75 border-red-500/25",
+        dividerBorder: "border-red-500/20",
+        inputClass:
+          "border-red-500/35 bg-black/80 text-white placeholder-zinc-400 focus:ring-4 focus:ring-red-500/40 focus:border-red-400",
+        optionBg: "bg-zinc-950 text-white",
+        btn: "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/35",
+        btnSecondary:
+          "bg-red-950/65 hover:bg-red-900/80 border border-red-500/35 text-red-100 hover:text-white",
+        backCapsule:
+          "bg-zinc-950/85 hover:bg-red-950/80 border-red-500/35 hover:border-red-400 text-zinc-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-red-600/60 via-rose-500/50 to-orange-500/50 border-red-400/50 text-white",
+        pillIdle:
+          "bg-red-950/40 hover:bg-red-900/65 border-red-500/25 text-red-100 hover:text-white",
+        recentChip: "bg-black/75 border-red-500/30",
+        personBanner: "bg-red-950/60 border-red-400/45 text-red-100",
+        liveCard:
+          "border-red-500/35 hover:border-red-400 bg-zinc-950/90 shadow-[0_10px_28px_rgba(239,68,68,0.14)]",
+        avatarFrame: "bg-zinc-950 border-zinc-950",
+        avatarRing: "from-red-500 via-rose-400 to-orange-400",
+        spinner: "border-red-400",
+        focusRing: "focus:ring-red-500",
+        ambient: "from-red-600/15 via-transparent to-transparent",
+        arrow: "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.85)]",
+      };
+    case "midnight":
+      return {
+        bg: "bg-gradient-to-br from-slate-950/85 via-blue-950/40 to-black/95",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        accentText: "text-sky-300",
+        accentBar: "bg-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.95)]",
+        accentBadge: "bg-blue-950/80 border border-blue-500/40 text-sky-200",
+        surfacePanel:
+          "bg-slate-950/88 border-blue-500/35 shadow-[0_16px_50px_rgba(59,130,246,0.18)]",
+        controlBox: "bg-black/75 border-blue-500/25",
+        dividerBorder: "border-blue-500/20",
+        inputClass:
+          "border-blue-500/35 bg-black/80 text-white placeholder-slate-400 focus:ring-4 focus:ring-sky-400/40 focus:border-sky-400",
+        optionBg: "bg-slate-950 text-white",
+        btn: "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/35",
+        btnSecondary:
+          "bg-blue-950/65 hover:bg-blue-900/80 border border-blue-500/35 text-blue-100 hover:text-white",
+        backCapsule:
+          "bg-slate-950/85 hover:bg-blue-950/80 border-blue-500/35 hover:border-sky-400 text-slate-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-blue-600/60 via-sky-500/50 to-cyan-400/50 border-sky-400/50 text-white",
+        pillIdle:
+          "bg-blue-950/40 hover:bg-blue-900/65 border-blue-500/25 text-blue-100 hover:text-white",
+        recentChip: "bg-black/75 border-blue-500/30",
+        personBanner: "bg-blue-950/60 border-sky-400/45 text-sky-100",
+        liveCard:
+          "border-blue-500/35 hover:border-sky-400 bg-slate-950/90 shadow-[0_10px_28px_rgba(59,130,246,0.14)]",
+        avatarFrame: "bg-slate-950 border-slate-950",
+        avatarRing: "from-cyan-400 via-sky-500 to-blue-500",
+        spinner: "border-sky-400",
+        focusRing: "focus:ring-sky-400",
+        ambient: "from-blue-600/15 via-transparent to-transparent",
+        arrow: "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.85)]",
+      };
+    case "emerald":
+      return {
+        bg: "bg-gradient-to-br from-neutral-950/85 via-emerald-950/40 to-black/95",
+        baseText: "text-neutral-100",
+        mutedText: "text-neutral-300",
+        subMutedText: "text-neutral-400",
+        accentText: "text-emerald-300",
+        accentBar: "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.95)]",
+        accentBadge:
+          "bg-emerald-950/80 border border-emerald-500/40 text-emerald-200",
+        surfacePanel:
+          "bg-neutral-950/88 border-emerald-500/35 shadow-[0_16px_50px_rgba(16,185,129,0.18)]",
+        controlBox: "bg-black/75 border-emerald-500/25",
+        dividerBorder: "border-emerald-500/20",
+        inputClass:
+          "border-emerald-500/35 bg-black/80 text-white placeholder-neutral-400 focus:ring-4 focus:ring-emerald-400/40 focus:border-emerald-400",
+        optionBg: "bg-neutral-950 text-white",
+        btn: "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/35",
+        btnSecondary:
+          "bg-emerald-950/65 hover:bg-emerald-900/80 border border-emerald-500/35 text-emerald-100 hover:text-white",
+        backCapsule:
+          "bg-neutral-950/85 hover:bg-emerald-950/80 border-emerald-500/35 hover:border-emerald-400 text-neutral-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-emerald-600/60 via-teal-500/50 to-green-400/50 border-emerald-400/50 text-white",
+        pillIdle:
+          "bg-emerald-950/40 hover:bg-emerald-900/65 border-emerald-500/25 text-emerald-100 hover:text-white",
+        recentChip: "bg-black/75 border-emerald-500/30",
+        personBanner: "bg-emerald-950/60 border-emerald-400/45 text-emerald-100",
+        liveCard:
+          "border-emerald-500/35 hover:border-emerald-400 bg-neutral-950/90 shadow-[0_10px_28px_rgba(16,185,129,0.14)]",
+        avatarFrame: "bg-neutral-950 border-neutral-950",
+        avatarRing: "from-emerald-400 via-teal-400 to-green-500",
+        spinner: "border-emerald-400",
+        focusRing: "focus:ring-emerald-400",
+        ambient: "from-emerald-600/15 via-transparent to-transparent",
+        arrow: "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.85)]",
+      };
+    case "amber":
+      return {
+        bg: "bg-gradient-to-br from-stone-950/85 via-yellow-950/40 to-black/95",
+        baseText: "text-stone-100",
+        mutedText: "text-stone-300",
+        subMutedText: "text-stone-400",
+        accentText: "text-amber-300",
+        accentBar: "bg-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.95)]",
+        accentBadge: "bg-amber-950/80 border border-amber-500/40 text-amber-200",
+        surfacePanel:
+          "bg-stone-950/88 border-amber-500/35 shadow-[0_16px_50px_rgba(245,158,11,0.18)]",
+        controlBox: "bg-black/75 border-amber-500/25",
+        dividerBorder: "border-amber-500/20",
+        inputClass:
+          "border-amber-500/35 bg-black/80 text-white placeholder-stone-400 focus:ring-4 focus:ring-amber-400/40 focus:border-amber-400",
+        optionBg: "bg-stone-950 text-white",
+        btn: "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/35",
+        btnSecondary:
+          "bg-amber-950/65 hover:bg-amber-900/80 border border-amber-500/35 text-amber-100 hover:text-white",
+        backCapsule:
+          "bg-stone-950/85 hover:bg-amber-950/80 border-amber-500/35 hover:border-amber-400 text-stone-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-amber-600/60 via-yellow-500/50 to-orange-500/50 border-amber-400/50 text-white",
+        pillIdle:
+          "bg-amber-950/40 hover:bg-amber-900/65 border-amber-500/25 text-amber-100 hover:text-white",
+        recentChip: "bg-black/75 border-amber-500/30",
+        personBanner: "bg-amber-950/60 border-amber-400/45 text-amber-100",
+        liveCard:
+          "border-amber-500/35 hover:border-amber-400 bg-stone-950/90 shadow-[0_10px_28px_rgba(245,158,11,0.14)]",
+        avatarFrame: "bg-stone-950 border-stone-950",
+        avatarRing: "from-amber-400 via-yellow-400 to-orange-500",
+        spinner: "border-amber-400",
+        focusRing: "focus:ring-amber-400",
+        ambient: "from-amber-600/15 via-transparent to-transparent",
+        arrow: "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.85)]",
+      };
+    case "cyan":
+      return {
+        bg: "bg-gradient-to-br from-slate-950/85 via-cyan-950/40 to-black/95",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        accentText: "text-cyan-300",
+        accentBar: "bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.95)]",
+        accentBadge: "bg-cyan-950/80 border border-cyan-500/40 text-cyan-200",
+        surfacePanel:
+          "bg-slate-950/88 border-cyan-500/35 shadow-[0_16px_50px_rgba(6,182,212,0.18)]",
+        controlBox: "bg-black/75 border-cyan-500/25",
+        dividerBorder: "border-cyan-500/20",
+        inputClass:
+          "border-cyan-500/35 bg-black/80 text-white placeholder-slate-400 focus:ring-4 focus:ring-cyan-400/40 focus:border-cyan-400",
+        optionBg: "bg-slate-950 text-white",
+        btn: "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/35",
+        btnSecondary:
+          "bg-cyan-950/65 hover:bg-cyan-900/80 border border-cyan-500/35 text-cyan-100 hover:text-white",
+        backCapsule:
+          "bg-slate-950/85 hover:bg-cyan-950/80 border-cyan-500/35 hover:border-cyan-400 text-slate-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-cyan-600/60 via-teal-500/50 to-sky-400/50 border-cyan-400/50 text-white",
+        pillIdle:
+          "bg-cyan-950/40 hover:bg-cyan-900/65 border-cyan-500/25 text-cyan-100 hover:text-white",
+        recentChip: "bg-black/75 border-cyan-500/30",
+        personBanner: "bg-cyan-950/60 border-cyan-400/45 text-cyan-100",
+        liveCard:
+          "border-cyan-500/35 hover:border-cyan-400 bg-slate-950/90 shadow-[0_10px_28px_rgba(6,182,212,0.14)]",
+        avatarFrame: "bg-slate-950 border-slate-950",
+        avatarRing: "from-cyan-400 via-teal-400 to-sky-500",
+        spinner: "border-cyan-400",
+        focusRing: "focus:ring-cyan-400",
+        ambient: "from-cyan-600/15 via-transparent to-transparent",
+        arrow: "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.85)]",
+      };
+    case "violet":
+    default:
+      return {
+        bg: "bg-gradient-to-br from-slate-950/85 via-purple-950/40 to-black/95",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        accentText: "text-violet-300",
+        accentBar: "bg-violet-500 shadow-[0_0_14px_rgba(139,92,246,0.95)]",
+        accentBadge: "bg-purple-950/80 border border-violet-500/40 text-violet-200",
+        surfacePanel:
+          "bg-slate-950/88 border-violet-500/35 shadow-[0_16px_50px_rgba(139,92,246,0.18)]",
+        controlBox: "bg-black/75 border-violet-500/25",
+        dividerBorder: "border-violet-500/20",
+        inputClass:
+          "border-violet-500/35 bg-black/80 text-white placeholder-slate-400 focus:ring-4 focus:ring-violet-500/40 focus:border-violet-400",
+        optionBg: "bg-slate-950 text-white",
+        btn: "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/35",
+        btnSecondary:
+          "bg-purple-950/65 hover:bg-purple-900/80 border border-violet-500/35 text-purple-100 hover:text-white",
+        backCapsule:
+          "bg-slate-950/85 hover:bg-purple-950/80 border-violet-500/35 hover:border-violet-400 text-slate-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-violet-600/60 via-purple-500/50 to-indigo-500/50 border-violet-400/50 text-white",
+        pillIdle:
+          "bg-purple-950/40 hover:bg-purple-900/65 border-violet-500/25 text-purple-100 hover:text-white",
+        recentChip: "bg-black/75 border-violet-500/30",
+        personBanner: "bg-purple-950/60 border-violet-400/45 text-violet-100",
+        liveCard:
+          "border-violet-500/35 hover:border-violet-400 bg-slate-950/90 shadow-[0_10px_28px_rgba(139,92,246,0.14)]",
+        avatarFrame: "bg-slate-950 border-slate-950",
+        avatarRing: "from-violet-400 via-purple-500 to-indigo-500",
+        spinner: "border-violet-400",
+        focusRing: "focus:ring-violet-400",
+        ambient: "from-violet-600/15 via-transparent to-transparent",
+        arrow: "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.85)]",
+      };
+  }
+}
+
+/**
+ * Isolated uncontrolled Search Bar form:
+ * Prevents full-page re-renders on every keystroke so Android WebView / Capacitor
+ * never resets the IME caret to 0 (which previously caused "talk" -> "klat").
+ */
+const SearchInputForm = memo(function SearchInputForm({
+  syncedQuery,
+  largeButtons,
+  tokens,
+  onSubmitQuery,
+  onClearQuery,
+}: {
+  syncedQuery: string;
+  largeButtons: boolean;
+  tokens: SearchThemeTokens;
+  onSubmitQuery: (raw: string) => void;
+  onClearQuery: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [hasValue, setHasValue] = useState<boolean>(Boolean(syncedQuery));
+
+  // Sync only when URL query changes externally (e.g., clicking a Recent pill or Reset)
+  useEffect(() => {
+    const el = inputRef.current;
+    if (el && el.value !== syncedQuery && document.activeElement !== el) {
+      el.value = syncedQuery;
+    }
+    setHasValue(Boolean(syncedQuery));
+  }, [syncedQuery]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = inputRef.current?.value || "";
+    onSubmitQuery(raw);
+    inputRef.current?.blur();
+  };
+
+  const handleClear = () => {
+    if (inputRef.current) {
+      inputRef.current.value = "";
+      inputRef.current.focus();
+    }
+    setHasValue(false);
+    onClearQuery();
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center w-full"
+    >
+      <div className="relative flex-1 min-w-0">
+        <span
+          className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none ${tokens.accentText}`}
+        >
+          🔍
+        </span>
+        <input
+          ref={inputRef}
+          type="search"
+          dir="ltr"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          enterKeyHint="search"
+          defaultValue={syncedQuery}
+          data-tour="global-search-input"
+          onInput={(e) => {
+            const nextHas = Boolean((e.target as HTMLInputElement).value);
+            setHasValue((prev) => (prev === nextHas ? prev : nextHas));
+          }}
+          placeholder="Search movies, TV shows, actors, or live channels..."
+          style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
+          className={`w-full rounded-2xl border pl-10 pr-10 py-3.5 text-sm font-bold focus:outline-none shadow-inner transition ${tokens.inputClass}`}
+        />
+        {hasValue && (
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="Clear search"
+            className={`absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-xs font-bold flex items-center justify-center cursor-pointer transition ${tokens.btnSecondary}`}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      <button
+        type="submit"
+        className={`w-full sm:w-auto px-7 ${
+          largeButtons ? "py-4 text-sm" : "py-3.5 text-xs"
+        } rounded-2xl font-black uppercase tracking-wider shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+          tokens.btn
+        } ${tokens.focusRing}`}
+      >
+        Search & Filter
+      </button>
+    </form>
+  );
+});
+
 export const Route = createFileRoute("/search")({
   component: SearchPage,
   validateSearch: (search: Record<string, unknown>) => {
@@ -237,8 +590,8 @@ function SearchPage() {
   const navigate = useNavigate();
   const searchParams = Route.useSearch();
 
-  // Search & Filter States
-  const [queryInput, setQueryInput] = useState(searchParams.q || "");
+  // Filter States
+  const activeUrlQuery = sanitizeQuery(searchParams.q || "");
   const [mediaType, setMediaType] = useState<"all" | "movie" | "tv">("all");
   const [selectedGenre, setSelectedGenre] = useState<string>("All");
   const [selectedYear, setSelectedYear] = useState<string>("");
@@ -254,6 +607,7 @@ function SearchPage() {
   const [recentSearches, setRecentSearches] = useState<string[]>(() =>
     loadRecentSearches()
   );
+  const [retryTick, setRetryTick] = useState<number>(0);
 
   // Results States
   const [results, setResults] = useState<MediaItem[]>([]);
@@ -290,18 +644,15 @@ function SearchPage() {
 
   const [canScrollDown, setCanScrollDown] = useState<boolean>(false);
   const [showScrollReminder, setShowScrollReminder] = useState<boolean>(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync URL query param to input box & record recent searches
+  // Record recent searches when URL query updates
   useEffect(() => {
-    const clean = sanitizeQuery(searchParams.q || "");
-    setQueryInput(clean);
-    if (clean.length >= 2) {
-      setRecentSearches(saveRecentSearch(clean));
+    if (activeUrlQuery.length >= 2) {
+      setRecentSearches(saveRecentSearch(activeUrlQuery));
     }
     setSelectedPerson(null);
     setPage(1);
-  }, [searchParams.q]);
+  }, [activeUrlQuery]);
 
   // Live settings listener
   useEffect(() => {
@@ -391,9 +742,8 @@ function SearchPage() {
 
   // Cross-search your 284 Live TV channels instantly whenever a keyword is active
   const matchingLiveChannels = useMemo<LiveChannel[]>(() => {
-    const q = sanitizeQuery(searchParams.q || "");
-    if (q.length < 2 || selectedPerson) return [];
-    const found = searchLiveChannels(q);
+    if (activeUrlQuery.length < 2 || selectedPerson) return [];
+    const found = searchLiveChannels(activeUrlQuery);
     const kidsActive = kidsLocked || userAge < 13;
     return found
       .filter((ch) => {
@@ -402,7 +752,7 @@ function SearchPage() {
         return !MATURE_LIVE_KEYWORDS.some((kw) => lower.includes(kw));
       })
       .slice(0, 6);
-  }, [searchParams.q, selectedPerson, kidsLocked, userAge]);
+  }, [activeUrlQuery, selectedPerson, kidsLocked, userAge]);
 
   // Main TMDB Search / Person Credits / Discover Fetcher with AbortController & Timeout
   useEffect(() => {
@@ -426,10 +776,9 @@ function SearchPage() {
       setError(null);
 
       try {
-        const activeQuery = sanitizeQuery(searchParams.q || "");
         const activeLangConfig = languageFilters[selectedLangIndex];
 
-        // 1. PERSON FILMOGRAPHY MODE (when user taps a matched actor/creator)
+        // 1. PERSON FILMOGRAPHY MODE
         if (selectedPerson) {
           const url = new URL(
             `person/${selectedPerson.id}/combined_credits`,
@@ -476,7 +825,7 @@ function SearchPage() {
         }
 
         // 2. KEYWORD SEARCH MODE (Movies + TV + Actors)
-        if (activeQuery) {
+        if (activeUrlQuery) {
           const endpoint =
             mediaType === "movie"
               ? "search/movie"
@@ -486,7 +835,7 @@ function SearchPage() {
 
           const urlParams = new URLSearchParams();
           if (TMDB_API_KEY) urlParams.set("api_key", TMDB_API_KEY);
-          urlParams.set("query", activeQuery);
+          urlParams.set("query", activeUrlQuery);
           urlParams.set("include_adult", "false");
           urlParams.set("page", String(page));
 
@@ -530,7 +879,6 @@ function SearchPage() {
             );
             if (!itemObj) continue;
 
-            // Client-side filter enforcement on keyword results
             if (
               activeLangConfig.lang &&
               item.original_language &&
@@ -565,7 +913,6 @@ function SearchPage() {
             mapped.push(itemObj);
           }
 
-          // Apply requested sort to keyword results
           if (sortBy === "vote_average.desc") {
             mapped.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
           } else if (sortBy === "release_date.desc") {
@@ -582,7 +929,7 @@ function SearchPage() {
           return;
         }
 
-        // 3. PURE DISCOVER FILTER MODE (Supports Movies, TV, or Both Interleaved!)
+        // 3. PURE DISCOVER FILTER MODE
         setMatchedPeople([]);
 
         const buildDiscoverParams = (targetType: "movie" | "tv") => {
@@ -599,7 +946,6 @@ function SearchPage() {
               : sortBy;
           p.set("sort_by", resolvedSort);
 
-          // Anti-junk vote threshold when sorting by Top Rated or Hidden Gems
           if (hiddenGemsMode) {
             p.set("vote_count.gte", "80");
             p.set("vote_count.lte", "1800");
@@ -616,7 +962,6 @@ function SearchPage() {
             p.set("with_genres", String(genreId));
           }
 
-          // Year or Decade range
           if (selectedYear) {
             const gteKey =
               targetType === "tv"
@@ -647,7 +992,6 @@ function SearchPage() {
               }
             }
           } else if (sortBy === "release_date.desc") {
-            // Prevent unreleased future 2029 placeholders from flooding "Newest First"
             const todayIso = new Date().toISOString().split("T")[0];
             p.set(
               targetType === "tv"
@@ -753,7 +1097,7 @@ function SearchPage() {
       controller.abort();
     };
   }, [
-    searchParams.q,
+    activeUrlQuery,
     mediaType,
     selectedGenre,
     selectedYear,
@@ -765,6 +1109,7 @@ function SearchPage() {
     selectedPerson,
     page,
     posterWidth,
+    retryTick,
   ]);
 
   // Apply Age Lock, Kids Safe Mode, Disliked & Broken Link guards
@@ -775,15 +1120,22 @@ function SearchPage() {
     });
   }, [results, userAge, kidsLocked]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const clean = sanitizeQuery(queryInput);
+  const handleSearchSubmitQuery = useCallback(
+    (raw: string) => {
+      const clean = sanitizeQuery(raw);
+      setSelectedPerson(null);
+      if (clean.length >= 2) {
+        setRecentSearches(saveRecentSearch(clean));
+      }
+      navigate({ to: "/search", search: { q: clean } });
+    },
+    [navigate]
+  );
+
+  const handleClearSearchQuery = useCallback(() => {
     setSelectedPerson(null);
-    if (clean.length >= 2) {
-      setRecentSearches(saveRecentSearch(clean));
-    }
-    navigate({ to: "/search", search: { q: clean } });
-  };
+    navigate({ to: "/search", search: { q: "" } });
+  }, [navigate]);
 
   const applyDiscoveryPreset = useCallback(
     (
@@ -796,7 +1148,6 @@ function SearchPage() {
         | "hiddenGems"
     ) => {
       setSelectedPerson(null);
-      setQueryInput("");
       navigate({ to: "/search", search: { q: "" } });
       setSelectedLangIndex(0);
       setSelectedProvider("all");
@@ -840,7 +1191,7 @@ function SearchPage() {
   );
 
   const hasActiveFilters =
-    Boolean(searchParams.q?.trim()) ||
+    Boolean(activeUrlQuery) ||
     mediaType !== "all" ||
     selectedGenre !== "All" ||
     selectedYear !== "" ||
@@ -852,7 +1203,6 @@ function SearchPage() {
     Boolean(selectedPerson);
 
   const resetAllFilters = () => {
-    setQueryInput("");
     setMediaType("all");
     setSelectedGenre("All");
     setSelectedYear("");
@@ -879,109 +1229,20 @@ function SearchPage() {
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
-      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 sm:gap-4 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 justify-items-center";
     }
     if (cardSize === "medium") {
-      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5 justify-items-center";
     }
-    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 justify-items-center";
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 justify-items-center";
   }, [cardSize]);
 
-  const themeTokens = useMemo(() => {
-    switch (appTheme) {
-      case "red":
-        return {
-          bg: "bg-gradient-to-br from-zinc-950/85 via-red-950/40 to-black/95",
-          accentText: "text-red-400",
-          accentBar: "bg-red-500 shadow-[0_0_14px_rgba(239,68,68,0.95)]",
-          borderGlow:
-            "border-red-500/30 shadow-[0_16px_50px_rgba(239,68,68,0.22)]",
-          btn: "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
-          ambient: "from-red-600/15 via-transparent to-transparent",
-          avatarRing: "from-red-500 via-rose-400 to-amber-400",
-          arrow: "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]",
-        };
-      case "midnight":
-        return {
-          bg: "bg-gradient-to-br from-slate-950/85 via-blue-950/40 to-slate-950/95",
-          accentText: "text-sky-300",
-          accentBar: "bg-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.95)]",
-          borderGlow:
-            "border-blue-500/30 shadow-[0_16px_50px_rgba(59,130,246,0.22)]",
-          btn: "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
-          ambient: "from-blue-600/15 via-transparent to-transparent",
-          avatarRing: "from-cyan-400 via-sky-500 to-indigo-500",
-          arrow: "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]",
-        };
-      case "emerald":
-        return {
-          bg: "bg-gradient-to-br from-slate-950/85 via-emerald-950/40 to-slate-950/95",
-          accentText: "text-emerald-300",
-          accentBar: "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.95)]",
-          borderGlow:
-            "border-emerald-500/30 shadow-[0_16px_50px_rgba(16,185,129,0.22)]",
-          btn: "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
-          ambient: "from-emerald-600/15 via-transparent to-transparent",
-          avatarRing: "from-emerald-400 via-teal-400 to-cyan-500",
-          arrow: "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]",
-        };
-      case "amber":
-        return {
-          bg: "bg-gradient-to-br from-stone-950/85 via-yellow-950/40 to-neutral-950/95",
-          accentText: "text-amber-300",
-          accentBar: "bg-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.95)]",
-          borderGlow:
-            "border-amber-500/30 shadow-[0_16px_50px_rgba(245,158,11,0.22)]",
-          btn: "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
-          ambient: "from-amber-600/15 via-transparent to-transparent",
-          avatarRing: "from-amber-400 via-yellow-400 to-orange-500",
-          arrow: "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.8)]",
-        };
-      case "cyan":
-        return {
-          bg: "bg-gradient-to-br from-slate-950/85 via-cyan-950/40 to-slate-950/95",
-          accentText: "text-cyan-300",
-          accentBar: "bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.95)]",
-          borderGlow:
-            "border-cyan-500/30 shadow-[0_16px_50px_rgba(6,182,212,0.22)]",
-          btn: "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
-          ambient: "from-cyan-600/15 via-transparent to-transparent",
-          avatarRing: "from-cyan-400 via-sky-400 to-blue-500",
-          arrow: "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.8)]",
-        };
-      case "violet":
-      default:
-        return {
-          bg: "bg-gradient-to-br from-slate-950/85 via-purple-950/40 to-slate-950/95",
-          accentText: "text-violet-300",
-          accentBar: "bg-violet-500 shadow-[0_0_14px_rgba(139,92,246,0.95)]",
-          borderGlow:
-            "border-violet-500/30 shadow-[0_16px_50px_rgba(139,92,246,0.22)]",
-          btn: "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
-          ambient: "from-violet-600/15 via-transparent to-transparent",
-          avatarRing: "from-cyan-400 via-purple-500 to-pink-500",
-          arrow: "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]",
-        };
-    }
-  }, [appTheme]);
+  const themeTokens = useMemo(() => getSearchThemeTokens(appTheme), [appTheme]);
 
-  const getPrimaryBgColor = useCallback((theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30";
-      case "midnight":
-        return "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30";
-      case "emerald":
-        return "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30";
-      case "amber":
-        return "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30";
-      case "cyan":
-        return "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30";
-      case "violet":
-      default:
-        return "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30";
-    }
-  }, []);
+  const getPrimaryBgColor = useCallback(
+    (theme: AppTheme) => getSearchThemeTokens(theme).btn,
+    []
+  );
 
   const allGenreOptions = useMemo(() => {
     return [
@@ -1010,7 +1271,8 @@ function SearchPage() {
 
   return (
     <main
-      className={`min-h-screen ${themeTokens.bg} text-slate-100 px-3 sm:px-6 py-5 pb-20 flex flex-col items-center relative rounded-3xl`}
+      data-tour="search-page"
+      className={`min-h-screen ${themeTokens.bg} ${themeTokens.baseText} px-2.5 sm:px-6 py-4 sm:py-5 pb-16 flex flex-col items-center relative rounded-3xl overflow-x-clip`}
     >
       <AppWallpaper />
       {!isLowRam && !reducedMotion && !glowOff && (
@@ -1019,27 +1281,32 @@ function SearchPage() {
         />
       )}
 
-      <div className="mx-auto max-w-7xl w-full space-y-6 relative z-10">
+      <div className="mx-auto max-w-7xl w-full space-y-5 sm:space-y-6 relative z-10 min-w-0">
         {/* Top Capsule Row: Back to Home + Kids Mode Badge + Surprise Me + Reset */}
         <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               to="/"
-              className={`group inline-flex items-center gap-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-3.5 pr-2 ${
+              className={`group inline-flex items-center gap-2.5 rounded-full backdrop-blur-xl pl-3.5 pr-2 ${
                 largeButtons ? "py-2.5" : "py-1.5"
-              } border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95`}
+              } border shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 ${
+                themeTokens.backCapsule
+              } ${themeTokens.focusRing}`}
             >
-              <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
+              <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
                 ‹
               </span>
-              <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-100 group-hover:text-white">
+              <span className="text-xs sm:text-sm font-semibold tracking-wide">
                 Back to Home
               </span>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600/50 via-pink-500/40 to-cyan-400/50 border border-purple-300/50 text-[11px] text-white">
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${themeTokens.backBadge}`}
+              >
                 ⟲
               </span>
             </Link>
 
+            {/* Semantic Kids Safe indicator */}
             {kidsLocked && (
               <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">
                 🧒 Kids Safe Mode
@@ -1052,7 +1319,7 @@ function SearchPage() {
               <button
                 type="button"
                 onClick={handleSurpriseMe}
-                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/50 px-3.5 py-1.5 text-xs font-extrabold text-amber-200 hover:text-white shadow transition cursor-pointer"
+                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-extrabold shadow transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
                 title="Pick a random title from these results"
               >
                 <span>🎲 Surprise Me</span>
@@ -1062,7 +1329,7 @@ function SearchPage() {
               <button
                 type="button"
                 onClick={resetAllFilters}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 px-3.5 py-1.5 text-xs font-bold text-white shadow transition cursor-pointer"
+                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold shadow transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
               >
                 <span>✕ Reset All Filters</span>
               </button>
@@ -1070,54 +1337,20 @@ function SearchPage() {
           </div>
         </div>
 
-        {/* High-End Crystal Glass Search & Discovery Control Deck */}
+        {/* Theme-Matched Crystal Glass Search & Discovery Control Deck */}
         <div
-          className={`rounded-3xl border bg-slate-950/85 ${
+          className={`rounded-3xl border ${
             isLowRam ? "" : "backdrop-blur-2xl"
-          } p-4 sm:p-6 shadow-2xl space-y-4 ${themeTokens.borderGlow}`}
+          } p-3.5 sm:p-6 space-y-4 ${themeTokens.surfacePanel}`}
         >
-          {/* Main Search Form */}
-          <form
-            onSubmit={handleSearchSubmit}
-            className="flex flex-col sm:flex-row gap-2.5 items-center"
-          >
-            <div className="relative flex-1 w-full">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
-                🔍
-              </span>
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={queryInput}
-                onChange={(e) => setQueryInput(e.target.value)}
-                placeholder="Search movies, TV shows, actors, or live channels..."
-                className="w-full rounded-2xl border border-white/15 bg-black/75 pl-10 pr-10 py-3.5 text-sm font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-purple-500/40 shadow-inner"
-              />
-              {queryInput && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQueryInput("");
-                    setSelectedPerson(null);
-                    navigate({ to: "/search", search: { q: "" } });
-                    searchInputRef.current?.focus();
-                  }}
-                  aria-label="Clear search"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 flex items-center justify-center cursor-pointer"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            <button
-              type="submit"
-              className={`w-full sm:w-auto px-7 ${
-                largeButtons ? "py-4 text-sm" : "py-3.5 text-xs"
-              } rounded-2xl font-black uppercase tracking-wider text-white shadow-xl transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer ${themeTokens.btn}`}
-            >
-              Search & Filter
-            </button>
-          </form>
+          {/* Isolated Uncontrolled Search Form (Immune to Android WebView Backwards-Typing Bug) */}
+          <SearchInputForm
+            syncedQuery={activeUrlQuery}
+            largeButtons={largeButtons}
+            tokens={themeTokens}
+            onSubmitQuery={handleSearchSubmitQuery}
+            onClearQuery={handleClearSearchQuery}
+          />
 
           {/* One-Tap Curated Discovery Presets */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
@@ -1135,7 +1368,7 @@ function SearchPage() {
                 key={preset.id}
                 type="button"
                 onClick={() => applyDiscoveryPreset(preset.id)}
-                className="shrink-0 rounded-full bg-white/[0.06] hover:bg-white/[0.15] border border-white/15 px-3 py-1 text-[11px] font-extrabold text-slate-200 hover:text-white transition cursor-pointer whitespace-nowrap"
+                className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-extrabold transition cursor-pointer whitespace-nowrap focus:outline-none focus:ring-2 ${themeTokens.pillIdle} ${themeTokens.focusRing}`}
               >
                 {preset.label}
               </button>
@@ -1145,22 +1378,20 @@ function SearchPage() {
           {/* Recent Search History Pills */}
           {recentSearches.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mr-1">
+              <span
+                className={`text-[10px] font-extrabold uppercase tracking-wider mr-1 ${themeTokens.subMutedText}`}
+              >
                 🕒 Recent:
               </span>
               {recentSearches.map((term) => (
                 <div
                   key={term}
-                  className="inline-flex items-center rounded-full bg-black/65 border border-white/15 overflow-hidden"
+                  className={`inline-flex items-center rounded-full border overflow-hidden ${themeTokens.recentChip}`}
                 >
                   <button
                     type="button"
-                    onClick={() => {
-                      setQueryInput(term);
-                      setSelectedPerson(null);
-                      navigate({ to: "/search", search: { q: term } });
-                    }}
-                    className="pl-2.5 pr-1.5 py-1 text-[11px] font-bold text-slate-200 hover:text-white transition cursor-pointer"
+                    onClick={() => handleSearchSubmitQuery(term)}
+                    className={`pl-2.5 pr-1.5 py-1 text-[11px] font-bold hover:text-white transition cursor-pointer ${themeTokens.mutedText}`}
                   >
                     {term}
                   </button>
@@ -1168,7 +1399,7 @@ function SearchPage() {
                     type="button"
                     onClick={() => setRecentSearches(removeRecentSearch(term))}
                     aria-label={`Remove ${term} from recent searches`}
-                    className="pr-2 pl-1 py-1 text-[10px] text-slate-500 hover:text-red-400 transition cursor-pointer"
+                    className={`pr-2 pl-1 py-1 text-[10px] hover:text-white transition cursor-pointer ${themeTokens.subMutedText}`}
                   >
                     ✕
                   </button>
@@ -1177,7 +1408,7 @@ function SearchPage() {
               <button
                 type="button"
                 onClick={() => setRecentSearches(clearAllRecentSearches())}
-                className="text-[10px] font-bold text-slate-500 hover:text-red-300 underline ml-1 cursor-pointer"
+                className={`text-[10px] font-bold underline ml-1 hover:text-white cursor-pointer ${themeTokens.accentText}`}
               >
                 Clear
               </button>
@@ -1186,15 +1417,17 @@ function SearchPage() {
 
           {/* Active Person Filmography Pill */}
           {selectedPerson && (
-            <div className="flex items-center justify-between gap-2 rounded-2xl bg-cyan-950/50 border border-cyan-400/45 px-3.5 py-2">
-              <span className="text-xs font-extrabold text-cyan-200 truncate">
+            <div
+              className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3.5 py-2 ${themeTokens.personBanner}`}
+            >
+              <span className="text-xs font-extrabold truncate">
                 🎭 Viewing full filmography for{" "}
                 <strong className="text-white">{selectedPerson.name}</strong>
               </span>
               <button
                 type="button"
                 onClick={() => setSelectedPerson(null)}
-                className="shrink-0 rounded-lg bg-black/65 hover:bg-red-600/80 border border-white/15 px-2.5 py-1 text-[10px] font-extrabold text-white transition cursor-pointer"
+                className={`shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-extrabold transition cursor-pointer ${themeTokens.btnSecondary}`}
               >
                 ✕ Back to Search
               </button>
@@ -1202,18 +1435,26 @@ function SearchPage() {
           )}
 
           {/* 6-Slot Precision Filter Matrix */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-3 border-t border-white/10">
+          <div
+            data-tour="search-filters"
+            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-3 border-t ${themeTokens.dividerBorder}`}
+          >
             {/* 1. Media Type Tabs */}
-            <div className="flex rounded-xl bg-black/65 border border-white/15 p-1">
+            <div
+              data-tour="search-tabs"
+              className={`flex rounded-xl border p-1 ${themeTokens.controlBox}`}
+            >
               {(["all", "movie", "tv"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setMediaType(t)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer ${
+                  className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer focus:outline-none focus:ring-2 ${
+                    themeTokens.focusRing
+                  } ${
                     mediaType === t
-                      ? `${getPrimaryBgColor(appTheme)} text-white shadow-md`
-                      : "text-slate-400 hover:text-white"
+                      ? `${themeTokens.btn} shadow-md`
+                      : `${themeTokens.subMutedText} hover:text-white`
                   }`}
                 >
                   {t === "all" ? "All" : t === "movie" ? "Movies" : "TV"}
@@ -1222,20 +1463,24 @@ function SearchPage() {
             </div>
 
             {/* 2. Sort Selector */}
-            <div className="flex flex-col bg-black/65 border border-white/15 rounded-xl px-3 py-1.5 justify-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div
+              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
+            >
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
+              >
                 Sort By
               </span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5"
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
               >
                 {sortOptions.map((opt) => (
                   <option
                     key={opt.id}
                     value={opt.id}
-                    className="bg-slate-950 text-white"
+                    className={themeTokens.optionBg}
                   >
                     {opt.label}
                   </option>
@@ -1244,8 +1489,12 @@ function SearchPage() {
             </div>
 
             {/* 3. Streaming Service (Canada) */}
-            <div className="flex flex-col bg-black/65 border border-white/15 rounded-xl px-3 py-1.5 justify-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div
+              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
+            >
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
+              >
                 Streaming Service
               </span>
               <select
@@ -1253,14 +1502,14 @@ function SearchPage() {
                 onChange={(e) =>
                   setSelectedProvider(e.target.value as ProviderOption)
                 }
-                disabled={Boolean(searchParams.q?.trim()) || Boolean(selectedPerson)}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 disabled:opacity-50"
+                disabled={Boolean(activeUrlQuery) || Boolean(selectedPerson)}
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full disabled:opacity-50"
               >
                 {providerFilters.map((pf) => (
                   <option
                     key={pf.id}
                     value={pf.id}
-                    className="bg-slate-950 text-white"
+                    className={themeTokens.optionBg}
                   >
                     {pf.label}
                   </option>
@@ -1269,20 +1518,24 @@ function SearchPage() {
             </div>
 
             {/* 4. Language / Region */}
-            <div className="flex flex-col bg-black/65 border border-white/15 rounded-xl px-3 py-1.5 justify-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div
+              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
+            >
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
+              >
                 Language / Region
               </span>
               <select
                 value={selectedLangIndex}
                 onChange={(e) => setSelectedLangIndex(Number(e.target.value))}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5"
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
               >
                 {languageFilters.map((lf, idx) => (
                   <option
                     key={lf.label}
                     value={idx}
-                    className="bg-slate-950 text-white"
+                    className={themeTokens.optionBg}
                   >
                     {lf.label}
                   </option>
@@ -1291,20 +1544,24 @@ function SearchPage() {
             </div>
 
             {/* 5. Year / Decade */}
-            <div className="flex flex-col bg-black/65 border border-white/15 rounded-xl px-3 py-1.5 justify-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div
+              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
+            >
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
+              >
                 Year / Era
               </span>
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5"
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
               >
                 {yearOptions.map((opt) => (
                   <option
                     key={opt.value}
                     value={opt.value}
-                    className="bg-slate-950 text-white"
+                    className={themeTokens.optionBg}
                   >
                     {opt.label}
                   </option>
@@ -1313,31 +1570,35 @@ function SearchPage() {
             </div>
 
             {/* 6. Minimum Rating */}
-            <div className="flex flex-col bg-black/65 border border-white/15 rounded-xl px-3 py-1.5 justify-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div
+              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
+            >
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
+              >
                 Minimum Rating
               </span>
               <select
                 value={minRating}
                 onChange={(e) => setMinRating(Number(e.target.value))}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5"
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
               >
-                <option value={0} className="bg-slate-950 text-white">
+                <option value={0} className={themeTokens.optionBg}>
                   ⭐ Any Rating
                 </option>
-                <option value={6} className="bg-slate-950 text-white">
+                <option value={6} className={themeTokens.optionBg}>
                   ⭐ 6.0 & Above
                 </option>
-                <option value={7} className="bg-slate-950 text-white">
+                <option value={7} className={themeTokens.optionBg}>
                   ⭐ 7.0 & Above
                 </option>
-                <option value={7.5} className="bg-slate-950 text-white">
+                <option value={7.5} className={themeTokens.optionBg}>
                   ⭐ 7.5 & Above
                 </option>
-                <option value={8} className="bg-slate-950 text-white">
+                <option value={8} className={themeTokens.optionBg}>
                   ⭐ 8.0 & Above
                 </option>
-                <option value={8.5} className="bg-slate-950 text-white">
+                <option value={8.5} className={themeTokens.optionBg}>
                   ⭐ 8.5 & Above
                 </option>
               </select>
@@ -1346,7 +1607,9 @@ function SearchPage() {
 
           {/* Genre Pill Bar */}
           <div className="space-y-1.5">
-            <span className="text-[11px] text-slate-400 font-extrabold uppercase tracking-wider block px-1">
+            <span
+              className={`text-[11px] font-extrabold uppercase tracking-wider block px-1 ${themeTokens.subMutedText}`}
+            >
               Genre Filter:
             </span>
             <ScrollPillBar
@@ -1368,16 +1631,18 @@ function SearchPage() {
         {/* MATCHING LIVE TV CHANNELS CROSS-SEARCH SHELF */}
         {matchingLiveChannels.length > 0 && (
           <section className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2.5">
-                <span className="w-1.5 h-6 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]" />
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span
+                  className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                />
                 <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
                   📡 Matching Live TV Channels
                 </h3>
               </div>
               <Link
                 to="/live-tv"
-                className="text-xs font-bold text-red-300 hover:underline"
+                className={`text-xs font-bold hover:underline shrink-0 ${themeTokens.accentText}`}
               >
                 Open Live TV Guide →
               </Link>
@@ -1404,9 +1669,11 @@ function SearchPage() {
                         type: "livetv",
                       });
                     }}
-                    className="group rounded-2xl border border-red-500/30 hover:border-red-400 bg-slate-950/85 p-3 text-center flex flex-col items-center justify-between gap-2 shadow-xl transition hover:-translate-y-1"
+                    className={`group rounded-2xl border p-3 text-center flex flex-col items-center justify-between gap-2 transition hover:-translate-y-1 focus:outline-none focus:ring-2 ${themeTokens.liveCard} ${themeTokens.focusRing}`}
                   >
-                    <div className="w-full h-16 rounded-xl bg-black/70 border border-white/10 p-2 flex items-center justify-center">
+                    <div
+                      className={`w-full h-16 rounded-xl bg-black/75 border p-2 flex items-center justify-center ${themeTokens.dividerBorder}`}
+                    >
                       {ch.logo ? (
                         <img
                           src={ch.logo}
@@ -1416,7 +1683,9 @@ function SearchPage() {
                           className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform"
                         />
                       ) : (
-                        <span className="text-xs font-black text-red-400">
+                        <span
+                          className={`text-xs font-black ${themeTokens.accentText}`}
+                        >
                           ● LIVE
                         </span>
                       )}
@@ -1424,7 +1693,9 @@ function SearchPage() {
                     <span className="text-xs font-black text-white line-clamp-1">
                       {ch.title}
                     </span>
-                    <span className="w-full py-1 rounded-lg bg-red-600/80 group-hover:bg-red-500 text-[10px] font-extrabold uppercase text-white transition">
+                    <span
+                      className={`w-full py-1.5 rounded-lg text-[10px] font-extrabold uppercase transition ${themeTokens.btn}`}
+                    >
                       ▶ Watch Live
                     </span>
                   </Link>
@@ -1438,7 +1709,9 @@ function SearchPage() {
         {matchedPeople.length > 0 && !selectedPerson && (
           <section className="space-y-3">
             <div className="flex items-center gap-2.5 px-1">
-              <span className={`w-1.5 h-6 rounded-full ${themeTokens.accentBar}`} />
+              <span
+                className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+              />
               <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
                 🎭 Matching Actors & Creators (Tap for Filmography)
               </h3>
@@ -1455,7 +1728,9 @@ function SearchPage() {
                   <div
                     className={`p-[2.5px] rounded-full bg-gradient-to-tr ${themeTokens.avatarRing} shadow-lg group-hover:scale-105 transition-transform mb-1.5`}
                   >
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-slate-950 border-2 border-slate-950 flex items-center justify-center">
+                    <div
+                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 flex items-center justify-center ${themeTokens.avatarFrame}`}
+                    >
                       {person.profilePath ? (
                         <img
                           src={`https://image.tmdb.org/t/p/w200${person.profilePath}`}
@@ -1472,7 +1747,9 @@ function SearchPage() {
                   <span className="text-xs font-bold text-white truncate w-full">
                     {person.name}
                   </span>
-                  <span className="text-[10px] text-slate-400 truncate w-full">
+                  <span
+                    className={`text-[10px] truncate w-full ${themeTokens.subMutedText}`}
+                  >
                     {person.department}
                   </span>
                 </button>
@@ -1483,20 +1760,22 @@ function SearchPage() {
 
         {/* RESULTS HEADER */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-1 w-full">
-          <div className="flex items-center gap-2.5">
-            <span className={`w-1.5 h-6 rounded-full ${themeTokens.accentBar}`} />
-            <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span
+              className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+            />
+            <h2 className="text-lg sm:text-xl font-black tracking-tight text-white truncate">
               {selectedPerson
                 ? `${selectedPerson.name} — Credits`
-                : searchParams.q
-                  ? `Search Results for "${searchParams.q}"`
+                : activeUrlQuery
+                  ? `Search Results for "${activeUrlQuery}"`
                   : hiddenGemsMode
                     ? "💎 Hidden Gems Discovery"
                     : "Filtered Catalog Results"}
             </h2>
           </div>
           <span
-            className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.05] border border-white/10 ${themeTokens.accentText}`}
+            className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeTokens.accentBadge}`}
           >
             {filteredResults.length} titles{" "}
             {totalPages > 1 ? `• Page ${page}/${totalPages}` : ""}
@@ -1505,24 +1784,35 @@ function SearchPage() {
 
         {/* RESULTS GRID */}
         {loading ? (
-          <div className="py-16 flex flex-col items-center justify-center gap-3 text-slate-300 font-bold">
-            <div className="h-9 w-9 rounded-full border-2 border-t-transparent border-cyan-400 animate-spin" />
+          <div
+            className={`py-16 flex flex-col items-center justify-center gap-3 font-bold ${themeTokens.mutedText}`}
+          >
+            <div
+              className={`h-9 w-9 rounded-full border-2 border-t-transparent animate-spin ${themeTokens.spinner}`}
+            />
             <span>Scanning catalog matches…</span>
           </div>
         ) : error ? (
-          <div className="rounded-3xl border border-red-500/35 bg-red-950/35 p-8 text-center space-y-3">
-            <p className="text-sm font-bold text-red-300">⚠️ {error}</p>
+          <div
+            className={`rounded-3xl border p-8 text-center space-y-3 ${themeTokens.surfacePanel}`}
+          >
+            <p className={`text-sm font-bold ${themeTokens.accentText}`}>
+              ⚠️ {error}
+            </p>
             <button
               type="button"
-              onClick={() => setPage((p) => p)}
-              className="rounded-xl bg-white/10 hover:bg-white/20 px-4 py-2 text-xs font-bold text-white cursor-pointer"
+              onClick={() => setRetryTick((t) => t + 1)}
+              className={`rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${themeTokens.btnSecondary}`}
             >
               ↻ Retry Search
             </button>
           </div>
         ) : filteredResults.length > 0 ? (
           <>
-            <div className={`${gridColsClass} w-full`}>
+            <div
+              data-tour="search-results"
+              className={`${gridColsClass} w-full`}
+            >
               {filteredResults.map((item) => (
                 <MediaCard
                   item={item}
@@ -1538,7 +1828,9 @@ function SearchPage() {
 
             {/* Pagination Deck */}
             {totalPages > 1 && !selectedPerson && (
-              <div className="pt-4 flex items-center justify-center gap-4 rounded-2xl bg-slate-950/80 border border-white/15 backdrop-blur-xl p-3 mx-auto w-full max-w-sm shadow-xl">
+              <div
+                className={`mt-4 flex items-center justify-center gap-4 rounded-2xl border backdrop-blur-xl p-3 mx-auto w-full max-w-sm ${themeTokens.surfacePanel}`}
+              >
                 <button
                   type="button"
                   onClick={() => {
@@ -1549,9 +1841,11 @@ function SearchPage() {
                     });
                   }}
                   disabled={page <= 1 || loading}
-                  className={`rounded-xl bg-white/10 hover:bg-white/20 ${
+                  className={`rounded-xl ${
                     largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
-                  } font-bold text-white transition disabled:opacity-40 cursor-pointer`}
+                  } font-bold transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
+                    themeTokens.btnSecondary
+                  } ${themeTokens.focusRing}`}
                 >
                   ◀ Prev
                 </button>
@@ -1572,7 +1866,9 @@ function SearchPage() {
                   disabled={page >= totalPages || loading}
                   className={`rounded-xl ${themeTokens.btn} ${
                     largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
-                  } font-bold shadow transition disabled:opacity-40 cursor-pointer`}
+                  } font-bold shadow transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
+                    themeTokens.focusRing
+                  }`}
                 >
                   Next ▶
                 </button>
@@ -1580,12 +1876,16 @@ function SearchPage() {
             )}
           </>
         ) : (
-          <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-12 text-center text-slate-400 backdrop-blur-xl shadow-xl space-y-3">
+          <div
+            className={`rounded-3xl border p-10 sm:p-12 text-center backdrop-blur-xl space-y-3 ${themeTokens.surfacePanel}`}
+          >
             <div className="text-3xl">🔍</div>
             <p className="text-base font-bold text-white">
               No titles found matching that exact combination of filters.
             </p>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <p
+              className={`text-xs max-w-md mx-auto ${themeTokens.subMutedText}`}
+            >
               Try relaxing your year, rating, streaming service, or language
               filter—or tap one of the quick presets above!
             </p>
@@ -1593,7 +1893,7 @@ function SearchPage() {
               <button
                 type="button"
                 onClick={resetAllFilters}
-                className={`mt-2 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-extrabold text-white shadow-lg transition cursor-pointer ${themeTokens.btn}`}
+                className={`mt-2 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-extrabold shadow-lg transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btn} ${themeTokens.focusRing}`}
               >
                 ↺ Reset All Filters
               </button>
@@ -1618,7 +1918,9 @@ function SearchPage() {
                 animation: flashTwice 8s ease-in-out forwards;
               }
             `}</style>
-            <div className="flex flex-col items-center gap-0.5 bg-black/35 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
+            <div
+              className={`flex flex-col items-center gap-0.5 backdrop-blur-md px-4 py-2 rounded-xl border shadow-2xl ${themeTokens.surfacePanel}`}
+            >
               <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white">
                 More Content Below
               </span>
