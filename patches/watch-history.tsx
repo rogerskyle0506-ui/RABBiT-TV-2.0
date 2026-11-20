@@ -44,6 +44,13 @@ import {
 } from "@/lib/watch-history";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { bgAudio } from "@/lib/background-audio";
+import {
+  getCachedEpisodeAlerts,
+  scanTrackedShowsForNewEpisodes,
+  isAlertUnseenByUser,
+  EPISODE_RADAR_UPDATED_EVENT,
+  type EpisodeRadarAlert,
+} from "@/lib/episode-radar";
 
 export const Route = createFileRoute("/watch-history")({
   component: WatchHistoryComponent,
@@ -529,9 +536,13 @@ const HistoryFilterInput = memo(function HistoryFilterInput({
 });
 
 function WatchHistoryComponent() {
+  const navigate = useNavigate();
   const [historyMap, setHistoryMap] = useState<
     Record<string, ShowWatchHistory>
   >({});
+  const [episodeAlerts, setEpisodeAlerts] = useState<
+    Record<string, EpisodeRadarAlert>
+  >(() => getCachedEpisodeAlerts());
   const [recentLiveChannels, setRecentLiveChannels] = useState<
     RecentLiveChannel[]
   >([]);
@@ -616,15 +627,47 @@ function WatchHistoryComponent() {
     refreshData();
     window.addEventListener("rabtv_watch_history_updated", refreshData);
     window.addEventListener("rabtv_disliked_updated", refreshData);
+    const syncRadar = () => setEpisodeAlerts(getCachedEpisodeAlerts());
+
     window.addEventListener("rabtv_settings_updated", refreshData);
     window.addEventListener("rabtv_ram_mode_updated", refreshData);
+    window.addEventListener(EPISODE_RADAR_UPDATED_EVENT, syncRadar);
     return () => {
       window.removeEventListener("rabtv_watch_history_updated", refreshData);
       window.removeEventListener("rabtv_disliked_updated", refreshData);
       window.removeEventListener("rabtv_settings_updated", refreshData);
       window.removeEventListener("rabtv_ram_mode_updated", refreshData);
+      window.removeEventListener(EPISODE_RADAR_UPDATED_EVENT, syncRadar);
     };
   }, [refreshData]);
+
+  // Background New Episode Radar scan (12h cached, capped concurrency & RAM safe)
+  const trackedTvIdsKey = useMemo(() => {
+    return Object.values(historyMap)
+      .filter((s) => s.mediaType === "tv")
+      .sort((a, b) => (b.lastWatchedAt || 0) - (a.lastWatchedAt || 0))
+      .map((s) => s.showId)
+      .slice(0, 12)
+      .join(",");
+  }, [historyMap]);
+
+  useEffect(() => {
+    if (!trackedTvIdsKey) return;
+    const ids = trackedTvIdsKey.split(",").filter(Boolean);
+    const controller = new AbortController();
+    let active = true;
+
+    void scanTrackedShowsForNewEpisodes(ids, controller.signal).then(
+      (alerts) => {
+        if (active) setEpisodeAlerts(alerts);
+      }
+    );
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [trackedTvIdsKey]);
 
   // Escape closes confirmation modals cleanly on TV remotes / keyboards
   useEffect(() => {
@@ -860,6 +903,18 @@ function WatchHistoryComponent() {
   const showDislikedSection =
     (activeTab === "all" || activeTab === "disliked") &&
     filteredDisliked.length > 0;
+
+  const unseenEpisodeAlerts = useMemo(() => {
+    const list: { show: ShowWatchHistory; alert: EpisodeRadarAlert }[] = [];
+    for (const show of Object.values(historyMap)) {
+      if (show.mediaType !== "tv") continue;
+      const alert = episodeAlerts[show.showId];
+      if (alert && isAlertUnseenByUser(alert, show.episodes)) {
+        list.push({ show, alert });
+      }
+    }
+    return list.sort((a, b) => a.alert.daysAgo - b.alert.daysAgo);
+  }, [historyMap, episodeAlerts]);
 
   const hasVisibleContent =
     showLiveSection ||
@@ -1220,6 +1275,73 @@ function WatchHistoryComponent() {
           </div>
         </div>
 
+        {/* NEW EPISODE RADAR BANNER (Unseen Fresh Episodes from Your Tracked Shows) */}
+        {unseenEpisodeAlerts.length > 0 && (
+          <section
+            data-tour="episode-radar-banner"
+            className={`rounded-3xl border p-3.5 sm:p-5 space-y-3 ${
+              isLowRam ? "" : "backdrop-blur-2xl"
+            } ${themeTokens.surfacePanel}`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span
+                  className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                />
+                <div className="min-w-0">
+                  <h2 className="text-sm sm:text-base font-black text-white truncate">
+                    📡 New Episode Radar
+                  </h2>
+                  <p className={`text-[10px] sm:text-xs ${themeTokens.subMutedText}`}>
+                    Fresh episodes aired recently for shows you watch — tap to jump straight in!
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`rounded-full border px-3 py-1 text-[11px] font-extrabold shrink-0 ${themeTokens.badgeBg}`}
+              >
+                {unseenEpisodeAlerts.length} New
+              </span>
+            </div>
+
+            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+              {unseenEpisodeAlerts.map(({ show, alert }) => (
+                <button
+                  key={show.showId}
+                  type="button"
+                  onClick={() => {
+                    bgAudio.pause();
+                    navigate({
+                      to: "/player",
+                      search: {
+                        id: show.showId,
+                        type: "tv",
+                        season: alert.seasonNumber,
+                        episode: alert.episodeNumber,
+                      },
+                    });
+                  }}
+                  className={`group shrink-0 flex items-center gap-2.5 rounded-2xl border px-3 py-2 text-left transition hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+                >
+                  <div className="min-w-0 max-w-[190px]">
+                    <span className="block text-xs font-black text-white truncate">
+                      {show.title}
+                    </span>
+                    <span className={`block text-[10px] font-bold truncate ${themeTokens.accentText}`}>
+                      {alert.badgeLabel}
+                    </span>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-xl px-2.5 py-1 text-[10px] font-black uppercase ${themeTokens.btnActive}`}
+                  >
+                    ▶ Play
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* MAIN ACTIVITY CONTENT */}
         {!hasVisibleContent ? (
           <div
@@ -1426,10 +1548,17 @@ function WatchHistoryComponent() {
                 <div
                   className={`grid ${gridColsClass} gap-3.5 sm:gap-5 pt-1 items-start`}
                 >
-                  {inProgressShows.map((show) => (
+                  {inProgressShows.map((show) => {
+                    const rawAlert = episodeAlerts[show.showId];
+                    const activeAlert =
+                      rawAlert && isAlertUnseenByUser(rawAlert, show.episodes)
+                        ? rawAlert
+                        : null;
+                    return (
                     <TvShowCard
                       key={show.showId}
                       show={show}
+                      newEpisodeAlert={activeAlert}
                       themeTokens={themeTokens}
                       posterAppearance={posterAppearance}
                       posterWidth={posterWidth}
@@ -1447,7 +1576,8 @@ function WatchHistoryComponent() {
                         refreshData();
                       }}
                     />
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -1490,10 +1620,17 @@ function WatchHistoryComponent() {
                       />
                     ))}
                   {activeTab !== "movies" &&
-                    completedShows.map((show) => (
+                    completedShows.map((show) => {
+                      const rawAlert = episodeAlerts[show.showId];
+                      const activeAlert =
+                        rawAlert && isAlertUnseenByUser(rawAlert, show.episodes)
+                          ? rawAlert
+                          : null;
+                      return (
                       <TvShowCard
                         key={show.showId}
                         show={show}
+                        newEpisodeAlert={activeAlert}
                         themeTokens={themeTokens}
                         posterAppearance={posterAppearance}
                         posterWidth={posterWidth}
@@ -1510,7 +1647,8 @@ function WatchHistoryComponent() {
                           refreshData();
                         }}
                       />
-                    ))}
+                      );
+                    })}
                 </div>
               </section>
             )}
@@ -1898,6 +2036,7 @@ const MovieCard = React.memo(function MovieCard({
 
 const TvShowCard = React.memo(function TvShowCard({
   show,
+  newEpisodeAlert,
   themeTokens,
   posterAppearance,
   posterWidth,
@@ -1909,6 +2048,7 @@ const TvShowCard = React.memo(function TvShowCard({
   onRemove,
 }: {
   show: ShowWatchHistory;
+  newEpisodeAlert?: EpisodeRadarAlert | null;
   themeTokens: WatchHistoryThemeTokens;
   posterAppearance: PosterAppearanceClasses;
   posterWidth: "w342" | "w500";
@@ -1971,13 +2111,20 @@ const TvShowCard = React.memo(function TvShowCard({
 
           <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none" />
 
-          {/* Top-Left Series Badge */}
-          <div className="absolute top-2 left-2 z-10 pointer-events-none">
+          {/* Top-Left Series / New Episode Radar Badge */}
+          <div className="absolute top-2 left-2 z-10 flex flex-col items-start gap-1 pointer-events-none max-w-[70%]">
             <span
               className={`rounded-lg backdrop-blur-md border px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${themeTokens.badgeBg}`}
             >
               Series
             </span>
+            {newEpisodeAlert && (
+              <span
+                className={`rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-lg truncate max-w-full ${themeTokens.btnActive}`}
+              >
+                {newEpisodeAlert.badgeLabel}
+              </span>
+            )}
           </div>
 
           {/* Top-Right Dislike & Remove Controls */}
@@ -2027,29 +2174,39 @@ const TvShowCard = React.memo(function TvShowCard({
         </div>
 
         <div className={`p-2.5 sm:p-3 space-y-2.5 shrink-0 ${themeTokens.cardFooter}`}>
-          {/* Smart Direct Resume / Next Episode Launcher */}
+          {/* Smart Direct Resume / Next Episode (or Brand-New Episode) Launcher */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => {
                 bgAudio.pause();
+                const targetSeason = newEpisodeAlert
+                  ? newEpisodeAlert.seasonNumber
+                  : nextEp.seasonNumber;
+                const targetEpisode = newEpisodeAlert
+                  ? newEpisodeAlert.episodeNumber
+                  : nextEp.episodeNumber;
                 navigate({
                   to: "/player",
                   search: {
                     id: show.showId,
                     type: "tv",
-                    season: nextEp.seasonNumber,
-                    episode: nextEp.episodeNumber,
+                    season: targetSeason,
+                    episode: targetEpisode,
                   },
                 });
               }}
               className={`flex-1 min-w-0 rounded-xl border ${
                 largeButtons ? "py-2 text-xs" : "py-1.5 text-[10px]"
               } font-extrabold uppercase tracking-wider transition cursor-pointer truncate px-2 focus:outline-none focus:ring-2 ${
-                themeTokens.btnSecondary
+                newEpisodeAlert
+                  ? `${themeTokens.btnActive} border-transparent`
+                  : themeTokens.btnSecondary
               } ${themeTokens.focusRing}`}
             >
-              ▶ Play {nextEp.label}
+              {newEpisodeAlert
+                ? `▶ New S${newEpisodeAlert.seasonNumber}E${newEpisodeAlert.episodeNumber}`
+                : `▶ Play ${nextEp.label}`}
             </button>
 
             <button
