@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
 import {
   type AppTheme,
-  PROFILE_MASCOT_OPTIONS,
   getHardwareLimits,
   getLargeButtons,
   verifyAgeLockPin,
@@ -10,6 +9,15 @@ import {
   recordPinFailure,
   resetPinFailures,
 } from "@/lib/settings";
+import {
+  getAllCustomMascotBadges,
+  EMOJI_MASCOT_BADGES,
+  DEFAULT_MASCOT_ID,
+  MASCOT_UPDATED_EVENT,
+  syncRemoteMascotBadges,
+  type MascotBadgeOption,
+} from "@/lib/mascots";
+import { MascotAvatar } from "@/components/MascotAvatar";
 import {
   getHouseholdProfiles,
   getActiveProfileId,
@@ -214,9 +222,17 @@ export const ProfileSwitcherModal = memo(function ProfileSwitcherModal({
   const [pinInput, setPinInput] = useState<string>("");
   const [pinError, setPinError] = useState<string | null>(null);
 
+  // Custom mascot badges list (Vite-bundled + 24h cached remote sync)
+  const [customBadges, setCustomBadges] = useState<MascotBadgeOption[]>(() =>
+    getAllCustomMascotBadges()
+  );
+  const [mascotTab, setMascotTab] = useState<"custom" | "emoji">(() =>
+    getAllCustomMascotBadges().length > 0 ? "custom" : "emoji"
+  );
+
   // Add-profile form state (uncontrolled ref for name to keep Android WebView strictly LTR)
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const [newMascot, setNewMascot] = useState<string>("🐰");
+  const [newMascot, setNewMascot] = useState<string>(() => DEFAULT_MASCOT_ID);
   const [newTheme, setNewTheme] = useState<AppTheme>(appTheme);
   const [newAge, setNewAge] = useState<string>("25");
   const [newIsKids, setNewIsKids] = useState<boolean>(false);
@@ -234,6 +250,10 @@ export const ProfileSwitcherModal = memo(function ProfileSwitcherModal({
   useEffect(() => {
     if (!isOpen) return;
     reloadProfiles();
+    const currentBadges = getAllCustomMascotBadges();
+    setCustomBadges(currentBadges);
+    setMascotTab(currentBadges.length > 0 ? "custom" : "emoji");
+    setNewMascot(currentBadges[0]?.id || DEFAULT_MASCOT_ID);
     setManageMode(false);
     setShowAddForm(false);
     setPinTargetProfile(null);
@@ -241,6 +261,20 @@ export const ProfileSwitcherModal = memo(function ProfileSwitcherModal({
     setPinError(null);
     setFormError(null);
     setNewTheme(appTheme);
+
+    const controller = new AbortController();
+    const syncLocal = () => setCustomBadges(getAllCustomMascotBadges());
+    window.addEventListener(MASCOT_UPDATED_EVENT, syncLocal);
+    void syncRemoteMascotBadges(controller.signal).then((badges) => {
+      if (!controller.signal.aborted) {
+        setCustomBadges(badges);
+      }
+    });
+
+    return () => {
+      controller.abort();
+      window.removeEventListener(MASCOT_UPDATED_EVENT, syncLocal);
+    };
   }, [isOpen, appTheme]);
 
   useEffect(() => {
@@ -517,30 +551,88 @@ export const ProfileSwitcherModal = memo(function ProfileSwitcherModal({
               </div>
             </div>
 
-            {/* Mascot Picker */}
-            <div>
-              <span
-                className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${tokens.subMutedText}`}
-              >
-                Choose Mascot
-              </span>
-              <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
-                {PROFILE_MASCOT_OPTIONS.map((m) => (
+            {/* Mascot Badge Picker (Custom Artwork + Classic Emojis) */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider ${tokens.subMutedText}`}
+                >
+                  Choose Mascot Badge
+                </span>
+                <div className="flex items-center gap-1.5">
                   <button
-                    key={m.id}
                     type="button"
-                    onClick={() => setNewMascot(m.id)}
-                    className={`h-10 rounded-xl border text-lg flex items-center justify-center transition cursor-pointer ${
-                      newMascot === m.id
-                        ? `${tokens.btnPrimary} border-transparent scale-105`
-                        : tokens.cardIdle
+                    onClick={() => setMascotTab("custom")}
+                    className={`rounded-lg border px-2.5 py-1 text-[10px] font-extrabold transition cursor-pointer ${
+                      mascotTab === "custom"
+                        ? `${tokens.btnPrimary} border-transparent`
+                        : tokens.btnSecondary
                     }`}
-                    title={m.label}
                   >
-                    {m.id}
+                    🎨 Custom ({customBadges.length})
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => setMascotTab("emoji")}
+                    className={`rounded-lg border px-2.5 py-1 text-[10px] font-extrabold transition cursor-pointer ${
+                      mascotTab === "emoji"
+                        ? `${tokens.btnPrimary} border-transparent`
+                        : tokens.btnSecondary
+                    }`}
+                  >
+                    ✨ Classic
+                  </button>
+                </div>
               </div>
+
+              {mascotTab === "custom" && customBadges.length > 0 ? (
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto pr-0.5 scrollbar-none">
+                  {customBadges.map((badge) => {
+                    const isSelected = newMascot === badge.id;
+                    return (
+                      <button
+                        key={badge.id}
+                        type="button"
+                        onClick={() => setNewMascot(badge.id)}
+                        className={`p-1 rounded-2xl border flex items-center justify-center transition cursor-pointer focus:outline-none focus:ring-2 ${
+                          tokens.focusRing
+                        } ${
+                          isSelected
+                            ? `${tokens.cardActive} scale-[1.04]`
+                            : tokens.cardIdle
+                        }`}
+                        title={badge.label}
+                        aria-label={badge.label}
+                      >
+                        <MascotAvatar
+                          mascot={badge.id}
+                          size="lg"
+                          rounded="xl"
+                          alt={badge.label}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
+                  {EMOJI_MASCOT_BADGES.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setNewMascot(m.id)}
+                      className={`h-10 rounded-xl border text-lg flex items-center justify-center transition cursor-pointer ${
+                        newMascot === m.id
+                          ? `${tokens.btnPrimary} border-transparent scale-105`
+                          : tokens.cardIdle
+                      }`}
+                      title={m.label}
+                    >
+                      {m.emojiFallback}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Theme Picker */}
@@ -631,11 +723,13 @@ export const ProfileSwitcherModal = memo(function ProfileSwitcherModal({
                         manageMode ? "cursor-default" : "cursor-pointer"
                       }`}
                     >
-                      <div
-                        className={`h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border flex items-center justify-center text-3xl sm:text-4xl shadow-inner ${tokens.subPanel}`}
-                      >
-                        {prof.mascot}
-                      </div>
+                      <MascotAvatar
+                        mascot={prof.mascot}
+                        size="xl"
+                        rounded="2xl"
+                        className={`border shadow-inner ${tokens.subPanel}`}
+                        alt={prof.name}
+                      />
 
                       <div className="space-y-1 w-full">
                         <p className="text-sm font-black text-white truncate">
