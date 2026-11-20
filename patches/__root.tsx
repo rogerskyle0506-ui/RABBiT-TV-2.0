@@ -4,6 +4,7 @@ import { BugReportModal } from "@/components/BugReportModal";
 import { PublicBugFeedModal } from "@/components/PublicBugFeedModal";
 import { UserNotifier } from "@/components/UserNotifier";
 import { Screensaver } from "@/components/Screensaver";
+import { SplashIntro } from "@/components/SplashIntro";
 import {
   Outlet,
   createRootRoute,
@@ -543,6 +544,7 @@ function RootComponent() {
   const isPlayerRoute =
     pathname.startsWith("/live-player") || pathname.startsWith("/player");
 
+  const [showSplashIntro, setShowSplashIntro] = useState(true);
   const [showFirstStartModal, setShowFirstStartModal] = useState(false);
   const [showBugModal, setShowBugModal] = useState(false);
   const [showBugFeedModal, setShowBugFeedModal] = useState(false);
@@ -636,9 +638,10 @@ function RootComponent() {
     }
   }, []);
 
-  // Background lobby audio lifecycle synced with TanStack Router pathname
+  // Background lobby audio lifecycle synced with SplashIntro & TanStack Router pathname
   useEffect(() => {
     if (
+      showSplashIntro ||
       pathname.includes("details") ||
       pathname.includes("watch") ||
       pathname.includes("player")
@@ -647,9 +650,11 @@ function RootComponent() {
     } else if (bgMusicState === "playing") {
       bgAudio.play();
     }
-  }, [pathname, bgMusicState]);
+  }, [showSplashIntro, pathname, bgMusicState]);
 
   useEffect(() => {
+    if (showSplashIntro) return;
+
     const startAudio = () => {
       const path = window.location.pathname;
       if (
@@ -672,7 +677,7 @@ function RootComponent() {
       window.removeEventListener("click", startAudio);
       window.removeEventListener("keydown", startAudio);
     };
-  }, [bgMusicState]);
+  }, [showSplashIntro, bgMusicState]);
 
   // Global soft remote click sound (single delegated listener, zero per-button cost)
   useEffect(() => {
@@ -957,6 +962,13 @@ function RootComponent() {
       <body
         className={`min-h-screen max-w-full overflow-x-clip ${tokens.bodyBg} ${tokens.bodyText} antialiased transition-colors duration-300 relative`}
       >
+        {/* Full-Screen Animated Splash Intro (Plays Every App Launch) */}
+        {showSplashIntro && (
+          <SplashIntro
+            appTheme={appTheme}
+            onFinish={() => setShowSplashIntro(false)}
+          />
+        )}
         <PreviewHostBridge />
         <HolidayOverlay />
         <AppWallpaper />
@@ -1220,7 +1232,7 @@ function RootComponent() {
 
           {/* FIRST-START ACTIVATION MODAL CALL */}
           <ActivationModal
-            isOpen={showFirstStartModal}
+            isOpen={showFirstStartModal && !showSplashIntro}
             onAuthorized={() => {
               setShowFirstStartModal(false);
               if (!hasAcceptedTos()) {
@@ -1248,7 +1260,7 @@ function RootComponent() {
 
           {/* TERMS OF SERVICE & LEGAL DISCLAIMER MODAL */}
           <TermsOfServiceModal
-            isOpen={showTosModal && !showFirstStartModal}
+            isOpen={showTosModal && !showFirstStartModal && !showSplashIntro}
             requireAcceptance={tosRequireAccept}
             appTheme={appTheme}
             onAccept={() => {
@@ -1264,10 +1276,10 @@ function RootComponent() {
             onOpenExternal={handleOpenExternal}
           />
 
-          {/* FULL INTERACTIVE APP WALKTHROUGH (Starts after Activation & ToS) */}
+          {/* FULL INTERACTIVE APP WALKTHROUGH (Starts after Splash, Activation & ToS) */}
           <InteractiveWalkthrough
             autoStartOnFirstLaunch={
-              !showFirstStartModal && !showTosModal && tosAccepted
+              !showSplashIntro && !showFirstStartModal && !showTosModal && tosAccepted
             }
             onNavigate={(path) => navigate({ to: path as any })}
             onToggleSidebar={(open) => setShowProfileMenu(open)}
