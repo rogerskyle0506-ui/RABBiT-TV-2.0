@@ -1,5 +1,5 @@
 // src/components/sidebar.tsx
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "@tanstack/react-router";
 import { AdminPanel } from "@/components/AdminPanel";
@@ -233,6 +233,308 @@ type ConsolidatedSection =
   | "screensaverAndBackup"
   | null;
 
+interface SidebarThemeTokens {
+  drawerShell: string;
+  drawerOverlay: string;
+  scrollBtn: string;
+  headerBar: string;
+  avatarFrame: string;
+  subPanel: string;
+  subBox: string;
+  detailsBody: string;
+  dividerBorder: string;
+  accordionOverlay: string;
+  accordionActive: string;
+  accordionIdle: string;
+  accordionBadge: string;
+  accordionCaret: string;
+  accentText: string;
+  mutedText: string;
+  subMutedText: string;
+  toggleActive: string;
+  toggleOff: string;
+  subtlePill: string;
+  inputClass: string;
+  optionBg: string;
+  sliderClass: string;
+  highlightCard: string;
+  referralCard: string;
+  referralIcon: string;
+  referralPill: string;
+  secondaryBtn: string;
+  focusRing: string;
+}
+
+function getSidebarThemeTokens(theme: AppTheme): SidebarThemeTokens {
+  switch (theme) {
+    case "red":
+      return {
+        drawerShell:
+          "bg-zinc-950/82 border-red-500/35 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_32px_rgba(239,68,68,0.18)]",
+        drawerOverlay:
+          "from-red-500/[0.08] via-zinc-950/55 to-red-950/20",
+        scrollBtn:
+          "bg-black/85 hover:bg-red-950 border-red-500/45 text-red-300 hover:text-white shadow-[0_0_12px_rgba(239,68,68,0.35)]",
+        headerBar: "bg-black/65 border-red-500/30",
+        avatarFrame:
+          "border-red-400/50 bg-zinc-900 shadow-[0_0_14px_rgba(239,68,68,0.3)]",
+        subPanel:
+          "bg-zinc-950/92 border-red-500/30 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(239,68,68,0.08)]",
+        subBox: "bg-black/75 border-red-500/25",
+        detailsBody: "bg-zinc-950/85 border-red-500/20",
+        dividerBorder: "border-red-500/20",
+        accordionOverlay: "bg-zinc-950/50",
+        accordionActive:
+          "ring-2 ring-red-400/90 border-red-400/65 shadow-[0_0_24px_rgba(239,68,68,0.42)]",
+        accordionIdle:
+          "border-red-500/25 hover:border-red-400/55 hover:shadow-[0_10px_24px_rgba(239,68,68,0.24)] focus:ring-2 focus:ring-red-400",
+        accordionBadge: "bg-black/75 border-red-500/35 text-red-300",
+        accordionCaret: "text-red-300",
+        accentText: "text-red-300",
+        mutedText: "text-zinc-300",
+        subMutedText: "text-zinc-400",
+        toggleActive: "bg-red-600",
+        toggleOff: "bg-zinc-700",
+        subtlePill:
+          "bg-red-950/50 border border-red-500/30 text-red-100 hover:bg-red-900/75",
+        inputClass:
+          "border-red-500/35 bg-black/85 text-white placeholder-zinc-500 focus:ring-2 focus:ring-red-500",
+        optionBg: "bg-zinc-950 text-white",
+        sliderClass: "bg-zinc-800 accent-red-500",
+        highlightCard:
+          "bg-gradient-to-r from-red-950/75 via-black/80 to-red-950/60 border-red-400/45",
+        referralCard:
+          "border-red-400/50 bg-gradient-to-r from-red-950/80 via-zinc-950/85 to-red-950/75 hover:from-red-900/80 hover:to-red-950/85 shadow-[0_10px_28px_rgba(239,68,68,0.22)] focus:ring-red-400",
+        referralIcon: "bg-red-500/20 border-red-400/50",
+        referralPill: "bg-red-500/20 border-red-400/45 text-red-200",
+        secondaryBtn:
+          "bg-black/70 hover:bg-red-950/70 border-red-500/30 text-zinc-200 hover:text-white",
+        focusRing: "focus:ring-red-500",
+      };
+    case "midnight":
+      return {
+        drawerShell:
+          "bg-slate-950/82 border-blue-500/35 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_32px_rgba(59,130,246,0.18)]",
+        drawerOverlay:
+          "from-blue-500/[0.08] via-slate-950/55 to-blue-950/20",
+        scrollBtn:
+          "bg-black/85 hover:bg-blue-950 border-blue-500/45 text-sky-300 hover:text-white shadow-[0_0_12px_rgba(59,130,246,0.35)]",
+        headerBar: "bg-black/65 border-blue-500/30",
+        avatarFrame:
+          "border-sky-400/50 bg-slate-900 shadow-[0_0_14px_rgba(59,130,246,0.3)]",
+        subPanel:
+          "bg-slate-950/92 border-blue-500/30 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(56,189,248,0.08)]",
+        subBox: "bg-black/75 border-blue-500/25",
+        detailsBody: "bg-slate-950/85 border-blue-500/20",
+        dividerBorder: "border-blue-500/20",
+        accordionOverlay: "bg-slate-950/50",
+        accordionActive:
+          "ring-2 ring-sky-400/90 border-sky-400/65 shadow-[0_0_24px_rgba(56,189,248,0.42)]",
+        accordionIdle:
+          "border-blue-500/25 hover:border-sky-400/55 hover:shadow-[0_10px_24px_rgba(56,189,248,0.24)] focus:ring-2 focus:ring-sky-400",
+        accordionBadge: "bg-black/75 border-blue-500/35 text-sky-300",
+        accordionCaret: "text-sky-300",
+        accentText: "text-sky-300",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        toggleActive: "bg-sky-500",
+        toggleOff: "bg-slate-700",
+        subtlePill:
+          "bg-blue-950/50 border border-blue-500/30 text-blue-100 hover:bg-blue-900/75",
+        inputClass:
+          "border-blue-500/35 bg-black/85 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-400",
+        optionBg: "bg-slate-950 text-white",
+        sliderClass: "bg-slate-800 accent-sky-400",
+        highlightCard:
+          "bg-gradient-to-r from-blue-950/75 via-black/80 to-blue-950/60 border-sky-400/45",
+        referralCard:
+          "border-sky-400/50 bg-gradient-to-r from-blue-950/80 via-slate-950/85 to-blue-950/75 hover:from-blue-900/80 hover:to-blue-950/85 shadow-[0_10px_28px_rgba(59,130,246,0.22)] focus:ring-sky-400",
+        referralIcon: "bg-sky-500/20 border-sky-400/50",
+        referralPill: "bg-sky-500/20 border-sky-400/45 text-sky-200",
+        secondaryBtn:
+          "bg-black/70 hover:bg-blue-950/70 border-blue-500/30 text-slate-200 hover:text-white",
+        focusRing: "focus:ring-sky-400",
+      };
+    case "emerald":
+      return {
+        drawerShell:
+          "bg-neutral-950/82 border-emerald-500/35 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_32px_rgba(16,185,129,0.18)]",
+        drawerOverlay:
+          "from-emerald-500/[0.08] via-neutral-950/55 to-emerald-950/20",
+        scrollBtn:
+          "bg-black/85 hover:bg-emerald-950 border-emerald-500/45 text-emerald-300 hover:text-white shadow-[0_0_12px_rgba(16,185,129,0.35)]",
+        headerBar: "bg-black/65 border-emerald-500/30",
+        avatarFrame:
+          "border-emerald-400/50 bg-neutral-900 shadow-[0_0_14px_rgba(16,185,129,0.3)]",
+        subPanel:
+          "bg-neutral-950/92 border-emerald-500/30 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(16,185,129,0.08)]",
+        subBox: "bg-black/75 border-emerald-500/25",
+        detailsBody: "bg-neutral-950/85 border-emerald-500/20",
+        dividerBorder: "border-emerald-500/20",
+        accordionOverlay: "bg-neutral-950/50",
+        accordionActive:
+          "ring-2 ring-emerald-400/90 border-emerald-400/65 shadow-[0_0_24px_rgba(16,185,129,0.42)]",
+        accordionIdle:
+          "border-emerald-500/25 hover:border-emerald-400/55 hover:shadow-[0_10px_24px_rgba(16,185,129,0.24)] focus:ring-2 focus:ring-emerald-400",
+        accordionBadge: "bg-black/75 border-emerald-500/35 text-emerald-300",
+        accordionCaret: "text-emerald-300",
+        accentText: "text-emerald-300",
+        mutedText: "text-neutral-300",
+        subMutedText: "text-neutral-400",
+        toggleActive: "bg-emerald-500",
+        toggleOff: "bg-neutral-700",
+        subtlePill:
+          "bg-emerald-950/50 border border-emerald-500/30 text-emerald-100 hover:bg-emerald-900/75",
+        inputClass:
+          "border-emerald-500/35 bg-black/85 text-white placeholder-neutral-500 focus:ring-2 focus:ring-emerald-400",
+        optionBg: "bg-neutral-950 text-white",
+        sliderClass: "bg-neutral-800 accent-emerald-400",
+        highlightCard:
+          "bg-gradient-to-r from-emerald-950/75 via-black/80 to-emerald-950/60 border-emerald-400/45",
+        referralCard:
+          "border-emerald-400/50 bg-gradient-to-r from-emerald-950/80 via-neutral-950/85 to-emerald-950/75 hover:from-emerald-900/80 hover:to-emerald-950/85 shadow-[0_10px_28px_rgba(16,185,129,0.22)] focus:ring-emerald-400",
+        referralIcon: "bg-emerald-500/20 border-emerald-400/50",
+        referralPill: "bg-emerald-500/20 border-emerald-400/45 text-emerald-200",
+        secondaryBtn:
+          "bg-black/70 hover:bg-emerald-950/70 border-emerald-500/30 text-neutral-200 hover:text-white",
+        focusRing: "focus:ring-emerald-400",
+      };
+    case "amber":
+      return {
+        drawerShell:
+          "bg-stone-950/82 border-amber-500/35 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_32px_rgba(245,158,11,0.18)]",
+        drawerOverlay:
+          "from-amber-500/[0.08] via-stone-950/55 to-amber-950/20",
+        scrollBtn:
+          "bg-black/85 hover:bg-amber-950 border-amber-500/45 text-amber-300 hover:text-white shadow-[0_0_12px_rgba(245,158,11,0.35)]",
+        headerBar: "bg-black/65 border-amber-500/30",
+        avatarFrame:
+          "border-amber-400/50 bg-stone-900 shadow-[0_0_14px_rgba(245,158,11,0.3)]",
+        subPanel:
+          "bg-stone-950/92 border-amber-500/30 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(245,158,11,0.08)]",
+        subBox: "bg-black/75 border-amber-500/25",
+        detailsBody: "bg-stone-950/85 border-amber-500/20",
+        dividerBorder: "border-amber-500/20",
+        accordionOverlay: "bg-stone-950/50",
+        accordionActive:
+          "ring-2 ring-amber-400/90 border-amber-400/65 shadow-[0_0_24px_rgba(245,158,11,0.42)]",
+        accordionIdle:
+          "border-amber-500/25 hover:border-amber-400/55 hover:shadow-[0_10px_24px_rgba(245,158,11,0.24)] focus:ring-2 focus:ring-amber-400",
+        accordionBadge: "bg-black/75 border-amber-500/35 text-amber-300",
+        accordionCaret: "text-amber-300",
+        accentText: "text-amber-300",
+        mutedText: "text-stone-300",
+        subMutedText: "text-stone-400",
+        toggleActive: "bg-amber-500",
+        toggleOff: "bg-stone-700",
+        subtlePill:
+          "bg-amber-950/50 border border-amber-500/30 text-amber-100 hover:bg-amber-900/75",
+        inputClass:
+          "border-amber-500/35 bg-black/85 text-white placeholder-stone-500 focus:ring-2 focus:ring-amber-400",
+        optionBg: "bg-stone-950 text-white",
+        sliderClass: "bg-stone-800 accent-amber-400",
+        highlightCard:
+          "bg-gradient-to-r from-amber-950/75 via-black/80 to-amber-950/60 border-amber-400/45",
+        referralCard:
+          "border-amber-400/50 bg-gradient-to-r from-amber-950/80 via-stone-950/85 to-amber-950/75 hover:from-amber-900/80 hover:to-amber-950/85 shadow-[0_10px_28px_rgba(245,158,11,0.22)] focus:ring-amber-400",
+        referralIcon: "bg-amber-500/20 border-amber-400/50",
+        referralPill: "bg-amber-500/20 border-amber-400/45 text-amber-200",
+        secondaryBtn:
+          "bg-black/70 hover:bg-amber-950/70 border-amber-500/30 text-stone-200 hover:text-white",
+        focusRing: "focus:ring-amber-400",
+      };
+    case "cyan":
+      return {
+        drawerShell:
+          "bg-slate-950/82 border-cyan-500/35 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_32px_rgba(6,182,212,0.18)]",
+        drawerOverlay:
+          "from-cyan-500/[0.08] via-slate-950/55 to-cyan-950/20",
+        scrollBtn:
+          "bg-black/85 hover:bg-cyan-950 border-cyan-500/45 text-cyan-300 hover:text-white shadow-[0_0_12px_rgba(6,182,212,0.35)]",
+        headerBar: "bg-black/65 border-cyan-500/30",
+        avatarFrame:
+          "border-cyan-400/50 bg-slate-900 shadow-[0_0_14px_rgba(6,182,212,0.3)]",
+        subPanel:
+          "bg-slate-950/92 border-cyan-500/30 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(6,182,212,0.08)]",
+        subBox: "bg-black/75 border-cyan-500/25",
+        detailsBody: "bg-slate-950/85 border-cyan-500/20",
+        dividerBorder: "border-cyan-500/20",
+        accordionOverlay: "bg-slate-950/50",
+        accordionActive:
+          "ring-2 ring-cyan-400/90 border-cyan-400/65 shadow-[0_0_24px_rgba(6,182,212,0.42)]",
+        accordionIdle:
+          "border-cyan-500/25 hover:border-cyan-400/55 hover:shadow-[0_10px_24px_rgba(6,182,212,0.24)] focus:ring-2 focus:ring-cyan-400",
+        accordionBadge: "bg-black/75 border-cyan-500/35 text-cyan-300",
+        accordionCaret: "text-cyan-300",
+        accentText: "text-cyan-300",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        toggleActive: "bg-cyan-500",
+        toggleOff: "bg-slate-700",
+        subtlePill:
+          "bg-cyan-950/50 border border-cyan-500/30 text-cyan-100 hover:bg-cyan-900/75",
+        inputClass:
+          "border-cyan-500/35 bg-black/85 text-white placeholder-slate-500 focus:ring-2 focus:ring-cyan-400",
+        optionBg: "bg-slate-950 text-white",
+        sliderClass: "bg-slate-800 accent-cyan-400",
+        highlightCard:
+          "bg-gradient-to-r from-cyan-950/75 via-black/80 to-cyan-950/60 border-cyan-400/45",
+        referralCard:
+          "border-cyan-400/50 bg-gradient-to-r from-cyan-950/80 via-slate-950/85 to-cyan-950/75 hover:from-cyan-900/80 hover:to-cyan-950/85 shadow-[0_10px_28px_rgba(6,182,212,0.22)] focus:ring-cyan-400",
+        referralIcon: "bg-cyan-500/20 border-cyan-400/50",
+        referralPill: "bg-cyan-500/20 border-cyan-400/45 text-cyan-200",
+        secondaryBtn:
+          "bg-black/70 hover:bg-cyan-950/70 border-cyan-500/30 text-slate-200 hover:text-white",
+        focusRing: "focus:ring-cyan-400",
+      };
+    case "violet":
+    default:
+      return {
+        drawerShell:
+          "bg-slate-950/82 border-violet-500/35 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_32px_rgba(139,92,246,0.18)]",
+        drawerOverlay:
+          "from-violet-500/[0.08] via-slate-950/55 to-purple-950/20",
+        scrollBtn:
+          "bg-black/85 hover:bg-purple-950 border-violet-500/45 text-violet-300 hover:text-white shadow-[0_0_12px_rgba(139,92,246,0.35)]",
+        headerBar: "bg-black/65 border-violet-500/30",
+        avatarFrame:
+          "border-violet-400/50 bg-slate-900 shadow-[0_0_14px_rgba(139,92,246,0.3)]",
+        subPanel:
+          "bg-slate-950/92 border-violet-500/30 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(139,92,246,0.08)]",
+        subBox: "bg-black/75 border-violet-500/25",
+        detailsBody: "bg-slate-950/85 border-violet-500/20",
+        dividerBorder: "border-violet-500/20",
+        accordionOverlay: "bg-slate-950/50",
+        accordionActive:
+          "ring-2 ring-violet-400/90 border-violet-400/65 shadow-[0_0_24px_rgba(139,92,246,0.42)]",
+        accordionIdle:
+          "border-violet-500/25 hover:border-violet-400/55 hover:shadow-[0_10px_24px_rgba(139,92,246,0.24)] focus:ring-2 focus:ring-violet-400",
+        accordionBadge: "bg-black/75 border-violet-500/35 text-violet-300",
+        accordionCaret: "text-violet-300",
+        accentText: "text-violet-300",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        toggleActive: "bg-violet-600",
+        toggleOff: "bg-slate-700",
+        subtlePill:
+          "bg-purple-950/50 border border-violet-500/30 text-purple-100 hover:bg-purple-900/75",
+        inputClass:
+          "border-violet-500/35 bg-black/85 text-white placeholder-slate-500 focus:ring-2 focus:ring-violet-400",
+        optionBg: "bg-slate-950 text-white",
+        sliderClass: "bg-slate-800 accent-violet-400",
+        highlightCard:
+          "bg-gradient-to-r from-purple-950/75 via-black/80 to-purple-950/60 border-violet-400/45",
+        referralCard:
+          "border-violet-400/50 bg-gradient-to-r from-purple-950/80 via-slate-950/85 to-purple-950/75 hover:from-purple-900/80 hover:to-purple-950/85 shadow-[0_10px_28px_rgba(139,92,246,0.22)] focus:ring-violet-400",
+        referralIcon: "bg-violet-500/20 border-violet-400/50",
+        referralPill: "bg-violet-500/20 border-violet-400/45 text-violet-200",
+        secondaryBtn:
+          "bg-black/70 hover:bg-purple-950/70 border-violet-500/30 text-slate-200 hover:text-white",
+        focusRing: "focus:ring-violet-400",
+      };
+  }
+}
+
 export function Sidebar({
   isOpen,
   onClose,
@@ -443,6 +745,8 @@ export function Sidebar({
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
 
+  const tokens = useMemo(() => getSidebarThemeTokens(appTheme), [appTheme]);
+
   // Sync all local sidebar controls whenever settings change
   const syncLocalControls = useCallback(() => {
     setScreensaverTimeoutMs(getSavedScreensaverTimeout());
@@ -530,7 +834,7 @@ export function Sidebar({
     }
   }, []);
 
-  // Close sidebar if main window scrolls significantly (paused while ReferralModal is open)
+  // Close sidebar if main window scrolls significantly (paused while ReferralModal or Walkthrough is open)
   useEffect(() => {
     if (!isOpen || isReferralModalOpen || typeof window === "undefined") return;
     lastScrollYRef.current = window.scrollY;
@@ -996,46 +1300,7 @@ export function Sidebar({
     reader.readAsText(file);
   };
 
-  const getToggleActiveBg = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-red-600";
-      case "midnight":
-        return "bg-sky-500";
-      case "emerald":
-        return "bg-emerald-500";
-      case "amber":
-        return "bg-amber-500";
-      case "cyan":
-        return "bg-cyan-500";
-      case "violet":
-      default:
-        return "bg-violet-600";
-    }
-  };
-
-  const getSubtlePillBg = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-red-950/50 border border-red-500/30 text-red-100 hover:bg-red-900/70";
-      case "midnight":
-        return "bg-blue-950/50 border border-blue-500/30 text-blue-100 hover:bg-blue-900/70";
-      case "emerald":
-        return "bg-emerald-950/50 border border-emerald-500/30 text-emerald-100 hover:bg-emerald-900/70";
-      case "amber":
-        return "bg-yellow-950/50 border border-amber-500/30 text-amber-100 hover:bg-yellow-900/70";
-      case "cyan":
-        return "bg-cyan-950/50 border border-cyan-500/30 text-cyan-100 hover:bg-cyan-900/70";
-      case "violet":
-      default:
-        return "bg-purple-950/50 border border-violet-500/30 text-purple-100 hover:bg-purple-900/70";
-    }
-  };
-
-  const toggleActiveClass = getToggleActiveBg(appTheme);
-
-  const crystalSubPanelClass =
-    "relative w-full p-3.5 sm:p-4 rounded-2xl mt-2 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(56,189,248,0.08)] overflow-hidden box-border backdrop-blur-xl bg-slate-950/85 border border-white/15 space-y-3.5";
+  const crystalSubPanelClass = `relative w-full p-3.5 sm:p-4 rounded-2xl mt-2 overflow-hidden box-border backdrop-blur-xl border space-y-3.5 ${tokens.subPanel}`;
 
   const toggleSection = (section: ConsolidatedSection) => {
     setActiveSection((prev) => (prev === section ? null : section));
@@ -1067,14 +1332,12 @@ export function Sidebar({
       <button
         type="button"
         onClick={() => toggleSection(sectionId)}
-        className={`crystal-menu-pill w-full flex items-center justify-between gap-2 px-4 py-3 text-left text-xs font-extrabold text-white relative overflow-hidden rounded-2xl border border-white/15 cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.03] focus:scale-[1.04] hover:-translate-y-0.5 focus:-translate-y-0.5 active:scale-[0.98] focus:outline-none ${
-          isActive
-            ? "ring-2 ring-cyan-400/90 border-cyan-400/60 shadow-[0_0_26px_rgba(56,189,248,0.45),0_0_18px_rgba(239,68,68,0.3)]"
-            : "hover:border-cyan-400/50 hover:shadow-[0_10px_24px_rgba(56,189,248,0.28),0_0_16px_rgba(239,68,68,0.2)] focus:ring-2 focus:ring-cyan-400"
+        className={`crystal-menu-pill w-full flex items-center justify-between gap-2 px-3.5 sm:px-4 py-3 text-left text-xs font-extrabold text-white relative overflow-hidden rounded-2xl border cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.02] focus:scale-[1.03] hover:-translate-y-0.5 focus:-translate-y-0.5 active:scale-[0.98] focus:outline-none ${
+          isActive ? tokens.accordionActive : tokens.accordionIdle
         }`}
       >
         <div
-          className="absolute inset-0 pointer-events-none z-0 opacity-80"
+          className="absolute inset-0 pointer-events-none z-0 opacity-75"
           style={{
             backgroundImage: `url(${RABBIT_HEADER_PILL})`,
             backgroundSize: "115% 380%",
@@ -1082,7 +1345,9 @@ export function Sidebar({
             backgroundPosition: "center center",
           }}
         >
-          <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[3px] w-full h-full" />
+          <div
+            className={`absolute inset-0 backdrop-blur-[3px] w-full h-full ${tokens.accordionOverlay}`}
+          />
         </div>
 
         <span className="relative z-10 flex items-center gap-2 min-w-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
@@ -1092,14 +1357,16 @@ export function Sidebar({
 
         <div className="relative z-10 flex items-center gap-1.5 shrink-0">
           {subtitleBadge && (
-            <span className="rounded-full bg-black/65 border border-white/15 px-2 py-0.5 text-[9px] font-bold text-cyan-300 whitespace-nowrap">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[9px] font-bold whitespace-nowrap ${tokens.accordionBadge}`}
+            >
               {subtitleBadge}
             </span>
           )}
           <span
-            className={`text-[10px] text-amber-300 transform transition-transform duration-200 ${
-              isActive ? "rotate-180" : ""
-            }`}
+            className={`text-[10px] transform transition-transform duration-200 ${
+              tokens.accordionCaret
+            } ${isActive ? "rotate-180" : ""}`}
           >
             ▼
           </span>
@@ -1109,7 +1376,7 @@ export function Sidebar({
   };
 
   return (
-    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex justify-end items-start pt-[56px] sm:pt-[64px] pr-2 sm:pr-4 pointer-events-none">
+    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex justify-end items-center sm:items-start p-2 sm:pt-[64px] sm:pr-4 sm:pb-3 pointer-events-none">
       <style>{`
         @keyframes crystalBladeSwipeIn {
           0% {
@@ -1129,32 +1396,35 @@ export function Sidebar({
 
       {/* Light Transparent Backdrop so Background Media/Catalog Stays Visible */}
       <div
-        className="fixed inset-0 bg-black/25 backdrop-blur-[2px] pointer-events-auto transition-opacity duration-300"
+        className="fixed inset-0 bg-black/30 backdrop-blur-[2px] pointer-events-auto transition-opacity duration-300"
         onClick={handleCloseSidebar}
       />
 
-      {/* Crystal Neon Console Blade Drawer */}
+      {/* Crystal Neon Console Blade Drawer (Viewport-Constrained for Portrait, Landscape, Tablet, TV & Projector) */}
       <div
         data-tour="sidebar"
-        className="relative my-1.5 w-[420px] max-w-[95vw] h-[calc(100dvh-74px)] rounded-[28px] border border-white/20 shadow-[0_25px_70px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-10 pb-10 px-3.5 sm:px-4 pointer-events-auto box-border backdrop-blur-2xl bg-slate-950/60"
+        className={`relative w-full max-w-[min(420px,calc(100vw-16px))] h-[calc(100dvh-16px)] sm:h-[calc(100dvh-78px)] max-h-[calc(100dvh-16px)] rounded-[28px] border flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-10 pb-10 px-3 sm:px-4 pointer-events-auto box-border backdrop-blur-2xl ${tokens.drawerShell}`}
       >
         {/* Translucent RABBIT_PANEL Neon Outer Frame Layer */}
         <div
-          className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
+          className="absolute inset-0 pointer-events-none z-0 opacity-65 mix-blend-lighten"
           style={{
             backgroundImage: `url(${RABBIT_PANEL})`,
             backgroundSize: "100% 100%",
             backgroundRepeat: "no-repeat",
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/[0.05] via-slate-950/45 to-red-500/[0.05] pointer-events-none z-0" />
+        <div
+          className={`absolute inset-0 bg-gradient-to-b pointer-events-none z-0 ${tokens.drawerOverlay}`}
+        />
 
         {/* Scroll Up Arrow Button */}
         <button
           type="button"
           onClick={() => handleScrollSidebar("up")}
-          className="absolute top-2 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/80 hover:bg-black border border-cyan-400/40 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-[0_0_12px_rgba(56,189,248,0.4)] transition hover:scale-110 cursor-pointer"
+          className={`absolute top-2 left-1/2 -translate-x-1/2 z-20 w-14 h-6 border rounded-full flex items-center justify-center text-xs font-bold transition hover:scale-110 cursor-pointer ${tokens.scrollBtn}`}
           title="Scroll Up"
+          aria-label="Scroll sidebar up"
         >
           ▲
         </button>
@@ -1174,10 +1444,12 @@ export function Sidebar({
             {/* Crystal Profile Header Bar */}
             <div
               data-tour="sidebar-profile-header"
-              className="flex items-center justify-between gap-2 rounded-2xl bg-black/55 backdrop-blur-xl border border-white/15 px-3 py-2.5 shadow-lg w-full box-border"
+              className={`flex items-center justify-between gap-2 rounded-2xl backdrop-blur-xl border px-3 py-2.5 shadow-lg w-full box-border ${tokens.headerBar}`}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-10 h-10 rounded-xl overflow-hidden border border-cyan-400/40 bg-slate-900 shadow-[0_0_15px_rgba(56,189,248,0.3)] shrink-0 flex items-center justify-center">
+                <div
+                  className={`w-10 h-10 rounded-xl overflow-hidden border shrink-0 flex items-center justify-center ${tokens.avatarFrame}`}
+                >
                   <img
                     src={headerIconUrl}
                     alt="Avatar"
@@ -1198,7 +1470,9 @@ export function Sidebar({
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       <span>Online</span>
                     </span>
-                    <span className="text-[9px] text-slate-300 font-bold uppercase px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
+                    <span
+                      className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${tokens.subBox} ${tokens.mutedText}`}
+                    >
                       {ramMode === "low"
                         ? "1-2GB Stick"
                         : ramMode === "high"
@@ -1206,7 +1480,9 @@ export function Sidebar({
                           : "Auto RAM"}
                     </span>
                     {seniorEasyMode && (
-                      <span className="text-[9px] text-amber-300 font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-400/30">
+                      <span
+                        className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${tokens.accordionBadge}`}
+                      >
                         Easy
                       </span>
                     )}
@@ -1217,7 +1493,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={handleCloseSidebar}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-red-600/80 border border-white/15 hover:border-red-400 text-xs font-bold text-slate-100 hover:text-white transition hover:scale-105 active:scale-95 shrink-0 cursor-pointer"
+                className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition hover:scale-105 active:scale-95 shrink-0 cursor-pointer ${tokens.secondaryBtn}`}
               >
                 ✕ Close
               </button>
@@ -1239,7 +1515,7 @@ export function Sidebar({
                 {activeSection === "feedAndHistory" && (
                   <div className={crystalSubPanelClass}>
                     <div>
-                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                      <p className={`text-[11px] font-bold mb-1.5 ${tokens.mutedText}`}>
                         Region / Language Catalog Feed:
                       </p>
                       <select
@@ -1249,13 +1525,13 @@ export function Sidebar({
                             e.target.value as GlobalFeedOption
                           )
                         }
-                        className="h-10 w-full rounded-xl border border-cyan-400/35 bg-black/80 px-3 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer"
+                        className={`h-10 w-full rounded-xl border px-3 text-xs font-bold focus:outline-none cursor-pointer ${tokens.inputClass}`}
                       >
                         {globalFeedOptions.map((opt) => (
                           <option
                             key={opt}
                             value={opt}
-                            className="bg-slate-950 text-white"
+                            className={tokens.optionBg}
                           >
                             🌐 {opt}
                           </option>
@@ -1263,8 +1539,8 @@ export function Sidebar({
                       </select>
                     </div>
 
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                    <div className={`pt-2.5 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] font-bold mb-1.5 ${tokens.mutedText}`}>
                         Favorite Startup Screen:
                       </p>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -1276,12 +1552,12 @@ export function Sidebar({
                               setStartupTab(tab);
                               setStartupTabState(tab);
                             }}
-                            className={`rounded-xl py-2 px-2 text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer hover:scale-[1.03] ${
+                            className={`rounded-xl py-2 px-2 text-[11px] font-bold whitespace-nowrap truncate transition-all cursor-pointer hover:scale-[1.03] ${
                               startupTab === tab
                                 ? `${getPrimaryBgColor(
                                     appTheme
                                   )} text-white shadow-md`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             {tab}
@@ -1290,12 +1566,12 @@ export function Sidebar({
                       </div>
                     </div>
 
-                    <div className="pt-2.5 border-t border-white/10 space-y-2">
+                    <div className={`pt-2.5 border-t space-y-2 ${tokens.dividerBorder}`}>
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-300 font-bold">
+                        <span className={`font-bold ${tokens.mutedText}`}>
                           ⭐ Pinned Live Channels:
                         </span>
-                        <span className="font-extrabold text-amber-300">
+                        <span className={`font-extrabold ${tokens.accentText}`}>
                           {favoriteChannelCount} / {MAX_FAVORITE_CHANNELS}
                         </span>
                       </div>
@@ -1304,9 +1580,7 @@ export function Sidebar({
                         <Link
                           to="/live-tv"
                           onClick={handleCloseSidebar}
-                          className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition hover:scale-[1.02] ${getSubtlePillBg(
-                            appTheme
-                          )}`}
+                          className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition hover:scale-[1.02] ${tokens.subtlePill}`}
                         >
                           <span>📡 Live TV</span>
                         </Link>
@@ -1338,7 +1612,7 @@ export function Sidebar({
                   <div className={crystalSubPanelClass}>
                     {/* App Themes */}
                     <div>
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                      <p className={`text-[11px] mb-1.5 font-bold ${tokens.mutedText}`}>
                         Neon App Theme:
                       </p>
                       <div className="grid grid-cols-2 gap-2 w-full">
@@ -1352,7 +1626,7 @@ export function Sidebar({
                                 ? `${getPrimaryBgColor(
                                     t.id
                                   )} text-white shadow-md ring-1 ring-white/40`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             {t.label}
@@ -1362,8 +1636,8 @@ export function Sidebar({
                     </div>
 
                     {/* Poster Corner Shape */}
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                    <div className={`pt-2.5 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] mb-1.5 font-bold ${tokens.mutedText}`}>
                         Poster Corner Shape:
                       </p>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -1380,7 +1654,7 @@ export function Sidebar({
                                 ? `${getPrimaryBgColor(
                                     appTheme
                                   )} text-white shadow-md`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             {opt.label}
@@ -1390,8 +1664,8 @@ export function Sidebar({
                     </div>
 
                     {/* Poster Frame Style */}
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                    <div className={`pt-2.5 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] mb-1.5 font-bold ${tokens.mutedText}`}>
                         Poster Frame Style:
                       </p>
                       <div className="space-y-1.5">
@@ -1408,7 +1682,7 @@ export function Sidebar({
                                 ? `${getPrimaryBgColor(
                                     appTheme
                                   )} text-white shadow-md ring-1 ring-white/30`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             <span className="block text-xs font-extrabold">
@@ -1423,8 +1697,8 @@ export function Sidebar({
                     </div>
 
                     {/* Poster Info Layout */}
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                    <div className={`pt-2.5 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] mb-1.5 font-bold ${tokens.mutedText}`}>
                         Poster Information Layout:
                       </p>
                       <div className="space-y-1.5">
@@ -1441,7 +1715,7 @@ export function Sidebar({
                                 ? `${getPrimaryBgColor(
                                     appTheme
                                   )} text-white shadow-md ring-1 ring-white/30`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             <span className="block text-xs font-extrabold">
@@ -1459,7 +1733,7 @@ export function Sidebar({
                           <p className="text-xs font-bold text-white">
                             Show Rating & Status Badges
                           </p>
-                          <p className="text-[10px] text-slate-300">
+                          <p className={`text-[10px] ${tokens.mutedText}`}>
                             Toggle floating star tags on posters.
                           </p>
                         </div>
@@ -1471,7 +1745,9 @@ export function Sidebar({
                             setShowPosterBadgesState(next);
                           }}
                           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                            showPosterBadges ? toggleActiveClass : "bg-slate-700"
+                            showPosterBadges
+                              ? tokens.toggleActive
+                              : tokens.toggleOff
                           }`}
                         >
                           <span
@@ -1486,8 +1762,8 @@ export function Sidebar({
                     </div>
 
                     {/* Catalog Card Size */}
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                    <div className={`pt-2.5 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] mb-1.5 font-bold ${tokens.mutedText}`}>
                         Catalog Poster Grid Size:
                       </p>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -1502,7 +1778,7 @@ export function Sidebar({
                                   ? `${getPrimaryBgColor(
                                       appTheme
                                     )} text-white shadow-md`
-                                  : getSubtlePillBg(appTheme)
+                                  : tokens.subtlePill
                               }`}
                             >
                               {size}
@@ -1513,8 +1789,8 @@ export function Sidebar({
                     </div>
 
                     {/* History Page Overscale */}
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                    <div className={`pt-2.5 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] mb-1.5 font-bold ${tokens.mutedText}`}>
                         Watch History Overscale:
                       </p>
                       <div className="grid grid-cols-4 gap-1.5">
@@ -1530,7 +1806,7 @@ export function Sidebar({
                                 ? `${getPrimaryBgColor(
                                     appTheme
                                   )} text-white shadow-md`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             {scale === "off" ? "Off" : `+${scale}`}
@@ -1540,8 +1816,8 @@ export function Sidebar({
                     </div>
 
                     {/* 3D Seasonal Holiday Overlay Mode */}
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                    <div className={`pt-2.5 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] mb-1.5 font-bold ${tokens.mutedText}`}>
                         ✨ 3D Seasonal Holiday Overlay:
                       </p>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -1553,12 +1829,12 @@ export function Sidebar({
                               setHolidayPreviewOverride(opt.id);
                               setHolidayOverrideState(opt.id);
                             }}
-                            className={`rounded-xl py-1.5 px-2 text-[10px] font-bold transition-all cursor-pointer hover:scale-[1.03] ${
+                            className={`rounded-xl py-1.5 px-2 text-[10px] font-bold truncate transition-all cursor-pointer hover:scale-[1.03] ${
                               holidayOverride === opt.id
                                 ? `${getPrimaryBgColor(
                                     appTheme
                                   )} text-white shadow-md`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             {opt.label}
@@ -1568,9 +1844,9 @@ export function Sidebar({
                     </div>
 
                     {/* Neon Glow Intensity + Safe Visual Reset */}
-                    <div className="pt-2.5 border-t border-white/10 space-y-2.5">
+                    <div className={`pt-2.5 border-t space-y-2.5 ${tokens.dividerBorder}`}>
                       <div>
-                        <p className="text-[11px] text-slate-300 mb-1.5 font-bold">
+                        <p className={`text-[11px] mb-1.5 font-bold ${tokens.mutedText}`}>
                           Neon Glow Intensity:
                         </p>
                         <div className="grid grid-cols-3 gap-1.5">
@@ -1587,7 +1863,7 @@ export function Sidebar({
                                   ? `${getPrimaryBgColor(
                                       appTheme
                                     )} text-white shadow-md`
-                                  : getSubtlePillBg(appTheme)
+                                  : tokens.subtlePill
                               }`}
                             >
                               {opt.label}
@@ -1599,7 +1875,7 @@ export function Sidebar({
                       <button
                         type="button"
                         onClick={handleResetVisualDefaults}
-                        className="w-full py-2 px-2 rounded-xl bg-black/70 hover:bg-white/15 border border-white/15 text-[11px] font-bold text-amber-300 transition cursor-pointer"
+                        className={`w-full py-2 px-2 rounded-xl border text-[11px] font-bold transition cursor-pointer ${tokens.secondaryBtn}`}
                       >
                         ↺ Reset Visual & Poster Defaults
                       </button>
@@ -1626,11 +1902,15 @@ export function Sidebar({
 
                 {activeSection === "audio" && (
                   <div className={crystalSubPanelClass}>
-                    <div className="flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/10 px-3 py-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
+                    <div
+                      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${tokens.subBox}`}
+                    >
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${tokens.subMutedText}`}
+                      >
                         Station:
                       </span>
-                      <span className="text-xs font-extrabold text-amber-300 truncate">
+                      <span className={`text-xs font-extrabold truncate ${tokens.accentText}`}>
                         📻 {activeStationName}
                       </span>
                     </div>
@@ -1644,7 +1924,7 @@ export function Sidebar({
                             ? `${getPrimaryBgColor(
                                 appTheme
                               )} text-white shadow-md`
-                            : getSubtlePillBg(appTheme)
+                            : tokens.subtlePill
                         }`}
                       >
                         🎵 Radio ON
@@ -1657,19 +1937,19 @@ export function Sidebar({
                             ? `${getPrimaryBgColor(
                                 appTheme
                               )} text-white shadow-md`
-                            : getSubtlePillBg(appTheme)
+                            : tokens.subtlePill
                         }`}
                       >
                         🔇 Radio Off
                       </button>
                     </div>
 
-                    <div className="pt-2 border-t border-white/10 space-y-1.5">
+                    <div className={`pt-2 border-t space-y-1.5 ${tokens.dividerBorder}`}>
                       <div className="flex items-center justify-between">
-                        <p className="text-[11px] text-slate-300 font-bold">
+                        <p className={`text-[11px] font-bold ${tokens.mutedText}`}>
                           Music Volume:
                         </p>
-                        <span className="text-[11px] font-bold text-amber-300">
+                        <span className={`text-[11px] font-bold ${tokens.accentText}`}>
                           {Math.round(bgMusicVolume * 100)}%
                         </span>
                       </div>
@@ -1682,12 +1962,12 @@ export function Sidebar({
                         onChange={(e) =>
                           handleVolumeChange(parseFloat(e.target.value))
                         }
-                        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                        className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer ${tokens.sliderClass}`}
                       />
                     </div>
 
-                    <div className="pt-2 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 mb-2 font-bold">
+                    <div className={`pt-2 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] mb-2 font-bold ${tokens.mutedText}`}>
                         Select Channel by Genre:
                       </p>
                       <div className="max-h-40 overflow-y-auto space-y-1.5 pr-0.5 scrollbar-none">
@@ -1707,12 +1987,16 @@ export function Sidebar({
                                   hasActiveStation ||
                                   category.toLowerCase().includes("2000")
                                 }
-                                className="group rounded-xl bg-black/60 border border-white/10 overflow-hidden"
+                                className={`group rounded-xl border overflow-hidden ${tokens.subBox}`}
                               >
-                                <summary className="flex items-center justify-between px-3 py-1.5 text-xs font-bold text-amber-300 cursor-pointer select-none hover:bg-white/10 transition">
+                                <summary
+                                  className={`flex items-center justify-between px-3 py-1.5 text-xs font-bold cursor-pointer select-none hover:bg-white/10 transition ${tokens.accentText}`}
+                                >
                                   <span className="flex items-center gap-2 truncate pr-2">
                                     <span>📁 {category}</span>
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
+                                    <span
+                                      className={`text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 ${tokens.mutedText}`}
+                                    >
                                       {stations.length}
                                     </span>
                                   </span>
@@ -1729,7 +2013,9 @@ export function Sidebar({
                                   </div>
                                 </summary>
 
-                                <div className="p-1.5 space-y-1 border-t border-white/10 bg-slate-950/75">
+                                <div
+                                  className={`p-1.5 space-y-1 border-t ${tokens.detailsBody}`}
+                                >
                                   {stations.map((station) => {
                                     const isSelected =
                                       currentStationUrl === station.url ||
@@ -1748,7 +2034,7 @@ export function Sidebar({
                                             ? `${getPrimaryBgColor(
                                                 appTheme
                                               )} text-white shadow-md`
-                                            : getSubtlePillBg(appTheme)
+                                            : tokens.subtlePill
                                         }`}
                                       >
                                         <span className="truncate pr-1">
@@ -1785,13 +2071,15 @@ export function Sidebar({
                 {activeSection === "profileAndAccessibility" && (
                   <div className={crystalSubPanelClass}>
                     {/* ONE-TAP SENIOR EASY MODE */}
-                    <div className="rounded-2xl bg-gradient-to-r from-amber-500/20 via-black/75 to-amber-500/15 border border-amber-400/45 p-3 flex items-center justify-between gap-2">
+                    <div
+                      className={`rounded-2xl border p-3 flex items-center justify-between gap-2 ${tokens.highlightCard}`}
+                    >
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-amber-300">
+                        <p className={`text-xs font-black ${tokens.accentText}`}>
                           👓 One-Tap Senior Easy Mode
                         </p>
-                        <p className="text-[10px] text-slate-200 leading-snug">
-                          Large text, big buttons, yellow XL pointer, bright TV
+                        <p className={`text-[10px] leading-snug ${tokens.mutedText}`}>
+                          Large text, big buttons, XL pointer, bright TV
                           focus & steady screen.
                         </p>
                       </div>
@@ -1803,7 +2091,7 @@ export function Sidebar({
                           setSeniorEasyModeState(next);
                         }}
                         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                          seniorEasyMode ? "bg-amber-500" : "bg-slate-700"
+                          seniorEasyMode ? tokens.toggleActive : tokens.toggleOff
                         }`}
                       >
                         <span
@@ -1815,13 +2103,15 @@ export function Sidebar({
                     </div>
 
                     {/* PERSONALIZATION: MASCOT, GREETING, EYE-CARE, CORNER CLOCK */}
-                    <div className="space-y-2.5 pb-3 border-b border-white/15">
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-pink-300">
+                    <div className={`space-y-2.5 pb-3 border-b ${tokens.dividerBorder}`}>
+                      <p
+                        className={`text-[10px] font-extrabold uppercase tracking-widest ${tokens.accentText}`}
+                      >
                         ✨ Fun Personalizations
                       </p>
 
                       <div>
-                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                        <p className={`text-[11px] font-bold mb-1 ${tokens.mutedText}`}>
                           Profile Mascot Badge:
                         </p>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -1839,7 +2129,7 @@ export function Sidebar({
                                   ? `${getPrimaryBgColor(
                                       appTheme
                                     )} ring-2 ring-white/50 shadow-md`
-                                  : "bg-black/65 border border-white/10 hover:bg-white/15"
+                                  : `border hover:bg-white/15 ${tokens.subBox}`
                               }`}
                             >
                               {m.id}
@@ -1849,7 +2139,7 @@ export function Sidebar({
                       </div>
 
                       <div>
-                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                        <p className={`text-[11px] font-bold mb-1 ${tokens.mutedText}`}>
                           Home Greeting Style:
                         </p>
                         <select
@@ -1859,13 +2149,13 @@ export function Sidebar({
                             setGreetingStyle(val);
                             setGreetingStyleState(val);
                           }}
-                          className="h-9 w-full rounded-xl border border-white/15 bg-black/80 px-3 text-xs font-bold text-white focus:outline-none cursor-pointer"
+                          className={`h-9 w-full rounded-xl border px-3 text-xs font-bold focus:outline-none cursor-pointer ${tokens.inputClass}`}
                         >
                           {GREETING_STYLE_OPTIONS.map((g) => (
                             <option
                               key={g.id}
                               value={g.id}
-                              className="bg-slate-950 text-white"
+                              className={tokens.optionBg}
                             >
                               {g.label} — {g.sample}
                             </option>
@@ -1878,7 +2168,7 @@ export function Sidebar({
                           <p className="text-xs font-bold text-white">
                             🌙 Night Owl Eye-Care Filter
                           </p>
-                          <p className="text-[10px] text-slate-300">
+                          <p className={`text-[10px] ${tokens.mutedText}`}>
                             Soft warm tint for late-night watching.
                           </p>
                         </div>
@@ -1890,7 +2180,7 @@ export function Sidebar({
                             setWarmEyeCareState(next);
                           }}
                           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                            warmEyeCare ? "bg-amber-500" : "bg-slate-700"
+                            warmEyeCare ? tokens.toggleActive : tokens.toggleOff
                           }`}
                         >
                           <span
@@ -1906,7 +2196,7 @@ export function Sidebar({
                           <p className="text-xs font-bold text-white">
                             🕒 Couch Corner Clock
                           </p>
-                          <p className="text-[10px] text-slate-300">
+                          <p className={`text-[10px] ${tokens.mutedText}`}>
                             Subtle live time while browsing.
                           </p>
                         </div>
@@ -1919,7 +2209,7 @@ export function Sidebar({
                               setClockFormat(nextFmt);
                               setClockFormatState(nextFmt);
                             }}
-                            className="px-2 py-1 rounded-lg bg-black/80 border border-white/15 text-[10px] font-bold text-cyan-300 cursor-pointer"
+                            className={`px-2 py-1 rounded-lg border text-[10px] font-bold cursor-pointer ${tokens.subBox} ${tokens.accentText}`}
                             title="Toggle 12h / 24h"
                           >
                             {clockFormat.toUpperCase()}
@@ -1933,8 +2223,8 @@ export function Sidebar({
                             }}
                             className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
                               showCornerClock
-                                ? toggleActiveClass
-                                : "bg-slate-700"
+                                ? tokens.toggleActive
+                                : tokens.toggleOff
                             }`}
                           >
                             <span
@@ -1950,13 +2240,15 @@ export function Sidebar({
                     </div>
 
                     {/* ACCESSIBILITY, TV OVERSCAN & SUBTITLES */}
-                    <div className="space-y-2.5 pb-3 border-b border-white/15">
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-300">
+                    <div className={`space-y-2.5 pb-3 border-b ${tokens.dividerBorder}`}>
+                      <p
+                        className={`text-[10px] font-extrabold uppercase tracking-widest ${tokens.accentText}`}
+                      >
                         ♿ TV, Projector & Accessibility
                       </p>
 
                       <div>
-                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                        <p className={`text-[11px] font-bold mb-1 ${tokens.mutedText}`}>
                           Text Size:
                         </p>
                         <div className="grid grid-cols-3 gap-1.5">
@@ -1974,7 +2266,7 @@ export function Sidebar({
                                     ? `${getPrimaryBgColor(
                                         appTheme
                                       )} text-white shadow-md`
-                                    : getSubtlePillBg(appTheme)
+                                    : tokens.subtlePill
                                 }`}
                               >
                                 {sc}
@@ -1989,7 +2281,7 @@ export function Sidebar({
                           <p className="text-xs font-bold text-white">
                             XL Mouse Pointer (3x)
                           </p>
-                          <p className="text-[10px] text-slate-300">
+                          <p className={`text-[10px] ${tokens.mutedText}`}>
                             Enlarges cursor for TVs & projectors.
                           </p>
                         </div>
@@ -1997,7 +2289,9 @@ export function Sidebar({
                           type="button"
                           onClick={() => onMouseToggle(!helpfulMouse)}
                           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                            helpfulMouse ? toggleActiveClass : "bg-slate-700"
+                            helpfulMouse
+                              ? tokens.toggleActive
+                              : tokens.toggleOff
                           }`}
                         >
                           <span
@@ -2023,7 +2317,7 @@ export function Sidebar({
                                   ? `${getPrimaryBgColor(
                                       appTheme
                                     )} text-white shadow`
-                                  : getSubtlePillBg(appTheme)
+                                  : tokens.subtlePill
                               }`}
                             >
                               {c.label}
@@ -2037,7 +2331,7 @@ export function Sidebar({
                           <p className="text-xs font-bold text-white">
                             Enlarged Action Buttons
                           </p>
-                          <p className="text-[10px] text-slate-300">
+                          <p className={`text-[10px] ${tokens.mutedText}`}>
                             Bigger icons & touch targets.
                           </p>
                         </div>
@@ -2045,7 +2339,9 @@ export function Sidebar({
                           type="button"
                           onClick={() => onLargeButtonsToggle(!largeButtons)}
                           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                            largeButtons ? toggleActiveClass : "bg-slate-700"
+                            largeButtons
+                              ? tokens.toggleActive
+                              : tokens.toggleOff
                           }`}
                         >
                           <span
@@ -2061,7 +2357,7 @@ export function Sidebar({
                           <p className="text-xs font-bold text-white">
                             Bright TV Focus Spotlight
                           </p>
-                          <p className="text-[10px] text-slate-300">
+                          <p className={`text-[10px] ${tokens.mutedText}`}>
                             High-contrast yellow D-pad highlight.
                           </p>
                         </div>
@@ -2073,7 +2369,9 @@ export function Sidebar({
                             setHighContrastFocusState(next);
                           }}
                           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                            highContrastFocus ? "bg-amber-500" : "bg-slate-700"
+                            highContrastFocus
+                              ? tokens.toggleActive
+                              : tokens.toggleOff
                           }`}
                         >
                           <span
@@ -2091,7 +2389,7 @@ export function Sidebar({
                           <p className="text-xs font-bold text-white">
                             Steady Screen (No Motion)
                           </p>
-                          <p className="text-[10px] text-slate-300">
+                          <p className={`text-[10px] ${tokens.mutedText}`}>
                             Stops animations for eyes & low-RAM sticks.
                           </p>
                         </div>
@@ -2103,7 +2401,9 @@ export function Sidebar({
                             setReducedMotionState(next);
                           }}
                           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                            reducedMotion ? toggleActiveClass : "bg-slate-700"
+                            reducedMotion
+                              ? tokens.toggleActive
+                              : tokens.toggleOff
                           }`}
                         >
                           <span
@@ -2119,7 +2419,7 @@ export function Sidebar({
                           <p className="text-xs font-bold text-white">
                             Soft Remote Click Sounds
                           </p>
-                          <p className="text-[10px] text-slate-300">
+                          <p className={`text-[10px] ${tokens.mutedText}`}>
                             Gentle audio feedback on button taps.
                           </p>
                         </div>
@@ -2131,7 +2431,9 @@ export function Sidebar({
                             setUiClickSoundsState(next);
                           }}
                           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                            uiClickSounds ? toggleActiveClass : "bg-slate-700"
+                            uiClickSounds
+                              ? tokens.toggleActive
+                              : tokens.toggleOff
                           }`}
                         >
                           <span
@@ -2143,7 +2445,7 @@ export function Sidebar({
                       </div>
 
                       <div className="pt-1">
-                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                        <p className={`text-[11px] font-bold mb-1 ${tokens.mutedText}`}>
                           TV / Projector Screen Safe-Zone:
                         </p>
                         <div className="grid grid-cols-4 gap-1">
@@ -2160,7 +2462,7 @@ export function Sidebar({
                                   ? `${getPrimaryBgColor(
                                       appTheme
                                     )} text-white shadow`
-                                  : getSubtlePillBg(appTheme)
+                                  : tokens.subtlePill
                               }`}
                             >
                               {opt.value}%
@@ -2170,7 +2472,7 @@ export function Sidebar({
                       </div>
 
                       <div className="pt-1">
-                        <p className="text-[11px] text-slate-300 font-bold mb-1">
+                        <p className={`text-[11px] font-bold mb-1 ${tokens.mutedText}`}>
                           Caption / Subtitle Style:
                         </p>
                         <div className="grid grid-cols-3 gap-1.5">
@@ -2184,11 +2486,17 @@ export function Sidebar({
                                 })
                               )
                             }
-                            className="h-8 rounded-lg border border-white/15 bg-black/80 px-1.5 text-[10px] font-bold text-white"
+                            className={`h-8 rounded-lg border px-1.5 text-[10px] font-bold ${tokens.inputClass}`}
                           >
-                            <option value="normal">Normal</option>
-                            <option value="large">Large</option>
-                            <option value="xl">XL Size</option>
+                            <option value="normal" className={tokens.optionBg}>
+                              Normal
+                            </option>
+                            <option value="large" className={tokens.optionBg}>
+                              Large
+                            </option>
+                            <option value="xl" className={tokens.optionBg}>
+                              XL Size
+                            </option>
                           </select>
                           <select
                             value={subtitles.color}
@@ -2200,11 +2508,17 @@ export function Sidebar({
                                 })
                               )
                             }
-                            className="h-8 rounded-lg border border-white/15 bg-black/80 px-1.5 text-[10px] font-bold text-white"
+                            className={`h-8 rounded-lg border px-1.5 text-[10px] font-bold ${tokens.inputClass}`}
                           >
-                            <option value="white">White</option>
-                            <option value="yellow">Yellow</option>
-                            <option value="cyan">Cyan</option>
+                            <option value="white" className={tokens.optionBg}>
+                              White
+                            </option>
+                            <option value="yellow" className={tokens.optionBg}>
+                              Yellow
+                            </option>
+                            <option value="cyan" className={tokens.optionBg}>
+                              Cyan
+                            </option>
                           </select>
                           <select
                             value={subtitles.bgOpacity}
@@ -2216,24 +2530,30 @@ export function Sidebar({
                                 })
                               )
                             }
-                            className="h-8 rounded-lg border border-white/15 bg-black/80 px-1.5 text-[10px] font-bold text-white"
+                            className={`h-8 rounded-lg border px-1.5 text-[10px] font-bold ${tokens.inputClass}`}
                           >
-                            <option value="none">No Box</option>
-                            <option value="medium">Dim Box</option>
-                            <option value="solid">Solid Box</option>
+                            <option value="none" className={tokens.optionBg}>
+                              No Box
+                            </option>
+                            <option value="medium" className={tokens.optionBg}>
+                              Dim Box
+                            </option>
+                            <option value="solid" className={tokens.optionBg}>
+                              Solid Box
+                            </option>
                           </select>
                         </div>
                       </div>
                     </div>
 
                     {/* KIDS SAFE MODE LOCK */}
-                    <div className="space-y-2 pb-3 border-b border-white/15">
+                    <div className={`space-y-2 pb-3 border-b ${tokens.dividerBorder}`}>
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-xs font-extrabold text-emerald-300">
                             🧒 Kids Safe Mode Lock
                           </p>
-                          <p className="text-[10px] text-slate-300">
+                          <p className={`text-[10px] ${tokens.mutedText}`}>
                             Caps catalog to kid-safe titles until PIN unlocked.
                           </p>
                         </div>
@@ -2243,7 +2563,7 @@ export function Sidebar({
                           className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold shrink-0 transition cursor-pointer ${
                             kidsLocked
                               ? "bg-emerald-600 text-white shadow"
-                              : "bg-black/75 border border-white/15 text-slate-200 hover:bg-white/15"
+                              : `border ${tokens.secondaryBtn}`
                           }`}
                         >
                           {kidsLocked ? "🔓 Unlock" : "🔒 Lock ON"}
@@ -2253,6 +2573,7 @@ export function Sidebar({
                       {kidsLocked && (
                         <input
                           type="password"
+                          dir="ltr"
                           inputMode="numeric"
                           maxLength={6}
                           placeholder="Enter 4–6 digit PIN then tap Unlock"
@@ -2262,12 +2583,12 @@ export function Sidebar({
                               e.target.value.replace(/\D/g, "").slice(0, 6)
                             )
                           }
-                          className="w-full rounded-xl border border-emerald-400/40 bg-black/80 px-3 py-1.5 text-xs font-bold text-white placeholder-slate-400 focus:outline-none tracking-widest"
+                          className={`w-full rounded-xl border px-3 py-1.5 text-xs font-bold focus:outline-none tracking-widest ${tokens.inputClass}`}
                         />
                       )}
 
                       {kidsLockStatus && (
-                        <p className="text-[10px] font-bold text-amber-300 text-center">
+                        <p className={`text-[10px] font-bold text-center ${tokens.accentText}`}>
                           {kidsLockStatus}
                         </p>
                       )}
@@ -2278,46 +2599,51 @@ export function Sidebar({
                       onSubmit={handleUnifiedProfileUpdate}
                       className="space-y-2.5"
                     >
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-amber-300">
+                      <p
+                        className={`text-[10px] font-extrabold uppercase tracking-widest ${tokens.accentText}`}
+                      >
                         🔐 Profile, Age & Parental PIN (4–6 Digits)
                       </p>
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                          <span className={`block text-[11px] mb-1 font-bold ${tokens.mutedText}`}>
                             Name:
                           </span>
                           <input
                             type="text"
+                            dir="ltr"
                             maxLength={25}
                             value={profileNameInput}
                             onChange={(e) =>
                               setProfileNameInput(e.target.value)
                             }
-                            className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                            className={`w-full rounded-xl border px-2.5 py-1.5 text-xs focus:outline-none ${tokens.inputClass}`}
                           />
                         </div>
                         <div>
-                          <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                          <span className={`block text-[11px] mb-1 font-bold ${tokens.mutedText}`}>
                             Age:
                           </span>
                           <input
                             type="number"
+                            dir="ltr"
                             min={1}
                             max={120}
                             value={userAgeInput}
                             onChange={(e) => setUserAgeInput(e.target.value)}
-                            className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                            className={`w-full rounded-xl border px-2.5 py-1.5 text-xs focus:outline-none ${tokens.inputClass}`}
                           />
                         </div>
                       </div>
 
                       <div>
-                        <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                        <span className={`block text-[11px] mb-1 font-bold ${tokens.mutedText}`}>
                           Current 4–6 Digit PIN (Required):
                         </span>
                         <input
                           type="password"
+                          dir="ltr"
                           inputMode="numeric"
                           maxLength={6}
                           placeholder="••••••"
@@ -2327,17 +2653,18 @@ export function Sidebar({
                               e.target.value.replace(/\D/g, "").slice(0, 6)
                             )
                           }
-                          className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                          className={`w-full rounded-xl border px-2.5 py-1.5 text-xs focus:outline-none tracking-widest ${tokens.inputClass}`}
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         <div>
-                          <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                          <span className={`block text-[11px] mb-1 font-bold ${tokens.mutedText}`}>
                             New PIN (Opt):
                           </span>
                           <input
                             type="password"
+                            dir="ltr"
                             inputMode="numeric"
                             maxLength={6}
                             placeholder="••••••"
@@ -2347,15 +2674,16 @@ export function Sidebar({
                                 e.target.value.replace(/\D/g, "").slice(0, 6)
                               )
                             }
-                            className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                            className={`w-full rounded-xl border px-2.5 py-1.5 text-xs focus:outline-none tracking-widest ${tokens.inputClass}`}
                           />
                         </div>
                         <div>
-                          <span className="block text-[11px] text-slate-300 mb-1 font-bold">
+                          <span className={`block text-[11px] mb-1 font-bold ${tokens.mutedText}`}>
                             Confirm PIN:
                           </span>
                           <input
                             type="password"
+                            dir="ltr"
                             inputMode="numeric"
                             maxLength={6}
                             placeholder="••••••"
@@ -2365,7 +2693,7 @@ export function Sidebar({
                                 e.target.value.replace(/\D/g, "").slice(0, 6)
                               )
                             }
-                            className="w-full rounded-xl border border-white/15 bg-black/80 px-2.5 py-1.5 text-xs text-white focus:outline-none tracking-widest"
+                            className={`w-full rounded-xl border px-2.5 py-1.5 text-xs focus:outline-none tracking-widest ${tokens.inputClass}`}
                           />
                         </div>
                       </div>
@@ -2411,11 +2739,11 @@ export function Sidebar({
                 {activeSection === "hardwareAndStream" && (
                   <div className={crystalSubPanelClass}>
                     <div>
-                      <p className="text-[11px] text-slate-300 font-bold mb-1">
+                      <p className={`text-[11px] font-bold mb-1 ${tokens.mutedText}`}>
                         Device Memory Allocation Profile:
                       </p>
-                      <p className="text-[10px] text-slate-400 mb-2 leading-snug">
-                        Use <strong className="text-cyan-300">1–2GB</strong> for
+                      <p className={`text-[10px] mb-2 leading-snug ${tokens.subMutedText}`}>
+                        Use <strong className={tokens.accentText}>1–2GB</strong> for
                         Nero 8K / Fire TV Sticks to cap video RAM buffers &
                         disable heavy blurs.
                       </p>
@@ -2436,7 +2764,7 @@ export function Sidebar({
                                 ? `${getPrimaryBgColor(
                                     appTheme
                                   )} text-white shadow-md ring-1 ring-white/40`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             {opt.label}
@@ -2445,12 +2773,12 @@ export function Sidebar({
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/10">
+                    <div className={`flex items-center justify-between gap-2 pt-2.5 border-t ${tokens.dividerBorder}`}>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-white">
                           📶 Data Saver / Lite Posters
                         </p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className={`text-[10px] ${tokens.subMutedText}`}>
                           Uses lighter w342 images (~45% less RAM).
                         </p>
                       </div>
@@ -2462,7 +2790,9 @@ export function Sidebar({
                           setDataSaverModeState(next);
                         }}
                         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                          dataSaverMode ? toggleActiveClass : "bg-slate-700"
+                          dataSaverMode
+                            ? tokens.toggleActive
+                            : tokens.toggleOff
                         }`}
                       >
                         <span
@@ -2473,8 +2803,8 @@ export function Sidebar({
                       </button>
                     </div>
 
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                    <div className={`pt-2.5 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] font-bold mb-1.5 ${tokens.mutedText}`}>
                         Preferred Stream Resolution:
                       </p>
                       <div className="grid grid-cols-4 gap-1.5">
@@ -2490,7 +2820,7 @@ export function Sidebar({
                                 ? `${getPrimaryBgColor(
                                     appTheme
                                   )} text-white shadow-md`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             {q}
@@ -2499,12 +2829,12 @@ export function Sidebar({
                       </div>
                     </div>
 
-                    <div className="pt-2.5 border-t border-white/10 space-y-1.5">
+                    <div className={`pt-2.5 border-t space-y-1.5 ${tokens.dividerBorder}`}>
                       <div className="flex items-center justify-between">
-                        <p className="text-[11px] text-slate-300 font-bold">
+                        <p className={`text-[11px] font-bold ${tokens.mutedText}`}>
                           Default Live Player Volume:
                         </p>
-                        <span className="text-[11px] font-bold text-cyan-300">
+                        <span className={`text-[11px] font-bold ${tokens.accentText}`}>
                           {Math.round(defaultPlayerVolume * 100)}%
                         </span>
                       </div>
@@ -2519,16 +2849,16 @@ export function Sidebar({
                           setDefaultPlayerVolume(val);
                           setDefaultPlayerVolumeState(val);
                         }}
-                        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                        className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer ${tokens.sliderClass}`}
                       />
                     </div>
 
-                    <div className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2">
+                    <div className={`pt-2.5 border-t flex items-center justify-between gap-2 ${tokens.dividerBorder}`}>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-white">
                           Auto-Play Next Episode
                         </p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className={`text-[10px] ${tokens.subMutedText}`}>
                           Seamless binge-watching for TV series.
                         </p>
                       </div>
@@ -2540,7 +2870,9 @@ export function Sidebar({
                           setAutoPlayNextState(next);
                         }}
                         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                          autoPlayNext ? toggleActiveClass : "bg-slate-700"
+                          autoPlayNext
+                            ? tokens.toggleActive
+                            : tokens.toggleOff
                         }`}
                       >
                         <span
@@ -2551,11 +2883,12 @@ export function Sidebar({
                       </button>
                     </div>
 
-                    <div className="pt-2.5 border-t border-white/10 space-y-2">
+                    <div className={`pt-2.5 border-t space-y-2 ${tokens.dividerBorder}`}>
                       <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-bold">
-                        <span className="text-slate-300">
+                        <span className={tokens.mutedText}>
                           Storage ({storageHealth.cacheEntriesCount} caches)
                         </span>
+                        {/* Semantic Storage Health Indicator */}
                         <span
                           className={
                             storageHealth.status === "high"
@@ -2587,14 +2920,14 @@ export function Sidebar({
                       <button
                         type="button"
                         onClick={handlePurgeVolatileCaches}
-                        className={`w-full py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:scale-[1.02] ${getSubtlePillBg(
-                          appTheme
-                        )}`}
+                        className={`w-full py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:scale-[1.02] ${tokens.subtlePill}`}
                       >
                         🧹 Purge Stream & Metadata Caches
                       </button>
 
-                      <p className="text-[9px] text-slate-400 font-mono text-center break-all">
+                      <p
+                        className={`text-[9px] font-mono text-center break-all ${tokens.subMutedText}`}
+                      >
                         Device ID: {deviceId}
                       </p>
 
@@ -2620,7 +2953,7 @@ export function Sidebar({
                 {activeSection === "screensaverAndBackup" && (
                   <div className={crystalSubPanelClass}>
                     <div>
-                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                      <p className={`text-[11px] font-bold mb-1.5 ${tokens.mutedText}`}>
                         🌙 Couch Sleep Timer (Auto-Pause & Dark Screen):
                       </p>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -2637,7 +2970,7 @@ export function Sidebar({
                                 ? `${getPrimaryBgColor(
                                     appTheme
                                   )} text-white shadow-md`
-                                : getSubtlePillBg(appTheme)
+                                : tokens.subtlePill
                             }`}
                           >
                             {opt.label}
@@ -2646,8 +2979,8 @@ export function Sidebar({
                       </div>
                     </div>
 
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[11px] text-slate-300 font-bold mb-1.5">
+                    <div className={`pt-2.5 border-t ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] font-bold mb-1.5 ${tokens.mutedText}`}>
                         Start Screensaver After:
                       </p>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -2668,7 +3001,7 @@ export function Sidebar({
                                   ? `${getPrimaryBgColor(
                                       appTheme
                                     )} text-white shadow-md`
-                                  : getSubtlePillBg(appTheme)
+                                  : tokens.subtlePill
                               }`}
                             >
                               {shortLabel}
@@ -2678,24 +3011,20 @@ export function Sidebar({
                       </div>
                     </div>
 
-                    <div className="pt-2.5 border-t border-white/10 space-y-2">
-                      <p className="text-[11px] text-slate-300 font-bold">
+                    <div className={`pt-2.5 border-t space-y-2 ${tokens.dividerBorder}`}>
+                      <p className={`text-[11px] font-bold ${tokens.mutedText}`}>
                         Profile, Poster Styles & Watchlist Backup:
                       </p>
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={handleSaveBackup}
-                          className={`rounded-xl px-2 py-2 text-xs font-bold whitespace-nowrap transition-all cursor-pointer hover:scale-[1.03] ${getSubtlePillBg(
-                            appTheme
-                          )}`}
+                          className={`rounded-xl px-2 py-2 text-xs font-bold whitespace-nowrap transition-all cursor-pointer hover:scale-[1.03] ${tokens.subtlePill}`}
                         >
                           💾 Export JSON
                         </button>
                         <label
-                          className={`text-center cursor-pointer rounded-xl px-2 py-2 text-xs font-bold whitespace-nowrap transition-all hover:scale-[1.03] ${getSubtlePillBg(
-                            appTheme
-                          )}`}
+                          className={`text-center cursor-pointer rounded-xl px-2 py-2 text-xs font-bold whitespace-nowrap transition-all hover:scale-[1.03] ${tokens.subtlePill}`}
                         >
                           🔄 Restore
                           <input
@@ -2721,29 +3050,33 @@ export function Sidebar({
               </div>
             </div>
 
-            {/* REFER FRIENDS & EARN CASH LAUNCHER */}
+            {/* REFER FRIENDS & EARN CASH LAUNCHER (Theme-Matched) */}
             <div data-tour="sidebar-referrals" className="pt-2 w-full box-border">
               <button
                 type="button"
                 onClick={() => setIsReferralModalOpen(true)}
-                className="w-full rounded-2xl border border-amber-400/50 bg-gradient-to-r from-amber-950/75 via-emerald-950/60 to-amber-950/75 hover:from-amber-900/80 hover:to-emerald-900/75 p-3 text-left shadow-[0_10px_28px_rgba(245,158,11,0.22)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className={`w-full rounded-2xl border p-3 text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none focus:ring-2 ${tokens.referralCard}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 border border-amber-400/50 text-base">
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-base ${tokens.referralIcon}`}
+                    >
                       💸
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-black text-amber-300 truncate">
+                      <p className={`text-xs font-black truncate ${tokens.accentText}`}>
                         Refer Friends & Earn Cash
                       </p>
-                      <p className="text-[10px] text-emerald-200/90 font-semibold truncate">
+                      <p className={`text-[10px] font-semibold truncate ${tokens.mutedText}`}>
                         ${PAYOUT_PER_EXTRA_REFERRAL_CAD}/friend after{" "}
                         {MIN_CONFIRMED_REFERRALS} paid invites
                       </p>
                     </div>
                   </div>
-                  <span className="shrink-0 rounded-full bg-emerald-500/20 border border-emerald-400/45 px-2.5 py-0.5 text-[10px] font-black text-emerald-300">
+                  <span
+                    className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-black ${tokens.referralPill}`}
+                  >
                     Open ↗
                   </span>
                 </div>
@@ -2752,7 +3085,7 @@ export function Sidebar({
 
             {/* ADMIN PANEL (IF ADMIN) */}
             {isAdmin && (
-              <div className="pt-3 border-t border-white/15 w-full box-border">
+              <div className={`pt-3 border-t w-full box-border ${tokens.dividerBorder}`}>
                 <AdminPanel
                   appTheme={appTheme}
                   getPrimaryBgColor={getPrimaryBgColor}
@@ -2764,9 +3097,11 @@ export function Sidebar({
             {/* FEEDBACK, WALKTHROUGH & LEGAL SECTION */}
             <div
               data-tour="sidebar-support"
-              className="pt-3 border-t border-white/15 space-y-2 w-full box-border"
+              className={`pt-3 border-t space-y-2 w-full box-border ${tokens.dividerBorder}`}
             >
-              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 px-1">
+              <h4
+                className={`text-[10px] font-extrabold uppercase tracking-widest px-1 ${tokens.mutedText}`}
+              >
                 Feedback, Guide & Legal
               </h4>
               <button
@@ -2781,7 +3116,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onOpenBugFeedModal}
-                className="w-full py-2.5 rounded-xl bg-black/60 hover:bg-white/[0.12] border border-white/15 text-xs font-bold text-slate-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                className={`w-full py-2.5 rounded-xl border text-xs font-bold transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${tokens.secondaryBtn}`}
               >
                 📋 View Bug Reports Feed
               </button>
@@ -2797,7 +3132,7 @@ export function Sidebar({
                       triggerRabbitWalkthrough(0);
                     }
                   }}
-                  className="w-full py-2.5 px-2 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/75 border border-cyan-400/35 text-[11px] font-extrabold text-cyan-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className={`w-full py-2.5 px-2 rounded-xl text-[11px] font-extrabold transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${tokens.subtlePill}`}
                 >
                   🧭 Replay Tour
                 </button>
@@ -2812,7 +3147,7 @@ export function Sidebar({
                       triggerOpenTosModal(false);
                     }
                   }}
-                  className="w-full py-2.5 px-2 rounded-xl bg-black/60 hover:bg-white/[0.12] border border-white/15 text-[11px] font-extrabold text-slate-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className={`w-full py-2.5 px-2 rounded-xl border text-[11px] font-extrabold transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${tokens.secondaryBtn}`}
                 >
                   📜 Terms (ToS)
                 </button>
@@ -2820,8 +3155,13 @@ export function Sidebar({
             </div>
 
             {/* UPDATE CHANNEL & ACTIONS */}
-            <div data-tour="sidebar-updates" className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
-              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 px-1">
+            <div
+              data-tour="sidebar-updates"
+              className={`pt-3 border-t space-y-2 w-full box-border ${tokens.dividerBorder}`}
+            >
+              <h4
+                className={`text-[10px] font-extrabold uppercase tracking-widest px-1 ${tokens.mutedText}`}
+              >
                 Update Channel
               </h4>
               <div className="grid grid-cols-2 gap-2">
@@ -2831,7 +3171,7 @@ export function Sidebar({
                   className={`py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 cursor-pointer ${
                     updateChannel === "stable"
                       ? `${getPrimaryBgColor(appTheme)} text-white`
-                      : "bg-black/60 text-slate-300 hover:bg-white/[0.12] border border-white/15"
+                      : `border ${tokens.secondaryBtn}`
                   }`}
                 >
                   🛡️ Stable
@@ -2842,7 +3182,7 @@ export function Sidebar({
                   className={`py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 cursor-pointer ${
                     updateChannel === "nightly"
                       ? `${getPrimaryBgColor(appTheme)} text-white`
-                      : "bg-black/60 text-slate-300 hover:bg-white/[0.12] border border-white/15"
+                      : `border ${tokens.secondaryBtn}`
                   }`}
                 >
                   ⚡ Nightly
@@ -2860,17 +3200,24 @@ export function Sidebar({
             </div>
 
             {/* LICENSE STATUS */}
-            <div data-tour="sidebar-license" className="pt-3 border-t border-white/15 space-y-2 w-full box-border">
-              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 px-1">
+            <div
+              data-tour="sidebar-license"
+              className={`pt-3 border-t space-y-2 w-full box-border ${tokens.dividerBorder}`}
+            >
+              <h4
+                className={`text-[10px] font-extrabold uppercase tracking-widest px-1 ${tokens.mutedText}`}
+              >
                 License Status
               </h4>
               {isAdmin ? (
-                <p className="text-[11px] text-red-300 font-bold bg-red-500/15 border border-red-500/30 p-2.5 rounded-xl backdrop-blur-md">
+                <p
+                  className={`text-[11px] font-bold border p-2.5 rounded-xl backdrop-blur-md ${tokens.highlightCard} ${tokens.accentText}`}
+                >
                   🔐 Admin access active.
                 </p>
               ) : isTrialActive ? (
                 <div className="space-y-2">
-                  <p className="text-[11px] text-amber-300 bg-amber-500/15 border border-amber-500/30 p-2.5 rounded-xl leading-relaxed backdrop-blur-md">
+                  <p className="text-[11px] text-amber-300 bg-amber-500/15 border border-amber-500/35 p-2.5 rounded-xl leading-relaxed backdrop-blur-md">
                     Trial:{" "}
                     <strong>
                       {trialDaysRemaining}{" "}
@@ -2884,10 +3231,11 @@ export function Sidebar({
                   >
                     <input
                       type="password"
+                      dir="ltr"
                       placeholder="Unlock code"
                       value={unlockCodeInput}
                       onChange={(e) => setUnlockCodeInput(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-black/80 px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                      className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none ${tokens.inputClass}`}
                     />
                     <button
                       type="submit"
@@ -2900,7 +3248,7 @@ export function Sidebar({
                   </form>
                 </div>
               ) : (
-                <p className="text-[11px] text-emerald-400 font-bold bg-emerald-500/15 border border-emerald-500/30 p-2.5 rounded-xl backdrop-blur-md">
+                <p className="text-[11px] text-emerald-400 font-bold bg-emerald-500/15 border border-emerald-500/35 p-2.5 rounded-xl backdrop-blur-md">
                   ✅ Lifetime Access Unlocked.
                 </p>
               )}
@@ -2918,13 +3266,15 @@ export function Sidebar({
             </div>
 
             {/* Sidebar Footer with Neon Divider */}
-            <div className="pt-4 border-t border-white/15 text-center w-full">
+            <div className={`pt-4 border-t text-center w-full ${tokens.dividerBorder}`}>
               <img
                 src={RABBIT_DIVIDER}
                 alt=""
                 className="w-2/3 mx-auto h-2 object-contain opacity-80 mb-2.5"
               />
-              <span className="text-[9px] text-slate-400 uppercase tracking-widest font-extrabold">
+              <span
+                className={`text-[9px] uppercase tracking-widest font-extrabold ${tokens.subMutedText}`}
+              >
                 Crystal Console UI v2.8 • RABBiT TV
               </span>
             </div>
@@ -2935,8 +3285,9 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => handleScrollSidebar("down")}
-          className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 w-14 h-6 bg-black/80 hover:bg-black border border-red-400/40 rounded-full flex items-center justify-center text-amber-300 text-xs font-bold shadow-[0_0_12px_rgba(239,68,68,0.4)] transition hover:scale-110 cursor-pointer"
+          className={`absolute bottom-2 left-1/2 -translate-x-1/2 z-20 w-14 h-6 border rounded-full flex items-center justify-center text-xs font-bold transition hover:scale-110 cursor-pointer ${tokens.scrollBtn}`}
           title="Scroll Down"
+          aria-label="Scroll sidebar down"
         >
           ▼
         </button>
