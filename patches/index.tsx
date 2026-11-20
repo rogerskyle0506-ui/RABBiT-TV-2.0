@@ -1,6 +1,6 @@
 // src/routes/index.tsx
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import React, { useEffect, useMemo, useState, memo } from "react";
+import React, { useEffect, useMemo, useState, useRef, memo } from "react";
 import type { MediaItem } from "@/lib/tmdb-scraper";
 import { scrapeCategoryContent } from "@/lib/tmdb-scraper";
 import {
@@ -22,9 +22,32 @@ import {
   getProfileMascot,
   getKidsModeLocked,
 } from "@/lib/settings";
-import { getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
+import {
+  getRawWatchHistory,
+  getWatchHistory,
+  calculateSeriesProgress,
+  getNextUnwatchedEpisode,
+  isTitleDisliked,
+  type ShowWatchHistory,
+} from "@/lib/watch-history";
 import { isTitleBroken } from "@/lib/broken-links";
 import { bgAudio } from "@/lib/background-audio";
+import {
+  getCustomShelves,
+  createCustomShelf,
+  deleteCustomShelf,
+  CUSTOM_SHELVES_EVENT,
+  SHELF_ICON_PRESETS,
+  type CustomShelf,
+} from "@/lib/custom-shelves";
+import {
+  getCachedEpisodeAlerts,
+  scanTrackedShowsForNewEpisodes,
+  isAlertUnseenByUser,
+  EPISODE_RADAR_UPDATED_EVENT,
+  type EpisodeRadarAlert,
+} from "@/lib/episode-radar";
+import { MovieNightMatcher } from "@/components/MovieNightMatcher";
 
 const navTabs = [
   "Home",
@@ -576,6 +599,92 @@ const MemoizedMediaCard = memo(
 
 MemoizedMediaCard.displayName = "MemoizedMediaCard";
 
+const NewShelfQuickBar = memo(function NewShelfQuickBar({
+  btnActiveClass,
+  btnSecondaryClass,
+  surfaceClass,
+  focusRingClass,
+  subMutedClass,
+  onCreated,
+}: {
+  btnActiveClass: string;
+  btnSecondaryClass: string;
+  surfaceClass: string;
+  focusRingClass: string;
+  subMutedClass: string;
+  onCreated: (shelfId: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [icon, setIcon] = useState<string>("🎬");
+  const [err, setErr] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = createCustomShelf(inputRef.current?.value || "", icon);
+    if (!res.ok || !res.shelf) {
+      setErr(res.error || "Could not create shelf.");
+      return;
+    }
+    setErr(null);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+      inputRef.current.blur();
+    }
+    onCreated(res.shelf.id);
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={`w-full max-w-4xl mx-auto rounded-2xl p-3 sm:p-4 space-y-2.5 backdrop-blur-xl ${surfaceClass}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={`text-[10px] font-extrabold uppercase tracking-wider ${subMutedClass}`}
+        >
+          📚 Create Custom Watchlist Shelf
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+        {SHELF_ICON_PRESETS.map((ic) => (
+          <button
+            key={ic}
+            type="button"
+            onClick={() => setIcon(ic)}
+            className={`h-8 w-8 shrink-0 rounded-xl border text-sm flex items-center justify-center transition cursor-pointer ${
+              icon === ic ? `${btnActiveClass} border-transparent scale-105` : btnSecondaryClass
+            }`}
+            aria-label={`Choose ${ic} icon`}
+          >
+            {ic}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          dir="ltr"
+          maxLength={36}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="Shelf name (e.g. Comfort Shows, Weekend Sci-Fi)"
+          style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
+          className={`flex-1 min-w-0 h-10 rounded-xl border border-white/15 bg-black/75 px-3 text-xs font-bold text-white placeholder-white/40 focus:outline-none focus:ring-2 ${focusRingClass}`}
+        />
+        <button
+          type="submit"
+          className={`h-10 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${btnActiveClass} ${focusRingClass}`}
+        >
+          + Create Shelf
+        </button>
+      </div>
+      {err && <p className="text-[11px] font-bold text-red-400">{err}</p>}
+    </form>
+  );
+});
+
 export const Route = createFileRoute("/")({
   component: Home,
   validateSearch: (search: Record<string, unknown>): { tab?: string } => {
@@ -673,12 +782,21 @@ function Home() {
     () => getHardwareLimits().effectiveMode === "low"
   );
 
-  const [myListSubTab, setMyListSubTab] = useState<
-    "all" | "in_progress" | "mylist" | "favorites"
-  >("all");
+  const [myListSubTab, setMyListSubTab] = useState<string>("all");
   const [savedMyList, setSavedMyList] = useState<MediaItem[]>([]);
   const [savedFavorites, setSavedFavorites] = useState<MediaItem[]>([]);
   const [historyItems, setHistoryItems] = useState<MediaItem[]>([]);
+  const [structuredHistory, setStructuredHistory] = useState<
+    Record<string, ShowWatchHistory>
+  >({});
+  const [customShelves, setCustomShelves] = useState<CustomShelf[]>(() =>
+    getCustomShelves()
+  );
+  const [showCreateShelfBar, setShowCreateShelfBar] = useState<boolean>(false);
+  const [episodeAlerts, setEpisodeAlerts] = useState<
+    Record<string, EpisodeRadarAlert>
+  >(() => getCachedEpisodeAlerts());
+  const [showMatcherModal, setShowMatcherModal] = useState<boolean>(false);
   const [suggestedItems, setSuggestedItems] = useState<MediaItem[]>([]);
 
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
@@ -785,6 +903,9 @@ function Home() {
       setSavedMyList(Array.isArray(listData) ? listData : []);
       setSavedFavorites(Array.isArray(favData) ? favData : []);
       setHistoryItems(mappedHistory);
+      setStructuredHistory({ ...getWatchHistory() });
+      setCustomShelves(getCustomShelves());
+      setEpisodeAlerts(getCachedEpisodeAlerts());
       setAppTheme(nextTheme);
       setCardSize(getSavedCardSize());
       setUserAge(getSavedUserAge());
@@ -830,8 +951,15 @@ function Home() {
       "rabtv_broken_links_updated",
       loadSavedListsAndTheme
     );
+    window.addEventListener(CUSTOM_SHELVES_EVENT, loadSavedListsAndTheme);
+    window.addEventListener(EPISODE_RADAR_UPDATED_EVENT, loadSavedListsAndTheme);
 
     return () => {
+      window.removeEventListener(CUSTOM_SHELVES_EVENT, loadSavedListsAndTheme);
+      window.removeEventListener(
+        EPISODE_RADAR_UPDATED_EVENT,
+        loadSavedListsAndTheme
+      );
       window.removeEventListener(
         "rabtv_catalog_updated",
         loadSavedListsAndTheme
@@ -1037,6 +1165,74 @@ function Home() {
     posterWidth,
   ]);
 
+  // Background New Episode Radar scan (12h cached, RAM-safe)
+  const trackedTvIdsKey = useMemo(() => {
+    const tvIds: string[] = [];
+    for (const s of Object.values(structuredHistory)) {
+      if (s.mediaType === "tv") tvIds.push(s.showId);
+    }
+    for (const f of [...savedFavorites, ...savedMyList]) {
+      if (f.mediaType === "tv" || String(f.id).startsWith("tv-")) {
+        tvIds.push(String(f.id).replace(/^tv-/i, ""));
+      }
+    }
+    return Array.from(new Set(tvIds)).slice(0, 12).join(",");
+  }, [structuredHistory, savedFavorites, savedMyList]);
+
+  useEffect(() => {
+    if (!trackedTvIdsKey) return;
+    const controller = new AbortController();
+    let active = true;
+    void scanTrackedShowsForNewEpisodes(
+      trackedTvIdsKey.split(",").filter(Boolean),
+      controller.signal
+    ).then((alerts) => {
+      if (active) setEpisodeAlerts(alerts);
+    });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [trackedTvIdsKey]);
+
+  // Structured "Continue Watching" Row items (In-Progress Movies & TV Shows)
+  const continueWatchingItems = useMemo(() => {
+    return Object.values(structuredHistory)
+      .filter((entry) => {
+        if (isTitleDisliked(entry.showId) || isTitleBroken(entry.showId)) {
+          return false;
+        }
+        const pct = calculateSeriesProgress(entry);
+        return pct < 100;
+      })
+      .sort((a, b) => (b.lastWatchedAt || 0) - (a.lastWatchedAt || 0))
+      .slice(0, isLowRam ? 6 : 10)
+      .map((entry) => {
+        const pct = calculateSeriesProgress(entry);
+        const nextEp =
+          entry.mediaType === "tv" ? getNextUnwatchedEpisode(entry) : null;
+        const rawAlert =
+          entry.mediaType === "tv" ? episodeAlerts[entry.showId] : undefined;
+        const freshAlert =
+          rawAlert && isAlertUnseenByUser(rawAlert, entry.episodes)
+            ? rawAlert
+            : null;
+        const posterUrl = entry.posterPath
+          ? entry.posterPath.startsWith("http")
+            ? optimizePosterUrl(entry.posterPath, posterWidth)
+            : `https://image.tmdb.org/t/p/${posterWidth}${entry.posterPath}`
+          : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
+
+        return {
+          entry,
+          pct,
+          nextEp,
+          freshAlert,
+          posterUrl,
+        };
+      });
+  }, [structuredHistory, episodeAlerts, posterWidth, isLowRam]);
+
   const inProgressHistory = useMemo(
     () =>
       historyItems.filter(
@@ -1050,7 +1246,21 @@ function Home() {
     if (myListSubTab === "mylist") rawList = savedMyList;
     else if (myListSubTab === "favorites") rawList = savedFavorites;
     else if (myListSubTab === "in_progress") rawList = inProgressHistory;
-    else {
+    else if (myListSubTab.startsWith("shelf:")) {
+      const targetShelfId = myListSubTab.slice(6);
+      const foundShelf = customShelves.find((s) => s.id === targetShelfId);
+      rawList = (foundShelf?.items || []).map((it) => ({
+        id: it.id,
+        title: it.title,
+        description: it.description || "",
+        image: it.image,
+        href: it.href,
+        genre: it.genre || (it.mediaType === "tv" ? "TV SHOW" : "MOVIE"),
+        year: it.year,
+        rating: it.rating,
+        mediaType: it.mediaType,
+      }));
+    } else {
       rawList = [...savedFavorites, ...savedMyList, ...inProgressHistory];
     }
 
@@ -1088,6 +1298,7 @@ function Home() {
     savedMyList,
     savedFavorites,
     inProgressHistory,
+    customShelves,
     userAge,
     kidsLocked,
   ]);
@@ -1570,20 +1781,36 @@ function Home() {
                 )}
               </div>
 
-              {(filteredItems.length > 0 || heroItems.length > 0) && (
+              <div className="flex items-center flex-wrap gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={handleSurpriseMe}
+                  data-tour="movie-night-matcher"
+                  onClick={() => setShowMatcherModal(true)}
                   className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 ${
                     largeButtons ? "py-2 text-xs" : "py-1.5 text-[11px]"
                   } font-extrabold shadow transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-                    themeStyles.btnSecondary
+                    themeStyles.btnActive
                   } ${themeStyles.focusRing}`}
-                  title="Pick a random title for me"
+                  title="Mood picks & 5-card couch vote"
                 >
-                  <span>🎲 Surprise Me</span>
+                  <span>🍿 Movie Night</span>
                 </button>
-              )}
+
+                {(filteredItems.length > 0 || heroItems.length > 0) && (
+                  <button
+                    type="button"
+                    onClick={handleSurpriseMe}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 ${
+                      largeButtons ? "py-2 text-xs" : "py-1.5 text-[11px]"
+                    } font-extrabold shadow transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                      themeStyles.btnSecondary
+                    } ${themeStyles.focusRing}`}
+                    title="Pick a random title for me"
+                  >
+                    <span>🎲 Surprise Me</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -1771,6 +1998,113 @@ function Home() {
             </section>
           )}
 
+          {/* CONTINUE WATCHING ROW (Home Tab — In-Progress Movies & TV Shows with Progress Bars & Episode Radar) */}
+          {activeTab === "Home" && continueWatchingItems.length > 0 && (
+            <section
+              data-tour="continue-watching-row"
+              className="mb-6 w-full max-w-6xl space-y-3 px-1"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className={`w-1.5 h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
+                  />
+                  <h3 className="text-base sm:text-xl font-black tracking-tight text-white">
+                    ▶ Continue Watching
+                  </h3>
+                </div>
+                <Link
+                  to="/watch-history"
+                  className={`text-xs font-bold hover:underline shrink-0 ${themeStyles.accentText}`}
+                >
+                  Full History →
+                </Link>
+              </div>
+
+              <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 pt-0.5 scrollbar-none">
+                {continueWatchingItems.map(
+                  ({ entry, pct, nextEp, freshAlert, posterUrl }) => {
+                    const targetSeason = freshAlert
+                      ? freshAlert.seasonNumber
+                      : nextEp?.seasonNumber || 1;
+                    const targetEpisode = freshAlert
+                      ? freshAlert.episodeNumber
+                      : nextEp?.episodeNumber || 1;
+
+                    return (
+                      <div
+                        key={entry.showId}
+                        className={`group shrink-0 w-40 sm:w-48 flex flex-col overflow-hidden ${posterAppearance.radiusClass} ${themeStyles.surfacePanel} transition-all duration-300 hover:-translate-y-1`}
+                      >
+                        <Link
+                          to="/details"
+                          search={{
+                            id: entry.showId,
+                            type: entry.mediaType === "tv" ? "tv" : "movie",
+                          }}
+                          className="relative aspect-[16/10] w-full bg-black overflow-hidden block"
+                        >
+                          <img
+                            src={posterUrl}
+                            alt={entry.title}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent pointer-events-none" />
+
+                          {freshAlert && (
+                            <span
+                              className={`absolute top-1.5 left-1.5 rounded-lg px-2 py-0.5 text-[9px] font-black uppercase shadow-lg truncate max-w-[90%] ${themeStyles.btnActive}`}
+                            >
+                              {freshAlert.badgeLabel}
+                            </span>
+                          )}
+
+                          <div className="absolute inset-x-2 bottom-2 space-y-1">
+                            <p className="text-xs font-black text-white truncate drop-shadow">
+                              {entry.title}
+                            </p>
+                            <div className="h-1 w-full rounded-full bg-white/20 overflow-hidden">
+                              <div
+                                className={`h-full ${themeStyles.btnActive}`}
+                                style={{ width: `${Math.max(10, pct)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </Link>
+
+                        <div className="p-2">
+                          <Link
+                            to="/player"
+                            search={{
+                              id: entry.showId,
+                              type: entry.mediaType === "tv" ? "tv" : "movie",
+                              season: targetSeason,
+                              episode: targetEpisode,
+                            }}
+                            onClick={() => bgAudio.pause()}
+                            className={`block w-full text-center rounded-xl py-1.5 text-[10px] font-extrabold uppercase tracking-wider transition focus:outline-none focus:ring-2 ${
+                              freshAlert
+                                ? themeStyles.btnActive
+                                : themeStyles.btnSecondary
+                            } ${themeStyles.focusRing}`}
+                          >
+                            {freshAlert
+                              ? `▶ New S${freshAlert.seasonNumber}E${freshAlert.episodeNumber}`
+                              : entry.mediaType === "tv" && nextEp
+                                ? `▶ Resume ${nextEp.label}`
+                                : "▶ Resume Movie"}
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </section>
+          )}
+
           {activeTab !== "My List" && (
             <section
               data-tour="catalog-filters"
@@ -1952,6 +2286,35 @@ function Home() {
                     >
                       ⭐ Favorites ({savedFavorites.length})
                     </button>
+
+                    {customShelves.map((shelf) => {
+                      const shelfKey = `shelf:${shelf.id}`;
+                      const isSelected = myListSubTab === shelfKey;
+                      return (
+                        <button
+                          key={shelf.id}
+                          type="button"
+                          onClick={() => setMyListSubTab(shelfKey)}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                            themeStyles.focusRing
+                          } ${
+                            isSelected
+                              ? `${themeStyles.btnActive} scale-[1.03]`
+                              : themeStyles.pillInactive
+                          }`}
+                        >
+                          {shelf.icon} {shelf.name} ({shelf.items.length})
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateShelfBar((v) => !v)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
+                    >
+                      {showCreateShelfBar ? "✕ Close" : "+ New Shelf"}
+                    </button>
                   </div>
                 </div>
                 <button
@@ -1965,6 +2328,40 @@ function Home() {
                 </button>
               </div>
             </section>
+          )}
+
+          {activeTab === "My List" && showCreateShelfBar && (
+            <div className="mb-5 w-full px-1">
+              <NewShelfQuickBar
+                btnActiveClass={themeStyles.btnActive}
+                btnSecondaryClass={themeStyles.btnSecondary}
+                surfaceClass={themeStyles.surfacePanel}
+                focusRingClass={themeStyles.focusRing}
+                subMutedClass={themeStyles.subMutedText}
+                onCreated={(newShelfId) => {
+                  setCustomShelves(getCustomShelves());
+                  setMyListSubTab(`shelf:${newShelfId}`);
+                  setShowCreateShelfBar(false);
+                }}
+              />
+            </div>
+          )}
+
+          {activeTab === "My List" && myListSubTab.startsWith("shelf:") && (
+            <div className="mb-4 w-full max-w-6xl px-1 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  const sid = myListSubTab.slice(6);
+                  deleteCustomShelf(sid);
+                  setCustomShelves(getCustomShelves());
+                  setMyListSubTab("all");
+                }}
+                className="rounded-xl bg-red-950/70 hover:bg-red-700 border border-red-500/40 px-3 py-1.5 text-[11px] font-extrabold text-red-200 hover:text-white transition cursor-pointer"
+              >
+                🗑️ Delete This Custom Shelf
+              </button>
+            </div>
           )}
 
           {/* Main Catalog Section */}
@@ -2128,6 +2525,13 @@ function Home() {
           )}
         </div>
       </div>
+
+      {/* Movie Night Matcher Modal */}
+      <MovieNightMatcher
+        isOpen={showMatcherModal}
+        appTheme={appTheme}
+        onClose={() => setShowMatcherModal(false)}
+      />
     </main>
   );
 }
