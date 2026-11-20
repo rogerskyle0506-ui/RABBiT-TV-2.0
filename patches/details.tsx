@@ -14,6 +14,7 @@ import {
   getHardwareLimits,
   getReducedMotion,
   getLargeButtons,
+  getGlowIntensity,
   getClockFormat,
   formatAppTime,
   getKidsModeLocked,
@@ -41,6 +42,341 @@ export const Route = createFileRoute("/details")({
     type: search.type != null ? String(search.type).toLowerCase() : "movie",
   }),
 });
+
+interface DetailsThemeTokens {
+  pageBg: string;
+  baseText: string;
+  mutedText: string;
+  subMutedText: string;
+  text: string;
+  textLight: string;
+  bg: string;
+  border: string;
+  ring: string;
+  accentBar: string;
+  badge: string;
+  subtleBadge: string;
+  surfacePanel: string;
+  subPanel: string;
+  dropdownMenu: string;
+  selectBtn: string;
+  dividerBorder: string;
+  backCapsule: string;
+  backBadge: string;
+  posterShadow: string;
+  trailerBtn: string;
+  trailerPlayDot: string;
+  trailerBackBg: string;
+  playBtn: string;
+  btnSecondary: string;
+  btnActive: string;
+  statCard: string;
+  avatarFrame: string;
+  avatarRing: string;
+  avatarGlow: string;
+  ambient: string;
+  laserLine: string;
+  arrow: string;
+}
+
+function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
+  switch (theme) {
+    case "red":
+      return {
+        pageBg: "bg-gradient-to-br from-zinc-950/88 via-red-950/42 to-black/95",
+        baseText: "text-zinc-100",
+        mutedText: "text-zinc-300",
+        subMutedText: "text-zinc-400",
+        text: "text-red-400",
+        textLight: "text-red-200",
+        bg: "bg-red-600",
+        border: "border-red-500",
+        ring: "focus:ring-red-500",
+        accentBar: "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.95)]",
+        badge: "text-red-200 border-red-500/35 bg-red-950/75",
+        subtleBadge: "text-zinc-200 border-red-500/25 bg-black/75",
+        surfacePanel:
+          "bg-zinc-950/90 border-red-500/30 shadow-[0_16px_50px_rgba(239,68,68,0.18)]",
+        subPanel: "bg-black/70 border-red-500/25",
+        dropdownMenu: "bg-zinc-950/98 border-red-500/35 shadow-2xl",
+        selectBtn:
+          "border-red-500/30 bg-black/75 text-white hover:border-red-400/60",
+        dividerBorder: "border-red-500/20",
+        backCapsule:
+          "bg-zinc-950/88 hover:bg-red-950/80 border-red-500/35 hover:border-red-400 text-zinc-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-red-600/60 via-rose-500/50 to-orange-500/50 border-red-400/50 text-white",
+        posterShadow:
+          "border-red-500/35 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_26px_rgba(239,68,68,0.25)]",
+        trailerBtn:
+          "bg-zinc-950/85 hover:bg-red-950/90 border-red-400/55 hover:border-red-300 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.4)]",
+        trailerPlayDot:
+          "border-red-300/75 bg-gradient-to-tr from-red-600/70 to-orange-500/60 text-white",
+        trailerBackBg: "from-zinc-950/95 via-red-950/40 to-black/95",
+        playBtn:
+          "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-[0_0_25px_rgba(239,68,68,0.45)] hover:shadow-[0_0_35px_rgba(239,68,68,0.7)]",
+        btnSecondary:
+          "bg-zinc-950/85 hover:bg-red-950/70 border-red-500/35 hover:border-red-400 text-red-100 hover:text-white",
+        btnActive:
+          "bg-red-600/35 border-red-400 text-white shadow-[0_0_22px_rgba(239,68,68,0.45)]",
+        statCard:
+          "bg-zinc-950/85 border-red-500/25 hover:border-red-400/60 shadow-[0_10px_28px_rgba(0,0,0,0.65)]",
+        avatarFrame: "bg-zinc-950 border-zinc-950",
+        avatarRing: "from-red-500 via-rose-400 to-orange-400",
+        avatarGlow:
+          "shadow-[0_0_16px_rgba(239,68,68,0.3)] group-hover:shadow-[0_0_24px_rgba(239,68,68,0.55)]",
+        ambient: "from-red-600/18 via-transparent to-transparent",
+        laserLine: "from-transparent via-red-500 to-rose-400",
+        arrow: "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.85)]",
+      };
+    case "midnight":
+      return {
+        pageBg:
+          "bg-gradient-to-br from-slate-950/88 via-blue-950/42 to-black/95",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        text: "text-sky-300",
+        textLight: "text-sky-100",
+        bg: "bg-blue-600",
+        border: "border-blue-500",
+        ring: "focus:ring-sky-400",
+        accentBar: "bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.95)]",
+        badge: "text-sky-200 border-blue-500/35 bg-blue-950/75",
+        subtleBadge: "text-slate-200 border-blue-500/25 bg-black/75",
+        surfacePanel:
+          "bg-slate-950/90 border-blue-500/30 shadow-[0_16px_50px_rgba(59,130,246,0.18)]",
+        subPanel: "bg-black/70 border-blue-500/25",
+        dropdownMenu: "bg-slate-950/98 border-blue-500/35 shadow-2xl",
+        selectBtn:
+          "border-blue-500/30 bg-black/75 text-white hover:border-sky-400/60",
+        dividerBorder: "border-blue-500/20",
+        backCapsule:
+          "bg-slate-950/88 hover:bg-blue-950/80 border-blue-500/35 hover:border-sky-400 text-slate-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-blue-600/60 via-sky-500/50 to-cyan-400/50 border-sky-400/50 text-white",
+        posterShadow:
+          "border-blue-500/35 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_26px_rgba(59,130,246,0.25)]",
+        trailerBtn:
+          "bg-slate-950/85 hover:bg-blue-950/90 border-sky-400/55 hover:border-sky-300 text-sky-100 shadow-[0_0_20px_rgba(56,189,248,0.4)]",
+        trailerPlayDot:
+          "border-sky-300/75 bg-gradient-to-tr from-blue-600/70 to-cyan-500/60 text-white",
+        trailerBackBg: "from-slate-950/95 via-blue-950/40 to-black/95",
+        playBtn:
+          "bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 text-white shadow-[0_0_25px_rgba(56,189,248,0.45)] hover:shadow-[0_0_35px_rgba(56,189,248,0.7)]",
+        btnSecondary:
+          "bg-slate-950/85 hover:bg-blue-950/70 border-blue-500/35 hover:border-sky-400 text-blue-100 hover:text-white",
+        btnActive:
+          "bg-blue-600/35 border-sky-400 text-white shadow-[0_0_22px_rgba(56,189,248,0.45)]",
+        statCard:
+          "bg-slate-950/85 border-blue-500/25 hover:border-sky-400/60 shadow-[0_10px_28px_rgba(0,0,0,0.65)]",
+        avatarFrame: "bg-slate-950 border-slate-950",
+        avatarRing: "from-cyan-400 via-sky-500 to-blue-500",
+        avatarGlow:
+          "shadow-[0_0_16px_rgba(59,130,246,0.3)] group-hover:shadow-[0_0_24px_rgba(56,189,248,0.55)]",
+        ambient: "from-blue-600/18 via-transparent to-transparent",
+        laserLine: "from-transparent via-sky-400 to-blue-500",
+        arrow: "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.85)]",
+      };
+    case "emerald":
+      return {
+        pageBg:
+          "bg-gradient-to-br from-neutral-950/88 via-emerald-950/42 to-black/95",
+        baseText: "text-neutral-100",
+        mutedText: "text-neutral-300",
+        subMutedText: "text-neutral-400",
+        text: "text-emerald-300",
+        textLight: "text-emerald-100",
+        bg: "bg-emerald-600",
+        border: "border-emerald-500",
+        ring: "focus:ring-emerald-400",
+        accentBar: "bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]",
+        badge: "text-emerald-200 border-emerald-500/35 bg-emerald-950/75",
+        subtleBadge: "text-neutral-200 border-emerald-500/25 bg-black/75",
+        surfacePanel:
+          "bg-neutral-950/90 border-emerald-500/30 shadow-[0_16px_50px_rgba(16,185,129,0.18)]",
+        subPanel: "bg-black/70 border-emerald-500/25",
+        dropdownMenu: "bg-neutral-950/98 border-emerald-500/35 shadow-2xl",
+        selectBtn:
+          "border-emerald-500/30 bg-black/75 text-white hover:border-emerald-400/60",
+        dividerBorder: "border-emerald-500/20",
+        backCapsule:
+          "bg-neutral-950/88 hover:bg-emerald-950/80 border-emerald-500/35 hover:border-emerald-400 text-neutral-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-emerald-600/60 via-teal-500/50 to-green-400/50 border-emerald-400/50 text-white",
+        posterShadow:
+          "border-emerald-500/35 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_26px_rgba(16,185,129,0.25)]",
+        trailerBtn:
+          "bg-neutral-950/85 hover:bg-emerald-950/90 border-emerald-400/55 hover:border-emerald-300 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.4)]",
+        trailerPlayDot:
+          "border-emerald-300/75 bg-gradient-to-tr from-emerald-600/70 to-teal-500/60 text-white",
+        trailerBackBg: "from-neutral-950/95 via-emerald-950/40 to-black/95",
+        playBtn:
+          "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-[0_0_25px_rgba(52,211,153,0.45)] hover:shadow-[0_0_35px_rgba(52,211,153,0.7)]",
+        btnSecondary:
+          "bg-neutral-950/85 hover:bg-emerald-950/70 border-emerald-500/35 hover:border-emerald-400 text-emerald-100 hover:text-white",
+        btnActive:
+          "bg-emerald-600/35 border-emerald-400 text-white shadow-[0_0_22px_rgba(52,211,153,0.45)]",
+        statCard:
+          "bg-neutral-950/85 border-emerald-500/25 hover:border-emerald-400/60 shadow-[0_10px_28px_rgba(0,0,0,0.65)]",
+        avatarFrame: "bg-neutral-950 border-neutral-950",
+        avatarRing: "from-emerald-400 via-teal-400 to-green-500",
+        avatarGlow:
+          "shadow-[0_0_16px_rgba(16,185,129,0.3)] group-hover:shadow-[0_0_24px_rgba(52,211,153,0.55)]",
+        ambient: "from-emerald-600/18 via-transparent to-transparent",
+        laserLine: "from-transparent via-emerald-400 to-teal-400",
+        arrow: "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.85)]",
+      };
+    case "amber":
+      return {
+        pageBg:
+          "bg-gradient-to-br from-stone-950/88 via-yellow-950/42 to-black/95",
+        baseText: "text-stone-100",
+        mutedText: "text-stone-300",
+        subMutedText: "text-stone-400",
+        text: "text-amber-300",
+        textLight: "text-amber-100",
+        bg: "bg-amber-600",
+        border: "border-amber-500",
+        ring: "focus:ring-amber-400",
+        accentBar: "bg-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.95)]",
+        badge: "text-amber-200 border-amber-500/35 bg-amber-950/75",
+        subtleBadge: "text-stone-200 border-amber-500/25 bg-black/75",
+        surfacePanel:
+          "bg-stone-950/90 border-amber-500/30 shadow-[0_16px_50px_rgba(245,158,11,0.18)]",
+        subPanel: "bg-black/70 border-amber-500/25",
+        dropdownMenu: "bg-stone-950/98 border-amber-500/35 shadow-2xl",
+        selectBtn:
+          "border-amber-500/30 bg-black/75 text-white hover:border-amber-400/60",
+        dividerBorder: "border-amber-500/20",
+        backCapsule:
+          "bg-stone-950/88 hover:bg-amber-950/80 border-amber-500/35 hover:border-amber-400 text-stone-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-amber-600/60 via-yellow-500/50 to-orange-500/50 border-amber-400/50 text-white",
+        posterShadow:
+          "border-amber-500/35 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_26px_rgba(245,158,11,0.25)]",
+        trailerBtn:
+          "bg-stone-950/85 hover:bg-amber-950/90 border-amber-400/55 hover:border-amber-300 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.4)]",
+        trailerPlayDot:
+          "border-amber-300/75 bg-gradient-to-tr from-amber-600/70 to-orange-500/60 text-white",
+        trailerBackBg: "from-stone-950/95 via-amber-950/40 to-black/95",
+        playBtn:
+          "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-[0_0_25px_rgba(245,158,11,0.45)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)]",
+        btnSecondary:
+          "bg-stone-950/85 hover:bg-amber-950/70 border-amber-500/35 hover:border-amber-400 text-amber-100 hover:text-white",
+        btnActive:
+          "bg-amber-600/35 border-amber-400 text-white shadow-[0_0_22px_rgba(245,158,11,0.45)]",
+        statCard:
+          "bg-stone-950/85 border-amber-500/25 hover:border-amber-400/60 shadow-[0_10px_28px_rgba(0,0,0,0.65)]",
+        avatarFrame: "bg-stone-950 border-stone-950",
+        avatarRing: "from-amber-400 via-yellow-400 to-orange-500",
+        avatarGlow:
+          "shadow-[0_0_16px_rgba(245,158,11,0.3)] group-hover:shadow-[0_0_24px_rgba(245,158,11,0.55)]",
+        ambient: "from-amber-600/18 via-transparent to-transparent",
+        laserLine: "from-transparent via-amber-400 to-orange-500",
+        arrow: "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.85)]",
+      };
+    case "cyan":
+      return {
+        pageBg:
+          "bg-gradient-to-br from-slate-950/88 via-cyan-950/42 to-black/95",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        text: "text-cyan-300",
+        textLight: "text-cyan-100",
+        bg: "bg-cyan-600",
+        border: "border-cyan-500",
+        ring: "focus:ring-cyan-400",
+        accentBar: "bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]",
+        badge: "text-cyan-200 border-cyan-500/35 bg-cyan-950/75",
+        subtleBadge: "text-slate-200 border-cyan-500/25 bg-black/75",
+        surfacePanel:
+          "bg-slate-950/90 border-cyan-500/30 shadow-[0_16px_50px_rgba(6,182,212,0.18)]",
+        subPanel: "bg-black/70 border-cyan-500/25",
+        dropdownMenu: "bg-slate-950/98 border-cyan-500/35 shadow-2xl",
+        selectBtn:
+          "border-cyan-500/30 bg-black/75 text-white hover:border-cyan-400/60",
+        dividerBorder: "border-cyan-500/20",
+        backCapsule:
+          "bg-slate-950/88 hover:bg-cyan-950/80 border-cyan-500/35 hover:border-cyan-400 text-slate-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-cyan-600/60 via-teal-500/50 to-sky-400/50 border-cyan-400/50 text-white",
+        posterShadow:
+          "border-cyan-500/35 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_26px_rgba(6,182,212,0.25)]",
+        trailerBtn:
+          "bg-slate-950/85 hover:bg-cyan-950/90 border-cyan-400/55 hover:border-cyan-300 text-cyan-100 shadow-[0_0_20px_rgba(6,182,212,0.4)]",
+        trailerPlayDot:
+          "border-cyan-300/75 bg-gradient-to-tr from-cyan-600/70 to-teal-500/60 text-white",
+        trailerBackBg: "from-slate-950/95 via-cyan-950/40 to-black/95",
+        playBtn:
+          "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-[0_0_25px_rgba(34,211,238,0.45)] hover:shadow-[0_0_35px_rgba(34,211,238,0.7)]",
+        btnSecondary:
+          "bg-slate-950/85 hover:bg-cyan-950/70 border-cyan-500/35 hover:border-cyan-400 text-cyan-100 hover:text-white",
+        btnActive:
+          "bg-cyan-600/35 border-cyan-400 text-white shadow-[0_0_22px_rgba(34,211,238,0.45)]",
+        statCard:
+          "bg-slate-950/85 border-cyan-500/25 hover:border-cyan-400/60 shadow-[0_10px_28px_rgba(0,0,0,0.65)]",
+        avatarFrame: "bg-slate-950 border-slate-950",
+        avatarRing: "from-cyan-400 via-teal-400 to-sky-500",
+        avatarGlow:
+          "shadow-[0_0_16px_rgba(6,182,212,0.3)] group-hover:shadow-[0_0_24px_rgba(34,211,238,0.55)]",
+        ambient: "from-cyan-600/18 via-transparent to-transparent",
+        laserLine: "from-transparent via-cyan-400 to-teal-400",
+        arrow: "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.85)]",
+      };
+    case "violet":
+    default:
+      return {
+        pageBg:
+          "bg-gradient-to-br from-slate-950/88 via-purple-950/42 to-black/95",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        text: "text-violet-300",
+        textLight: "text-violet-100",
+        bg: "bg-violet-600",
+        border: "border-violet-500",
+        ring: "focus:ring-violet-400",
+        accentBar: "bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]",
+        badge: "text-violet-200 border-violet-500/35 bg-purple-950/75",
+        subtleBadge: "text-slate-200 border-violet-500/25 bg-black/75",
+        surfacePanel:
+          "bg-slate-950/90 border-violet-500/30 shadow-[0_16px_50px_rgba(139,92,246,0.18)]",
+        subPanel: "bg-black/70 border-violet-500/25",
+        dropdownMenu: "bg-slate-950/98 border-violet-500/35 shadow-2xl",
+        selectBtn:
+          "border-violet-500/30 bg-black/75 text-white hover:border-violet-400/60",
+        dividerBorder: "border-violet-500/20",
+        backCapsule:
+          "bg-slate-950/88 hover:bg-purple-950/80 border-violet-500/35 hover:border-violet-400 text-slate-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-violet-600/60 via-purple-500/50 to-indigo-500/50 border-violet-400/50 text-white",
+        posterShadow:
+          "border-violet-500/35 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_26px_rgba(139,92,246,0.25)]",
+        trailerBtn:
+          "bg-slate-950/85 hover:bg-purple-950/90 border-violet-400/55 hover:border-violet-300 text-violet-100 shadow-[0_0_20px_rgba(139,92,246,0.4)]",
+        trailerPlayDot:
+          "border-violet-300/75 bg-gradient-to-tr from-violet-600/70 to-indigo-500/60 text-white",
+        trailerBackBg: "from-slate-950/95 via-purple-950/40 to-black/95",
+        playBtn:
+          "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-[0_0_25px_rgba(139,92,246,0.45)] hover:shadow-[0_0_35px_rgba(139,92,246,0.7)]",
+        btnSecondary:
+          "bg-slate-950/85 hover:bg-purple-950/70 border-violet-500/35 hover:border-violet-400 text-purple-100 hover:text-white",
+        btnActive:
+          "bg-violet-600/35 border-violet-400 text-white shadow-[0_0_22px_rgba(139,92,246,0.45)]",
+        statCard:
+          "bg-slate-950/85 border-violet-500/25 hover:border-violet-400/60 shadow-[0_10px_28px_rgba(0,0,0,0.65)]",
+        avatarFrame: "bg-slate-950 border-slate-950",
+        avatarRing: "from-violet-400 via-purple-500 to-indigo-500",
+        avatarGlow:
+          "shadow-[0_0_16px_rgba(139,92,246,0.3)] group-hover:shadow-[0_0_24px_rgba(139,92,246,0.55)]",
+        ambient: "from-violet-600/18 via-transparent to-transparent",
+        laserLine: "from-transparent via-purple-500 to-violet-400",
+        arrow: "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.85)]",
+      };
+  }
+}
 
 export function DetailsPage() {
   const search = Route.useSearch();
@@ -82,6 +418,9 @@ export function DetailsPage() {
   );
   const [largeButtons, setLargeButtons] = useState<boolean>(() =>
     getLargeButtons()
+  );
+  const [glowOff, setGlowOff] = useState<boolean>(
+    () => getGlowIntensity() === "off"
   );
   const [isLowRam, setIsLowRam] = useState<boolean>(
     () => getHardwareLimits().effectiveMode === "low"
@@ -255,6 +594,7 @@ export function DetailsPage() {
       setPosterWidth(getOptimalTmdbImageWidth());
       setReducedMotion(getReducedMotion());
       setLargeButtons(getLargeButtons());
+      setGlowOff(getGlowIntensity() === "off");
       setIsLowRam(getHardwareLimits().effectiveMode === "low");
       setClockFormat(getClockFormat());
     };
@@ -332,193 +672,10 @@ export function DetailsPage() {
     };
   }, [season, mediaId, mediaType]);
 
-  const getPageBackground = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-gradient-to-br from-zinc-950/85 via-red-950/45 to-black/90";
-      case "midnight":
-        return "bg-gradient-to-br from-slate-950/85 via-blue-950/45 to-slate-950/95";
-      case "emerald":
-        return "bg-gradient-to-br from-slate-950/85 via-emerald-950/45 to-slate-950/95";
-      case "amber":
-        return "bg-gradient-to-br from-stone-950/85 via-yellow-950/45 to-neutral-950/95";
-      case "cyan":
-        return "bg-gradient-to-br from-slate-950/85 via-cyan-950/45 to-slate-950/95";
-      case "violet":
-      default:
-        return "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/95";
-    }
-  };
-
-  const getCardBackground = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-zinc-950/90 border-red-500/25";
-      case "midnight":
-        return "bg-slate-950/90 border-blue-500/25";
-      case "emerald":
-        return "bg-slate-950/90 border-emerald-500/25";
-      case "amber":
-        return "bg-stone-950/90 border-amber-500/25";
-      case "cyan":
-        return "bg-slate-950/90 border-cyan-500/25";
-      case "violet":
-      default:
-        return "bg-slate-950/90 border-violet-500/25";
-    }
-  };
-
-  const getSmokeWrapperStyle = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-slate-950/85 border-red-500/25 shadow-[0_16px_50px_rgba(239,68,68,0.22)]";
-      case "midnight":
-        return "bg-slate-950/85 border-blue-500/25 shadow-[0_16px_50px_rgba(59,130,246,0.22)]";
-      case "emerald":
-        return "bg-slate-950/85 border-emerald-500/25 shadow-[0_16px_50px_rgba(16,185,129,0.22)]";
-      case "amber":
-        return "bg-stone-950/85 border-amber-500/25 shadow-[0_16px_50px_rgba(245,158,11,0.22)]";
-      case "cyan":
-        return "bg-slate-950/85 border-cyan-500/25 shadow-[0_16px_50px_rgba(6,182,212,0.22)]";
-      case "violet":
-      default:
-        return "bg-slate-950/85 border-violet-500/25 shadow-[0_16px_50px_rgba(139,92,246,0.22)]";
-    }
-  };
-
-  const getThemeClasses = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return {
-          text: "text-red-400",
-          textLight: "text-red-200",
-          bg: "bg-red-600",
-          hoverBg: "hover:bg-red-500",
-          border: "border-red-500",
-          borderHover: "group-hover:border-red-500/80",
-          ring: "focus:ring-red-400",
-          shadow: "shadow-red-600/30",
-          accentBar: "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.95)]",
-          badge: "text-red-200 border-red-500/30 bg-red-950/60",
-          ambient: "from-red-600/15 via-transparent to-transparent",
-          playBtn:
-            "bg-gradient-to-r from-red-500 via-rose-500 to-amber-500 text-white shadow-[0_0_25px_rgba(239,68,68,0.5)] hover:shadow-[0_0_35px_rgba(239,68,68,0.75)]",
-          laserLine: "from-transparent via-red-500 to-amber-400",
-          avatarRing: "from-red-500 via-rose-400 to-amber-400",
-        };
-      case "midnight":
-        return {
-          text: "text-sky-300",
-          textLight: "text-sky-100",
-          bg: "bg-blue-600",
-          hoverBg: "hover:bg-blue-500",
-          border: "border-blue-500",
-          borderHover: "group-hover:border-blue-400/80",
-          ring: "focus:ring-blue-400",
-          shadow: "shadow-blue-600/30",
-          accentBar: "bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.95)]",
-          badge: "text-sky-200 border-blue-500/30 bg-blue-950/60",
-          ambient: "from-blue-600/15 via-transparent to-transparent",
-          playBtn:
-            "bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 text-slate-950 shadow-[0_0_25px_rgba(56,189,248,0.5)] hover:shadow-[0_0_35px_rgba(56,189,248,0.75)]",
-          laserLine: "from-transparent via-sky-400 to-blue-500",
-          avatarRing: "from-cyan-400 via-sky-500 to-indigo-500",
-        };
-      case "emerald":
-        return {
-          text: "text-emerald-300",
-          textLight: "text-emerald-100",
-          bg: "bg-emerald-600",
-          hoverBg: "hover:bg-emerald-500",
-          border: "border-emerald-500",
-          borderHover: "group-hover:border-emerald-400/80",
-          ring: "focus:ring-emerald-400",
-          shadow: "shadow-emerald-600/30",
-          accentBar: "bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]",
-          badge: "text-emerald-200 border-emerald-500/30 bg-emerald-950/60",
-          ambient: "from-emerald-600/15 via-transparent to-transparent",
-          playBtn:
-            "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 shadow-[0_0_25px_rgba(52,211,153,0.5)] hover:shadow-[0_0_35px_rgba(52,211,153,0.75)]",
-          laserLine: "from-transparent via-emerald-400 to-cyan-400",
-          avatarRing: "from-emerald-400 via-teal-400 to-cyan-500",
-        };
-      case "amber":
-        return {
-          text: "text-amber-300",
-          textLight: "text-amber-100",
-          bg: "bg-amber-600",
-          hoverBg: "hover:bg-amber-500",
-          border: "border-amber-500",
-          borderHover: "group-hover:border-amber-400/80",
-          ring: "focus:ring-amber-400",
-          shadow: "shadow-amber-600/30",
-          accentBar: "bg-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.95)]",
-          badge: "text-amber-200 border-amber-500/30 bg-amber-950/60",
-          ambient: "from-amber-600/15 via-transparent to-transparent",
-          playBtn:
-            "bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 text-slate-950 shadow-[0_0_25px_rgba(245,158,11,0.5)] hover:shadow-[0_0_35px_rgba(245,158,11,0.75)]",
-          laserLine: "from-transparent via-amber-400 to-orange-500",
-          avatarRing: "from-amber-400 via-yellow-400 to-orange-500",
-        };
-      case "cyan":
-        return {
-          text: "text-cyan-300",
-          textLight: "text-cyan-100",
-          bg: "bg-cyan-600",
-          hoverBg: "hover:bg-cyan-500",
-          border: "border-cyan-500",
-          borderHover: "group-hover:border-cyan-400/80",
-          ring: "focus:ring-cyan-400",
-          shadow: "shadow-cyan-600/30",
-          accentBar: "bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]",
-          badge: "text-cyan-200 border-cyan-500/30 bg-cyan-950/60",
-          ambient: "from-cyan-600/15 via-transparent to-transparent",
-          playBtn:
-            "bg-gradient-to-r from-cyan-400 via-teal-300 to-sky-400 text-slate-950 shadow-[0_0_25px_rgba(34,211,238,0.5)] hover:shadow-[0_0_35px_rgba(34,211,238,0.75)]",
-          laserLine: "from-transparent via-cyan-400 to-sky-500",
-          avatarRing: "from-cyan-400 via-sky-400 to-blue-500",
-        };
-      case "violet":
-      default:
-        return {
-          text: "text-violet-300",
-          textLight: "text-violet-100",
-          bg: "bg-violet-600",
-          hoverBg: "hover:bg-violet-500",
-          border: "border-violet-500",
-          borderHover: "group-hover:border-violet-400/80",
-          ring: "focus:ring-violet-400",
-          shadow: "shadow-violet-600/30",
-          accentBar: "bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]",
-          badge: "text-slate-200 border-white/15 bg-white/[0.06]",
-          ambient: "from-violet-600/15 via-transparent to-transparent",
-          playBtn:
-            "bg-gradient-to-r from-cyan-400 via-sky-400 to-purple-500 text-slate-950 shadow-[0_0_25px_rgba(56,189,248,0.5)] hover:shadow-[0_0_35px_rgba(168,85,247,0.75)]",
-          laserLine: "from-transparent via-pink-500 to-cyan-400",
-          avatarRing: "from-cyan-400 via-purple-500 to-pink-500",
-        };
-    }
-  };
-
-  const getThemeArrowColor = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
-      case "midnight":
-        return "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]";
-      case "emerald":
-        return "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)]";
-      case "amber":
-        return "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.8)]";
-      case "cyan":
-        return "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.8)]";
-      case "violet":
-      default:
-        return "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]";
-    }
-  };
-
-  const activeTheme = getThemeClasses(appTheme);
+  const activeTheme = useMemo(
+    () => getDetailsThemeTokens(appTheme),
+    [appTheme]
+  );
   const prefixedId = `${mediaType}-${mediaId}`;
 
   const mediaStatusBadge = useMemo(() => {
@@ -528,7 +685,7 @@ export function DetailsPage() {
 
     if (isTitleBroken(cleanId) || isTitleBroken(prefId)) {
       return (
-        <span className="absolute top-4 left-4 z-20 rounded-xl bg-red-600/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white border border-red-400/40 shadow-lg">
+        <span className="absolute top-3.5 left-3.5 z-20 rounded-xl bg-red-600/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white border border-red-400/40 shadow-lg">
           ⚠️ Reported Broken
         </span>
       );
@@ -536,7 +693,7 @@ export function DetailsPage() {
 
     if (isTitleDisliked(cleanId) || isTitleDisliked(prefId)) {
       return (
-        <span className="absolute top-4 left-4 z-20 rounded-xl bg-zinc-800/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 border border-zinc-600/40 shadow-lg">
+        <span className="absolute top-3.5 left-3.5 z-20 rounded-xl bg-black/85 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white border border-white/20 shadow-lg">
           👎 Disliked
         </span>
       );
@@ -554,14 +711,16 @@ export function DetailsPage() {
       if (match) {
         if (match.confirmedCompleted || (match.progressPercent ?? 0) >= 100) {
           return (
-            <span className="absolute top-4 left-4 z-20 rounded-xl bg-emerald-600/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white border border-emerald-400/40 shadow-lg">
+            <span className="absolute top-3.5 left-3.5 z-20 rounded-xl bg-emerald-600/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white border border-emerald-400/40 shadow-lg">
               ✓ Completed
             </span>
           );
         }
         if ((match.progressPercent ?? 0) > 0) {
           return (
-            <span className="absolute top-4 left-4 z-20 rounded-xl bg-cyan-600/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white border border-cyan-400/40 shadow-lg animate-pulse">
+            <span
+              className={`absolute top-3.5 left-3.5 z-20 rounded-xl backdrop-blur-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest border shadow-lg animate-pulse ${activeTheme.badge}`}
+            >
               ⏳ In Progress ({match.progressPercent}%)
             </span>
           );
@@ -572,7 +731,7 @@ export function DetailsPage() {
     }
 
     return null;
-  }, [mediaId, mediaType]);
+  }, [mediaId, mediaType, activeTheme.badge]);
 
   useEffect(() => {
     if (!mediaId || !mediaDetails) return;
@@ -635,7 +794,7 @@ export function DetailsPage() {
         }
 
         let res = await fetch(
-          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
+          `https://api.themoviedb.org/3/${activeFetchType}/${mediaId}?api_key=${apiKey}&append_to_response=credits,external_ids`
         );
         let data = await res.json();
 
@@ -643,7 +802,7 @@ export function DetailsPage() {
           const otherType: "movie" | "tv" =
             activeFetchType === "movie" ? "tv" : "movie";
           res = await fetch(
-            `https://api.themoviedb.org/3/${otherType}/${mediaId}?api_key=${apiKey}&append_to_response=credits`
+            `https://api.themoviedb.org/3/${otherType}/${mediaId}?api_key=${apiKey}&append_to_response=credits,external_ids`
           );
           data = await res.json();
           if (data && data.success !== false && !data.status_code) {
@@ -739,12 +898,12 @@ export function DetailsPage() {
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
-      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 sm:gap-4 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 justify-items-center";
     }
     if (cardSize === "medium") {
-      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5 justify-items-center";
     }
-    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 justify-items-center";
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 justify-items-center";
   }, [cardSize]);
 
   const mappedRecommendations: MediaItem[] = useMemo(() => {
@@ -921,9 +1080,7 @@ export function DetailsPage() {
   if (loading) {
     return (
       <div
-        className={`flex min-h-screen items-center justify-center ${getPageBackground(
-          appTheme
-        )} text-white relative rounded-3xl`}
+        className={`flex min-h-screen items-center justify-center ${activeTheme.pageBg} ${activeTheme.baseText} relative rounded-3xl`}
       >
         <AppWallpaper />
         <p
@@ -957,6 +1114,12 @@ export function DetailsPage() {
   const genres =
     mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
 
+  const imdbId =
+    mediaDetails?.external_ids?.imdb_id || mediaDetails?.imdb_id || null;
+  const imdbLink = imdbId
+    ? `https://www.imdb.com/title/${imdbId}/`
+    : `https://www.imdb.com/find?q=${encodeURIComponent(title)}`;
+
   const castList = mediaDetails?.credits?.cast || [];
   const budget =
     mediaDetails?.budget && mediaDetails.budget > 0
@@ -978,9 +1141,7 @@ export function DetailsPage() {
 
   return (
     <div
-      className={`min-h-screen w-full ${getPageBackground(
-        appTheme
-      )} p-3 sm:p-6 md:p-10 text-white overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative rounded-3xl`}
+      className={`min-h-screen w-full max-w-full ${activeTheme.pageBg} ${activeTheme.baseText} p-2.5 sm:p-6 md:p-10 overflow-x-clip scroll-smooth transition-colors duration-300 pb-16 relative rounded-3xl`}
     >
       <style>{`
         @keyframes heartbeatSlow {
@@ -1001,38 +1162,55 @@ export function DetailsPage() {
 
       {/* Layered cinematic glass overlays for Ambient backdrop depths */}
       <AppWallpaper backdropUrl={backdropUrl} />
-      {!isLowRam && !reducedMotion && (
+      {!isLowRam && !reducedMotion && !glowOff && (
         <div
           className={`absolute inset-x-0 -top-12 h-[34rem] bg-gradient-to-b ${activeTheme.ambient} animate-ambient-pulse z-0 pointer-events-none rounded-t-3xl`}
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none z-0" />
 
-      <div className="relative z-10 max-w-5xl mx-auto">
-        {/* Top-Left Neon Glass "Back to Home" Capsule Pill */}
-        <div className="mb-4 flex items-center justify-start">
+      <div className="relative z-10 max-w-5xl mx-auto min-w-0">
+        {/* Top-Left Theme-Matched "Back to Home" Capsule Pill */}
+        <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
           <Link
             to="/"
-            className={`group inline-flex items-center gap-3 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-4 pr-2 ${
+            data-tour="back-to-home"
+            className={`group inline-flex items-center gap-2.5 rounded-full backdrop-blur-xl pl-3.5 pr-2 ${
               largeButtons ? "py-2.5" : "py-1.5"
-            } border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] hover:shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all duration-300 transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50`}
+            } border shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 ${
+              activeTheme.backCapsule
+            } ${activeTheme.ring}`}
           >
-            <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
+            <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
               ‹
             </span>
-            <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-100 group-hover:text-white">
+            <span className="text-xs sm:text-sm font-semibold tracking-wide">
               Back to Home
             </span>
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600/50 via-pink-500/40 to-cyan-400/50 border border-purple-300/50 text-[11px] text-white shadow-[0_0_12px_rgba(217,70,239,0.7)]">
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${activeTheme.backBadge}`}
+            >
               ⟲
             </span>
           </Link>
+
+          <a
+            href={imdbLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-tour="imdb-link"
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition hover:scale-105 focus:outline-none focus:ring-2 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
+            title="View Official IMDb Listing"
+          >
+            <span>⭐ IMDb ↗</span>
+          </a>
         </div>
 
-        <div className="mx-auto flex flex-col items-center gap-6">
-          {/* 3D Spin / Flip Cover Art → Trailer Reveal Component */}
+        <div className="mx-auto flex flex-col items-center gap-5 sm:gap-6">
+          {/* 3D Spin / Flip Cover Art -> Trailer Reveal (Proportional across all viewports) */}
           <div
-            className="relative w-full max-w-[440px] h-[480px] sm:h-[580px] cursor-pointer select-none"
+            data-tour="card-flip"
+            className="relative w-full max-w-[380px] sm:max-w-[430px] aspect-[2/3] max-h-[72dvh] cursor-pointer select-none"
             style={{ perspective: "1500px" }}
             onClick={() => !isFlipped && setIsFlipped(true)}
           >
@@ -1043,9 +1221,11 @@ export function DetailsPage() {
                 transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
               }}
             >
-              {/* Front: Cover Art with Floating Bottom Metadata Pill & Neon ClickForTrailer Square Badge */}
+              {/* Front: Cover Art with Floating Bottom Metadata Pill & Theme-Matched Trailer Badge */}
               <div
-                className={`absolute inset-0 h-full w-full ${heroPosterRadius} overflow-hidden border border-white/20 bg-black shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_25px_rgba(168,85,247,0.2)]`}
+                className={`absolute inset-0 h-full w-full ${heroPosterRadius} overflow-hidden border bg-black ${
+                  glowOff ? "shadow-2xl" : activeTheme.posterShadow
+                }`}
                 style={{ backfaceVisibility: "hidden" }}
               >
                 <img
@@ -1057,46 +1237,55 @@ export function DetailsPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent pointer-events-none" />
                 {mediaStatusBadge}
 
-                {/* Bottom Overlay Bar: Metadata Pill on Left + Neon Trailer Square Badge on Right */}
-                <div className="absolute inset-x-3.5 bottom-3.5 z-20 flex items-end justify-between gap-2 pointer-events-none">
+                {/* Bottom Overlay Bar: Metadata Pill on Left + Theme-Matched Trailer Badge on Right */}
+                <div className="absolute inset-x-3 bottom-3 z-20 flex items-end justify-between gap-2 pointer-events-none">
                   {/* Left: Floating Dark Glass Metadata Pill */}
-                  <div className="inline-flex items-center flex-wrap gap-1.5 rounded-full bg-black/75 backdrop-blur-xl border border-white/15 px-3.5 py-1.5 text-[11px] font-bold text-slate-200 shadow-xl">
+                  <div
+                    className={`inline-flex items-center flex-wrap gap-1.5 rounded-full backdrop-blur-xl border px-3 py-1.5 text-[10px] sm:text-[11px] font-bold shadow-xl min-w-0 ${activeTheme.subtleBadge}`}
+                  >
                     {rating !== "N/A" && (
                       <>
-                        <span className="text-amber-400 font-extrabold">
+                        <span className={`font-extrabold ${activeTheme.text}`}>
                           ★ {rating}
                         </span>
-                        <span className="text-white/25">|</span>
+                        <span className="opacity-30">|</span>
                       </>
                     )}
                     {releaseYear && (
                       <>
                         <span>{releaseYear}</span>
-                        <span className="text-white/25">|</span>
+                        <span className="opacity-30">|</span>
                       </>
                     )}
-                    <span>{originalLanguageName || "English"}</span>
-                    <span className="text-white/25">|</span>
+                    <span className="truncate max-w-[75px] sm:max-w-none">
+                      {originalLanguageName || "English"}
+                    </span>
+                    <span className="opacity-30">|</span>
                     <span className="uppercase tracking-wider text-white">
                       {inferredMediaType}
                     </span>
                   </div>
 
-                  {/* Right: Neon Glass "Click for Trailer" Square Badge */}
+                  {/* Right: Theme-Matched "Click for Trailer" Square Badge */}
                   <button
                     type="button"
+                    data-tour="details-trailer"
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsFlipped(true);
                     }}
-                    className={`pointer-events-auto group flex flex-col items-center justify-center gap-1 rounded-2xl bg-slate-950/80 hover:bg-slate-900/95 backdrop-blur-xl border border-purple-400/50 hover:border-cyan-400 px-3 py-2 shadow-[0_0_20px_rgba(168,85,247,0.45)] hover:shadow-[0_0_25px_rgba(56,189,248,0.7)] transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50 shrink-0 ${
+                    className={`pointer-events-auto group flex flex-col items-center justify-center gap-1 rounded-2xl backdrop-blur-xl border px-2.5 sm:px-3 py-2 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 shrink-0 ${
+                      activeTheme.trailerBtn
+                    } ${activeTheme.ring} ${
                       reducedMotion ? "" : "animate-heartbeat-slow"
                     }`}
                   >
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-cyan-300/70 bg-gradient-to-tr from-purple-600/50 to-cyan-400/50 text-[10px] text-white shadow-[0_0_10px_rgba(56,189,248,0.6)] group-hover:scale-110 transition-transform">
+                    <span
+                      className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border text-[10px] group-hover:scale-110 transition-transform ${activeTheme.trailerPlayDot}`}
+                    >
                       ▶
                     </span>
-                    <span className="text-[10px] font-bold leading-tight text-slate-100 text-center">
+                    <span className="text-[9px] sm:text-[10px] font-bold leading-tight text-center">
                       Click for
                       <br />
                       Trailer
@@ -1123,15 +1312,15 @@ export function DetailsPage() {
                   }}
                 />
                 <div
-                  className={`absolute inset-0 bg-gradient-to-br ${getCardBackground(
-                    appTheme
-                  )} opacity-40 pointer-events-none z-0`}
+                  className={`absolute inset-0 bg-gradient-to-br ${activeTheme.trailerBackBg} opacity-50 pointer-events-none z-0`}
                 />
 
                 {/* Header / Close bar */}
-                <div className="relative z-10 flex items-center justify-between p-3.5 border-b border-white/10 bg-black/75 backdrop-blur-md">
+                <div
+                  className={`relative z-10 flex items-center justify-between gap-2 p-3 border-b bg-black/75 backdrop-blur-md ${activeTheme.dividerBorder}`}
+                >
                   <span
-                    className={`text-xs font-bold truncate max-w-[200px] sm:max-w-[280px] ${activeTheme.text}`}
+                    className={`text-xs font-bold truncate ${activeTheme.text}`}
                   >
                     Official Trailer • {title}
                   </span>
@@ -1141,7 +1330,7 @@ export function DetailsPage() {
                       e.stopPropagation();
                       setIsFlipped(false);
                     }}
-                    className={`w-8 h-8 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center text-xs font-bold border ${activeTheme.border}/50 hover:scale-105 active:scale-95 transition cursor-pointer shadow-md`}
+                    className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold border hover:scale-105 active:scale-95 transition cursor-pointer shadow-md ${activeTheme.btnSecondary}`}
                     title="Close Trailer & Return to Cover"
                     aria-label="Close Trailer"
                   >
@@ -1163,7 +1352,7 @@ export function DetailsPage() {
                       <div
                         className={`w-8 h-8 rounded-full border-2 border-t-transparent ${activeTheme.border} animate-spin`}
                       />
-                      <span className="text-xs text-slate-400">
+                      <span className={`text-xs ${activeTheme.subMutedText}`}>
                         Loading official trailer from TMDB...
                       </span>
                     </div>
@@ -1175,41 +1364,49 @@ export function DetailsPage() {
 
           {/* Media Details Card */}
           <div
-            className={`flex flex-col items-start text-left gap-4 w-full rounded-3xl border p-5 sm:p-7 md:p-8 backdrop-blur-2xl transition-colors duration-300 ${getSmokeWrapperStyle(
-              appTheme
-            )}`}
+            data-tour="details-metadata"
+            className={`flex flex-col items-start text-left gap-4 w-full rounded-3xl border p-4 sm:p-7 md:p-8 ${
+              isLowRam ? "" : "backdrop-blur-2xl"
+            } transition-colors duration-300 ${activeTheme.surfacePanel}`}
           >
             {/* Genre Capsule */}
             <span
-              className={`w-fit rounded-full border px-3.5 py-1 text-[11px] font-bold uppercase tracking-widest ${activeTheme.badge}`}
+              className={`w-fit rounded-full border px-3.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest ${activeTheme.badge}`}
             >
               {genres}
             </span>
 
             {/* Crisp High-Contrast Title */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
               {title}
             </h1>
 
             {/* Single-Line Metadata Subtitle + Live Finish Time */}
-            <div className="flex items-center flex-wrap gap-2 text-xs sm:text-sm font-medium text-slate-300">
+            <div
+              className={`flex items-center flex-wrap gap-2 text-xs sm:text-sm font-medium ${activeTheme.mutedText}`}
+            >
               <span>Content {releaseYear || "2026"}</span>
-              <span className="text-white/30">|</span>
+              <span className="opacity-30">|</span>
               <span>{originalLanguageName || "English"}</span>
-              <span className="text-white/30">•</span>
+              <span className="opacity-30">•</span>
               {rating !== "N/A" && (
-                <span className="text-amber-300 font-bold">★ {rating}</span>
+                <span className={`font-bold ${activeTheme.text}`}>
+                  ★ {rating}
+                </span>
               )}
-              <span className="uppercase font-bold tracking-wider text-slate-200">
+              <span className="uppercase font-bold tracking-wider text-white">
                 {inferredMediaType}
               </span>
               {runtimeSummary && (
                 <>
-                  <span className="text-white/30">•</span>
-                  <span className="text-slate-200 font-semibold">
+                  <span className="opacity-30">•</span>
+                  <span className="text-white font-semibold">
                     {runtimeSummary.durationText}
                   </span>
-                  <span className="rounded-full bg-emerald-500/15 border border-emerald-400/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
+                  <span
+                    data-tour="finish-time"
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${activeTheme.badge}`}
+                  >
                     ⏱️ Ends {runtimeSummary.endsAtText}
                   </span>
                 </>
@@ -1217,39 +1414,50 @@ export function DetailsPage() {
             </div>
 
             {/* Overview Paragraph */}
-            <p className="max-w-3xl text-xs sm:text-sm md:text-base leading-relaxed text-slate-300/95">
+            <p
+              className={`max-w-3xl text-xs sm:text-sm md:text-base leading-relaxed ${activeTheme.mutedText}`}
+            >
               {overview}
             </p>
 
-            {/* TV Season & Episode Selector Dropdowns */}
+            {/* TV Season & Episode Selector Dropdowns (Portrait-Safe 1-col -> 2-col Grid) */}
             {inferredMediaType === "tv" && mediaDetails?.seasons && (
               <div
-                className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border ${getCardBackground(
-                  appTheme
-                )} p-4 backdrop-blur-md shadow-xl my-1 w-full`}
+                className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 rounded-2xl border p-3.5 sm:p-4 backdrop-blur-md shadow-xl my-1 w-full ${activeTheme.subPanel}`}
               >
-                <div className="relative flex-1 min-w-[180px]" ref={seasonRef}>
-                  <label className="block text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 pl-1">
+                <div
+                  className="relative min-w-0"
+                  ref={seasonRef}
+                  data-tour="season-selector"
+                >
+                  <label
+                    className={`block text-left text-[10px] font-bold uppercase tracking-wider mb-1.5 pl-1 ${activeTheme.subMutedText}`}
+                  >
                     Select Season
                   </label>
                   <button
                     type="button"
-                    onClick={() => setIsSeasonOpen(!isSeasonOpen)}
-                    className={`flex items-center justify-between w-full gap-4 rounded-xl border border-white/15 bg-black/60 px-4 ${
+                    onClick={() => {
+                      setIsSeasonOpen(!isSeasonOpen);
+                      setIsEpisodeOpen(false);
+                    }}
+                    className={`flex items-center justify-between w-full gap-3 rounded-xl border px-3.5 ${
                       largeButtons ? "py-3.5 text-sm" : "py-2.5 text-xs sm:text-sm"
-                    } font-bold text-white shadow-lg focus:outline-none focus:ring-4 ${
-                      activeTheme.ring
-                    } transition cursor-pointer`}
+                    } font-bold shadow-lg focus:outline-none focus:ring-4 ${
+                      activeTheme.selectBtn
+                    } ${activeTheme.ring} transition cursor-pointer`}
                   >
                     <span className="truncate">
                       {currentSeasonObj
-                        ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Episodes)`
+                        ? `${currentSeasonObj.name} (${currentSeasonObj.episode_count} Eps)`
                         : `Season ${season}`}
                     </span>
-                    <span>▾</span>
+                    <span className="shrink-0">▾</span>
                   </button>
                   {isSeasonOpen && (
-                    <div className="absolute left-0 right-0 mt-2 z-50 max-h-60 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-xl p-1 w-full box-border">
+                    <div
+                      className={`absolute left-0 right-0 mt-2 z-50 max-h-60 overflow-y-auto rounded-2xl border backdrop-blur-xl p-1 w-full box-border ${activeTheme.dropdownMenu}`}
+                    >
                       {mediaDetails.seasons
                         .filter((s: any) => s.season_number > 0)
                         .map((s: any) => (
@@ -1264,7 +1472,7 @@ export function DetailsPage() {
                             className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition cursor-pointer ${
                               season === s.season_number
                                 ? `${activeTheme.bg} text-white font-black`
-                                : "text-slate-200 hover:bg-white/10"
+                                : `${activeTheme.mutedText} hover:bg-white/10 hover:text-white`
                             }`}
                           >
                             {s.name} ({s.episode_count} Episodes)
@@ -1274,28 +1482,35 @@ export function DetailsPage() {
                   )}
                 </div>
 
-                <div className="relative flex-1 min-w-[180px]" ref={episodeRef}>
-                  <label className="block text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 pl-1">
+                <div className="relative min-w-0" ref={episodeRef}>
+                  <label
+                    className={`block text-left text-[10px] font-bold uppercase tracking-wider mb-1.5 pl-1 ${activeTheme.subMutedText}`}
+                  >
                     Select Episode
                   </label>
                   <button
                     type="button"
-                    onClick={() => setIsEpisodeOpen(!isEpisodeOpen)}
-                    className={`flex items-center justify-between w-full gap-4 rounded-xl border border-white/15 bg-black/60 px-4 ${
+                    onClick={() => {
+                      setIsEpisodeOpen(!isEpisodeOpen);
+                      setIsSeasonOpen(false);
+                    }}
+                    className={`flex items-center justify-between w-full gap-3 rounded-xl border px-3.5 ${
                       largeButtons ? "py-3.5 text-sm" : "py-2.5 text-xs sm:text-sm"
-                    } font-bold text-white shadow-lg focus:outline-none focus:ring-4 ${
-                      activeTheme.ring
-                    } transition cursor-pointer`}
+                    } font-bold shadow-lg focus:outline-none focus:ring-4 ${
+                      activeTheme.selectBtn
+                    } ${activeTheme.ring} transition cursor-pointer`}
                   >
                     <span className="truncate">
                       {currentEpisodeObj
                         ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
                         : `Episode ${episode}`}
                     </span>
-                    <span>▾</span>
+                    <span className="shrink-0">▾</span>
                   </button>
                   {isEpisodeOpen && (
-                    <div className="absolute left-0 right-0 mt-2 z-50 max-h-60 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-xl p-1 w-full box-border">
+                    <div
+                      className={`absolute left-0 right-0 mt-2 z-50 max-h-60 overflow-y-auto rounded-2xl border backdrop-blur-xl p-1 w-full box-border ${activeTheme.dropdownMenu}`}
+                    >
                       {seasonEpisodes.length > 0 ? (
                         seasonEpisodes.map((ep: any) => (
                           <button
@@ -1308,14 +1523,16 @@ export function DetailsPage() {
                             className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition cursor-pointer ${
                               episode === ep.episode_number
                                 ? `${activeTheme.bg} text-white font-black`
-                                : "text-slate-200 hover:bg-white/10"
+                                : `${activeTheme.mutedText} hover:bg-white/10 hover:text-white`
                             }`}
                           >
                             Ep {ep.episode_number}: {ep.name}
                           </button>
                         ))
                       ) : (
-                        <div className="px-3.5 py-2.5 text-xs text-slate-400 font-bold">
+                        <div
+                          className={`px-3.5 py-2.5 text-xs font-bold ${activeTheme.subMutedText}`}
+                        >
                           Loading episodes...
                         </div>
                       )}
@@ -1325,16 +1542,17 @@ export function DetailsPage() {
               </div>
             )}
 
-            {/* 2x2 Neon Glass Action Buttons Grid */}
-            <div className="mt-2 grid grid-cols-2 gap-3 sm:gap-4 w-full">
+            {/* 2x2 Theme-Matched Action Buttons Grid */}
+            <div className="mt-2 grid grid-cols-2 gap-2.5 sm:gap-4 w-full">
               {/* 1. Play Button */}
               <button
                 type="button"
+                data-tour="details-play"
                 onClick={handlePlay}
-                className={`group relative flex items-center justify-center gap-2.5 ${actionBtnHeight} rounded-2xl font-extrabold text-sm sm:text-base tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-cyan-400 ${activeTheme.playBtn}`}
+                className={`group relative flex items-center justify-center gap-2 px-3 ${actionBtnHeight} rounded-2xl font-extrabold text-xs sm:text-base tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.playBtn} ${activeTheme.ring}`}
               >
-                <span className="text-base sm:text-lg">▶</span>
-                <span>
+                <span className="text-sm sm:text-lg shrink-0">▶</span>
+                <span className="truncate">
                   {inferredMediaType === "tv"
                     ? `Play S${season}:E${episode}`
                     : "Play"}
@@ -1344,80 +1562,77 @@ export function DetailsPage() {
               {/* 2. Report Broken Button */}
               <button
                 type="button"
+                data-tour="report-broken"
                 onClick={handleReportBroken}
-                className={`group relative flex items-center justify-center gap-2 ${actionBtnHeight} rounded-2xl bg-slate-900/85 hover:bg-red-950/60 backdrop-blur-xl border border-white/15 hover:border-red-400/70 text-slate-200 hover:text-white font-bold text-xs sm:text-sm tracking-wide shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(239,68,68,0.35)] transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500/50`}
+                className={`group relative flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 ${actionBtnHeight} rounded-2xl backdrop-blur-xl border font-bold text-xs sm:text-sm tracking-wide shadow-[0_4px_20px_rgba(0,0,0,0.5)] transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
                 title="Report link as broken and hide globally"
               >
-                <span className="text-sm sm:text-base text-slate-300 group-hover:text-red-400 transition-colors">
-                  △
-                </span>
-                <span>Report Broken</span>
+                <span className="text-sm sm:text-base shrink-0">🚩</span>
+                <span className="truncate">Report Broken</span>
               </button>
 
               {/* 3. My Favs Button */}
               <button
                 type="button"
+                data-tour="details-favorite"
                 onClick={toggleFavorites}
-                className={`group relative flex items-center justify-center gap-2 ${actionBtnHeight} rounded-2xl backdrop-blur-xl border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-500/50 ${
-                  inFavorites
-                    ? "bg-purple-950/75 border-purple-400 text-white shadow-[0_0_25px_rgba(168,85,247,0.55)]"
-                    : "bg-slate-900/85 hover:bg-purple-950/40 border-purple-500/45 hover:border-purple-400 text-slate-200 hover:text-white shadow-[0_0_15px_rgba(168,85,247,0.2)]"
-                }`}
+                className={`group relative flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 ${actionBtnHeight} rounded-2xl backdrop-blur-xl border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${
+                  inFavorites ? activeTheme.btnActive : activeTheme.btnSecondary
+                } ${activeTheme.ring}`}
               >
-                <span
-                  className={`text-sm sm:text-base transition-transform group-hover:scale-110 ${
-                    inFavorites ? "text-pink-400" : "text-purple-300"
-                  }`}
-                >
+                <span className="text-sm sm:text-base transition-transform group-hover:scale-110 shrink-0">
                   {inFavorites ? "♥" : "♡"}
                 </span>
-                <span>{inFavorites ? "Favorited" : "My Favs"}</span>
+                <span className="truncate">
+                  {inFavorites ? "Favorited" : "My Favs"}
+                </span>
               </button>
 
               {/* 4. Save for Later Button */}
               <button
                 type="button"
                 onClick={toggleMyList}
-                className={`group relative flex items-center justify-center gap-2 ${actionBtnHeight} rounded-2xl backdrop-blur-xl border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-cyan-400/50 ${
-                  inMyList
-                    ? "bg-cyan-950/75 border-cyan-400 text-white shadow-[0_0_25px_rgba(34,211,238,0.55)]"
-                    : "bg-slate-900/85 hover:bg-cyan-950/40 border-cyan-500/45 hover:border-cyan-400 text-slate-200 hover:text-white shadow-[0_0_15px_rgba(34,211,238,0.2)]"
-                }`}
+                className={`group relative flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 ${actionBtnHeight} rounded-2xl backdrop-blur-xl border font-bold text-xs sm:text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${
+                  inMyList ? activeTheme.btnActive : activeTheme.btnSecondary
+                } ${activeTheme.ring}`}
               >
-                <span
-                  className={`text-sm sm:text-base transition-transform group-hover:scale-110 ${
-                    inMyList ? "text-cyan-300" : "text-sky-300"
-                  }`}
-                >
+                <span className="text-sm sm:text-base transition-transform group-hover:scale-110 shrink-0">
                   {inMyList ? "✓" : "🔖"}
                 </span>
-                <span>{inMyList ? "Saved" : "Save for Later"}</span>
+                <span className="truncate">
+                  {inMyList ? "Saved" : "Save for Later"}
+                </span>
               </button>
             </div>
 
             {actionFeedback && (
               <p
-                className={`text-xs font-bold ${activeTheme.text} transition animate-fade-in mt-1`}
+                className={`text-xs font-bold ${activeTheme.text} transition mt-1`}
               >
                 {actionFeedback}
               </p>
             )}
           </div>
 
-          {/* Cast Section */}
+          {/* Cast Section (Tap any actor to search their filmography) */}
           {castList.length > 0 && (
-            <div className="mt-2 pt-2 pb-1 w-full space-y-3.5">
-              <div className="flex items-center justify-between px-1">
-                <h2 className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-white">
-                  Cast
-                </h2>
+            <div className="mt-1 pt-2 pb-1 w-full space-y-3.5">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className={`w-1.5 h-5 rounded-full shrink-0 ${activeTheme.accentBar}`}
+                  />
+                  <h2 className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-white">
+                    Cast
+                  </h2>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => scrollCast("left")}
                     className={`${
                       largeButtons ? "w-9 h-9 text-sm" : "w-7 h-7 text-xs"
-                    } rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/15 flex items-center justify-center font-bold text-white shadow-md transition cursor-pointer`}
+                    } rounded-lg border flex items-center justify-center font-bold shadow-md transition cursor-pointer focus:outline-none focus:ring-2 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
                     aria-label="Scroll cast left"
                   >
                     ◀
@@ -1427,7 +1642,7 @@ export function DetailsPage() {
                     onClick={() => scrollCast("right")}
                     className={`${
                       largeButtons ? "w-9 h-9 text-sm" : "w-7 h-7 text-xs"
-                    } rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/15 flex items-center justify-center font-bold text-white shadow-md transition cursor-pointer`}
+                    } rounded-lg border flex items-center justify-center font-bold shadow-md transition cursor-pointer focus:outline-none focus:ring-2 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
                     aria-label="Scroll cast right"
                   >
                     ▶
@@ -1440,14 +1655,23 @@ export function DetailsPage() {
                 className="flex gap-4 sm:gap-5 overflow-x-auto pb-2 pt-1 px-1 scrollbar-none scroll-smooth w-full"
               >
                 {castList.slice(0, 15).map((actor: any) => (
-                  <div
+                  <button
                     key={actor.id}
-                    className="group flex flex-col items-center text-center shrink-0 w-20 sm:w-24"
+                    type="button"
+                    onClick={() =>
+                      navigate({ to: "/search", search: { q: actor.name } })
+                    }
+                    className="group flex flex-col items-center text-center shrink-0 w-20 sm:w-24 cursor-pointer focus:outline-none"
+                    title={`Search titles starring ${actor.name}`}
                   >
                     <div
-                      className={`p-[2.5px] rounded-full bg-gradient-to-tr ${activeTheme.avatarRing} shadow-[0_0_18px_rgba(168,85,247,0.35)] group-hover:shadow-[0_0_25px_rgba(56,189,248,0.65)] transition-all duration-300 mb-2 group-hover:scale-105`}
+                      className={`p-[2.5px] rounded-full bg-gradient-to-tr ${activeTheme.avatarRing} ${
+                        glowOff ? "shadow-md" : activeTheme.avatarGlow
+                      } transition-all duration-300 mb-2 group-hover:scale-105`}
                     >
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-slate-950 border-2 border-slate-950">
+                      <div
+                        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 ${activeTheme.avatarFrame}`}
+                      >
                         <img
                           src={
                             actor.profile_path
@@ -1464,71 +1688,93 @@ export function DetailsPage() {
                     <h3 className="text-[11px] sm:text-xs font-bold text-white truncate w-full px-0.5">
                       {actor.name}
                     </h3>
-                    <p className="text-[10px] text-slate-400 font-medium truncate w-full px-0.5">
+                    <p
+                      className={`text-[10px] font-medium truncate w-full px-0.5 ${activeTheme.subMutedText}`}
+                    >
                       {actor.character || "Character"}
                     </p>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Budget, Production, & Language Cards */}
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mt-1 w-full">
-            <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-slate-950/75 p-3 sm:p-4 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-left group hover:border-purple-400/50 transition duration-300">
-              <span className="block text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+          {/* Budget, Production, & Language Cards (Stacks cleanly on narrow portrait phones) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 mt-1 w-full">
+            <div
+              className={`relative overflow-hidden rounded-2xl border p-3.5 sm:p-4 backdrop-blur-xl text-left transition duration-300 ${activeTheme.statCard}`}
+            >
+              <span
+                className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${activeTheme.subMutedText}`}
+              >
                 Budget
               </span>
-              <span className="text-xs sm:text-lg font-black text-white truncate block">
+              <span className="text-sm sm:text-lg font-black text-white truncate block">
                 {budget}
               </span>
-              <div
-                className={`absolute inset-x-3 bottom-0 h-[2px] bg-gradient-to-r ${activeTheme.laserLine} opacity-85 shadow-[0_0_12px_rgba(236,72,153,0.9)]`}
-              />
+              {!glowOff && (
+                <div
+                  className={`absolute inset-x-3 bottom-0 h-[2px] bg-gradient-to-r ${activeTheme.laserLine} opacity-85`}
+                />
+              )}
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-slate-950/75 p-3 sm:p-4 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-left group hover:border-purple-400/50 transition duration-300">
-              <span className="block text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            <div
+              className={`relative overflow-hidden rounded-2xl border p-3.5 sm:p-4 backdrop-blur-xl text-left transition duration-300 ${activeTheme.statCard}`}
+            >
+              <span
+                className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${activeTheme.subMutedText}`}
+              >
                 Production
               </span>
               <span
-                className="text-xs sm:text-lg font-black text-white truncate block"
+                className="text-sm sm:text-lg font-black text-white truncate block"
                 title={productionCompanies}
               >
                 {productionCompanies}
               </span>
-              <div
-                className={`absolute inset-x-3 bottom-0 h-[2px] bg-gradient-to-r ${activeTheme.laserLine} opacity-85 shadow-[0_0_12px_rgba(236,72,153,0.9)]`}
-              />
+              {!glowOff && (
+                <div
+                  className={`absolute inset-x-3 bottom-0 h-[2px] bg-gradient-to-r ${activeTheme.laserLine} opacity-85`}
+                />
+              )}
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-slate-950/75 p-3 sm:p-4 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-left group hover:border-purple-400/50 transition duration-300">
-              <span className="block text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            <div
+              className={`relative overflow-hidden rounded-2xl border p-3.5 sm:p-4 backdrop-blur-xl text-left transition duration-300 ${activeTheme.statCard}`}
+            >
+              <span
+                className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${activeTheme.subMutedText}`}
+              >
                 Language
               </span>
-              <span className="text-xs sm:text-lg font-black text-white truncate block">
+              <span className="text-sm sm:text-lg font-black text-white truncate block">
                 {originalLanguageName || "English"}
               </span>
-              <div
-                className={`absolute inset-x-3 bottom-0 h-[2px] bg-gradient-to-r ${activeTheme.laserLine} opacity-85 shadow-[0_0_12px_rgba(236,72,153,0.9)]`}
-              />
+              {!glowOff && (
+                <div
+                  className={`absolute inset-x-3 bottom-0 h-[2px] bg-gradient-to-r ${activeTheme.laserLine} opacity-85`}
+                />
+              )}
             </div>
           </div>
 
           {/* Similar Recommended Titles */}
           {mappedRecommendations.length > 0 && (
-            <div className="mt-6 pt-5 border-t border-white/10 space-y-4 w-full">
-              <div className="mb-3 flex items-center justify-between px-1 text-left w-full">
-                <div className="flex items-center gap-2.5">
+            <div
+              className={`mt-5 pt-5 border-t space-y-4 w-full ${activeTheme.dividerBorder}`}
+            >
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-left w-full">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <span
-                    className={`w-1.5 h-6 rounded-full ${activeTheme.accentBar}`}
+                    className={`w-1.5 h-6 rounded-full shrink-0 ${activeTheme.accentBar}`}
                   />
                   <h3 className="text-base sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
                     <span>✨ Similar Recommended Titles</span>
                   </h3>
                 </div>
                 <span
-                  className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 ${activeTheme.text}`}
+                  className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${activeTheme.badge}`}
                 >
                   {mappedRecommendations.length} matches
                 </span>
@@ -1567,14 +1813,14 @@ export function DetailsPage() {
                 animation: flashTwice 8s ease-in-out forwards;
               }
             `}</style>
-            <div className="flex flex-col items-center gap-0.5 bg-black/35 backdrop-blur-md px-4.5 py-2 rounded-xl border border-white/10 shadow-2xl">
+            <div
+              className={`flex flex-col items-center gap-0.5 backdrop-blur-md px-4 py-2 rounded-xl border shadow-2xl ${activeTheme.surfacePanel}`}
+            >
               <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white">
                 More Content Details
               </span>
               <span
-                className={`text-xl font-black animate-slow-glow ${getThemeArrowColor(
-                  appTheme
-                )}`}
+                className={`text-xl font-black animate-slow-glow ${activeTheme.arrow}`}
               >
                 ⌄
               </span>
