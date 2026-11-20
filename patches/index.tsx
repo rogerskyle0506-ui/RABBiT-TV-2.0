@@ -24,6 +24,7 @@ import {
 } from "@/lib/settings";
 import { getRawWatchHistory, isTitleDisliked } from "@/lib/watch-history";
 import { isTitleBroken } from "@/lib/broken-links";
+import { bgAudio } from "@/lib/background-audio";
 
 const navTabs = [
   "Home",
@@ -101,6 +102,21 @@ function getDetailsSearch(item: MediaItem): { id: string; type: "movie" | "tv" }
       ? "tv"
       : "movie";
   return { id: cleanId, type };
+}
+
+function getPlayerSearch(item: MediaItem): {
+  id: string;
+  type: "movie" | "tv";
+  season: number;
+  episode: number;
+} {
+  const details = getDetailsSearch(item);
+  return {
+    id: details.id,
+    type: details.type,
+    season: 1,
+    episode: 1,
+  };
 }
 
 function optimizePosterUrl(url: string, width: "w342" | "w500"): string {
@@ -278,6 +294,7 @@ export function MediaCard({
 
   const dimensions = getPosterDimensions(cardSize);
   const detailsSearch = getDetailsSearch(item);
+  const playerSearch = getPlayerSearch(item);
   const optimizedImage = optimizePosterUrl(item.image, posterWidth);
   const isCollector = appearance.cardStyle === "collector-showcase";
   const layout = appearance.infoLayout;
@@ -473,8 +490,9 @@ export function MediaCard({
             {item.year && <span className="shrink-0">{item.year}</span>}
           </div>
           <Link
-            to="/details"
-            search={detailsSearch}
+            to="/player"
+            search={playerSearch}
+            onClick={() => bgAudio.pause()}
             className={`mt-1 block w-full text-center rounded-xl border ${cardThemeStyles.watchBtn} ${
               largeButtons ? "py-2.5 text-xs" : "py-1.5 text-[10px]"
             } font-bold tracking-wider uppercase transition focus:outline-none focus:ring-2 ${
@@ -490,8 +508,9 @@ export function MediaCard({
       {!isBelow && !isClean && !isHoverReveal && (
         <div className={`p-2 flex items-center justify-between z-20 ${cardThemeStyles.watchBar}`}>
           <Link
-            to="/details"
-            search={detailsSearch}
+            to="/player"
+            search={playerSearch}
+            onClick={() => bgAudio.pause()}
             className={`w-full text-center rounded-xl border ${cardThemeStyles.watchBtn} ${
               largeButtons ? "py-2.5 text-xs" : "py-1.5 text-[10px]"
             } font-bold tracking-wider uppercase transition focus:outline-none focus:ring-2 ${
@@ -1164,12 +1183,12 @@ function Home() {
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
-      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 sm:gap-4 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 justify-items-center";
     }
     if (cardSize === "medium") {
-      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5 justify-items-center";
     }
-    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 justify-items-center";
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 justify-items-center";
   }, [cardSize]);
 
   // Comprehensive per-theme visual tokens — zero hardcoded blue/slate/amber fallbacks
@@ -1449,6 +1468,9 @@ function Home() {
   const heroDetailsSearch = activeHeroItem
     ? getDetailsSearch(activeHeroItem)
     : null;
+  const heroPlayerSearch = activeHeroItem
+    ? getPlayerSearch(activeHeroItem)
+    : null;
 
   const pillTrackMaskStyle: React.CSSProperties = {
     maskImage:
@@ -1526,7 +1548,7 @@ function Home() {
           </div>
         </div>
 
-        <div className="mx-auto max-w-7xl px-2 sm:px-6 overflow-x-hidden flex flex-col items-center">
+        <div className="mx-auto max-w-7xl px-2 sm:px-6 overflow-x-clip flex flex-col items-center">
           {/* Personalized Greeting & Quick "Surprise Me" Bar */}
           {(greetingText || filteredItems.length > 0) && (
             <div
@@ -1565,17 +1587,17 @@ function Home() {
             </div>
           )}
 
-          {/* Clean Split Hero Card: Unobstructed Cover Art Above + Theme-Matched Details Panel Below */}
-          {activeHeroItem && heroDetailsSearch ? (
+          {/* Clean Split Hero Card: 100% Unobstructed Cover Art Above + Theme-Matched Details Panel Below */}
+          {activeHeroItem && heroDetailsSearch && heroPlayerSearch ? (
             <div
               data-tour="hero-banner"
               className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] flex flex-col group ${themeStyles.heroContainer}`}
             >
-              {/* Top: Pure, Unobstructed Cover Art (Zero Overlaid Text, Theme-Matched Focus Ring & Edge Fade) */}
+              {/* Top: Pure Cover Art — Strictly Zero Text, Badges, or Gradients Overlaid */}
               <Link
                 to="/details"
                 search={heroDetailsSearch}
-                className={`relative block w-full h-[240px] sm:h-[320px] md:h-[380px] overflow-hidden bg-black focus:outline-none focus:ring-4 ${themeStyles.focusRing}`}
+                className={`relative block w-full aspect-[16/10] sm:aspect-[16/9] max-h-[420px] overflow-hidden bg-black focus:outline-none focus:ring-4 ${themeStyles.focusRing}`}
               >
                 <img
                   src={optimizePosterUrl(
@@ -1585,9 +1607,6 @@ function Home() {
                   alt={activeHeroItem.title}
                   decoding="async"
                   className="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
-                />
-                <div
-                  className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t ${themeStyles.heroImageFade} to-transparent`}
                 />
               </Link>
 
@@ -1642,8 +1661,9 @@ function Home() {
                 <div className="pt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center flex-wrap gap-2.5">
                     <Link
-                      to="/details"
-                      search={heroDetailsSearch}
+                      to="/player"
+                      search={heroPlayerSearch}
+                      onClick={() => bgAudio.pause()}
                       data-tour="hero-play"
                       className={`inline-flex items-center gap-2 ${
                         largeButtons
@@ -1942,8 +1962,8 @@ function Home() {
             data-tour={activeTab === "My List" ? "favorites-grid" : "catalog-grid"}
             className="mb-8 px-1 w-full max-w-6xl"
           >
-            <div className="mb-4 flex items-center justify-between px-1">
-              <div className="flex items-center gap-2.5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-1">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <span
                   className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`}
                 />
