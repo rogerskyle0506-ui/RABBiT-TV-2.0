@@ -5,6 +5,12 @@ import { PublicBugFeedModal } from "@/components/PublicBugFeedModal";
 import { UserNotifier } from "@/components/UserNotifier";
 import { Screensaver } from "@/components/Screensaver";
 import { SplashIntro } from "@/components/SplashIntro";
+import { ProfileSwitcherModal } from "@/components/ProfileSwitcherModal";
+import {
+  ensurePrimaryProfileInitialized,
+  OPEN_PROFILE_SWITCHER_EVENT,
+  PROFILES_UPDATED_EVENT,
+} from "@/lib/profiles";
 import {
   Outlet,
   createRootRoute,
@@ -545,6 +551,7 @@ function RootComponent() {
     pathname.startsWith("/live-player") || pathname.startsWith("/player");
 
   const [showSplashIntro, setShowSplashIntro] = useState(true);
+  const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
   const [showFirstStartModal, setShowFirstStartModal] = useState(false);
   const [showBugModal, setShowBugModal] = useState(false);
   const [showBugFeedModal, setShowBugFeedModal] = useState(false);
@@ -753,6 +760,7 @@ function RootComponent() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       getOrCreateDeviceId();
+      ensurePrimaryProfileInitialized();
       applyAllSettingsToDocument();
 
       const ua = navigator.userAgent.toLowerCase();
@@ -870,17 +878,29 @@ function RootComponent() {
       setShowTosModal(true);
     };
 
+    const handleOpenSwitcherEvent = () => {
+      setShowProfileMenu(false);
+      setShowProfileSwitcher(true);
+    };
+
     syncRootStateFromSettings();
     window.addEventListener("rabtv_settings_updated", syncRootStateFromSettings);
+    window.addEventListener(PROFILES_UPDATED_EVENT, syncRootStateFromSettings);
     window.addEventListener(SIDEBAR_TOGGLE_EVENT, handleSidebarToggleEvent);
     window.addEventListener(TOS_OPEN_EVENT, handleOpenTosEvent);
+    window.addEventListener(OPEN_PROFILE_SWITCHER_EVENT, handleOpenSwitcherEvent);
     return () => {
       window.removeEventListener(
         "rabtv_settings_updated",
         syncRootStateFromSettings
       );
+      window.removeEventListener(PROFILES_UPDATED_EVENT, syncRootStateFromSettings);
       window.removeEventListener(SIDEBAR_TOGGLE_EVENT, handleSidebarToggleEvent);
       window.removeEventListener(TOS_OPEN_EVENT, handleOpenTosEvent);
+      window.removeEventListener(
+        OPEN_PROFILE_SWITCHER_EVENT,
+        handleOpenSwitcherEvent
+      );
     };
   }, [navigate]);
 
@@ -969,6 +989,14 @@ function RootComponent() {
             onFinish={() => setShowSplashIntro(false)}
           />
         )}
+
+        {/* Household Multi-Profile Switcher ("Who's Watching?") */}
+        <ProfileSwitcherModal
+          isOpen={showProfileSwitcher && !showSplashIntro && !showFirstStartModal}
+          appTheme={appTheme}
+          canDismiss={true}
+          onClose={() => setShowProfileSwitcher(false)}
+        />
         <PreviewHostBridge />
         <HolidayOverlay />
         <AppWallpaper />
@@ -1023,9 +1051,17 @@ function RootComponent() {
                 />
               )}
 
-              {/* Right: Profile Pill with Mascot & Kids Lock Indicator */}
+              {/* Right: Corner Clock Pill + Kids Badge + Profile Pill */}
               {savedProfileName && !showFirstStartModal && (
                 <div className="order-2 sm:order-3 flex items-center gap-1.5 shrink-0">
+                  {showCornerClock && cornerClockText && !isPlayerRoute && (
+                    <span
+                      data-tour="corner-clock"
+                      className={`hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] font-extrabold tracking-wider ${tokens.clockPill}`}
+                    >
+                      🕒 {cornerClockText}
+                    </span>
+                  )}
                   {kidsLocked && (
                     <span
                       className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider"
@@ -1198,20 +1234,7 @@ function RootComponent() {
             )}
           </div>
 
-          {/* Optional Couch Corner Clock (Auto-hidden on Player routes where HUD clock is built-in) */}
-          {showCornerClock &&
-            cornerClockText &&
-            !showFirstStartModal &&
-            !isPlayerRoute && (
-              <div
-                data-tour="corner-clock"
-                className={`rabtv-vidsrc-protected fixed bottom-4 left-4 z-30 pointer-events-none rounded-xl border px-3 py-1.5 backdrop-blur-md ${tokens.clockPill}`}
-              >
-                <span className="text-xs font-extrabold tracking-wider">
-                  🕒 {cornerClockText}
-                </span>
-              </div>
-            )}
+
 
           {/* USER NOTIFICATION LISTENER TOAST */}
           <UserNotifier appTheme={appTheme} />
