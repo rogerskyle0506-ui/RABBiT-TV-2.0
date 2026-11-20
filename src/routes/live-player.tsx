@@ -26,6 +26,17 @@ import { logLiveChannelWatch } from '@/lib/watch-history';
 import { getChannelDescription } from '@/lib/channel-descriptions';
 import { AppWallpaper } from '@/components/AppWallpaper';
 import { bgAudio } from '@/lib/background-audio';
+import { LiveMiniGuide, type MiniGuideMode } from '@/components/LiveMiniGuide';
+
+function isSafeHttpUrl(raw: string): boolean {
+  if (!raw) return false;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
 
 export const Route = createFileRoute('/live-player')({
   component: LivePlayerComponent,
@@ -416,10 +427,29 @@ function LivePlayerComponent() {
   const [showControls, setShowControls] = useState(true);
   const [pinFeedback, setPinFeedback] = useState<string | null>(null);
 
+  // Slide-Over Mini-Guide & Split-Screen Sports Mode state
+  const [miniGuideOpen, setMiniGuideOpen] = useState(false);
+  const [miniGuideMode, setMiniGuideMode] = useState<MiniGuideMode>('tune');
+  const [splitChannel, setSplitChannel] = useState<LiveChannel | null>(null);
+  const [splitStatus, setSplitStatus] = useState<StreamStatus>('checking');
+  const [activeAudioPane, setActiveAudioPane] = useState<'primary' | 'secondary'>('primary');
+
   const videoRef = useRef<HTMLVideoElement>(null);
+  const secondaryVideoRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<any>(null);
+  const secondaryHlsRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
+
+  const safePrimaryUrl = useMemo(
+    () => (isSafeHttpUrl(streamUrl) ? streamUrl : ''),
+    [streamUrl]
+  );
+  const splitStreamUrl = useMemo(() => {
+    const raw = (splitChannel?.streamUrl || splitChannel?.url || '').trim();
+    return isSafeHttpUrl(raw) ? raw : '';
+  }, [splitChannel]);
+  const isSplitActive = Boolean(splitChannel && splitStreamUrl && !isLowRam);
 
   // Resolve canonical channelId (supports both new and legacy links)
   const resolvedChannelId = useMemo(() => {
@@ -575,11 +605,30 @@ function LivePlayerComponent() {
     [navigate]
   );
 
+  // Auto-disable Split-Screen if 1-2GB Low RAM mode is turned on
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.volume = isMuted ? 0 : volume;
+    if (isLowRam && splitChannel) {
+      setSplitChannel(null);
+      setActiveAudioPane('primary');
     }
-  }, [volume, isMuted]);
+  }, [isLowRam, splitChannel]);
+
+  // Route active audio cleanly between Screen 1 and Screen 2 in Split-Screen Mode
+  useEffect(() => {
+    const primaryVol =
+      isMuted || (isSplitActive && activeAudioPane !== 'primary') ? 0 : volume;
+    const secondaryVol =
+      isMuted || !isSplitActive || activeAudioPane !== 'secondary' ? 0 : volume;
+
+    if (videoRef.current) {
+      videoRef.current.volume = primaryVol;
+      videoRef.current.muted = primaryVol === 0;
+    }
+    if (secondaryVideoRef.current) {
+      secondaryVideoRef.current.volume = secondaryVol;
+      secondaryVideoRef.current.muted = secondaryVol === 0;
+    }
+  }, [volume, isMuted, isSplitActive, activeAudioPane]);
 
   const revealControlsTemporarily = useCallback(() => {
     setShowControls(true);
@@ -709,6 +758,10 @@ function LivePlayerComponent() {
       } else if (e.key === 'a' || e.key === 'A') {
         e.preventDefault();
         cycleAspectMode();
+      } else if (e.key === 'g' || e.key === 'G') {
+        e.preventDefault();
+        setMiniGuideMode('tune');
+        setMiniGuideOpen((prev) => !prev);
       } else if (e.key === 'PageUp' && nextChannel) {
         e.preventDefault();
         surfToChannel(nextChannel);
@@ -742,6 +795,151 @@ function LivePlayerComponent() {
       hlsRef.current = null;
     }
   }, []);
+
+  const destroySecondaryHls = useCallback(() => {
+    if (secondaryHlsRef.current) {
+      try {
+        secondaryHlsRef.current.stopLoad();
+        secondaryHlsRef.current.detachMedia();
+        secondaryHlsRef.current.destroy();
+      } catch {
+        // Ignore teardown errors
+      }
+      secondaryHlsRef.current = null;
+    }
+  }, []);
+
+  // Secondary Split-Screen HLS Lifecycle (Capped buffers + instant cleanup on close)
+  useEffect(() => {
+    const video = secondaryVideoRef.current;
+    if (!isSplitActive || !video || !splitStreamUrl) {
+      destroySecondaryHls();
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: number | null = null;
+    let recoveryAttempts = 0;
+
+    setSplitStatus('checking');
+    destroySecondaryHls();
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+
+    const onPlaying = () => {
+      if (!cancelled) setSplitStatus('live');
+    };
+    const onError = () => {
+      if (!cancelled && !secondaryHlsRef.current) setSplitStatus('offline');
+    };
+
+    video.addEventListener('playing', onPlaying);
+    video.addEventListener('error', onError);
+
+    timeoutId = window.setTimeout(() => {
+      if (!cancelled && video.paused && video.readyState < 2) {
+        setSplitStatus('offline');
+      }
+    }, 10000);
+
+    const startSecondary = () => {
+      if (cancelled) return;
+      const HlsClass = (window as any).Hls;
+      const limits = getHardwareLimits();
+
+      if (HlsClass && HlsClass.isSupported() && splitStreamUrl.includes('.m3u8')) {
+        const hls2 = new HlsClass({
+          enableWorker: true,
+          lowLatencyMode: false,
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: 5,
+          maxBufferLength: Math.min(12, limits.hlsMaxBufferLengthSec),
+          maxMaxBufferLength: Math.min(20, limits.hlsMaxBufferLengthSec * 2),
+          backBufferLength: 6,
+          maxBufferSize: Math.min(18 * 1024 * 1024, limits.hlsMaxBufferSizeBytes),
+          capLevelToPlayerSize: true,
+          startLevel: -1,
+        });
+
+        secondaryHlsRef.current = hls2;
+        hls2.loadSource(splitStreamUrl);
+        hls2.attachMedia(video);
+
+        hls2.on(HlsClass.Events.MANIFEST_PARSED, () => {
+          if (cancelled) return;
+          video
+            .play()
+            .then(() => {
+              if (!cancelled) setSplitStatus('live');
+            })
+            .catch(() => {});
+        });
+
+        hls2.on(HlsClass.Events.ERROR, (_ev: any, data: any) => {
+          if (!data.fatal || cancelled) return;
+          if (data.type === HlsClass.ErrorTypes.NETWORK_ERROR) {
+            hls2.startLoad();
+          } else if (
+            data.type === HlsClass.ErrorTypes.MEDIA_ERROR &&
+            recoveryAttempts < 2
+          ) {
+            recoveryAttempts++;
+            hls2.recoverMediaError();
+          } else {
+            setSplitStatus('offline');
+            destroySecondaryHls();
+          }
+        });
+        return;
+      }
+
+      if (
+        video.canPlayType('application/vnd.apple.mpegurl') ||
+        !splitStreamUrl.includes('.m3u8')
+      ) {
+        video.src = splitStreamUrl;
+        video
+          .play()
+          .then(() => !cancelled && setSplitStatus('live'))
+          .catch(() => !cancelled && setSplitStatus('offline'));
+        return;
+      }
+
+      setSplitStatus('offline');
+    };
+
+    if (splitStreamUrl.includes('.m3u8') && !(window as any).Hls) {
+      const existing = document.querySelector(
+        'script[data-hls-js]'
+      ) as HTMLScriptElement | null;
+      if (existing) {
+        existing.addEventListener('load', startSecondary, { once: true });
+      } else {
+        const script = document.createElement('script');
+        script.src =
+          'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
+        script.async = true;
+        script.dataset.hlsJs = 'true';
+        script.onload = startSecondary;
+        script.onerror = () => !cancelled && setSplitStatus('offline');
+        document.head.appendChild(script);
+      }
+    } else {
+      startSecondary();
+    }
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+      video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('error', onError);
+      destroySecondaryHls();
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    };
+  }, [isSplitActive, splitStreamUrl, retryNonce, destroySecondaryHls]);
 
   /**
    * Honors the user's Preferred Stream Resolution from settings.ts
@@ -780,7 +978,7 @@ function LivePlayerComponent() {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !streamUrl) {
+    if (!video || !safePrimaryUrl) {
       setStreamStatus('offline');
       return;
     }
@@ -1002,6 +1200,56 @@ function LivePlayerComponent() {
     setRetryNonce((n) => n + 1);
   };
 
+  const openTuneMiniGuide = useCallback(() => {
+    setMiniGuideMode('tune');
+    setMiniGuideOpen(true);
+  }, []);
+
+  const openSplitMiniGuide = useCallback(() => {
+    if (isLowRam) return;
+    setMiniGuideMode('split');
+    setMiniGuideOpen(true);
+  }, [isLowRam]);
+
+  const handleMiniGuideSelect = useCallback(
+    (ch: LiveChannel) => {
+      if (miniGuideMode === 'split') {
+        setSplitChannel(ch);
+        setActiveAudioPane('secondary');
+        logLiveChannelWatch({
+          title: ch.title || 'Live Channel',
+          logo: ch.logo || '',
+          streamUrl: ch.streamUrl || ch.url,
+          channelId: ch.channelId || ch.streamUrl || ch.url,
+        });
+        return;
+      }
+      surfToChannel(ch);
+    },
+    [miniGuideMode, surfToChannel]
+  );
+
+  const handleCloseSplitScreen = useCallback(() => {
+    destroySecondaryHls();
+    setSplitChannel(null);
+    setActiveAudioPane('primary');
+  }, [destroySecondaryHls]);
+
+  const handleSwapSplitScreens = useCallback(() => {
+    if (!splitChannel) return;
+    const oldPrimary: LiveChannel = {
+      channelId: resolvedChannelId,
+      title: title || 'Live Channel',
+      logo: logo || '',
+      url: streamUrl,
+      streamUrl,
+    };
+    const nextPrimary = splitChannel;
+    setSplitChannel(oldPrimary);
+    setActiveAudioPane((prev) => (prev === 'primary' ? 'secondary' : 'primary'));
+    surfToChannel(nextPrimary);
+  }, [splitChannel, resolvedChannelId, title, logo, streamUrl, surfToChannel]);
+
   const themeStyles = useMemo(
     () => getLivePlayerThemeTokens(appTheme),
     [appTheme]
@@ -1092,6 +1340,17 @@ function LivePlayerComponent() {
             ⏭
           </button>
         )}
+
+        {/* Slide-Over Live Mini-Guide Button */}
+        <button
+          type="button"
+          onClick={openTuneMiniGuide}
+          className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-extrabold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeStyles.hudBtn} ${themeStyles.focusRing}`}
+          title="Open Slide-Over Channel Guide (G)"
+        >
+          <span>📺</span>
+          <span className="hidden sm:inline">Guide</span>
+        </button>
 
         {/* Quality Selector Pill */}
         {qualityLevels.length > 0 && (
@@ -1354,6 +1613,38 @@ function LivePlayerComponent() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={openTuneMiniGuide}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 ${
+                largeButtons ? 'py-2 text-sm' : 'py-1.5 text-xs'
+              } font-extrabold shadow transition cursor-pointer focus:outline-none focus:ring-2 ${
+                themeStyles.btnSecondary
+              } ${themeStyles.focusRing}`}
+              title="Open Slide-Over Channel Mini-Guide (G)"
+            >
+              <span>📺 Channel List</span>
+            </button>
+
+            {!isLowRam && (
+              <button
+                type="button"
+                onClick={isSplitActive ? handleCloseSplitScreen : openSplitMiniGuide}
+                className={`hidden md:inline-flex items-center gap-1.5 rounded-full border px-3 ${
+                  largeButtons ? 'py-2 text-sm' : 'py-1.5 text-xs'
+                } font-extrabold shadow transition cursor-pointer focus:outline-none focus:ring-2 ${
+                  isSplitActive ? themeStyles.btnPinned : themeStyles.btnSecondary
+                } ${themeStyles.focusRing}`}
+                title={
+                  isSplitActive
+                    ? 'Exit Split-Screen Sports Mode'
+                    : 'Watch 2 Live Channels Side-by-Side'
+                }
+              >
+                <span>{isSplitActive ? '⊞ Exit Split' : '⊞ Split-Screen'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
               data-tour="channel-pin"
               onClick={handleTogglePin}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 ${
@@ -1420,25 +1711,180 @@ function LivePlayerComponent() {
 
         {/* Theater-Grade Live Video Player Stage + Non-Overlapping Mobile Controls Dock */}
         <div className="w-full space-y-2.5">
+          {/* Active Split-Screen Control Strip */}
+          {isSplitActive && splitChannel && (
+            <div
+              className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3.5 py-2 ${themeStyles.hudDock}`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`text-xs font-black ${themeStyles.accentText}`}>
+                  ⊞ Split-Screen Sports Mode
+                </span>
+                <span className={`text-[11px] font-semibold truncate ${themeStyles.mutedText}`}>
+                  Tap either screen to switch audio
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={openSplitMiniGuide}
+                  className={`rounded-xl border px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${themeStyles.hudBtn}`}
+                >
+                  📺 Change Screen 2
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSwapSplitScreens}
+                  className={`rounded-xl border px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${themeStyles.hudBtn}`}
+                >
+                  ⇄ Swap
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseSplitScreen}
+                  className={`rounded-xl border px-2.5 py-1 text-[11px] font-extrabold transition cursor-pointer ${themeStyles.hudBtn}`}
+                >
+                  ✕ Single View
+                </button>
+              </div>
+            </div>
+          )}
+
           <div
             ref={playerContainerRef}
             data-tour="video-player"
             onMouseMove={revealControlsTemporarily}
             onTouchStart={revealControlsTemporarily}
-            className={`w-full relative flex items-center justify-center rounded-2xl sm:rounded-3xl overflow-hidden bg-black border aspect-video max-h-[75dvh] box-border group select-none ${
+            className={`w-full relative flex items-center justify-center rounded-2xl sm:rounded-3xl overflow-hidden bg-black border ${
+              isSplitActive ? 'min-h-[300px] sm:min-h-[380px] md:aspect-[21/9]' : 'aspect-video'
+            } max-h-[75dvh] box-border group select-none ${
               themeStyles.playerFrame
             } ${glowOff ? 'shadow-2xl' : themeStyles.playerGlow}`}
           >
-            {streamUrl ? (
-              <video
-                ref={videoRef}
-                poster={TRANSPARENT_POSTER}
-                autoPlay
-                playsInline
-                controls={false}
-                onClick={togglePlayPause}
-                className={`w-full h-full ${videoFitClass} bg-black cursor-pointer`}
-              />
+            {safePrimaryUrl ? (
+              <div
+                className={
+                  isSplitActive
+                    ? 'grid grid-cols-1 md:grid-cols-2 w-full h-full bg-black gap-1 p-1'
+                    : 'w-full h-full'
+                }
+              >
+                {/* Screen 1 (Primary — Never unmounts when toggling Split-Screen!) */}
+                <div
+                  onClick={
+                    isSplitActive
+                      ? () => setActiveAudioPane('primary')
+                      : undefined
+                  }
+                  className={
+                    isSplitActive
+                      ? `relative w-full h-full min-h-[180px] rounded-xl overflow-hidden bg-black border-2 cursor-pointer transition ${
+                          activeAudioPane === 'primary'
+                            ? themeStyles.btnPinned
+                            : 'border-white/10 opacity-90 hover:opacity-100'
+                        }`
+                      : 'relative w-full h-full'
+                  }
+                >
+                  <video
+                    ref={videoRef}
+                    poster={TRANSPARENT_POSTER}
+                    autoPlay
+                    playsInline
+                    controls={false}
+                    onClick={isSplitActive ? undefined : togglePlayPause}
+                    className={`w-full h-full ${videoFitClass} bg-black cursor-pointer`}
+                  />
+
+                  {isSplitActive && (
+                    <div className="pointer-events-none absolute top-2 left-2 right-2 flex items-center justify-between gap-2 z-10">
+                      <span
+                        className={`rounded-lg border px-2 py-0.5 text-[10px] font-extrabold truncate max-w-[65%] backdrop-blur-md ${themeStyles.hudDock} text-white`}
+                      >
+                        1. {title}
+                      </span>
+                      <span
+                        className={`rounded-lg border px-2 py-0.5 text-[10px] font-extrabold shrink-0 backdrop-blur-md ${
+                          activeAudioPane === 'primary'
+                            ? themeStyles.badge
+                            : themeStyles.subtleBadge
+                        }`}
+                      >
+                        {activeAudioPane === 'primary' ? '🔊 Audio' : '🔇 Tap Audio'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Screen 2 (Secondary Broadcast — Mounted only while Split-Screen is active) */}
+                {isSplitActive && splitChannel && (
+                  <div
+                    onClick={() => setActiveAudioPane('secondary')}
+                    className={`relative w-full h-full min-h-[180px] rounded-xl overflow-hidden bg-black border-2 cursor-pointer transition ${
+                      activeAudioPane === 'secondary'
+                        ? themeStyles.btnPinned
+                        : 'border-white/10 opacity-90 hover:opacity-100'
+                    }`}
+                  >
+                    <video
+                      ref={secondaryVideoRef}
+                      poster={TRANSPARENT_POSTER}
+                      autoPlay
+                      playsInline
+                      controls={false}
+                      className={`w-full h-full ${videoFitClass} bg-black`}
+                    />
+
+                    <div className="pointer-events-none absolute top-2 left-2 right-2 flex items-center justify-between gap-2 z-10">
+                      <span
+                        className={`rounded-lg border px-2 py-0.5 text-[10px] font-extrabold truncate max-w-[65%] backdrop-blur-md ${themeStyles.hudDock} text-white`}
+                      >
+                        2. {splitChannel.title}
+                      </span>
+                      <span
+                        className={`rounded-lg border px-2 py-0.5 text-[10px] font-extrabold shrink-0 backdrop-blur-md ${
+                          activeAudioPane === 'secondary'
+                            ? themeStyles.badge
+                            : themeStyles.subtleBadge
+                        }`}
+                      >
+                        {activeAudioPane === 'secondary' ? '🔊 Audio' : '🔇 Tap Audio'}
+                      </span>
+                    </div>
+
+                    {splitStatus === 'checking' && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 gap-2 pointer-events-none">
+                        <div
+                          className={`h-7 w-7 rounded-full border-2 border-t-transparent animate-spin ${themeStyles.accentText}`}
+                        />
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider ${themeStyles.mutedText}`}
+                        >
+                          Tuning Screen 2…
+                        </span>
+                      </div>
+                    )}
+
+                    {splitStatus === 'offline' && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 gap-2 p-4 text-center">
+                        <span className="text-xs font-extrabold text-red-400">
+                          Screen 2 Feed Offline
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openSplitMiniGuide();
+                          }}
+                          className={`rounded-xl border px-3 py-1.5 text-[10px] font-extrabold cursor-pointer ${themeStyles.btnSecondary}`}
+                        >
+                          📺 Pick Another Channel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             ) : (
               <div
                 className={`text-center p-6 rounded-2xl border ${themeStyles.surfacePanel}`}
@@ -1450,7 +1896,7 @@ function LivePlayerComponent() {
             )}
 
             {/* Top HUD Overlay: Hidden during Connecting/Offline so it never collides with center splash */}
-            {streamStatus === 'live' && (
+            {streamStatus === 'live' && !isSplitActive && (
               <div
                 className={`absolute inset-x-2.5 sm:inset-x-3.5 top-2.5 sm:top-3.5 z-20 flex items-center justify-between gap-2 pointer-events-none transition-opacity duration-300 ${
                   showControls ? 'opacity-100' : 'opacity-0'
@@ -1754,6 +2200,20 @@ function LivePlayerComponent() {
           )}
         </div>
       </div>
+
+      {/* Slide-Over Transparent Live TV Mini-Guide */}
+      <LiveMiniGuide
+        isOpen={miniGuideOpen}
+        mode={miniGuideMode}
+        appTheme={appTheme}
+        channels={allChannels}
+        currentStreamUrl={safePrimaryUrl}
+        secondaryStreamUrl={splitStreamUrl}
+        isLowRam={isLowRam}
+        largeButtons={largeButtons}
+        onSelectChannel={handleMiniGuideSelect}
+        onClose={() => setMiniGuideOpen(false)}
+      />
     </div>
   );
 }
