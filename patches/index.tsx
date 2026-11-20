@@ -1593,12 +1593,22 @@ function Home() {
               data-tour="hero-banner"
               className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] flex flex-col group ${themeStyles.heroContainer}`}
             >
-              {/* Top: Pure Cover Art — Strictly Zero Text, Badges, or Gradients Overlaid */}
+              {/* Top: 100% Full Uncropped Cover Art — Zero Cropping, Zero Overlaid Text or Panels */}
               <Link
                 to="/details"
                 search={heroDetailsSearch}
-                className={`relative block w-full aspect-[16/10] sm:aspect-[16/9] max-h-[420px] overflow-hidden bg-black focus:outline-none focus:ring-4 ${themeStyles.focusRing}`}
+                className={`relative flex items-center justify-center w-full overflow-hidden bg-black focus:outline-none focus:ring-4 ${themeStyles.focusRing}`}
               >
+                {/* Subtle blurred ambient fill behind full poster on wide screens (desktop/tablet/TV) */}
+                {!isLowRam && (
+                  <img
+                    src={optimizePosterUrl(activeHeroItem.image, "w342")}
+                    alt=""
+                    aria-hidden="true"
+                    decoding="async"
+                    className="hidden sm:block pointer-events-none absolute inset-0 h-full w-full object-cover object-center blur-2xl scale-110 opacity-35"
+                  />
+                )}
                 <img
                   src={optimizePosterUrl(
                     activeHeroItem.image,
@@ -1606,7 +1616,7 @@ function Home() {
                   )}
                   alt={activeHeroItem.title}
                   decoding="async"
-                  className="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+                  className="relative z-10 block w-full h-auto sm:w-auto sm:h-[480px] md:h-[540px] sm:max-w-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                 />
               </Link>
 
@@ -1695,7 +1705,7 @@ function Home() {
                       className={`flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 ${themeStyles.dividerBorder}`}
                     >
                       <span
-                        className={`text-[10px] font-bold uppercase tracking-wider sm:hidden ${themeStyles.subMutedText}`}
+                        className={`text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 sm:hidden ${themeStyles.subMutedText}`}
                       >
                         Featured {currentHeroIndex + 1} / {heroItems.length}
                       </span>
