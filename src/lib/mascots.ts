@@ -10,7 +10,11 @@ export const MASCOT_UPDATED_EVENT = "rabtv_mascot_updated";
 
 const GITHUB_MASCOT_BASE_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/mascots/";
-const LOCAL_MASCOT_BASE_PATH = "/assets/mascots/";
+const GITHUB_MASCOT_API_URL =
+  "https://api.github.com/repos/rogerskyle0506-ui/RABBiT-TV-2.0/contents/assets/mascots";
+const REMOTE_MASCOT_CACHE_KEY = "rabtv_remote_mascots_cache_v1";
+const REMOTE_MASCOT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const DEFAULT_EMOJI = "\u{1F430}";
 
 export type MascotCategory = "custom" | "emoji";
 
@@ -24,40 +28,80 @@ export interface MascotBadgeOption {
   emojiFallback: string;
 }
 
-/**
- * Exact custom mascot badge files committed in RABBiT-TV-2.0/assets/mascots/
- * To add more badges later, just append the filename to this array.
- */
-const CUSTOM_MASCOT_FILENAMES: readonly string[] = [
-  "1795157415422.jpg",
-  "1795157420589.jpg",
-  "1795157426107.jpg",
-  "1795157430755.jpg",
-  "1795157435196.jpg",
-  "1795157439106.jpg",
-  "1795157444300.jpg",
-  "1795157447473.jpg",
-  "1795157451595.jpg",
-  "1795157455329.jpg",
-  "1795158385829.png",
-  "1795158416414.png",
-  "1795158458124.png",
-];
-
 function isSafeFilename(name: string): boolean {
-  return /^[a-zA-Z0-9._-]+\.(png|jpg|jpeg|webp)$/i.test(name);
+  return /^[a-zA-Z0-9._-]+\.(png|jpg|jpeg|webp|gif)$/i.test(name);
 }
 
-export const CUSTOM_MASCOT_BADGES: MascotBadgeOption[] =
-  CUSTOM_MASCOT_FILENAMES.filter(isSafeFilename).map((filename, idx) => ({
-    id: `badge:${filename}`,
-    label: `Mascot Badge #${idx + 1}`,
-    category: "custom",
-    filename,
-    imageUrl: `${GITHUB_MASCOT_BASE_URL}${encodeURIComponent(filename)}`,
-    localUrl: `${LOCAL_MASCOT_BASE_PATH}${encodeURIComponent(filename)}`,
-    emojiFallback: "🐰",
-  }));
+function extractFilename(filePath: string): string {
+  const parts = String(filePath || "").split("/");
+  return parts[parts.length - 1] || "";
+}
+
+function formatFriendlyLabel(filename: string, index: number): string {
+  const base = filename.replace(/\.[^.]+$/, "");
+  // Pure numeric timestamps (e.g. 1795157415422.jpg) get clean numbered labels
+  if (/^\d+$/.test(base)) {
+    return `Mascot Badge #${index + 1}`;
+  }
+  const readable = base
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  return readable || `Mascot Badge #${index + 1}`;
+}
+
+/**
+ * Vite Build-Time Auto-Import:
+ * Automatically discovers and bundles EVERY image placed inside /assets/mascots/
+ * (or /src/assets/mascots/). Drop new .png / .jpg / .jpeg / .webp files into the
+ * folder and rebuild — no filename list to maintain, and 100% offline-ready in the APK.
+ */
+const BUNDLED_MASCOT_GLOB = import.meta.glob(
+  [
+    "/assets/mascots/*.{png,jpg,jpeg,webp,gif,PNG,JPG,JPEG,WEBP,GIF}",
+    "/src/assets/mascots/*.{png,jpg,jpeg,webp,gif,PNG,JPG,JPEG,WEBP,GIF}",
+  ],
+  {
+    eager: true,
+    query: "?url",
+    import: "default",
+  }
+) as Record<string, string>;
+
+function buildBundledMascots(): MascotBadgeOption[] {
+  const seenFilenames = new Set<string>();
+  const entries = Object.entries(BUNDLED_MASCOT_GLOB).sort(([a], [b]) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
+  );
+
+  const list: MascotBadgeOption[] = [];
+  for (const [filePath, resolvedAssetUrl] of entries) {
+    const filename = extractFilename(filePath);
+    if (!isSafeFilename(filename) || seenFilenames.has(filename)) continue;
+    seenFilenames.add(filename);
+
+    const encoded = encodeURIComponent(filename);
+    const bundledUrl = typeof resolvedAssetUrl === "string" ? resolvedAssetUrl : "";
+    const githubFallbackUrl = `${GITHUB_MASCOT_BASE_URL}${encoded}`;
+
+    list.push({
+      id: `badge:${filename}`,
+      label: formatFriendlyLabel(filename, list.length),
+      category: "custom",
+      filename,
+      // Primary: bundled inside the Vite/Capacitor build (instant + works offline)
+      imageUrl: bundledUrl || githubFallbackUrl,
+      // Secondary fallback: GitHub raw URL
+      localUrl: githubFallbackUrl,
+      emojiFallback: DEFAULT_EMOJI,
+    });
+  }
+
+  return list;
+}
+
+export const CUSTOM_MASCOT_BADGES: MascotBadgeOption[] = buildBundledMascots();
 
 export const EMOJI_MASCOT_BADGES: MascotBadgeOption[] =
   PROFILE_MASCOT_OPTIONS.map((m) => ({
@@ -73,7 +117,125 @@ export const ALL_MASCOT_BADGES: MascotBadgeOption[] = [
 ];
 
 export const DEFAULT_MASCOT_ID: string =
-  CUSTOM_MASCOT_BADGES[0]?.id || "🐰";
+  CUSTOM_MASCOT_BADGES[0]?.id || DEFAULT_EMOJI;
+
+/**
+ * Reads any cached remote filenames discovered from GitHub (for badges added
+ * after the APK was built) and merges them with Vite-bundled badges.
+ */
+function readCachedRemoteFilenames(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(REMOTE_MASCOT_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed?.filenames)) return [];
+    return parsed.filenames.filter(
+      (f: unknown): f is string => typeof f === "string" && isSafeFilename(f)
+    );
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Returns all currently known custom badges (Vite-bundled + any cached remote additions).
+ */
+export function getAllCustomMascotBadges(): MascotBadgeOption[] {
+  const merged = [...CUSTOM_MASCOT_BADGES];
+  const seen = new Set(merged.map((b) => b.filename));
+
+  for (const filename of readCachedRemoteFilenames()) {
+    if (seen.has(filename)) continue;
+    seen.add(filename);
+    const encoded = encodeURIComponent(filename);
+    merged.push({
+      id: `badge:${filename}`,
+      label: formatFriendlyLabel(filename, merged.length),
+      category: "custom",
+      filename,
+      imageUrl: `${GITHUB_MASCOT_BASE_URL}${encoded}`,
+      localUrl: `/assets/mascots/${encoded}`,
+      emojiFallback: DEFAULT_EMOJI,
+    });
+  }
+
+  return merged;
+}
+
+/**
+ * Optional 24-hour cached background check against GitHub's assets/mascots folder
+ * so newly committed badges can even appear before your next APK rebuild.
+ */
+export async function syncRemoteMascotBadges(
+  signal?: AbortSignal
+): Promise<MascotBadgeOption[]> {
+  if (typeof window === "undefined") return CUSTOM_MASCOT_BADGES;
+
+  try {
+    const rawCache = localStorage.getItem(REMOTE_MASCOT_CACHE_KEY);
+    if (rawCache) {
+      const parsed = JSON.parse(rawCache);
+      if (
+        parsed?.checkedAt &&
+        Date.now() - Number(parsed.checkedAt) < REMOTE_MASCOT_TTL_MS
+      ) {
+        return getAllCustomMascotBadges();
+      }
+    }
+  } catch {
+    // ignore malformed cache
+  }
+
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return getAllCustomMascotBadges();
+  }
+
+  const controller = new AbortController();
+  const onParentAbort = () => controller.abort();
+  signal?.addEventListener("abort", onParentAbort, { once: true });
+  const timer = window.setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const res = await fetch(GITHUB_MASCOT_API_URL, {
+      headers: { Accept: "application/vnd.github+json" },
+      signal: controller.signal,
+    });
+    if (!res.ok) return getAllCustomMascotBadges();
+    const items = await res.json();
+    if (!Array.isArray(items)) return getAllCustomMascotBadges();
+
+    const filenames = items
+      .filter(
+        (entry: any) =>
+          entry?.type === "file" &&
+          typeof entry?.name === "string" &&
+          isSafeFilename(entry.name)
+      )
+      .map((entry: any) => String(entry.name))
+      .sort((a: string, b: string) =>
+        a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
+      );
+
+    try {
+      localStorage.setItem(
+        REMOTE_MASCOT_CACHE_KEY,
+        JSON.stringify({ checkedAt: Date.now(), filenames })
+      );
+    } catch {
+      // ignore storage quota errors
+    }
+
+    window.dispatchEvent(new Event(MASCOT_UPDATED_EVENT));
+  } catch {
+    // Offline or rate-limited — bundled Vite badges still work 100%
+  } finally {
+    signal?.removeEventListener("abort", onParentAbort);
+    window.clearTimeout(timer);
+  }
+
+  return getAllCustomMascotBadges();
+}
 
 /**
  * Sanitizes any mascot identifier (either "badge:<filename>" or short emoji).
@@ -90,13 +252,11 @@ export function sanitizeMascotId(raw: unknown): string {
     return DEFAULT_MASCOT_ID;
   }
 
-  // Allow direct raw filename reference
   if (isSafeFilename(str)) {
     return `badge:${str}`;
   }
 
-  // Otherwise treat as classic emoji mascot
-  return str.slice(0, 8) || "🐰";
+  return str.slice(0, 8) || DEFAULT_EMOJI;
 }
 
 /**
@@ -105,29 +265,32 @@ export function sanitizeMascotId(raw: unknown): string {
 export function resolveMascotBadge(rawId?: string | null): MascotBadgeOption {
   const safeId = sanitizeMascotId(rawId);
 
-  const exactMatch = ALL_MASCOT_BADGES.find((b) => b.id === safeId);
+  const exactMatch =
+    getAllCustomMascotBadges().find((b) => b.id === safeId) ||
+    EMOJI_MASCOT_BADGES.find((b) => b.id === safeId);
   if (exactMatch) return exactMatch;
 
   if (safeId.startsWith("badge:")) {
     const filename = safeId.slice(6);
     if (isSafeFilename(filename)) {
+      const encoded = encodeURIComponent(filename);
       return {
         id: safeId,
-        label: "Custom Badge",
+        label: formatFriendlyLabel(filename, 0),
         category: "custom",
         filename,
-        imageUrl: `${GITHUB_MASCOT_BASE_URL}${encodeURIComponent(filename)}`,
-        localUrl: `${LOCAL_MASCOT_BASE_PATH}${encodeURIComponent(filename)}`,
-        emojiFallback: "🐰",
+        imageUrl: `${GITHUB_MASCOT_BASE_URL}${encoded}`,
+        localUrl: `/assets/mascots/${encoded}`,
+        emojiFallback: DEFAULT_EMOJI,
       };
     }
   }
 
   return {
-    id: safeId || "🐰",
+    id: safeId || DEFAULT_EMOJI,
     label: "Classic Mascot",
     category: "emoji",
-    emojiFallback: safeId || "🐰",
+    emojiFallback: safeId || DEFAULT_EMOJI,
   };
 }
 
@@ -170,7 +333,6 @@ export function setActiveMascotBadge(mascotId: string): string {
     // ignore storage quota errors
   }
 
-  // Keep legacy emoji setting synced if user picked a classic emoji
   if (!safeId.startsWith("badge:")) {
     try {
       setLegacyEmojiMascot(safeId);
