@@ -19,7 +19,6 @@ import {
   getLargeButtons,
   getGreetingStyle,
   getPersonalizedGreeting,
-  getProfileMascot,
   getKidsModeLocked,
 } from "@/lib/settings";
 import {
@@ -48,6 +47,11 @@ import {
   type EpisodeRadarAlert,
 } from "@/lib/episode-radar";
 import { MovieNightMatcher } from "@/components/MovieNightMatcher";
+import { MascotAvatar } from "@/components/MascotAvatar";
+import {
+  getActiveMascotBadge,
+  MASCOT_UPDATED_EVENT,
+} from "@/lib/mascots";
 
 const navTabs = [
   "Home",
@@ -776,7 +780,7 @@ function Home() {
   );
   const [greetingText, setGreetingText] = useState<string>("");
   const [profileMascot, setProfileMascot] = useState<string>(() =>
-    getProfileMascot()
+    getActiveMascotBadge()
   );
   const [isLowRam, setIsLowRam] = useState<boolean>(
     () => getHardwareLimits().effectiveMode === "low"
@@ -914,7 +918,7 @@ function Home() {
       setReducedMotion(getReducedMotion());
       setLargeButtons(getLargeButtons());
       setKidsLocked(getKidsModeLocked());
-      setProfileMascot(getProfileMascot());
+      setProfileMascot(getActiveMascotBadge());
       setIsLowRam(getHardwareLimits().effectiveMode === "low");
       setGreetingText(
         savedName ? getPersonalizedGreeting(savedName, getGreetingStyle()) : ""
@@ -953,6 +957,7 @@ function Home() {
     );
     window.addEventListener(CUSTOM_SHELVES_EVENT, loadSavedListsAndTheme);
     window.addEventListener(EPISODE_RADAR_UPDATED_EVENT, loadSavedListsAndTheme);
+    window.addEventListener(MASCOT_UPDATED_EVENT, loadSavedListsAndTheme);
 
     return () => {
       window.removeEventListener(CUSTOM_SHELVES_EVENT, loadSavedListsAndTheme);
@@ -960,6 +965,7 @@ function Home() {
         EPISODE_RADAR_UPDATED_EVENT,
         loadSavedListsAndTheme
       );
+      window.removeEventListener(MASCOT_UPDATED_EVENT, loadSavedListsAndTheme);
       window.removeEventListener(
         "rabtv_catalog_updated",
         loadSavedListsAndTheme
@@ -1768,10 +1774,18 @@ function Home() {
             >
               <div className="flex items-center gap-2 min-w-0">
                 {greetingText && (
-                  <p className="text-sm sm:text-base font-black tracking-wide text-white truncate">
-                    <span className="mr-1.5">{profileMascot}</span>
-                    <span>{greetingText}</span>
-                  </p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MascotAvatar
+                      mascot={profileMascot}
+                      size="sm"
+                      rounded="full"
+                      className={`border ${themeStyles.dividerBorder}`}
+                      alt="Profile Mascot"
+                    />
+                    <p className="text-sm sm:text-base font-black tracking-wide text-white truncate">
+                      {greetingText}
+                    </p>
+                  </div>
                 )}
                 {/* Semantic Kids Safe status indicator */}
                 {kidsLocked && (
@@ -1820,22 +1834,12 @@ function Home() {
               data-tour="hero-banner"
               className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] flex flex-col group ${themeStyles.heroContainer}`}
             >
-              {/* Top: 100% Full Uncropped Cover Art — Zero Cropping, Zero Overlaid Text or Panels */}
+              {/* Top: Full-Bleed Stretched Cover Art — Fills 100% of Container on All Sides, Zero Overlaid Text */}
               <Link
                 to="/details"
                 search={heroDetailsSearch}
-                className={`relative flex items-center justify-center w-full overflow-hidden bg-black focus:outline-none focus:ring-4 ${themeStyles.focusRing}`}
+                className={`relative block w-full sm:h-[360px] md:h-[460px] lg:h-[540px] overflow-hidden bg-black focus:outline-none focus:ring-4 ${themeStyles.focusRing}`}
               >
-                {/* Subtle blurred ambient fill behind full poster on wide screens (desktop/tablet/TV) */}
-                {!isLowRam && (
-                  <img
-                    src={optimizePosterUrl(activeHeroItem.image, "w342")}
-                    alt=""
-                    aria-hidden="true"
-                    decoding="async"
-                    className="hidden sm:block pointer-events-none absolute inset-0 h-full w-full object-cover object-center blur-2xl scale-110 opacity-35"
-                  />
-                )}
                 <img
                   src={optimizePosterUrl(
                     activeHeroItem.image,
@@ -1843,7 +1847,7 @@ function Home() {
                   )}
                   alt={activeHeroItem.title}
                   decoding="async"
-                  className="relative z-10 block w-full h-auto sm:w-auto sm:h-[480px] md:h-[540px] sm:max-w-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+                  className="block w-full h-auto sm:h-full object-fill transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                 />
               </Link>
 
