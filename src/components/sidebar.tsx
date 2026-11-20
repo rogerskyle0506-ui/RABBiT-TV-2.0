@@ -11,6 +11,10 @@ import {
 import { triggerOpenTosModal } from "@/components/TermsOfServiceModal";
 import { TIMEOUT_OPTIONS } from "@/components/Screensaver";
 import { bgAudio, RADIO_STATIONS } from "@/lib/background-audio";
+import {
+  triggerOpenProfileSwitcher,
+  snapshotActiveProfile,
+} from "@/lib/profiles";
 import { sendPermanentActivationAlert } from "@/lib/report";
 import { checkForAppUpdates } from "@/lib/updater";
 import {
@@ -1126,6 +1130,7 @@ export function Sidebar({
     setNewPasscode("");
     setConfirmNewPasscode("");
     window.setTimeout(() => setUnifiedUpdateStatus(null), 3500);
+    snapshotActiveProfile();
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("rabtv_settings_updated"));
     }
@@ -1490,13 +1495,26 @@ export function Sidebar({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleCloseSidebar}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition hover:scale-105 active:scale-95 shrink-0 cursor-pointer ${tokens.secondaryBtn}`}
-              >
-                ✕ Close
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCloseSidebar();
+                    triggerOpenProfileSwitcher();
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl border text-xs font-extrabold transition hover:scale-105 active:scale-95 cursor-pointer ${tokens.subtlePill}`}
+                  title="Switch or Manage Household Profiles"
+                >
+                  👥 Profiles
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseSidebar}
+                  className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition hover:scale-105 active:scale-95 cursor-pointer ${tokens.secondaryBtn}`}
+                >
+                  ✕ Close
+                </button>
+              </div>
             </div>
 
             {/* CONSOLIDATED CRYSTAL NEON ACCORDIONS */}
