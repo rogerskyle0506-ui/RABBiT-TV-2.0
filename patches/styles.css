@@ -28,59 +28,108 @@
 :root {
   color-scheme: dark;
   font-family: "Dancing-Majesty", "Inter", "Segoe UI", sans-serif;
-  --app-bg: #050b16;
-  --app-panel: #090e1f;
-  --app-accent: #a855f7;
+  --app-bg: #070412;
+  --app-panel: #100921;
+  --app-surface: rgba(16, 9, 33, 0.88);
+  --app-border: rgba(168, 85, 247, 0.35);
+  --app-accent: #c084fc;
+  --app-accent-strong: #9333ea;
+  --app-accent-soft: rgba(168, 85, 247, 0.18);
+  --app-glow: rgba(139, 92, 246, 0.4);
+  --app-text: #f5f3ff;
+  --app-muted: #cbd5e1;
   --selection-bg: rgba(168, 85, 247, 0.45);
   --rabtv-overscan: 0%;
 }
 
 /* Theme: Violet (Default) */
 html[data-theme="violet"] {
-  --app-bg: #050b16;
-  --app-panel: #090e1f;
-  --app-accent: #a855f7;
+  --app-bg: #070412;
+  --app-panel: #100921;
+  --app-surface: rgba(16, 9, 33, 0.88);
+  --app-border: rgba(168, 85, 247, 0.35);
+  --app-accent: #c084fc;
+  --app-accent-strong: #9333ea;
+  --app-accent-soft: rgba(168, 85, 247, 0.18);
+  --app-glow: rgba(139, 92, 246, 0.4);
+  --app-text: #f5f3ff;
+  --app-muted: #d8d4e8;
   --selection-bg: rgba(168, 85, 247, 0.45);
 }
 
 /* Theme: Red & Black */
 html[data-theme="red"] {
-  --app-bg: #120202;
+  --app-bg: #0d0202;
   --app-panel: #160404;
+  --app-surface: rgba(20, 5, 5, 0.9);
+  --app-border: rgba(239, 68, 68, 0.38);
   --app-accent: #f87171;
+  --app-accent-strong: #dc2626;
+  --app-accent-soft: rgba(239, 68, 68, 0.18);
+  --app-glow: rgba(239, 68, 68, 0.42);
+  --app-text: #fef2f2;
+  --app-muted: #d4d4d8;
   --selection-bg: rgba(239, 68, 68, 0.45);
 }
 
 /* Theme: Midnight & Black */
 html[data-theme="midnight"] {
   --app-bg: #020617;
-  --app-panel: #03091e;
+  --app-panel: #040d24;
+  --app-surface: rgba(4, 13, 36, 0.9);
+  --app-border: rgba(59, 130, 246, 0.38);
   --app-accent: #60a5fa;
+  --app-accent-strong: #2563eb;
+  --app-accent-soft: rgba(59, 130, 246, 0.18);
+  --app-glow: rgba(59, 130, 246, 0.42);
+  --app-text: #f0f9ff;
+  --app-muted: #cbd5e1;
   --selection-bg: rgba(59, 130, 246, 0.45);
 }
 
 /* Theme: Emerald */
 html[data-theme="emerald"] {
-  --app-bg: #02140d;
-  --app-panel: #031b13;
+  --app-bg: #02110b;
+  --app-panel: #041b12;
+  --app-surface: rgba(4, 27, 18, 0.9);
+  --app-border: rgba(16, 185, 129, 0.38);
   --app-accent: #34d399;
+  --app-accent-strong: #059669;
+  --app-accent-soft: rgba(16, 185, 129, 0.18);
+  --app-glow: rgba(16, 185, 129, 0.4);
+  --app-text: #ecfdf5;
+  --app-muted: #d4d4d4;
   --selection-bg: rgba(16, 185, 129, 0.4);
 }
 
 /* Theme: Amber */
 html[data-theme="amber"] {
-  --app-bg: #1b1204;
-  --app-panel: #221507;
+  --app-bg: #140d03;
+  --app-panel: #1f1405;
+  --app-surface: rgba(31, 20, 5, 0.9);
+  --app-border: rgba(245, 158, 11, 0.38);
   --app-accent: #fbbf24;
+  --app-accent-strong: #d97706;
+  --app-accent-soft: rgba(245, 158, 11, 0.18);
+  --app-glow: rgba(245, 158, 11, 0.4);
+  --app-text: #fffbeb;
+  --app-muted: #d6d3d1;
   --selection-bg: rgba(245, 158, 11, 0.38);
 }
 
 /* Theme: Cyan */
 html[data-theme="cyan"] {
-  --app-bg: #021417;
-  --app-panel: #031d20;
+  --app-bg: #021216;
+  --app-panel: #041c22;
+  --app-surface: rgba(4, 28, 34, 0.9);
+  --app-border: rgba(6, 182, 212, 0.38);
   --app-accent: #67e8f9;
-  --selection-bg: rgba(14, 165, 233, 0.35);
+  --app-accent-strong: #0891b2;
+  --app-accent-soft: rgba(6, 182, 212, 0.18);
+  --app-glow: rgba(6, 182, 212, 0.4);
+  --app-text: #ecfeff;
+  --app-muted: #cbd5e1;
+  --selection-bg: rgba(6, 182, 212, 0.38);
 }
 
 /* ==========================================================
@@ -102,12 +151,15 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  max-width: 100%;
+  overflow-x: clip;
   background-color: var(--app-bg);
+  color: var(--app-text);
   font-family: 'Dancing-Majesty', sans-serif;
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--app-bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -115,10 +167,13 @@ body {
 
 /* ==========================================================
    TV / Projector Overscan Safe-Zone Wrapper
+   Applied on dedicated wrapper so inner Tailwind padding stays intact
    ========================================================== */
 .rabtv-overscan-shell {
   padding: var(--rabtv-overscan, 0%);
   transition: padding 0.2s ease;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* --- Global Role-Based Font Mappings --- */
@@ -141,6 +196,23 @@ button,
 p, span, a, li, label, input, select, textarea,
 .font-dancingmajesty {
   font-family: 'Dancing-Majesty', sans-serif;
+}
+
+/* Enforce strict LTR text flow on inputs to prevent Android WebView IME reversal */
+input[type="text"],
+input[type="search"],
+input[type="password"],
+input[type="number"],
+textarea {
+  direction: ltr !important;
+  unicode-bidi: plaintext !important;
+  text-align: left;
+}
+
+/* Theme-matched native range sliders & accent color */
+input[type="range"],
+input[type="checkbox"] {
+  accent-color: var(--app-accent);
 }
 
 button,
@@ -177,10 +249,10 @@ img {
   overflow: hidden;
 }
 
-/* Glassmorphism & Panel Polish Utilities */
+/* Glassmorphism & Panel Polish Utilities (Theme Driven) */
 .app-panel-card {
   background-color: var(--app-panel);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--app-border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -192,6 +264,15 @@ img {
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ==========================================================
+   Short Landscape Mobile Optimization (Prevents Header Slicing Video)
+   ========================================================== */
+@media (max-height: 520px) and (orientation: landscape) {
+  .rabtv-header-player-route {
+    position: relative !important;
+  }
 }
 
 /* ==========================================================
