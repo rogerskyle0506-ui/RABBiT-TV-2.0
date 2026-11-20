@@ -25,6 +25,53 @@ function optimizeBackdropUrl(url: string, isLowRam: boolean): string {
   return url;
 }
 
+interface WallpaperThemeTokens {
+  overlayGradient: string;
+  radialTint: string;
+}
+
+function getWallpaperThemeTokens(theme: AppTheme): WallpaperThemeTokens {
+  switch (theme) {
+    case "red":
+      return {
+        overlayGradient: "from-zinc-950/70 via-red-950/30 to-black/85",
+        radialTint:
+          "radial-gradient(circle at top, rgba(239, 68, 68, 0.14), transparent 58%)",
+      };
+    case "midnight":
+      return {
+        overlayGradient: "from-slate-950/70 via-blue-950/30 to-black/85",
+        radialTint:
+          "radial-gradient(circle at top, rgba(59, 130, 246, 0.14), transparent 58%)",
+      };
+    case "emerald":
+      return {
+        overlayGradient: "from-neutral-950/70 via-emerald-950/30 to-black/85",
+        radialTint:
+          "radial-gradient(circle at top, rgba(16, 185, 129, 0.14), transparent 58%)",
+      };
+    case "amber":
+      return {
+        overlayGradient: "from-stone-950/70 via-yellow-950/30 to-black/85",
+        radialTint:
+          "radial-gradient(circle at top, rgba(245, 158, 11, 0.14), transparent 58%)",
+      };
+    case "cyan":
+      return {
+        overlayGradient: "from-slate-950/70 via-cyan-950/30 to-black/85",
+        radialTint:
+          "radial-gradient(circle at top, rgba(6, 182, 212, 0.14), transparent 58%)",
+      };
+    case "violet":
+    default:
+      return {
+        overlayGradient: "from-slate-950/70 via-purple-950/30 to-black/85",
+        radialTint:
+          "radial-gradient(circle at top, rgba(139, 92, 246, 0.14), transparent 58%)",
+      };
+  }
+}
+
 export const AppWallpaper = memo(function AppWallpaper({
   backdropUrl,
 }: AppWallpaperProps) {
@@ -80,27 +127,14 @@ export const AppWallpaper = memo(function AppWallpaper({
     return optimizeBackdropUrl(backdropUrl, isLowRam);
   }, [backdropUrl, imgFailed, isLowRam]);
 
-  const themeOverlay = useMemo(() => {
-    switch (appTheme) {
-      case "red":
-        return "from-zinc-950/65 via-red-950/25 to-black/80";
-      case "midnight":
-        return "from-slate-950/65 via-blue-950/25 to-slate-950/80";
-      case "emerald":
-        return "from-slate-950/65 via-emerald-950/25 to-slate-950/80";
-      case "amber":
-        return "from-stone-950/65 via-yellow-950/25 to-neutral-950/80";
-      case "cyan":
-        return "from-slate-950/65 via-cyan-950/25 to-slate-950/80";
-      case "violet":
-      default:
-        return "from-slate-950/65 via-purple-950/25 to-slate-950/80";
-    }
-  }, [appTheme]);
+  const themeTokens = useMemo(
+    () => getWallpaperThemeTokens(appTheme),
+    [appTheme]
+  );
 
   return (
     <div
-      className="rabtv-vidsrc-protected pointer-events-none fixed inset-0 z-0 overflow-hidden select-none"
+      className="rabtv-vidsrc-protected pointer-events-none fixed inset-0 w-full h-[100dvh] z-0 overflow-hidden select-none"
       aria-hidden="true"
     >
       <img
@@ -112,7 +146,7 @@ export const AppWallpaper = memo(function AppWallpaper({
             setImgFailed(true);
           }
         }}
-        className={`h-full w-full object-cover ${
+        className={`h-full w-full object-cover object-center ${
           reducedMotion || isLowRam ? "" : "transition-opacity duration-500"
         } ${
           backdropUrl && !imgFailed
@@ -123,14 +157,16 @@ export const AppWallpaper = memo(function AppWallpaper({
         }`}
       />
       <div
-        className={`absolute inset-0 bg-gradient-to-br ${themeOverlay}`}
+        className={`absolute inset-0 bg-gradient-to-br ${themeTokens.overlayGradient}`}
       />
       {!glowOff && !isLowRam && (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),transparent_55%)]" />
+        <div
+          className="absolute inset-0"
+          style={{ background: themeTokens.radialTint }}
+        />
       )}
-      {warmEyeCare && (
-        <div className="absolute inset-0 bg-amber-900/15" />
-      )}
+      {/* Functional warm night-time eye-care filter */}
+      {warmEyeCare && <div className="absolute inset-0 bg-amber-900/15" />}
     </div>
   );
 });
