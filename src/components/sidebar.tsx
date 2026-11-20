@@ -15,6 +15,16 @@ import {
   triggerOpenProfileSwitcher,
   snapshotActiveProfile,
 } from "@/lib/profiles";
+import {
+  getActiveMascotBadge,
+  setActiveMascotBadge,
+  getAllCustomMascotBadges,
+  EMOJI_MASCOT_BADGES,
+  MASCOT_UPDATED_EVENT,
+  syncRemoteMascotBadges,
+  type MascotBadgeOption,
+} from "@/lib/mascots";
+import { MascotAvatar } from "@/components/MascotAvatar";
 import { sendPermanentActivationAlert } from "@/lib/report";
 import { checkForAppUpdates } from "@/lib/updater";
 import {
@@ -54,7 +64,6 @@ import {
   POSTER_SHAPE_OPTIONS,
   POSTER_CARD_STYLE_OPTIONS,
   POSTER_INFO_LAYOUT_OPTIONS,
-  PROFILE_MASCOT_OPTIONS,
   GREETING_STYLE_OPTIONS,
   CURSOR_STYLE_OPTIONS,
   STARTUP_TAB_OPTIONS,
@@ -111,8 +120,6 @@ import {
   applySeniorEasyPreset,
   getGreetingStyle,
   setGreetingStyle,
-  getProfileMascot,
-  setProfileMascot,
   getWarmEyeCare,
   setWarmEyeCare,
   getStartupTab,
@@ -222,7 +229,7 @@ export interface SidebarProps {
   onTriggerFirstStartModal: () => void;
   onOpenTosModal?: () => void;
   onStartWalkthrough?: () => void;
-  headerIconUrl: string;
+  headerIconUrl?: string;
   allThemesList: { id: AppTheme; label: string }[];
   getPrimaryBgColor: (theme: AppTheme) => string;
   getPrimaryAccentColor: (theme: AppTheme) => string;
@@ -570,7 +577,6 @@ export function Sidebar({
   onTriggerFirstStartModal,
   onOpenTosModal,
   onStartWalkthrough,
-  headerIconUrl,
   allThemesList,
   getPrimaryBgColor,
   getPrimaryAccentColor,
@@ -642,7 +648,13 @@ export function Sidebar({
     getSubtitleSettings()
   );
   const [profileMascot, setProfileMascotState] = useState<string>(() =>
-    getProfileMascot()
+    getActiveMascotBadge()
+  );
+  const [customBadges, setCustomBadges] = useState<MascotBadgeOption[]>(() =>
+    getAllCustomMascotBadges()
+  );
+  const [mascotPickerTab, setMascotPickerTab] = useState<"custom" | "emoji">(
+    () => (getAllCustomMascotBadges().length > 0 ? "custom" : "emoji")
   );
   const [greetingStyle, setGreetingStyleState] = useState<GreetingStyle>(() =>
     getGreetingStyle()
@@ -771,7 +783,8 @@ export function Sidebar({
     setUiClickSoundsState(getUiClickSounds());
     setTvOverscanState(getTvOverscan());
     setSubtitlesState(getSubtitleSettings());
-    setProfileMascotState(getProfileMascot());
+    setProfileMascotState(getActiveMascotBadge());
+    setCustomBadges(getAllCustomMascotBadges());
     setGreetingStyleState(getGreetingStyle());
     setWarmEyeCareState(getWarmEyeCare());
     setStartupTabState(getStartupTab());
@@ -787,11 +800,23 @@ export function Sidebar({
   useEffect(() => {
     if (!isOpen) return;
     syncLocalControls();
+    const controller = new AbortController();
+    void syncRemoteMascotBadges(controller.signal).then((badges) => {
+      if (!controller.signal.aborted) {
+        setCustomBadges(badges);
+        if (badges.length > 0) {
+          setMascotPickerTab((prev) => (prev === "emoji" ? prev : "custom"));
+        }
+      }
+    });
     window.addEventListener("rabtv_settings_updated", syncLocalControls);
     window.addEventListener("rabtv_holiday_updated", syncLocalControls);
+    window.addEventListener(MASCOT_UPDATED_EVENT, syncLocalControls);
     return () => {
+      controller.abort();
       window.removeEventListener("rabtv_settings_updated", syncLocalControls);
       window.removeEventListener("rabtv_holiday_updated", syncLocalControls);
+      window.removeEventListener(MASCOT_UPDATED_EVENT, syncLocalControls);
     };
   }, [isOpen, syncLocalControls]);
 
@@ -1452,22 +1477,19 @@ export function Sidebar({
               className={`flex items-center justify-between gap-2 rounded-2xl backdrop-blur-xl border px-3 py-2.5 shadow-lg w-full box-border ${tokens.headerBar}`}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  className={`w-10 h-10 rounded-xl overflow-hidden border shrink-0 flex items-center justify-center ${tokens.avatarFrame}`}
-                >
-                  <img
-                    src={headerIconUrl}
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                <MascotAvatar
+                  mascot={profileMascot}
+                  size="md"
+                  rounded="xl"
+                  className={`border ${tokens.avatarFrame}`}
+                  alt={savedProfileName || "User Profile"}
+                />
                 <div className="min-w-0">
                   <h3
                     className={`text-sm font-black tracking-wide truncate ${getPrimaryAccentColor(
                       appTheme
                     )}`}
                   >
-                    <span className="mr-1">{profileMascot}</span>
                     {savedProfileName || "User Profile"}
                   </h3>
                   <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
@@ -2128,32 +2150,95 @@ export function Sidebar({
                         ✨ Fun Personalizations
                       </p>
 
-                      <div>
-                        <p className={`text-[11px] font-bold mb-1 ${tokens.mutedText}`}>
-                          Profile Mascot Badge:
-                        </p>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {PROFILE_MASCOT_OPTIONS.map((m) => (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-1.5">
+                          <p className={`text-[11px] font-bold ${tokens.mutedText}`}>
+                            Profile Mascot Badge:
+                          </p>
+                          <div className="flex items-center gap-1">
                             <button
-                              key={m.id}
                               type="button"
-                              onClick={() => {
-                                setProfileMascot(m.id);
-                                setProfileMascotState(m.id);
-                              }}
-                              title={m.label}
-                              className={`py-1.5 rounded-xl text-base transition-all cursor-pointer hover:scale-110 ${
-                                profileMascot === m.id
-                                  ? `${getPrimaryBgColor(
-                                      appTheme
-                                    )} ring-2 ring-white/50 shadow-md`
-                                  : `border hover:bg-white/15 ${tokens.subBox}`
+                              onClick={() => setMascotPickerTab("custom")}
+                              className={`rounded-lg px-2 py-0.5 text-[10px] font-extrabold transition cursor-pointer ${
+                                mascotPickerTab === "custom"
+                                  ? `${getPrimaryBgColor(appTheme)} text-white shadow`
+                                  : tokens.subtlePill
                               }`}
                             >
-                              {m.id}
+                              🎨 Custom ({customBadges.length})
                             </button>
-                          ))}
+                            <button
+                              type="button"
+                              onClick={() => setMascotPickerTab("emoji")}
+                              className={`rounded-lg px-2 py-0.5 text-[10px] font-extrabold transition cursor-pointer ${
+                                mascotPickerTab === "emoji"
+                                  ? `${getPrimaryBgColor(appTheme)} text-white shadow`
+                                  : tokens.subtlePill
+                              }`}
+                            >
+                              ✨ Classic
+                            </button>
+                          </div>
                         </div>
+
+                        {mascotPickerTab === "custom" && customBadges.length > 0 ? (
+                          <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-0.5 scrollbar-none">
+                            {customBadges.map((badge) => {
+                              const isSelected = profileMascot === badge.id;
+                              return (
+                                <button
+                                  key={badge.id}
+                                  type="button"
+                                  onClick={() => {
+                                    const saved = setActiveMascotBadge(badge.id);
+                                    setProfileMascotState(saved);
+                                    snapshotActiveProfile();
+                                  }}
+                                  title={badge.label}
+                                  aria-label={badge.label}
+                                  className={`p-1 rounded-2xl border flex items-center justify-center transition-all cursor-pointer hover:scale-105 ${
+                                    isSelected
+                                      ? `${getPrimaryBgColor(
+                                          appTheme
+                                        )} ring-2 ring-white/60 border-transparent shadow-md`
+                                      : `${tokens.subBox} hover:bg-white/10`
+                                  }`}
+                                >
+                                  <MascotAvatar
+                                    mascot={badge.id}
+                                    size="lg"
+                                    rounded="xl"
+                                    alt={badge.label}
+                                  />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {EMOJI_MASCOT_BADGES.map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => {
+                                  const saved = setActiveMascotBadge(m.id);
+                                  setProfileMascotState(saved);
+                                  snapshotActiveProfile();
+                                }}
+                                title={m.label}
+                                className={`py-1.5 rounded-xl text-base transition-all cursor-pointer hover:scale-110 ${
+                                  profileMascot === m.id
+                                    ? `${getPrimaryBgColor(
+                                        appTheme
+                                      )} ring-2 ring-white/50 shadow-md`
+                                    : `border hover:bg-white/15 ${tokens.subBox}`
+                                }`}
+                              >
+                                {m.emojiFallback}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div>
