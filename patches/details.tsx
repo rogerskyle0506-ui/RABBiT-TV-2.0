@@ -1,6 +1,6 @@
 // src/routes/details.tsx
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import {
   AppTheme,
   CardSize,
@@ -18,6 +18,7 @@ import {
   getClockFormat,
   formatAppTime,
   getKidsModeLocked,
+  purgeOldTmdbCaches,
 } from "@/lib/settings";
 import { reportBrokenLink, isTitleBroken } from "@/lib/broken-links";
 import { MediaCard } from "@/routes/index";
@@ -29,6 +30,21 @@ import {
 } from "@/lib/watch-history";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { bgAudio } from "@/lib/background-audio";
+import {
+  getCustomShelves,
+  createCustomShelf,
+  toggleItemInShelf,
+  getShelfIdsForItem,
+  CUSTOM_SHELVES_EVENT,
+  SHELF_ICON_PRESETS,
+  SHELF_TEMPLATE_SUGGESTIONS,
+  type CustomShelf,
+} from "@/lib/custom-shelves";
+import {
+  getCachedEpisodeAlerts,
+  EPISODE_RADAR_UPDATED_EVENT,
+  type EpisodeRadarAlert,
+} from "@/lib/episode-radar";
 
 const MY_LIST_STORAGE_KEY = "rabtv_my_list";
 const FAVORITES_STORAGE_KEY = "rabtv_favorites";
@@ -378,6 +394,126 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
   }
 }
 
+interface FranchisePart {
+  id: string;
+  title: string;
+  posterPath: string | null;
+  releaseDate: string;
+  year: string;
+  rating?: string;
+  adult?: boolean;
+}
+
+interface FranchiseCollection {
+  id: number;
+  name: string;
+  parts: FranchisePart[];
+}
+
+const COLLECTION_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
+function safeSaveCollectionCache(key: string, payload: unknown): void {
+  if (typeof window === "undefined") return;
+  const serialized = JSON.stringify(payload);
+  try {
+    localStorage.setItem(key, serialized);
+  } catch {
+    try {
+      purgeOldTmdbCaches();
+      localStorage.setItem(key, serialized);
+    } catch {
+      // ignore if critically full
+    }
+  }
+}
+
+/**
+ * Isolated uncontrolled form for creating a new custom shelf inside the picker
+ * so Android WebView never flips typed characters.
+ */
+const CreateShelfInlineForm = memo(function CreateShelfInlineForm({
+  activeTheme,
+  onCreate,
+}: {
+  activeTheme: DetailsThemeTokens;
+  onCreate: (name: string, icon: string) => { ok: boolean; error?: string };
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [selectedIcon, setSelectedIcon] = useState<string>("🎬");
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const rawName = inputRef.current?.value || "";
+    const res = onCreate(rawName, selectedIcon);
+    if (!res.ok) {
+      setErrMsg(res.error || "Could not create shelf.");
+      return;
+    }
+    setErrMsg(null);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+      inputRef.current.blur();
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={`rounded-2xl border p-3 space-y-2.5 ${activeTheme.subPanel}`}
+    >
+      <span
+        className={`block text-[10px] font-extrabold uppercase tracking-wider ${activeTheme.subMutedText}`}
+      >
+        + Create New Custom Shelf
+      </span>
+
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+        {SHELF_ICON_PRESETS.map((ic) => (
+          <button
+            key={ic}
+            type="button"
+            onClick={() => setSelectedIcon(ic)}
+            className={`h-8 w-8 shrink-0 rounded-xl border text-sm flex items-center justify-center transition cursor-pointer ${
+              selectedIcon === ic
+                ? `${activeTheme.btnActive} scale-105`
+                : activeTheme.btnSecondary
+            }`}
+            aria-label={`Choose ${ic} icon`}
+          >
+            {ic}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          dir="ltr"
+          maxLength={36}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="e.g. Halloween Marathon"
+          style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
+          className={`flex-1 min-w-0 h-10 rounded-xl border px-3 text-xs font-bold focus:outline-none focus:ring-2 ${activeTheme.selectBtn} ${activeTheme.ring}`}
+        />
+        <button
+          type="submit"
+          className={`h-10 px-4 rounded-xl text-xs font-extrabold shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${activeTheme.playBtn} ${activeTheme.ring}`}
+        >
+          Create & Add
+        </button>
+      </div>
+
+      {errMsg && (
+        <p className="text-[11px] font-bold text-red-400">{errMsg}</p>
+      )}
+    </form>
+  );
+});
+
 export function DetailsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -445,6 +581,18 @@ export function DetailsPage() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
 
+  // Franchise Collection, Custom Shelves & New Episode Radar state
+  const [franchiseCollection, setFranchiseCollection] =
+    useState<FranchiseCollection | null>(null);
+  const [customShelves, setCustomShelves] = useState<CustomShelf[]>(() =>
+    getCustomShelves()
+  );
+  const [itemShelfIds, setItemShelfIds] = useState<string[]>([]);
+  const [showShelfModal, setShowShelfModal] = useState(false);
+  const [tvRadarAlert, setTvRadarAlert] = useState<EpisodeRadarAlert | null>(
+    null
+  );
+
   const wasAudioPlayingRef = useRef<boolean>(false);
   const castScrollRef = useRef<HTMLDivElement>(null);
   const seasonRef = useRef<HTMLDivElement>(null);
@@ -460,19 +608,22 @@ export function DetailsPage() {
     setLoading(true);
     setIsFlipped(false);
     setTrailerKey(null);
+    setFranchiseCollection(null);
+    setShowShelfModal(false);
   }, [mediaId, urlType]);
 
-  // Allow Escape key to exit trailer flip cleanly on TV remotes / keyboards
+  // Allow Escape key to exit trailer flip or custom shelf modal on TV remotes / keyboards
   useEffect(() => {
-    if (!isFlipped) return;
+    if (!isFlipped && !showShelfModal) return;
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setIsFlipped(false);
+        setShowShelfModal(false);
       }
     };
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
-  }, [isFlipped]);
+  }, [isFlipped, showShelfModal]);
 
   // Manage background audio mute/resume during trailer playback
   useEffect(() => {
@@ -859,6 +1010,130 @@ export function DetailsPage() {
     };
   }, [mediaId, urlType]);
 
+  // Sync Custom Watchlist Shelves & TV New Episode Radar badge
+  useEffect(() => {
+    const syncShelvesAndRadar = () => {
+      setCustomShelves(getCustomShelves());
+      setItemShelfIds(getShelfIdsForItem(mediaId, mediaType));
+      const alerts = getCachedEpisodeAlerts();
+      setTvRadarAlert(mediaType === "tv" ? alerts[mediaId] || null : null);
+    };
+
+    syncShelvesAndRadar();
+    window.addEventListener(CUSTOM_SHELVES_EVENT, syncShelvesAndRadar);
+    window.addEventListener(EPISODE_RADAR_UPDATED_EVENT, syncShelvesAndRadar);
+    return () => {
+      window.removeEventListener(CUSTOM_SHELVES_EVENT, syncShelvesAndRadar);
+      window.removeEventListener(
+        EPISODE_RADAR_UPDATED_EVENT,
+        syncShelvesAndRadar
+      );
+    };
+  }, [mediaId, mediaType]);
+
+  // Fetch Franchise & Movie Collection from TMDB when movie belongs to a collection
+  useEffect(() => {
+    const collectionId = Number(mediaDetails?.belongs_to_collection?.id || 0);
+    if (
+      !collectionId ||
+      !Number.isInteger(collectionId) ||
+      collectionId <= 0 ||
+      mediaType === "tv"
+    ) {
+      setFranchiseCollection(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 7000);
+    let cancelled = false;
+
+    async function loadCollection() {
+      const cacheKey = `rabtv_collection_${collectionId}`;
+      try {
+        const cachedRaw = localStorage.getItem(cacheKey);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw);
+          if (
+            parsed?.collection &&
+            Date.now() - (parsed.timestamp || 0) < COLLECTION_CACHE_TTL_MS
+          ) {
+            if (!cancelled) setFranchiseCollection(parsed.collection);
+            return;
+          }
+        }
+      } catch {
+        // ignore malformed cache
+      }
+
+      try {
+        const apiKey = import.meta.env.VITE_TMDB_API_KEY as string;
+        if (!apiKey) return;
+        const res = await fetch(
+          `https://api.themoviedb.org/3/collection/${collectionId}?api_key=${encodeURIComponent(
+            apiKey
+          )}&language=en-US`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data || !Array.isArray(data.parts)) return;
+
+        const parts: FranchisePart[] = data.parts
+          .filter((p: any) => p && p.id && (p.title || p.name))
+          .map((p: any) => {
+            const rel = String(p.release_date || "");
+            return {
+              id: String(p.id),
+              title: String(p.title || p.name),
+              posterPath: p.poster_path ? String(p.poster_path) : null,
+              releaseDate: rel,
+              year: rel ? rel.split("-")[0] : "TBA",
+              rating:
+                typeof p.vote_average === "number" && p.vote_average > 0
+                  ? p.vote_average.toFixed(1)
+                  : undefined,
+              adult: Boolean(p.adult),
+            };
+          })
+          .sort((a: FranchisePart, b: FranchisePart) => {
+            if (!a.releaseDate && !b.releaseDate) return 0;
+            if (!a.releaseDate) return 1;
+            if (!b.releaseDate) return -1;
+            return a.releaseDate.localeCompare(b.releaseDate);
+          });
+
+        if (parts.length > 1) {
+          const collection: FranchiseCollection = {
+            id: collectionId,
+            name: String(
+              data.name ||
+                mediaDetails?.belongs_to_collection?.name ||
+                "Movie Collection"
+            ),
+            parts,
+          };
+          safeSaveCollectionCache(cacheKey, {
+            collection,
+            timestamp: Date.now(),
+          });
+          if (!cancelled) setFranchiseCollection(collection);
+        }
+      } catch {
+        // ignore timeout/abort
+      } finally {
+        window.clearTimeout(timer);
+      }
+    }
+
+    void loadCollection();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [mediaDetails?.belongs_to_collection?.id, mediaDetails?.belongs_to_collection?.name, mediaType]);
+
   const inferredMediaType: "tv" | "movie" =
     mediaDetails?.seasons ||
     mediaDetails?.number_of_seasons ||
@@ -1076,6 +1351,153 @@ export function DetailsPage() {
       feedbackTimeoutRef.current = null;
     }, 2500);
   };
+
+  // Compute chronological franchise progress against Watch History
+  const franchiseShelfData = useMemo(() => {
+    if (!franchiseCollection || !franchiseCollection.parts.length) return null;
+
+    const history = getRawWatchHistory();
+    const completedIds = new Set<string>();
+    for (const h of history) {
+      if (h.confirmedCompleted || (h.progressPercent ?? 0) >= 100) {
+        completedIds.add(
+          String(h.mediaId ?? h.id).replace(/^(movie|tv)-/i, "")
+        );
+      }
+    }
+
+    const filteredParts = franchiseCollection.parts
+      .filter((p) => {
+        if (
+          isTitleBroken(p.id) ||
+          isTitleBroken(`movie-${p.id}`) ||
+          isTitleDisliked(p.id) ||
+          isTitleDisliked(`movie-${p.id}`)
+        ) {
+          return false;
+        }
+        return isAllowedForAge(p.adult ? "R" : undefined, "MOVIE", userAge);
+      })
+      .map((p, idx) => ({
+        ...p,
+        orderNumber: idx + 1,
+        isCurrent: p.id === mediaId,
+        isWatched: completedIds.has(p.id),
+      }));
+
+    if (filteredParts.length <= 1) return null;
+
+    const watchedCount = filteredParts.filter((p) => p.isWatched).length;
+    const progressPct = Math.round((watchedCount / filteredParts.length) * 100);
+
+    return {
+      name: franchiseCollection.name,
+      parts: filteredParts,
+      watchedCount,
+      totalCount: filteredParts.length,
+      progressPct,
+    };
+  }, [franchiseCollection, mediaId, userAge, kidsLocked]);
+
+  // Also detect freshly aired TV episode directly from already-fetched TMDB details (0 extra API calls!)
+  const liveTvFreshBadge = useMemo(() => {
+    if (inferredMediaType !== "tv") return null;
+    if (tvRadarAlert) return tvRadarAlert;
+
+    const lastEp = mediaDetails?.last_episode_to_air;
+    if (!lastEp?.air_date) return null;
+    const parts = String(lastEp.air_date).split("-").map(Number);
+    if (parts.length !== 3 || parts.some((n) => isNaN(n))) return null;
+    const airTs = new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+    const now = new Date();
+    const todayTs = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    ).getTime();
+    const daysAgo = Math.floor((todayTs - airTs) / (24 * 60 * 60 * 1000));
+    if (daysAgo < 0 || daysAgo > 14) return null;
+    const sNum = Number(lastEp.season_number || 0);
+    const eNum = Number(lastEp.episode_number || 0);
+    if (sNum <= 0 || eNum <= 0) return null;
+
+    return {
+      showId: mediaId,
+      showTitle: mediaDetails?.name || "TV Show",
+      seasonNumber: sNum,
+      episodeNumber: eNum,
+      episodeName: String(lastEp.name || `Episode ${eNum}`),
+      airDate: String(lastEp.air_date),
+      daysAgo,
+      badgeLabel:
+        daysAgo === 0
+          ? `🆕 New S${sNum}E${eNum} Today!`
+          : `🆕 New S${sNum}E${eNum} • ${daysAgo}d`,
+      checkedAt: Date.now(),
+    } as EpisodeRadarAlert;
+  }, [inferredMediaType, tvRadarAlert, mediaDetails, mediaId]);
+
+  const handleToggleCustomShelf = useCallback(
+    (shelfId: string, shelfName: string) => {
+      if (!mediaDetails) return;
+      const item = buildCatalogItem();
+      const res = toggleItemInShelf(shelfId, {
+        id: item.id,
+        mediaId: item.mediaId,
+        title: item.title,
+        description: item.description,
+        image: item.image,
+        href: item.href,
+        genre:
+          mediaDetails?.genres?.map((g: any) => g.name).join(", ") ||
+          "Entertainment",
+        year: item.year,
+        rating: item.rating,
+        mediaType: inferredMediaType,
+      });
+      if (res.error) {
+        triggerFeedback(res.error);
+      } else {
+        triggerFeedback(
+          res.added
+            ? `📚 Added to "${shelfName}"!`
+            : `Removed from "${shelfName}".`
+        );
+      }
+      setCustomShelves(getCustomShelves());
+      setItemShelfIds(getShelfIdsForItem(mediaId, inferredMediaType));
+    },
+    [mediaDetails, mediaId, inferredMediaType]
+  );
+
+  const handleCreateAndAddShelf = useCallback(
+    (name: string, icon: string): { ok: boolean; error?: string } => {
+      const created = createCustomShelf(name, icon);
+      if (!created.ok || !created.shelf) {
+        return { ok: false, error: created.error };
+      }
+      if (mediaDetails) {
+        const item = buildCatalogItem();
+        toggleItemInShelf(created.shelf.id, {
+          id: item.id,
+          mediaId: item.mediaId,
+          title: item.title,
+          description: item.description,
+          image: item.image,
+          href: item.href,
+          genre: mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment",
+          year: item.year,
+          rating: item.rating,
+          mediaType: inferredMediaType,
+        });
+      }
+      setCustomShelves(getCustomShelves());
+      setItemShelfIds(getShelfIdsForItem(mediaId, inferredMediaType));
+      triggerFeedback(`📚 Created "${created.shelf.name}" & saved title!`);
+      return { ok: true };
+    },
+    [mediaDetails, mediaId, inferredMediaType]
+  );
 
   if (loading) {
     return (
@@ -1369,12 +1791,36 @@ export function DetailsPage() {
               isLowRam ? "" : "backdrop-blur-2xl"
             } transition-colors duration-300 ${activeTheme.surfacePanel}`}
           >
-            {/* Genre Capsule */}
-            <span
-              className={`w-fit rounded-full border px-3.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest ${activeTheme.badge}`}
-            >
-              {genres}
-            </span>
+            {/* Genre Capsule + Optional New Episode Radar Pill */}
+            <div className="flex items-center flex-wrap gap-2">
+              <span
+                className={`w-fit rounded-full border px-3.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest ${activeTheme.badge}`}
+              >
+                {genres}
+              </span>
+              {liveTvFreshBadge && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    bgAudio.pause();
+                    navigate({
+                      to: "/player",
+                      search: {
+                        id: mediaId,
+                        type: "tv",
+                        season: liveTvFreshBadge.seasonNumber,
+                        episode: liveTvFreshBadge.episodeNumber,
+                      },
+                    });
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider transition hover:scale-105 cursor-pointer focus:outline-none focus:ring-2 ${activeTheme.playBtn} ${activeTheme.ring}`}
+                  title={`Play ${liveTvFreshBadge.episodeName} (Aired ${liveTvFreshBadge.airDate})`}
+                >
+                  <span>{liveTvFreshBadge.badgeLabel}</span>
+                  <span>▶</span>
+                </button>
+              )}
+            </div>
 
             {/* Crisp High-Contrast Title */}
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
@@ -1605,6 +2051,34 @@ export function DetailsPage() {
               </button>
             </div>
 
+            {/* Custom Watchlist Shelf Launcher */}
+            <button
+              type="button"
+              data-tour="details-custom-shelf"
+              onClick={() => setShowShelfModal(true)}
+              className={`w-full flex items-center justify-between gap-2 px-4 ${
+                largeButtons ? "py-3.5 text-sm" : "py-2.5 text-xs sm:text-sm"
+              } rounded-2xl backdrop-blur-xl border font-bold tracking-wide transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer focus:outline-none focus:ring-4 ${
+                itemShelfIds.length > 0
+                  ? activeTheme.btnActive
+                  : activeTheme.btnSecondary
+              } ${activeTheme.ring}`}
+            >
+              <span className="flex items-center gap-2 truncate">
+                <span className="text-base shrink-0">📚</span>
+                <span className="truncate">
+                  {itemShelfIds.length > 0
+                    ? `Saved in ${itemShelfIds.length} Custom ${
+                        itemShelfIds.length === 1 ? "Shelf" : "Shelves"
+                      }`
+                    : "Add to Custom Shelf (e.g. Comfort Shows, Marathons)"}
+                </span>
+              </span>
+              <span className="text-[11px] font-extrabold shrink-0 opacity-85">
+                Manage ▸
+              </span>
+            </button>
+
             {actionFeedback && (
               <p
                 className={`text-xs font-bold ${activeTheme.text} transition mt-1`}
@@ -1759,6 +2233,135 @@ export function DetailsPage() {
             </div>
           </div>
 
+          {/* Franchise & Movie Collections Shelf (Chronological Order + Completion Tracker) */}
+          {franchiseShelfData && (
+            <section
+              data-tour="franchise-collection"
+              className={`mt-4 w-full rounded-3xl border p-4 sm:p-6 space-y-4 ${
+                isLowRam ? "" : "backdrop-blur-2xl"
+              } ${activeTheme.surfacePanel}`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className={`w-1.5 h-6 rounded-full shrink-0 ${activeTheme.accentBar}`}
+                  />
+                  <div className="min-w-0">
+                    <span
+                      className={`block text-[10px] font-extrabold uppercase tracking-widest ${activeTheme.subMutedText}`}
+                    >
+                      🎞️ Part of Franchise Collection
+                    </span>
+                    <h3 className="text-base sm:text-xl font-black tracking-tight text-white truncate">
+                      {franchiseShelfData.name}
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className={`rounded-full border px-3 py-1 text-xs font-extrabold ${
+                      franchiseShelfData.watchedCount ===
+                      franchiseShelfData.totalCount
+                        ? "bg-emerald-950/80 border-emerald-400/45 text-emerald-300"
+                        : activeTheme.badge
+                    }`}
+                  >
+                    ✓ {franchiseShelfData.watchedCount} of{" "}
+                    {franchiseShelfData.totalCount} Watched
+                  </span>
+                </div>
+              </div>
+
+              {/* Franchise Completion Progress Bar */}
+              <div
+                className={`h-1.5 w-full rounded-full overflow-hidden border bg-black/60 ${activeTheme.dividerBorder}`}
+              >
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    franchiseShelfData.watchedCount ===
+                    franchiseShelfData.totalCount
+                      ? "bg-emerald-500"
+                      : activeTheme.playBtn
+                  }`}
+                  style={{
+                    width: `${Math.max(
+                      franchiseShelfData.watchedCount > 0 ? 8 : 0,
+                      franchiseShelfData.progressPct
+                    )}%`,
+                  }}
+                />
+              </div>
+
+              {/* Chronological Franchise Movie Cards */}
+              <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 pt-1 scrollbar-none">
+                {franchiseShelfData.parts.map((part) => {
+                  const partPoster = part.posterPath
+                    ? `https://image.tmdb.org/t/p/${posterWidth}${part.posterPath}`
+                    : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=900&q=80";
+
+                  return (
+                    <Link
+                      key={part.id}
+                      to="/details"
+                      search={{ id: part.id, type: "movie" }}
+                      className={`group shrink-0 w-32 sm:w-40 flex flex-col overflow-hidden ${posterAppearance.radiusClass} border transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 ${
+                        activeTheme.ring
+                      } ${
+                        part.isCurrent
+                          ? `${activeTheme.btnActive} ring-2 ring-white/40`
+                          : activeTheme.statCard
+                      }`}
+                    >
+                      <div className="relative aspect-[2/3] w-full bg-black overflow-hidden">
+                        <img
+                          src={partPoster}
+                          alt={part.title}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <span
+                          className={`absolute top-2 left-2 rounded-lg border px-1.5 py-0.5 text-[9px] font-black backdrop-blur-md ${activeTheme.subtleBadge}`}
+                        >
+                          #{part.orderNumber}
+                        </span>
+                        {part.isWatched && (
+                          <span className="absolute top-2 right-2 rounded-lg bg-emerald-600/95 border border-emerald-300/40 px-1.5 py-0.5 text-[9px] font-black text-white shadow">
+                            ✓
+                          </span>
+                        )}
+                        {part.isCurrent && (
+                          <span
+                            className={`absolute inset-x-1.5 bottom-1.5 rounded-lg py-0.5 text-center text-[9px] font-black uppercase tracking-wider ${activeTheme.playBtn}`}
+                          >
+                            Now Viewing
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-2.5 text-left space-y-0.5">
+                        <p className="text-xs font-bold text-white line-clamp-1">
+                          {part.title}
+                        </p>
+                        <div
+                          className={`flex items-center justify-between text-[10px] font-semibold ${activeTheme.subMutedText}`}
+                        >
+                          <span>{part.year}</span>
+                          {part.rating && (
+                            <span className={activeTheme.text}>
+                              ★ {part.rating}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           {/* Similar Recommended Titles */}
           {mappedRecommendations.length > 0 && (
             <div
@@ -1828,6 +2431,118 @@ export function DetailsPage() {
           </div>
         )}
       </div>
+
+      {/* Custom Watchlist Shelves Picker Modal */}
+      {showShelfModal && (
+        <div
+          className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+          onClick={() => setShowShelfModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`w-full max-w-md max-h-[85dvh] overflow-y-auto rounded-3xl border p-5 sm:p-6 space-y-4 scrollbar-none ${activeTheme.surfacePanel}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-black text-white truncate">
+                  📚 Save to Custom Shelf
+                </h3>
+                <p
+                  className={`text-[11px] font-medium truncate ${activeTheme.subMutedText}`}
+                >
+                  {title}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowShelfModal(false)}
+                className={`h-8 w-8 shrink-0 rounded-full border text-xs font-bold flex items-center justify-center cursor-pointer ${activeTheme.btnSecondary}`}
+                aria-label="Close Custom Shelf Picker"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Existing Custom Shelves */}
+            {customShelves.length > 0 ? (
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-0.5 scrollbar-none">
+                {customShelves.map((shelf) => {
+                  const isAdded = itemShelfIds.includes(shelf.id);
+                  return (
+                    <button
+                      key={shelf.id}
+                      type="button"
+                      onClick={() =>
+                        handleToggleCustomShelf(shelf.id, shelf.name)
+                      }
+                      className={`w-full flex items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition cursor-pointer focus:outline-none focus:ring-2 ${
+                        activeTheme.ring
+                      } ${
+                        isAdded
+                          ? activeTheme.btnActive
+                          : activeTheme.btnSecondary
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-lg shrink-0">{shelf.icon}</span>
+                        <div className="min-w-0">
+                          <span className="block text-xs font-extrabold text-white truncate">
+                            {shelf.name}
+                          </span>
+                          <span
+                            className={`block text-[10px] ${activeTheme.subMutedText}`}
+                          >
+                            {shelf.items.length}{" "}
+                            {shelf.items.length === 1 ? "title" : "titles"}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase ${
+                          isAdded
+                            ? "bg-emerald-950/85 border-emerald-400/45 text-emerald-300"
+                            : activeTheme.subtleBadge
+                        }`}
+                      >
+                        {isAdded ? "✓ Added" : "+ Add"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                className={`rounded-2xl border p-3.5 text-center space-y-2.5 ${activeTheme.subPanel}`}
+              >
+                <p className={`text-xs font-semibold ${activeTheme.mutedText}`}>
+                  No custom shelves yet! Tap a quick starter below or make your
+                  own:
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                  {SHELF_TEMPLATE_SUGGESTIONS.map((tpl) => (
+                    <button
+                      key={tpl.name}
+                      type="button"
+                      onClick={() =>
+                        handleCreateAndAddShelf(tpl.name, tpl.icon)
+                      }
+                      className={`rounded-full border px-3 py-1 text-[11px] font-bold transition cursor-pointer hover:scale-105 ${activeTheme.btnSecondary}`}
+                    >
+                      {tpl.icon} {tpl.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Create New Shelf Inline Form */}
+            <CreateShelfInlineForm
+              activeTheme={activeTheme}
+              onCreate={handleCreateAndAddShelf}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
