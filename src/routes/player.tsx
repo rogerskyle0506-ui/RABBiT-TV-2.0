@@ -128,6 +128,312 @@ async function fetchJsonWithTimeout(
   }
 }
 
+interface PlayerThemeTokens {
+  pageBg: string;
+  baseText: string;
+  mutedText: string;
+  subMutedText: string;
+  surfacePanel: string;
+  dropdownMenu: string;
+  selectBtn: string;
+  dividerBorder: string;
+  backCapsule: string;
+  backBadge: string;
+  btnSecondary: string;
+  btnActivePill: string;
+  text: string;
+  bg: string;
+  ring: string;
+  accentBar: string;
+  badge: string;
+  subtleBadge: string;
+  episodeActive: string;
+  episodeIdle: string;
+  episodeThumb: string;
+  toastBanner: string;
+  lightsOnBtn: string;
+  playerFrame: string;
+  ambient: string;
+  playerGlow: string;
+  laserLine: string;
+  avatarFrame: string;
+  avatarRing: string;
+  nextBtn: string;
+}
+
+function getPlayerThemeTokens(theme: AppTheme): PlayerThemeTokens {
+  switch (theme) {
+    case "red":
+      return {
+        pageBg: "bg-gradient-to-br from-zinc-950/88 via-red-950/42 to-black/95",
+        baseText: "text-zinc-100",
+        mutedText: "text-zinc-300",
+        subMutedText: "text-zinc-400",
+        surfacePanel:
+          "bg-zinc-950/90 border-red-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+        dropdownMenu:
+          "bg-zinc-950/98 border-red-500/35 shadow-2xl",
+        selectBtn:
+          "border-red-500/30 bg-black/75 text-white hover:border-red-400/60",
+        dividerBorder: "border-red-500/20",
+        backCapsule:
+          "bg-zinc-950/88 hover:bg-red-950/80 border-red-500/35 hover:border-red-400 text-zinc-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-red-600/60 via-rose-500/50 to-orange-500/50 border-red-400/50 text-white",
+        btnSecondary:
+          "bg-red-950/55 hover:bg-red-900/80 border-red-500/30 text-red-100 hover:text-white",
+        btnActivePill:
+          "bg-red-600/35 border-red-400/75 text-red-100",
+        text: "text-red-400",
+        bg: "bg-red-600",
+        ring: "focus:ring-red-500",
+        accentBar: "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.95)]",
+        badge: "text-red-200 border-red-500/35 bg-red-950/75",
+        subtleBadge: "text-zinc-200 border-red-500/25 bg-black/75",
+        episodeActive: "bg-red-950/80 border-red-400/75 ring-1 ring-red-400/50",
+        episodeIdle: "bg-black/65 border-red-500/20 hover:bg-red-950/45",
+        episodeThumb: "bg-zinc-900 border-red-500/25",
+        toastBanner: "bg-zinc-950/95 border-red-400/55 text-red-100",
+        lightsOnBtn:
+          "bg-red-950/90 hover:bg-red-900 border-red-400/65 text-red-100",
+        playerFrame: "border-red-500/35",
+        ambient: "from-red-600/20 via-rose-600/5 to-transparent",
+        playerGlow:
+          "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(239,68,68,0.24)]",
+        laserLine: "from-transparent via-red-500 to-rose-400",
+        avatarFrame: "bg-zinc-950 border-zinc-950",
+        avatarRing: "from-red-500 via-rose-400 to-orange-400",
+        nextBtn:
+          "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.45)]",
+      };
+    case "midnight":
+      return {
+        pageBg:
+          "bg-gradient-to-br from-slate-950/88 via-blue-950/42 to-black/95",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        surfacePanel:
+          "bg-slate-950/90 border-blue-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+        dropdownMenu:
+          "bg-slate-950/98 border-blue-500/35 shadow-2xl",
+        selectBtn:
+          "border-blue-500/30 bg-black/75 text-white hover:border-sky-400/60",
+        dividerBorder: "border-blue-500/20",
+        backCapsule:
+          "bg-slate-950/88 hover:bg-blue-950/80 border-blue-500/35 hover:border-sky-400 text-slate-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-blue-600/60 via-sky-500/50 to-cyan-400/50 border-sky-400/50 text-white",
+        btnSecondary:
+          "bg-blue-950/55 hover:bg-blue-900/80 border-blue-500/30 text-blue-100 hover:text-white",
+        btnActivePill:
+          "bg-blue-600/35 border-sky-400/75 text-sky-100",
+        text: "text-sky-300",
+        bg: "bg-blue-600",
+        ring: "focus:ring-sky-400",
+        accentBar: "bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.95)]",
+        badge: "text-sky-200 border-blue-500/35 bg-blue-950/75",
+        subtleBadge: "text-slate-200 border-blue-500/25 bg-black/75",
+        episodeActive: "bg-blue-950/80 border-sky-400/75 ring-1 ring-sky-400/50",
+        episodeIdle: "bg-black/65 border-blue-500/20 hover:bg-blue-950/45",
+        episodeThumb: "bg-slate-900 border-blue-500/25",
+        toastBanner: "bg-slate-950/95 border-sky-400/55 text-sky-100",
+        lightsOnBtn:
+          "bg-blue-950/90 hover:bg-blue-900 border-sky-400/65 text-sky-100",
+        playerFrame: "border-blue-500/35",
+        ambient: "from-blue-600/20 via-sky-500/5 to-transparent",
+        playerGlow:
+          "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(56,189,248,0.24)]",
+        laserLine: "from-transparent via-sky-400 to-blue-500",
+        avatarFrame: "bg-slate-950 border-slate-950",
+        avatarRing: "from-cyan-400 via-sky-500 to-blue-500",
+        nextBtn:
+          "bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 text-white shadow-[0_0_20px_rgba(56,189,248,0.45)]",
+      };
+    case "emerald":
+      return {
+        pageBg:
+          "bg-gradient-to-br from-neutral-950/88 via-emerald-950/42 to-black/95",
+        baseText: "text-neutral-100",
+        mutedText: "text-neutral-300",
+        subMutedText: "text-neutral-400",
+        surfacePanel:
+          "bg-neutral-950/90 border-emerald-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+        dropdownMenu:
+          "bg-neutral-950/98 border-emerald-500/35 shadow-2xl",
+        selectBtn:
+          "border-emerald-500/30 bg-black/75 text-white hover:border-emerald-400/60",
+        dividerBorder: "border-emerald-500/20",
+        backCapsule:
+          "bg-neutral-950/88 hover:bg-emerald-950/80 border-emerald-500/35 hover:border-emerald-400 text-neutral-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-emerald-600/60 via-teal-500/50 to-green-400/50 border-emerald-400/50 text-white",
+        btnSecondary:
+          "bg-emerald-950/55 hover:bg-emerald-900/80 border-emerald-500/30 text-emerald-100 hover:text-white",
+        btnActivePill:
+          "bg-emerald-600/35 border-emerald-400/75 text-emerald-100",
+        text: "text-emerald-300",
+        bg: "bg-emerald-600",
+        ring: "focus:ring-emerald-400",
+        accentBar: "bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]",
+        badge: "text-emerald-200 border-emerald-500/35 bg-emerald-950/75",
+        subtleBadge: "text-neutral-200 border-emerald-500/25 bg-black/75",
+        episodeActive:
+          "bg-emerald-950/80 border-emerald-400/75 ring-1 ring-emerald-400/50",
+        episodeIdle: "bg-black/65 border-emerald-500/20 hover:bg-emerald-950/45",
+        episodeThumb: "bg-neutral-900 border-emerald-500/25",
+        toastBanner: "bg-neutral-950/95 border-emerald-400/55 text-emerald-100",
+        lightsOnBtn:
+          "bg-emerald-950/90 hover:bg-emerald-900 border-emerald-400/65 text-emerald-100",
+        playerFrame: "border-emerald-500/35",
+        ambient: "from-emerald-600/20 via-teal-500/5 to-transparent",
+        playerGlow:
+          "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(52,211,153,0.24)]",
+        laserLine: "from-transparent via-emerald-400 to-teal-400",
+        avatarFrame: "bg-neutral-950 border-neutral-950",
+        avatarRing: "from-emerald-400 via-teal-400 to-green-500",
+        nextBtn:
+          "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-[0_0_20px_rgba(52,211,153,0.45)]",
+      };
+    case "amber":
+      return {
+        pageBg:
+          "bg-gradient-to-br from-stone-950/88 via-yellow-950/42 to-black/95",
+        baseText: "text-stone-100",
+        mutedText: "text-stone-300",
+        subMutedText: "text-stone-400",
+        surfacePanel:
+          "bg-stone-950/90 border-amber-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+        dropdownMenu:
+          "bg-stone-950/98 border-amber-500/35 shadow-2xl",
+        selectBtn:
+          "border-amber-500/30 bg-black/75 text-white hover:border-amber-400/60",
+        dividerBorder: "border-amber-500/20",
+        backCapsule:
+          "bg-stone-950/88 hover:bg-amber-950/80 border-amber-500/35 hover:border-amber-400 text-stone-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-amber-600/60 via-yellow-500/50 to-orange-500/50 border-amber-400/50 text-white",
+        btnSecondary:
+          "bg-amber-950/55 hover:bg-amber-900/80 border-amber-500/30 text-amber-100 hover:text-white",
+        btnActivePill:
+          "bg-amber-600/35 border-amber-400/75 text-amber-100",
+        text: "text-amber-300",
+        bg: "bg-amber-600",
+        ring: "focus:ring-amber-400",
+        accentBar: "bg-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.95)]",
+        badge: "text-amber-200 border-amber-500/35 bg-amber-950/75",
+        subtleBadge: "text-stone-200 border-amber-500/25 bg-black/75",
+        episodeActive:
+          "bg-amber-950/80 border-amber-400/75 ring-1 ring-amber-400/50",
+        episodeIdle: "bg-black/65 border-amber-500/20 hover:bg-amber-950/45",
+        episodeThumb: "bg-stone-900 border-amber-500/25",
+        toastBanner: "bg-stone-950/95 border-amber-400/55 text-amber-100",
+        lightsOnBtn:
+          "bg-amber-950/90 hover:bg-amber-900 border-amber-400/65 text-amber-100",
+        playerFrame: "border-amber-500/35",
+        ambient: "from-amber-600/20 via-yellow-500/5 to-transparent",
+        playerGlow:
+          "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(245,158,11,0.24)]",
+        laserLine: "from-transparent via-amber-400 to-orange-500",
+        avatarFrame: "bg-stone-950 border-stone-950",
+        avatarRing: "from-amber-400 via-yellow-400 to-orange-500",
+        nextBtn:
+          "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-[0_0_20px_rgba(245,158,11,0.45)]",
+      };
+    case "cyan":
+      return {
+        pageBg:
+          "bg-gradient-to-br from-slate-950/88 via-cyan-950/42 to-black/95",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        surfacePanel:
+          "bg-slate-950/90 border-cyan-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+        dropdownMenu:
+          "bg-slate-950/98 border-cyan-500/35 shadow-2xl",
+        selectBtn:
+          "border-cyan-500/30 bg-black/75 text-white hover:border-cyan-400/60",
+        dividerBorder: "border-cyan-500/20",
+        backCapsule:
+          "bg-slate-950/88 hover:bg-cyan-950/80 border-cyan-500/35 hover:border-cyan-400 text-slate-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-cyan-600/60 via-teal-500/50 to-sky-400/50 border-cyan-400/50 text-white",
+        btnSecondary:
+          "bg-cyan-950/55 hover:bg-cyan-900/80 border-cyan-500/30 text-cyan-100 hover:text-white",
+        btnActivePill:
+          "bg-cyan-600/35 border-cyan-400/75 text-cyan-100",
+        text: "text-cyan-300",
+        bg: "bg-cyan-600",
+        ring: "focus:ring-cyan-400",
+        accentBar: "bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]",
+        badge: "text-cyan-200 border-cyan-500/35 bg-cyan-950/75",
+        subtleBadge: "text-slate-200 border-cyan-500/25 bg-black/75",
+        episodeActive:
+          "bg-cyan-950/80 border-cyan-400/75 ring-1 ring-cyan-400/50",
+        episodeIdle: "bg-black/65 border-cyan-500/20 hover:bg-cyan-950/45",
+        episodeThumb: "bg-slate-900 border-cyan-500/25",
+        toastBanner: "bg-slate-950/95 border-cyan-400/55 text-cyan-100",
+        lightsOnBtn:
+          "bg-cyan-950/90 hover:bg-cyan-900 border-cyan-400/65 text-cyan-100",
+        playerFrame: "border-cyan-500/35",
+        ambient: "from-cyan-600/20 via-sky-500/5 to-transparent",
+        playerGlow:
+          "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(34,211,238,0.24)]",
+        laserLine: "from-transparent via-cyan-400 to-teal-400",
+        avatarFrame: "bg-slate-950 border-slate-950",
+        avatarRing: "from-cyan-400 via-teal-400 to-sky-500",
+        nextBtn:
+          "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-[0_0_20px_rgba(34,211,238,0.45)]",
+      };
+    case "violet":
+    default:
+      return {
+        pageBg:
+          "bg-gradient-to-br from-slate-950/88 via-purple-950/42 to-black/95",
+        baseText: "text-slate-100",
+        mutedText: "text-slate-300",
+        subMutedText: "text-slate-400",
+        surfacePanel:
+          "bg-slate-950/90 border-violet-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+        dropdownMenu:
+          "bg-slate-950/98 border-violet-500/35 shadow-2xl",
+        selectBtn:
+          "border-violet-500/30 bg-black/75 text-white hover:border-violet-400/60",
+        dividerBorder: "border-violet-500/20",
+        backCapsule:
+          "bg-slate-950/88 hover:bg-purple-950/80 border-violet-500/35 hover:border-violet-400 text-slate-100 hover:text-white",
+        backBadge:
+          "bg-gradient-to-tr from-violet-600/60 via-purple-500/50 to-indigo-500/50 border-violet-400/50 text-white",
+        btnSecondary:
+          "bg-purple-950/55 hover:bg-purple-900/80 border-violet-500/30 text-purple-100 hover:text-white",
+        btnActivePill:
+          "bg-violet-600/35 border-violet-400/75 text-violet-100",
+        text: "text-violet-300",
+        bg: "bg-violet-600",
+        ring: "focus:ring-violet-400",
+        accentBar: "bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]",
+        badge: "text-violet-200 border-violet-500/35 bg-purple-950/75",
+        subtleBadge: "text-slate-200 border-violet-500/25 bg-black/75",
+        episodeActive:
+          "bg-purple-950/80 border-violet-400/75 ring-1 ring-violet-400/50",
+        episodeIdle: "bg-black/65 border-violet-500/20 hover:bg-purple-950/45",
+        episodeThumb: "bg-slate-900 border-violet-500/25",
+        toastBanner: "bg-slate-950/95 border-violet-400/55 text-violet-100",
+        lightsOnBtn:
+          "bg-purple-950/90 hover:bg-purple-900 border-violet-400/65 text-violet-100",
+        playerFrame: "border-violet-500/35",
+        ambient: "from-violet-600/20 via-purple-500/5 to-transparent",
+        playerGlow:
+          "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(168,85,247,0.24)]",
+        laserLine: "from-transparent via-purple-500 to-violet-400",
+        avatarFrame: "bg-slate-950 border-slate-950",
+        avatarRing: "from-violet-400 via-purple-500 to-indigo-500",
+        nextBtn:
+          "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(139,92,246,0.45)]",
+      };
+  }
+}
+
 export function PlayerPage() {
   // 1. Protect React DOM & activate global adblocker interceptors (unchanged core shield)
   useEffect(() => {
@@ -481,7 +787,6 @@ export function PlayerPage() {
           setMediaDetails(null);
         }
 
-        // Fetch recommendations in parallel-safe flow
         let recData = await fetchJsonWithTimeout(
           `https://api.themoviedb.org/3/${activeFetchType}/${safeApiId}/recommendations?api_key=${apiKey}&language=en-US&page=1`,
           controller.signal
@@ -720,126 +1025,15 @@ export function PlayerPage() {
 
   const gridColsClass = useMemo(() => {
     if (cardSize === "small") {
-      return "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 sm:gap-4 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 justify-items-center";
     }
     if (cardSize === "medium") {
-      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 justify-items-center";
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5 justify-items-center";
     }
-    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 justify-items-center";
+    return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 justify-items-center";
   }, [cardSize]);
 
-  const themeTokens = useMemo(() => {
-    switch (appTheme) {
-      case "red":
-        return {
-          pageBg: "bg-gradient-to-br from-zinc-950/85 via-red-950/45 to-black/95",
-          cardBg: "bg-zinc-950/90 border-red-500/25",
-          text: "text-red-400",
-          bg: "bg-red-600",
-          ring: "focus:ring-red-400",
-          accentBar: "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.95)]",
-          badge: "text-red-200 border-red-500/30 bg-red-950/60",
-          ambient: "from-red-600/20 via-rose-600/5 to-transparent",
-          playerGlow:
-            "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(239,68,68,0.22)]",
-          laserLine: "from-transparent via-red-500 to-amber-400",
-          avatarRing: "from-red-500 via-rose-400 to-amber-400",
-          nextBtn:
-            "bg-gradient-to-r from-red-500 via-rose-500 to-amber-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.45)]",
-        };
-      case "midnight":
-        return {
-          pageBg:
-            "bg-gradient-to-br from-slate-950/85 via-blue-950/45 to-slate-950/95",
-          cardBg: "bg-slate-950/90 border-blue-500/25",
-          text: "text-sky-300",
-          bg: "bg-blue-600",
-          ring: "focus:ring-blue-400",
-          accentBar: "bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.95)]",
-          badge: "text-sky-200 border-blue-500/30 bg-blue-950/60",
-          ambient: "from-blue-600/20 via-sky-500/5 to-transparent",
-          playerGlow:
-            "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(56,189,248,0.22)]",
-          laserLine: "from-transparent via-sky-400 to-blue-500",
-          avatarRing: "from-cyan-400 via-sky-500 to-indigo-500",
-          nextBtn:
-            "bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 text-slate-950 shadow-[0_0_20px_rgba(56,189,248,0.45)]",
-        };
-      case "emerald":
-        return {
-          pageBg:
-            "bg-gradient-to-br from-slate-950/85 via-emerald-950/45 to-slate-950/95",
-          cardBg: "bg-slate-950/90 border-emerald-500/25",
-          text: "text-emerald-300",
-          bg: "bg-emerald-600",
-          ring: "focus:ring-emerald-400",
-          accentBar: "bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]",
-          badge: "text-emerald-200 border-emerald-500/30 bg-emerald-950/60",
-          ambient: "from-emerald-600/20 via-teal-500/5 to-transparent",
-          playerGlow:
-            "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(52,211,153,0.22)]",
-          laserLine: "from-transparent via-emerald-400 to-cyan-400",
-          avatarRing: "from-emerald-400 via-teal-400 to-cyan-500",
-          nextBtn:
-            "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(52,211,153,0.45)]",
-        };
-      case "amber":
-        return {
-          pageBg:
-            "bg-gradient-to-br from-stone-950/85 via-yellow-950/45 to-neutral-950/95",
-          cardBg: "bg-stone-950/90 border-amber-500/25",
-          text: "text-amber-300",
-          bg: "bg-amber-600",
-          ring: "focus:ring-amber-400",
-          accentBar: "bg-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.95)]",
-          badge: "text-amber-200 border-amber-500/30 bg-amber-950/60",
-          ambient: "from-amber-600/20 via-yellow-500/5 to-transparent",
-          playerGlow:
-            "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(245,158,11,0.22)]",
-          laserLine: "from-transparent via-amber-400 to-orange-500",
-          avatarRing: "from-amber-400 via-yellow-400 to-orange-500",
-          nextBtn:
-            "bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.45)]",
-        };
-      case "cyan":
-        return {
-          pageBg:
-            "bg-gradient-to-br from-slate-950/85 via-cyan-950/45 to-slate-950/95",
-          cardBg: "bg-slate-950/90 border-cyan-500/25",
-          text: "text-cyan-300",
-          bg: "bg-cyan-600",
-          ring: "focus:ring-cyan-400",
-          accentBar: "bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]",
-          badge: "text-cyan-200 border-cyan-500/30 bg-cyan-950/60",
-          ambient: "from-cyan-600/20 via-sky-500/5 to-transparent",
-          playerGlow:
-            "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(34,211,238,0.22)]",
-          laserLine: "from-transparent via-cyan-400 to-sky-500",
-          avatarRing: "from-cyan-400 via-sky-400 to-blue-500",
-          nextBtn:
-            "bg-gradient-to-r from-cyan-400 via-teal-300 to-sky-400 text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.45)]",
-        };
-      case "violet":
-      default:
-        return {
-          pageBg:
-            "bg-gradient-to-br from-slate-950/85 via-purple-950/45 to-slate-950/95",
-          cardBg: "bg-slate-950/90 border-violet-500/25",
-          text: "text-violet-300",
-          bg: "bg-violet-600",
-          ring: "focus:ring-violet-400",
-          accentBar: "bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]",
-          badge: "text-slate-200 border-white/15 bg-white/[0.06]",
-          ambient: "from-violet-600/20 via-fuchsia-500/5 to-transparent",
-          playerGlow:
-            "shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(168,85,247,0.25)]",
-          laserLine: "from-transparent via-pink-500 to-cyan-400",
-          avatarRing: "from-cyan-400 via-purple-500 to-pink-500",
-          nextBtn:
-            "bg-gradient-to-r from-cyan-400 via-sky-400 to-purple-500 text-slate-950 shadow-[0_0_20px_rgba(56,189,248,0.45)]",
-        };
-    }
-  }, [appTheme]);
+  const themeTokens = useMemo(() => getPlayerThemeTokens(appTheme), [appTheme]);
 
   if (loading) {
     return (
@@ -863,7 +1057,6 @@ export function PlayerPage() {
   const overview =
     mediaDetails?.overview || "No description available for this title.";
 
-  // Hardware-aware backdrop sizing (saves multi-megabyte GPU texture RAM on 1-2GB sticks!)
   const backdropWidth = isLowRam ? "w780" : "w1280";
   const backdropUrl = mediaDetails?.backdrop_path
     ? `https://image.tmdb.org/t/p/${backdropWidth}${mediaDetails.backdrop_path}`
@@ -977,7 +1170,7 @@ export function PlayerPage() {
 
   return (
     <div
-      className={`player-view-wrapper min-h-screen w-full ${themeTokens.pageBg} py-4 sm:py-6 px-3 sm:px-6 md:px-10 text-white overflow-y-auto scroll-smooth transition-colors duration-300 pb-20 relative rounded-3xl`}
+      className={`player-view-wrapper min-h-screen w-full max-w-full ${themeTokens.pageBg} ${themeTokens.baseText} py-3 sm:py-6 px-2.5 sm:px-6 md:px-10 overflow-x-clip scroll-smooth transition-colors duration-300 pb-16 relative rounded-3xl`}
     >
       <AppWallpaper backdropUrl={backdropUrl} />
       {!isLowRam && !reducedMotion && !glowOff && (
@@ -999,29 +1192,34 @@ export function PlayerPage() {
         <button
           type="button"
           onClick={() => setCinemaDimMode(false)}
-          className="rabtv-vidsrc-protected fixed top-4 right-4 z-50 rounded-full bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/60 px-4 py-2 text-xs font-extrabold text-amber-200 shadow-2xl backdrop-blur-xl cursor-pointer transition"
+          className={`rabtv-vidsrc-protected fixed top-4 right-4 z-50 rounded-full border px-4 py-2 text-xs font-extrabold shadow-2xl backdrop-blur-xl cursor-pointer transition ${themeTokens.lightsOnBtn}`}
         >
           💡 Turn Lights On (Esc)
         </button>
       )}
 
-      <div className="relative z-10 max-w-6xl mx-auto flex flex-col gap-5">
-        {/* Top Navigation Row: Neon Glass Capsules + Live Clock & Sleep Indicator */}
-        <div className="w-full flex flex-wrap items-center justify-between gap-2.5">
+      <div className="relative z-10 max-w-6xl mx-auto flex flex-col gap-4 sm:gap-5 min-w-0">
+        {/* Top Navigation Row: Theme-Matched Capsules + Live Clock & Sleep Indicator */}
+        <div className="w-full flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <Link
               to="/"
-              className={`group inline-flex items-center gap-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-3.5 pr-2 ${
+              data-tour="back-to-home"
+              className={`group inline-flex items-center gap-2 rounded-full backdrop-blur-xl pl-3 pr-2 ${
                 largeButtons ? "py-2.5" : "py-1.5"
-              } border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50`}
+              } border shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 ${
+                themeTokens.backCapsule
+              } ${themeTokens.ring}`}
             >
-              <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
+              <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
                 ‹
               </span>
-              <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-100 group-hover:text-white">
+              <span className="text-xs sm:text-sm font-semibold tracking-wide">
                 Back to Home
               </span>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600/50 via-pink-500/40 to-cyan-400/50 border border-purple-300/50 text-[11px] text-white">
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${themeTokens.backBadge}`}
+              >
                 ⟲
               </span>
             </Link>
@@ -1029,17 +1227,21 @@ export function PlayerPage() {
             <button
               type="button"
               onClick={handleReturnToDetails}
-              className={`group inline-flex items-center gap-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-3.5 pr-2 ${
+              className={`group inline-flex items-center gap-2 rounded-full backdrop-blur-xl pl-3 pr-2 ${
                 largeButtons ? "py-2.5" : "py-1.5"
-              } border border-white/15 hover:border-cyan-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 focus:ring-cyan-500/50`}
+              } border shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${
+                themeTokens.backCapsule
+              } ${themeTokens.ring}`}
             >
-              <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
+              <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
                 ‹
               </span>
-              <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-100 group-hover:text-white">
+              <span className="text-xs sm:text-sm font-semibold tracking-wide">
                 {inferredMediaType === "tv" ? "TV Details" : "Movie Details"}
               </span>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-cyan-500/50 to-blue-500/50 border border-cyan-300/50 text-[11px] font-bold text-white">
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-bold ${themeTokens.backBadge}`}
+              >
                 ⓘ
               </span>
             </button>
@@ -1047,17 +1249,21 @@ export function PlayerPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             {sleepTimerMin > 0 && (
-              <span className="rounded-full bg-amber-950/80 border border-amber-400/40 px-3 py-1 text-[11px] font-extrabold text-amber-300">
+              <span
+                className={`rounded-full border px-3 py-1 text-[11px] font-extrabold ${themeTokens.badge}`}
+              >
                 🌙 Sleep: {sleepTimerMin}m
               </span>
             )}
-            <span className="rounded-full bg-slate-950/80 border border-white/15 px-3 py-1 text-[11px] font-extrabold text-slate-200">
+            <span
+              className={`rounded-full border px-3 py-1 text-[11px] font-extrabold ${themeTokens.subtleBadge}`}
+            >
               🕒 {liveClock}
             </span>
             <button
               type="button"
               onClick={() => setCinemaDimMode((d) => !d)}
-              className={`rounded-full bg-slate-900/85 hover:bg-amber-500/20 border border-white/15 hover:border-amber-400/50 ${pillBtnPadding} font-extrabold text-amber-200 transition cursor-pointer`}
+              className={`rounded-full border ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
               title="Dim surroundings around the player (L)"
             >
               💡 Lights Out
@@ -1067,7 +1273,9 @@ export function PlayerPage() {
 
         {/* Inline Feedback Toast */}
         {actionToast && (
-          <div className="rabtv-vidsrc-protected rounded-2xl bg-slate-950/90 border border-cyan-400/50 px-4 py-2 text-center text-xs font-extrabold text-cyan-200 shadow-xl">
+          <div
+            className={`rabtv-vidsrc-protected rounded-2xl border px-4 py-2 text-center text-xs font-extrabold shadow-xl ${themeTokens.toastBanner}`}
+          >
             {actionToast}
           </div>
         )}
@@ -1075,15 +1283,22 @@ export function PlayerPage() {
         {/* TV Season & Episode Control Deck */}
         {inferredMediaType === "tv" && (
           <div
-            className={`w-full flex flex-col gap-3 rounded-3xl border ${themeTokens.cardBg} bg-slate-950/85 p-4 sm:p-5 ${
+            data-tour="player-controls"
+            className={`w-full flex flex-col gap-3 rounded-3xl border p-3.5 sm:p-5 ${
               isLowRam ? "" : "backdrop-blur-2xl"
-            } shadow-2xl relative z-20`}
+            } relative z-20 ${themeTokens.surfacePanel}`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm font-semibold relative flex-1 min-w-[260px]">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-semibold relative flex-1 min-w-0">
                 {/* Season Selector */}
-                <div className="relative flex-1 min-w-[140px]" ref={seasonRef}>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 pl-1">
+                <div
+                  className="relative min-w-0"
+                  ref={seasonRef}
+                  data-tour="season-selector"
+                >
+                  <span
+                    className={`block text-[10px] font-bold uppercase tracking-wider mb-1 pl-1 ${themeTokens.subMutedText}`}
+                  >
                     Season
                   </span>
                   <button
@@ -1092,19 +1307,23 @@ export function PlayerPage() {
                       setIsSeasonOpen(!isSeasonOpen);
                       setIsEpisodeOpen(false);
                     }}
-                    className={`flex items-center justify-between w-full gap-3 rounded-xl border border-white/15 bg-black/65 px-3.5 ${
+                    className={`flex items-center justify-between w-full gap-3 rounded-xl border px-3.5 ${
                       largeButtons ? "py-3 text-sm" : "py-2.5 text-xs sm:text-sm"
-                    } text-white font-bold shadow-lg focus:outline-none focus:ring-4 ${themeTokens.ring} transition cursor-pointer`}
+                    } font-bold shadow-lg focus:outline-none focus:ring-4 ${
+                      themeTokens.selectBtn
+                    } ${themeTokens.ring} transition cursor-pointer`}
                   >
                     <span className="truncate">
                       {currentSeasonObj
                         ? currentSeasonObj.name
                         : `Season ${season}`}
                     </span>
-                    <span>▾</span>
+                    <span className="shrink-0">▾</span>
                   </button>
                   {isSeasonOpen && (
-                    <div className="rabtv-vidsrc-protected absolute left-0 right-0 mt-2 z-[999] max-h-60 min-w-[200px] overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-xl p-1">
+                    <div
+                      className={`rabtv-vidsrc-protected absolute left-0 right-0 mt-2 z-[999] max-h-60 overflow-y-auto rounded-2xl border backdrop-blur-xl p-1 ${themeTokens.dropdownMenu}`}
+                    >
                       {validSeasons.map((s: any) => (
                         <button
                           key={s.id}
@@ -1117,7 +1336,7 @@ export function PlayerPage() {
                           className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
                             season === s.season_number
                               ? `${themeTokens.bg} text-white font-black`
-                              : "text-slate-200 hover:bg-white/10"
+                              : `${themeTokens.mutedText} hover:bg-white/10 hover:text-white`
                           }`}
                         >
                           {s.name} ({s.episode_count} Eps)
@@ -1128,11 +1347,10 @@ export function PlayerPage() {
                 </div>
 
                 {/* Episode Selector */}
-                <div
-                  className="relative flex-[1.5] min-w-[180px]"
-                  ref={episodeRef}
-                >
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 pl-1">
+                <div className="relative min-w-0" ref={episodeRef}>
+                  <span
+                    className={`block text-[10px] font-bold uppercase tracking-wider mb-1 pl-1 ${themeTokens.subMutedText}`}
+                  >
                     Episode
                   </span>
                   <button
@@ -1141,19 +1359,23 @@ export function PlayerPage() {
                       setIsEpisodeOpen(!isEpisodeOpen);
                       setIsSeasonOpen(false);
                     }}
-                    className={`flex items-center justify-between w-full gap-3 rounded-xl border border-white/15 bg-black/65 px-3.5 ${
+                    className={`flex items-center justify-between w-full gap-3 rounded-xl border px-3.5 ${
                       largeButtons ? "py-3 text-sm" : "py-2.5 text-xs sm:text-sm"
-                    } text-white font-bold shadow-lg focus:outline-none focus:ring-4 ${themeTokens.ring} transition cursor-pointer`}
+                    } font-bold shadow-lg focus:outline-none focus:ring-4 ${
+                      themeTokens.selectBtn
+                    } ${themeTokens.ring} transition cursor-pointer`}
                   >
                     <span className="truncate">
                       {currentEpisodeObj
                         ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
                         : `Episode ${episode}`}
                     </span>
-                    <span>▾</span>
+                    <span className="shrink-0">▾</span>
                   </button>
                   {isEpisodeOpen && (
-                    <div className="rabtv-vidsrc-protected absolute left-0 right-0 mt-2 z-[999] max-h-60 min-w-[240px] overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-xl p-1">
+                    <div
+                      className={`rabtv-vidsrc-protected absolute left-0 right-0 mt-2 z-[999] max-h-60 overflow-y-auto rounded-2xl border backdrop-blur-xl p-1 ${themeTokens.dropdownMenu}`}
+                    >
                       {seasonEpisodes.length > 0 ? (
                         seasonEpisodes.map((ep: any) => {
                           const epWatched = completedEpisodesSet.has(
@@ -1170,7 +1392,7 @@ export function PlayerPage() {
                               className={`w-full flex items-center justify-between gap-2 text-left px-3 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
                                 episode === ep.episode_number
                                   ? `${themeTokens.bg} text-white font-black`
-                                  : "text-slate-200 hover:bg-white/10"
+                                  : `${themeTokens.mutedText} hover:bg-white/10 hover:text-white`
                               }`}
                             >
                               <span className="truncate">
@@ -1185,7 +1407,9 @@ export function PlayerPage() {
                           );
                         })
                       ) : (
-                        <div className="px-3 py-2 text-xs text-slate-400 font-bold">
+                        <div
+                          className={`px-3 py-2 text-xs font-bold ${themeTokens.subMutedText}`}
+                        >
                           Loading episodes...
                         </div>
                       )}
@@ -1195,24 +1419,29 @@ export function PlayerPage() {
               </div>
 
               {/* Smart Cross-Season Prev / Next Episode & Synced Autoplay Controls */}
-              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 pt-1 sm:pt-4">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={handlePrevEpisode}
                   disabled={!canGoPrevEpisode}
-                  className={`rounded-xl border border-white/15 bg-slate-900/90 hover:bg-slate-800 ${
+                  className={`rounded-xl border ${
                     largeButtons ? "px-4 py-3 text-sm" : "px-3.5 py-2.5 text-xs"
-                  } font-bold text-white transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-4 ${themeTokens.ring}`}
+                  } font-bold transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
+                    themeTokens.btnSecondary
+                  } ${themeTokens.ring}`}
                 >
                   ◀ Prev
                 </button>
                 <button
                   type="button"
+                  data-tour="player-next-episode"
                   onClick={handleNextEpisode}
                   disabled={!canGoNextEpisode}
                   className={`rounded-xl ${
                     largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2.5 text-xs"
-                  } font-extrabold tracking-wide transition transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-4 ${themeTokens.ring} ${themeTokens.nextBtn}`}
+                  } font-extrabold tracking-wide transition transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
+                    themeTokens.nextBtn
+                  } ${themeTokens.ring}`}
                 >
                   {episode >= currentSeasonMaxEp && nextSeasonObj
                     ? `Season ${nextSeasonObj.season_number} Ep 1 ▶`
@@ -1225,20 +1454,27 @@ export function PlayerPage() {
                   <button
                     type="button"
                     onClick={() => setShowEpisodeDrawer((v) => !v)}
-                    className={`rounded-xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.14] ${
+                    className={`rounded-xl border ${
                       largeButtons ? "px-4 py-3 text-sm" : "px-3 py-2.5 text-xs"
-                    } font-bold text-slate-100 transition cursor-pointer`}
+                    } font-bold transition cursor-pointer focus:outline-none focus:ring-2 ${
+                      themeTokens.btnSecondary
+                    } ${themeTokens.ring}`}
                   >
                     📺 {showEpisodeDrawer ? "Hide Guide" : "Episodes"}
                   </button>
                 )}
 
-                <label className="inline-flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-xs font-semibold text-slate-200 cursor-pointer select-none">
+                <label
+                  data-tour="player-autoplay"
+                  className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold cursor-pointer select-none ${themeStylesAutoplay(
+                    themeTokens
+                  )}`}
+                >
                   <input
                     type="checkbox"
                     checked={autoPlayNext}
                     onChange={(e) => handleToggleAutoPlay(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-violet-500 focus:ring-violet-500 focus:outline-none"
+                    className="h-4 w-4 rounded focus:outline-none"
                   />
                   <span>Autoplay</span>
                 </label>
@@ -1247,7 +1483,9 @@ export function PlayerPage() {
 
             {/* Expandable Visual Episode Guide Strip */}
             {showEpisodeDrawer && seasonEpisodes.length > 0 && (
-              <div className="pt-3 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-none">
+              <div
+                className={`pt-3 border-t grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-none ${themeTokens.dividerBorder}`}
+              >
                 {seasonEpisodes.map((ep: any) => {
                   const isActive = ep.episode_number === episode;
                   const isDone = completedEpisodesSet.has(
@@ -1263,11 +1501,13 @@ export function PlayerPage() {
                       }}
                       className={`flex items-center gap-2.5 rounded-2xl border p-2 text-left transition cursor-pointer ${
                         isActive
-                          ? `${themeTokens.bg}/30 border-cyan-400/70 ring-1 ring-cyan-400/50`
-                          : "bg-black/55 border-white/10 hover:bg-white/[0.08]"
+                          ? themeTokens.episodeActive
+                          : themeTokens.episodeIdle
                       }`}
                     >
-                      <div className="relative h-14 w-24 shrink-0 rounded-xl overflow-hidden bg-slate-900 border border-white/10">
+                      <div
+                        className={`relative h-14 w-24 shrink-0 rounded-xl overflow-hidden border ${themeTokens.episodeThumb}`}
+                      >
                         {ep.still_path ? (
                           <img
                             src={`https://image.tmdb.org/t/p/w300${ep.still_path}`}
@@ -1277,7 +1517,9 @@ export function PlayerPage() {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[10px] font-black text-slate-400">
+                          <div
+                            className={`flex h-full w-full items-center justify-center text-[10px] font-black ${themeTokens.subMutedText}`}
+                          >
                             EP {ep.episode_number}
                           </div>
                         )}
@@ -1291,7 +1533,9 @@ export function PlayerPage() {
                         <p className="text-xs font-extrabold text-white truncate">
                           {ep.episode_number}. {ep.name || `Episode ${ep.episode_number}`}
                         </p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
+                        <p
+                          className={`text-[10px] mt-0.5 ${themeTokens.subMutedText}`}
+                        >
                           {ep.runtime ? `${ep.runtime}m` : ""}
                           {ep.runtime && ep.air_date ? " • " : ""}
                           {ep.air_date || ""}
@@ -1307,9 +1551,12 @@ export function PlayerPage() {
 
         {/* Theater-Grade Video Player Container (100% Untouched vidsrc Iframe) */}
         <div
-          className={`video-player-container relative w-full mx-auto aspect-video overflow-hidden rounded-2xl sm:rounded-3xl bg-black border border-white/20 ${
-            cinemaDimMode ? "z-40" : "z-10"
-          } ${glowOff ? "shadow-2xl" : themeTokens.playerGlow}`}
+          data-tour="video-player"
+          className={`video-player-container relative w-full mx-auto aspect-video max-h-[75dvh] overflow-hidden rounded-2xl sm:rounded-3xl bg-black border ${
+            themeTokens.playerFrame
+          } ${cinemaDimMode ? "z-40" : "z-10"} ${
+            glowOff ? "shadow-2xl" : themeTokens.playerGlow
+          }`}
         >
           <iframe
             key={`stable-player-${mediaId}-${season}-${episode}`}
@@ -1322,12 +1569,15 @@ export function PlayerPage() {
 
         {/* Unified High-End Cinema Metadata, Quick Actions & Overview Panel */}
         <div
-          className={`relative overflow-hidden w-full rounded-3xl border border-white/15 bg-slate-950/85 ${
+          data-tour="details-metadata"
+          className={`relative overflow-hidden w-full rounded-3xl border ${
             isLowRam ? "" : "backdrop-blur-2xl"
-          } p-5 sm:p-7 shadow-[0_16px_50px_rgba(0,0,0,0.75)] flex flex-col gap-4`}
+          } p-4 sm:p-7 flex flex-col gap-4 ${themeTokens.surfacePanel}`}
         >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/10 pb-4">
-            <div className="space-y-2 text-left">
+          <div
+            className={`flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-4 ${themeTokens.dividerBorder}`}
+          >
+            <div className="space-y-2 text-left min-w-0">
               <div className="flex items-center flex-wrap gap-2">
                 <span
                   className={`rounded-full border px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest ${themeTokens.badge}`}
@@ -1335,18 +1585,22 @@ export function PlayerPage() {
                   {genres}
                 </span>
                 {inferredMediaType === "tv" && (
-                  <span className="rounded-full bg-cyan-500/15 border border-cyan-400/30 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-cyan-300">
+                  <span
+                    className={`rounded-full border px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${themeTokens.badge}`}
+                  >
                     Season {season} • Episode {episode}
                   </span>
                 )}
                 {runtimeMinutes && (
-                  <span className="rounded-full bg-white/[0.06] border border-white/10 px-2.5 py-0.5 text-[10px] font-bold text-slate-300">
+                  <span
+                    className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${themeTokens.subtleBadge}`}
+                  >
                     {runtimeMinutes} min
                   </span>
                 )}
               </div>
 
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
                 {title}
                 {inferredMediaType === "tv" && currentEpisodeObj?.name
                   ? ` — ${currentEpisodeObj.name}`
@@ -1357,16 +1611,23 @@ export function PlayerPage() {
             {/* Right Metadata Pills & IMDb Quick Link */}
             <div className="flex items-center flex-wrap gap-2 shrink-0">
               {rating !== "N/A" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-400/30 px-3 py-1.5 text-xs font-extrabold text-amber-300">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-extrabold ${themeTokens.badge}`}
+                >
                   ★ {rating}
                 </span>
               )}
               {releaseYear && (
-                <span className="rounded-full bg-white/[0.06] border border-white/10 px-3 py-1.5 text-xs font-bold text-slate-200">
+                <span
+                  className={`rounded-full border px-3 py-1.5 text-xs font-bold ${themeTokens.subtleBadge}`}
+                >
                   {releaseYear}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 px-3.5 py-1.5 text-xs font-bold text-emerald-300">
+              <span
+                data-tour="finish-time"
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold ${themeTokens.badge}`}
+              >
                 <span>⏱️ Finish:</span>
                 <strong className="text-white">{estimatedCompletion}</strong>
               </span>
@@ -1374,7 +1635,8 @@ export function PlayerPage() {
                 href={imdbLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 px-3.5 py-1.5 text-xs font-extrabold text-amber-300 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                data-tour="imdb-link"
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition transform hover:scale-105 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
                 title="View Official IMDb Listing"
               >
                 <span>⭐ IMDb</span>
@@ -1387,11 +1649,9 @@ export function PlayerPage() {
             <button
               type="button"
               onClick={handleToggleMyList}
-              className={`rounded-xl border ${pillBtnPadding} font-extrabold transition cursor-pointer ${
-                inMyList
-                  ? "bg-cyan-500/25 border-cyan-400/60 text-cyan-200"
-                  : "bg-white/[0.06] hover:bg-white/[0.14] border-white/15 text-slate-200"
-              }`}
+              className={`rounded-xl border ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${
+                inMyList ? themeTokens.btnActivePill : themeTokens.btnSecondary
+              } ${themeTokens.ring}`}
             >
               {inMyList ? "✓ In My List" : "🔖 Add to My List"}
             </button>
@@ -1399,19 +1659,20 @@ export function PlayerPage() {
             <button
               type="button"
               onClick={handleToggleWatched}
-              className={`rounded-xl border ${pillBtnPadding} font-extrabold transition cursor-pointer ${
+              className={`rounded-xl border ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${
                 isCurrentItemWatched
                   ? "bg-emerald-500/25 border-emerald-400/60 text-emerald-200"
-                  : "bg-white/[0.06] hover:bg-white/[0.14] border-white/15 text-slate-200"
-              }`}
+                  : themeTokens.btnSecondary
+              } ${themeTokens.ring}`}
             >
               {isCurrentItemWatched ? "👁️ ✓ Watched" : "👁️ Mark Watched"}
             </button>
 
             <button
               type="button"
+              data-tour="report-broken"
               onClick={handleReportBrokenStream}
-              className={`rounded-xl border border-red-500/35 bg-red-950/45 hover:bg-red-600/75 ${pillBtnPadding} font-extrabold text-red-200 hover:text-white transition cursor-pointer`}
+              className={`rounded-xl border ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
               title="Report if this stream fails to load"
             >
               🚩 Report Broken Stream
@@ -1420,7 +1681,7 @@ export function PlayerPage() {
             <button
               type="button"
               onClick={handleDislikeTitle}
-              className={`rounded-xl border border-amber-500/30 bg-black/55 hover:bg-amber-600/70 ${pillBtnPadding} font-bold text-amber-200 hover:text-white transition cursor-pointer`}
+              className={`rounded-xl border ${pillBtnPadding} font-bold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
               title="Hide this title from catalogs"
             >
               👎 Dislike
@@ -1429,10 +1690,14 @@ export function PlayerPage() {
 
           {/* Overview Paragraph */}
           <div className="space-y-1.5 text-left">
-            <h3 className="text-[10px] uppercase tracking-widest text-slate-400 font-extrabold">
+            <h3
+              className={`text-[10px] uppercase tracking-widest font-extrabold ${themeTokens.subMutedText}`}
+            >
               Synopsis & Overview
             </h3>
-            <p className="text-xs sm:text-sm md:text-base leading-relaxed text-slate-300/95 max-w-4xl">
+            <p
+              className={`text-xs sm:text-sm md:text-base leading-relaxed max-w-4xl ${themeTokens.mutedText}`}
+            >
               {inferredMediaType === "tv" && currentEpisodeObj?.overview
                 ? currentEpisodeObj.overview
                 : overview}
@@ -1442,7 +1707,7 @@ export function PlayerPage() {
           {/* Neon Bottom Laser Accent Line */}
           {!glowOff && (
             <div
-              className={`absolute inset-x-6 bottom-0 h-[2px] bg-gradient-to-r ${themeTokens.laserLine} opacity-85 shadow-[0_0_15px_rgba(236,72,153,0.9)]`}
+              className={`absolute inset-x-6 bottom-0 h-[2px] bg-gradient-to-r ${themeTokens.laserLine} opacity-85`}
             />
           )}
         </div>
@@ -1452,7 +1717,7 @@ export function PlayerPage() {
           <section className="w-full space-y-3 pt-1">
             <div className="flex items-center gap-2.5 px-1">
               <span
-                className={`w-1.5 h-6 rounded-full ${themeTokens.accentBar}`}
+                className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
               />
               <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
                 🎭 Starring Cast
@@ -1473,7 +1738,9 @@ export function PlayerPage() {
                   <div
                     className={`p-[2px] rounded-full bg-gradient-to-tr ${themeTokens.avatarRing} shadow-lg group-hover:scale-105 transition-transform mb-1.5`}
                   >
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-slate-950 border-2 border-slate-950 flex items-center justify-center">
+                    <div
+                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 flex items-center justify-center ${themeTokens.avatarFrame}`}
+                    >
                       {actor.profilePath ? (
                         <img
                           src={`https://image.tmdb.org/t/p/w185${actor.profilePath}`}
@@ -1491,7 +1758,9 @@ export function PlayerPage() {
                     {actor.name}
                   </span>
                   {actor.character && (
-                    <span className="text-[9px] text-slate-400 truncate w-full">
+                    <span
+                      className={`text-[9px] truncate w-full ${themeTokens.subMutedText}`}
+                    >
                       {actor.character}
                     </span>
                   )}
@@ -1503,18 +1772,20 @@ export function PlayerPage() {
 
         {/* Similar Recommended Titles */}
         {mappedRecommendations.length > 0 && (
-          <div className="w-full mt-2 pt-6 border-t border-white/10 space-y-4">
-            <div className="mb-3 flex items-center justify-between px-1 text-left w-full">
-              <div className="flex items-center gap-2.5">
+          <div
+            className={`w-full mt-2 pt-6 border-t space-y-4 ${themeTokens.dividerBorder}`}
+          >
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-left w-full">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <span
-                  className={`w-1.5 h-6 rounded-full ${themeTokens.accentBar}`}
+                  className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
                 />
                 <h2 className="text-base sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
                   <span>✨ Similar Recommended Titles</span>
                 </h2>
               </div>
               <span
-                className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 ${themeTokens.text}`}
+                className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeTokens.badge}`}
               >
                 {mappedRecommendations.length} matches
               </span>
@@ -1538,4 +1809,8 @@ export function PlayerPage() {
       </div>
     </div>
   );
+}
+
+function themeStylesAutoplay(tokens: PlayerThemeTokens): string {
+  return `${tokens.subtleBadge}`;
 }
