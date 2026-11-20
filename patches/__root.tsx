@@ -1,5 +1,5 @@
 // src/routes/__root.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, memo, useCallback } from "react";
 import { BugReportModal } from "@/components/BugReportModal";
 import { PublicBugFeedModal } from "@/components/PublicBugFeedModal";
 import { UserNotifier } from "@/components/UserNotifier";
@@ -11,6 +11,7 @@ import {
   Scripts,
   Link,
   useNavigate,
+  useRouterState,
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -94,6 +95,241 @@ const themeStatusBarMap: Record<AppTheme, string> = {
   cyan: "#021820",
 };
 
+interface RootThemeTokens {
+  bodyBg: string;
+  bodyText: string;
+  headerBg: string;
+  headerBorder: string;
+  glowClass: string;
+  cardBg: string;
+  profileBtn: string;
+  avatarFrame: string;
+  searchInput: string;
+  searchIcon: string;
+  searchSubmitBtn: string;
+  trialBadge: string;
+  footerShell: string;
+  footerText: string;
+  footerSubText: string;
+  footerLink: string;
+  footerBtn: string;
+  footerVersion: string;
+  clockPill: string;
+  primaryAccent: string;
+  primaryBg: string;
+  focusRing: string;
+}
+
+function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
+  switch (theme) {
+    case "red":
+      return {
+        bodyBg: "bg-gradient-to-br from-zinc-950/92 via-red-950/40 to-black/95",
+        bodyText: "text-zinc-100",
+        headerBg: "bg-red-950/45 backdrop-blur-xl",
+        headerBorder: "border-red-500/35",
+        glowClass: "border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.38)]",
+        cardBg: "bg-zinc-950/95 border-red-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn:
+          "bg-red-950/70 border-red-500/35 text-red-100 hover:bg-red-900/85 shadow-sm",
+        avatarFrame: "border-red-400/45 bg-zinc-900",
+        searchInput:
+          "border-red-500/30 bg-black/70 text-white placeholder-zinc-400 focus:ring-2 focus:ring-red-500 focus:border-red-400/60",
+        searchIcon: "text-red-300",
+        searchSubmitBtn:
+          "bg-red-950/80 hover:bg-red-800/90 border border-red-500/40 text-red-100 hover:text-white",
+        trialBadge:
+          "bg-red-950/70 border-red-500/40 text-red-200",
+        footerShell:
+          "border-red-500/25 bg-zinc-950/80 shadow-[0_8px_30px_rgba(239,68,68,0.12)]",
+        footerText: "text-zinc-300",
+        footerSubText: "text-zinc-400",
+        footerLink: "text-red-300 hover:text-red-200",
+        footerBtn:
+          "bg-red-950/60 hover:bg-red-900/80 border-red-500/35 text-red-100 hover:text-white",
+        footerVersion:
+          "bg-black/75 border-red-500/25 text-zinc-300",
+        clockPill:
+          "bg-zinc-950/85 border-red-500/35 text-red-100 shadow-[0_6px_20px_rgba(239,68,68,0.2)]",
+        primaryAccent: "text-red-400",
+        primaryBg:
+          "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
+        focusRing: "focus:ring-red-500",
+      };
+    case "midnight":
+      return {
+        bodyBg: "bg-gradient-to-br from-slate-950/92 via-blue-950/40 to-black/95",
+        bodyText: "text-slate-100",
+        headerBg: "bg-blue-950/45 backdrop-blur-xl",
+        headerBorder: "border-blue-500/35",
+        glowClass: "border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.38)]",
+        cardBg: "bg-slate-950/95 border-blue-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn:
+          "bg-blue-950/70 border-blue-500/35 text-blue-100 hover:bg-blue-900/85 shadow-sm",
+        avatarFrame: "border-sky-400/45 bg-slate-900",
+        searchInput:
+          "border-blue-500/30 bg-black/70 text-white placeholder-slate-400 focus:ring-2 focus:ring-sky-400 focus:border-sky-400/60",
+        searchIcon: "text-sky-300",
+        searchSubmitBtn:
+          "bg-blue-950/80 hover:bg-blue-800/90 border border-blue-500/40 text-sky-100 hover:text-white",
+        trialBadge:
+          "bg-blue-950/70 border-blue-500/40 text-sky-200",
+        footerShell:
+          "border-blue-500/25 bg-slate-950/80 shadow-[0_8px_30px_rgba(59,130,246,0.12)]",
+        footerText: "text-slate-300",
+        footerSubText: "text-slate-400",
+        footerLink: "text-sky-300 hover:text-sky-200",
+        footerBtn:
+          "bg-blue-950/60 hover:bg-blue-900/80 border-blue-500/35 text-blue-100 hover:text-white",
+        footerVersion:
+          "bg-black/75 border-blue-500/25 text-slate-300",
+        clockPill:
+          "bg-slate-950/85 border-blue-500/35 text-sky-100 shadow-[0_6px_20px_rgba(59,130,246,0.2)]",
+        primaryAccent: "text-sky-300",
+        primaryBg:
+          "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
+        focusRing: "focus:ring-sky-400",
+      };
+    case "emerald":
+      return {
+        bodyBg: "bg-gradient-to-br from-neutral-950/92 via-emerald-950/40 to-black/95",
+        bodyText: "text-neutral-100",
+        headerBg: "bg-emerald-950/45 backdrop-blur-xl",
+        headerBorder: "border-emerald-500/35",
+        glowClass: "border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.38)]",
+        cardBg: "bg-neutral-950/95 border-emerald-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn:
+          "bg-emerald-950/70 border-emerald-500/35 text-emerald-100 hover:bg-emerald-900/85 shadow-sm",
+        avatarFrame: "border-emerald-400/45 bg-neutral-900",
+        searchInput:
+          "border-emerald-500/30 bg-black/70 text-white placeholder-neutral-400 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400/60",
+        searchIcon: "text-emerald-300",
+        searchSubmitBtn:
+          "bg-emerald-950/80 hover:bg-emerald-800/90 border border-emerald-500/40 text-emerald-100 hover:text-white",
+        trialBadge:
+          "bg-emerald-950/70 border-emerald-500/40 text-emerald-200",
+        footerShell:
+          "border-emerald-500/25 bg-neutral-950/80 shadow-[0_8px_30px_rgba(16,185,129,0.12)]",
+        footerText: "text-neutral-300",
+        footerSubText: "text-neutral-400",
+        footerLink: "text-emerald-300 hover:text-emerald-200",
+        footerBtn:
+          "bg-emerald-950/60 hover:bg-emerald-900/80 border-emerald-500/35 text-emerald-100 hover:text-white",
+        footerVersion:
+          "bg-black/75 border-emerald-500/25 text-neutral-300",
+        clockPill:
+          "bg-neutral-950/85 border-emerald-500/35 text-emerald-100 shadow-[0_6px_20px_rgba(16,185,129,0.2)]",
+        primaryAccent: "text-emerald-300",
+        primaryBg:
+          "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
+        focusRing: "focus:ring-emerald-400",
+      };
+    case "amber":
+      return {
+        bodyBg: "bg-gradient-to-br from-stone-950/92 via-yellow-950/40 to-black/95",
+        bodyText: "text-stone-100",
+        headerBg: "bg-yellow-950/45 backdrop-blur-xl",
+        headerBorder: "border-amber-500/35",
+        glowClass: "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.38)]",
+        cardBg: "bg-stone-950/95 border-amber-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn:
+          "bg-amber-950/70 border-amber-500/35 text-amber-100 hover:bg-amber-900/85 shadow-sm",
+        avatarFrame: "border-amber-400/45 bg-stone-900",
+        searchInput:
+          "border-amber-500/30 bg-black/70 text-white placeholder-stone-400 focus:ring-2 focus:ring-amber-400 focus:border-amber-400/60",
+        searchIcon: "text-amber-300",
+        searchSubmitBtn:
+          "bg-amber-950/80 hover:bg-amber-800/90 border border-amber-500/40 text-amber-100 hover:text-white",
+        trialBadge:
+          "bg-amber-950/70 border-amber-500/40 text-amber-200",
+        footerShell:
+          "border-amber-500/25 bg-stone-950/80 shadow-[0_8px_30px_rgba(245,158,11,0.12)]",
+        footerText: "text-stone-300",
+        footerSubText: "text-stone-400",
+        footerLink: "text-amber-300 hover:text-amber-200",
+        footerBtn:
+          "bg-amber-950/60 hover:bg-amber-900/80 border-amber-500/35 text-amber-100 hover:text-white",
+        footerVersion:
+          "bg-black/75 border-amber-500/25 text-stone-300",
+        clockPill:
+          "bg-stone-950/85 border-amber-500/35 text-amber-100 shadow-[0_6px_20px_rgba(245,158,11,0.2)]",
+        primaryAccent: "text-amber-300",
+        primaryBg:
+          "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
+        focusRing: "focus:ring-amber-400",
+      };
+    case "cyan":
+      return {
+        bodyBg: "bg-gradient-to-br from-slate-950/92 via-cyan-950/40 to-black/95",
+        bodyText: "text-slate-100",
+        headerBg: "bg-cyan-950/45 backdrop-blur-xl",
+        headerBorder: "border-cyan-500/35",
+        glowClass: "border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.38)]",
+        cardBg: "bg-slate-950/95 border-cyan-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn:
+          "bg-cyan-950/70 border-cyan-500/35 text-cyan-100 hover:bg-cyan-900/85 shadow-sm",
+        avatarFrame: "border-cyan-400/45 bg-slate-900",
+        searchInput:
+          "border-cyan-500/30 bg-black/70 text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400/60",
+        searchIcon: "text-cyan-300",
+        searchSubmitBtn:
+          "bg-cyan-950/80 hover:bg-cyan-800/90 border border-cyan-500/40 text-cyan-100 hover:text-white",
+        trialBadge:
+          "bg-cyan-950/70 border-cyan-500/40 text-cyan-200",
+        footerShell:
+          "border-cyan-500/25 bg-slate-950/80 shadow-[0_8px_30px_rgba(6,182,212,0.12)]",
+        footerText: "text-slate-300",
+        footerSubText: "text-slate-400",
+        footerLink: "text-cyan-300 hover:text-cyan-200",
+        footerBtn:
+          "bg-cyan-950/60 hover:bg-cyan-900/80 border-cyan-500/35 text-cyan-100 hover:text-white",
+        footerVersion:
+          "bg-black/75 border-cyan-500/25 text-slate-300",
+        clockPill:
+          "bg-slate-950/85 border-cyan-500/35 text-cyan-100 shadow-[0_6px_20px_rgba(6,182,212,0.2)]",
+        primaryAccent: "text-cyan-300",
+        primaryBg:
+          "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
+        focusRing: "focus:ring-cyan-400",
+      };
+    case "violet":
+    default:
+      return {
+        bodyBg: "bg-gradient-to-br from-slate-950/92 via-purple-950/40 to-black/95",
+        bodyText: "text-slate-100",
+        headerBg: "bg-purple-950/45 backdrop-blur-xl",
+        headerBorder: "border-violet-500/35",
+        glowClass: "border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.38)]",
+        cardBg: "bg-slate-950/95 border-violet-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn:
+          "bg-purple-950/70 border-violet-500/35 text-purple-100 hover:bg-purple-900/85 shadow-sm",
+        avatarFrame: "border-violet-400/45 bg-slate-900",
+        searchInput:
+          "border-violet-500/30 bg-black/70 text-white placeholder-slate-400 focus:ring-2 focus:ring-violet-400 focus:border-violet-400/60",
+        searchIcon: "text-violet-300",
+        searchSubmitBtn:
+          "bg-purple-950/80 hover:bg-purple-800/90 border border-violet-500/40 text-purple-100 hover:text-white",
+        trialBadge:
+          "bg-purple-950/70 border-violet-500/40 text-violet-200",
+        footerShell:
+          "border-violet-500/25 bg-slate-950/80 shadow-[0_8px_30px_rgba(139,92,246,0.12)]",
+        footerText: "text-slate-300",
+        footerSubText: "text-slate-400",
+        footerLink: "text-violet-300 hover:text-violet-200",
+        footerBtn:
+          "bg-purple-950/60 hover:bg-purple-900/80 border-violet-500/35 text-purple-100 hover:text-white",
+        footerVersion:
+          "bg-black/75 border-violet-500/25 text-slate-300",
+        clockPill:
+          "bg-slate-950/85 border-violet-500/35 text-purple-100 shadow-[0_6px_20px_rgba(139,92,246,0.2)]",
+        primaryAccent: "text-violet-400",
+        primaryBg:
+          "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
+        focusRing: "focus:ring-violet-400",
+      };
+  }
+}
+
 async function updateNativeStatusBar(theme: AppTheme) {
   if (typeof window === "undefined") return;
   try {
@@ -129,8 +365,73 @@ function verifyCurrentAccess(): boolean {
 }
 
 /**
- * Global Crash-Recovery Error Boundary so corrupted TMDB data or memory glitches
- * never leave users stuck on a blank screen.
+ * Isolated uncontrolled Header Search Bar:
+ * 1) Never triggers RootComponent re-renders on keystrokes (eliminates Android WebView
+ *    IME caret-reset-to-0 bug that reverses typed words like "talk" -> "klat").
+ * 2) Allows empty submission to navigate directly to /search.
+ * 3) Wraps cleanly below Logo + Profile on portrait phones so it is never squished.
+ */
+const HeaderSearchBar = memo(function HeaderSearchBar({
+  tokens,
+  onSubmitQuery,
+}: {
+  tokens: RootThemeTokens;
+  onSubmitQuery: (query: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = (inputRef.current?.value || "").trim();
+    onSubmitQuery(raw);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+      inputRef.current.blur();
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      data-tour="header-search"
+      className="order-3 sm:order-2 w-full sm:w-auto sm:flex-1 sm:max-w-xl relative flex items-center gap-1.5 min-w-0"
+    >
+      <div className="relative flex-1 min-w-0">
+        <span
+          className={`absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-xs sm:text-sm pointer-events-none ${tokens.searchIcon}`}
+        >
+          🔍
+        </span>
+        <input
+          ref={inputRef}
+          type="search"
+          dir="ltr"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          enterKeyHint="search"
+          defaultValue=""
+          data-tour="global-search-input"
+          placeholder="Search movies, TV shows..."
+          style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
+          className={`h-10 sm:h-11 w-full rounded-xl border pl-9 pr-3 text-xs sm:text-sm focus:outline-none backdrop-blur-xl shadow-inner transition-all ${tokens.searchInput}`}
+        />
+      </div>
+      <button
+        type="submit"
+        aria-label="Search"
+        title="Open Search"
+        className={`h-10 sm:h-11 px-3 sm:px-3.5 rounded-xl text-xs font-extrabold shrink-0 transition active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
+      >
+        Search
+      </button>
+    </form>
+  );
+});
+
+/**
+ * Global Crash-Recovery Error Boundary (Theme-Matched via CSS Custom Properties)
  */
 class AppErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -155,25 +456,47 @@ class AppErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="mx-auto my-12 max-w-lg rounded-3xl border border-red-500/40 bg-slate-950/90 p-6 sm:p-8 text-center shadow-2xl space-y-4">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-600/20 border border-red-400/40 text-3xl">
+        <div
+          className="mx-auto my-12 max-w-lg rounded-3xl p-6 sm:p-8 text-center shadow-2xl space-y-4 border"
+          style={{
+            backgroundColor: "var(--app-surface)",
+            borderColor: "var(--app-border)",
+          }}
+        >
+          <div
+            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border text-3xl"
+            style={{
+              backgroundColor: "var(--app-accent-soft)",
+              borderColor: "var(--app-border)",
+            }}
+          >
             🛠️
           </div>
           <h2 className="text-xl font-black text-white">
             Oops — This Screen Hit a Bump
           </h2>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          <p
+            className="text-xs sm:text-sm leading-relaxed"
+            style={{ color: "var(--app-muted)" }}
+          >
             Your saved lists, license, and watch history are completely safe.
             Tap below to reload cleanly.
           </p>
-          <p className="rounded-xl bg-black/60 border border-white/10 p-2 text-[10px] font-mono text-red-300 truncate">
+          <p
+            className="rounded-xl bg-black/60 border p-2 text-[10px] font-mono truncate"
+            style={{
+              borderColor: "var(--app-border)",
+              color: "var(--app-accent)",
+            }}
+          >
             {this.state.errorMessage}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 py-3 px-4 text-xs font-black text-white shadow-lg cursor-pointer"
+              className="rounded-xl py-3 px-4 text-xs font-black text-white shadow-lg cursor-pointer"
+              style={{ backgroundColor: "var(--app-accent-strong)" }}
             >
               🔄 Reload App
             </button>
@@ -183,7 +506,11 @@ class AppErrorBoundary extends React.Component<
                 purgeOldTmdbCaches();
                 window.location.href = "/";
               }}
-              className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 py-3 px-4 text-xs font-extrabold text-amber-300 cursor-pointer"
+              className="rounded-xl bg-black/60 hover:bg-black/80 border py-3 px-4 text-xs font-extrabold cursor-pointer"
+              style={{
+                borderColor: "var(--app-border)",
+                color: "var(--app-accent)",
+              }}
             >
               🧹 Clear Cache & Fix
             </button>
@@ -209,6 +536,13 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   const navigate = useNavigate();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+
+  const isPlayerRoute =
+    pathname.startsWith("/live-player") || pathname.startsWith("/player");
+
   const [showFirstStartModal, setShowFirstStartModal] = useState(false);
   const [showBugModal, setShowBugModal] = useState(false);
   const [showBugFeedModal, setShowBugFeedModal] = useState(false);
@@ -247,16 +581,15 @@ function RootComponent() {
   const [isTrialActive, setIsTrialActive] = useState(false);
   const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [headerSearchInput, setHeaderSearchInput] = useState("");
 
   const sleepTimerRef = useRef<number | null>(null);
 
-  const handleHeaderSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!headerSearchInput.trim()) return;
-    navigate({ to: "/search", search: { q: headerSearchInput.trim() } });
-    setHeaderSearchInput("");
-  };
+  const handleHeaderSearchQuery = useCallback(
+    (query: string) => {
+      navigate({ to: "/search", search: { q: query } });
+    },
+    [navigate]
+  );
 
   const handleOpenExternal = async (url: string, e?: React.MouseEvent) => {
     if (e) e.preventDefault();
@@ -303,10 +636,28 @@ function RootComponent() {
     }
   }, []);
 
-  // Background lobby audio lifecycle
+  // Background lobby audio lifecycle synced with TanStack Router pathname
+  useEffect(() => {
+    if (
+      pathname.includes("details") ||
+      pathname.includes("watch") ||
+      pathname.includes("player")
+    ) {
+      bgAudio.pause();
+    } else if (bgMusicState === "playing") {
+      bgAudio.play();
+    }
+  }, [pathname, bgMusicState]);
+
   useEffect(() => {
     const startAudio = () => {
-      if (bgMusicState === "playing") {
+      const path = window.location.pathname;
+      if (
+        bgMusicState === "playing" &&
+        !path.includes("details") &&
+        !path.includes("watch") &&
+        !path.includes("player")
+      ) {
         bgAudio.play();
       }
       window.removeEventListener("click", startAudio);
@@ -316,25 +667,10 @@ function RootComponent() {
     window.addEventListener("click", startAudio, { once: true });
     window.addEventListener("keydown", startAudio, { once: true });
 
-    const handleRouteCheck = () => {
-      const path = window.location.pathname;
-      if (
-        path.includes("details") ||
-        path.includes("watch") ||
-        path.includes("player")
-      ) {
-        bgAudio.pause();
-      } else if (bgMusicState === "playing") {
-        bgAudio.play();
-      }
-    };
-
-    window.addEventListener("popstate", handleRouteCheck);
     return () => {
       bgAudio.pause();
       window.removeEventListener("click", startAudio);
       window.removeEventListener("keydown", startAudio);
-      window.removeEventListener("popstate", handleRouteCheck);
     };
   }, [bgMusicState]);
 
@@ -386,7 +722,6 @@ function RootComponent() {
       const minutes = getSleepTimerMinutes();
       if (minutes > 0 && typeof window !== "undefined") {
         sleepTimerRef.current = window.setTimeout(() => {
-          // Pause all active media & lobby radio
           bgAudio.pause();
           document.querySelectorAll("video, audio").forEach((el) => {
             try {
@@ -451,7 +786,6 @@ function RootComponent() {
         );
       }
 
-      // Route once per session to the user's chosen Favorite Startup Tab if landing on "/"
       if (
         typeof window !== "undefined" &&
         window.location.pathname === "/" &&
@@ -589,151 +923,13 @@ function RootComponent() {
     }
   };
 
-  const getBodyBackground = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-gradient-to-br from-zinc-950/90 via-red-950/40 to-zinc-950/95";
-      case "midnight":
-        return "bg-gradient-to-br from-slate-950/90 via-blue-950/40 to-slate-950/95";
-      case "emerald":
-        return "bg-gradient-to-br from-slate-950/90 via-emerald-950/40 to-slate-950/95";
-      case "amber":
-        return "bg-gradient-to-br from-stone-950/90 via-yellow-950/40 to-stone-950/95";
-      case "cyan":
-        return "bg-gradient-to-br from-slate-950/90 via-cyan-950/40 to-slate-950/95";
-      case "violet":
-      default:
-        return "bg-gradient-to-br from-slate-950/90 via-purple-950/40 to-slate-950/95";
-    }
-  };
+  const tokens = getRootThemeTokens(appTheme);
 
-  const getHeaderThemeBg = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-red-950/40 backdrop-blur-xl";
-      case "midnight":
-        return "bg-blue-950/40 backdrop-blur-xl";
-      case "emerald":
-        return "bg-emerald-950/40 backdrop-blur-xl";
-      case "amber":
-        return "bg-yellow-950/40 backdrop-blur-xl";
-      case "cyan":
-        return "bg-cyan-950/40 backdrop-blur-xl";
-      case "violet":
-      default:
-        return "bg-purple-950/40 backdrop-blur-xl";
-    }
-  };
-
-  const getCardBackground = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-zinc-900/90 border-red-500/25 shadow-2xl backdrop-blur-xl";
-      case "midnight":
-        return "bg-slate-900/90 border-blue-500/25 shadow-2xl backdrop-blur-xl";
-      case "emerald":
-        return "bg-slate-900/90 border-emerald-500/25 shadow-2xl backdrop-blur-xl";
-      case "amber":
-        return "bg-stone-900/90 border-amber-500/25 shadow-2xl backdrop-blur-xl";
-      case "cyan":
-        return "bg-slate-900/90 border-cyan-500/25 shadow-2xl backdrop-blur-xl";
-      case "violet":
-      default:
-        return "bg-slate-900/90 border-violet-500/25 shadow-2xl backdrop-blur-xl";
-    }
-  };
-
-  const getThemeHeaderStyles = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return {
-          btnBg:
-            "bg-red-950/60 border-red-500/25 text-red-100 hover:bg-red-900/80 shadow-sm",
-        };
-      case "midnight":
-        return {
-          btnBg:
-            "bg-blue-950/60 border-blue-500/25 text-blue-100 hover:bg-blue-900/80 shadow-sm",
-        };
-      case "emerald":
-        return {
-          btnBg:
-            "bg-emerald-950/60 border-emerald-500/25 text-emerald-100 hover:bg-emerald-900/80 shadow-sm",
-        };
-      case "amber":
-        return {
-          btnBg:
-            "bg-yellow-950/60 border-amber-500/25 text-amber-100 hover:bg-yellow-900/80 shadow-sm",
-        };
-      case "cyan":
-        return {
-          btnBg:
-            "bg-cyan-950/60 border-cyan-500/25 text-cyan-100 hover:bg-cyan-900/80 shadow-sm",
-        };
-      case "violet":
-      default:
-        return {
-          btnBg:
-            "bg-purple-950/60 border-violet-500/25 text-purple-100 hover:bg-purple-900/80 shadow-sm",
-        };
-    }
-  };
-
-  const activeHeader = getThemeHeaderStyles(appTheme);
-
-  const getPrimaryAccentColor = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "text-red-400";
-      case "midnight":
-        return "text-blue-400";
-      case "emerald":
-        return "text-emerald-300";
-      case "amber":
-        return "text-amber-300";
-      case "cyan":
-        return "text-cyan-300";
-      case "violet":
-      default:
-        return "text-violet-400";
-    }
-  };
-
-  const getPrimaryBgColor = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30";
-      case "midnight":
-        return "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30";
-      case "emerald":
-        return "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30";
-      case "amber":
-        return "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30";
-      case "cyan":
-        return "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30";
-      case "violet":
-      default:
-        return "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30";
-    }
-  };
-
-  const getThemeGlowClass = (theme: AppTheme) => {
-    switch (theme) {
-      case "red":
-        return "border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4)]";
-      case "midnight":
-        return "border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.4)]";
-      case "emerald":
-        return "border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.4)]";
-      case "amber":
-        return "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.4)]";
-      case "cyan":
-        return "border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.4)]";
-      case "violet":
-      default:
-        return "border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.4)]";
-    }
-  };
+  const getCardBackground = (theme: AppTheme) => getRootThemeTokens(theme).cardBg;
+  const getPrimaryAccentColor = (theme: AppTheme) =>
+    getRootThemeTokens(theme).primaryAccent;
+  const getPrimaryBgColor = (theme: AppTheme) =>
+    getRootThemeTokens(theme).primaryBg;
 
   const allThemesList: { id: AppTheme; label: string }[] = [
     { id: "violet", label: "🟣 Violet / Neon" },
@@ -759,29 +955,27 @@ function RootComponent() {
         )}
       </head>
       <body
-        className={`min-h-screen max-w-full overflow-x-hidden ${getBodyBackground(
-          appTheme
-        )} text-slate-100 antialiased transition-colors duration-300 relative`}
+        className={`min-h-screen max-w-full overflow-x-clip ${tokens.bodyBg} ${tokens.bodyText} antialiased transition-colors duration-300 relative`}
       >
         <PreviewHostBridge />
         <HolidayOverlay />
         <AppWallpaper />
         <Screensaver />
         <AuthProvider>
-          {/* Live Wi-Fi Offline Warning Banner */}
+          {/* Live Wi-Fi Offline Warning Banner (Semantic Alert) */}
           {isOffline && (
             <div className="rabtv-vidsrc-protected sticky top-0 z-50 w-full bg-red-700/95 border-b border-red-400/60 px-4 py-2 text-center text-xs font-extrabold text-white shadow-lg">
               📡 No Internet Connection — Waiting for Wi-Fi to reconnect...
             </div>
           )}
 
+          {/* Responsive Theme-Matched Glass Header (Un-sticks in short phone landscape during playback) */}
           <header
             data-tour="app-header"
-            className={`rabtv-vidsrc-protected sticky top-0 z-40 border-b border-white/10 transition-colors duration-300 relative overflow-hidden ${getHeaderThemeBg(
-              appTheme
-            )} ${getThemeGlowClass(appTheme)}`}
+            className={`rabtv-vidsrc-protected sticky top-0 z-40 border-b transition-colors duration-300 relative overflow-hidden ${
+              isPlayerRoute ? "rabtv-header-player-route" : ""
+            } ${tokens.headerBg} ${tokens.headerBorder} ${tokens.glowClass}`}
           >
-            {/* Streamlined Cinema Glass Header Background */}
             <div className="absolute inset-0 pointer-events-none opacity-25">
               <img
                 src={RABBITHEADERWALL}
@@ -789,17 +983,15 @@ function RootComponent() {
                 className="w-full h-full object-cover object-center"
               />
             </div>
-            <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/65 pointer-events-none" />
 
-            <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-3 sm:px-6 py-2.5 gap-2 sm:gap-4">
-              {/* Left group: Crisp Non-Pulsing Neon Rabbit Logo */}
-              <div className="flex items-center shrink-0">
+            <div className="relative z-10 mx-auto flex flex-wrap sm:flex-nowrap max-w-7xl items-center justify-between px-3 sm:px-6 py-2.5 gap-2 sm:gap-4">
+              {/* Left: Neon Rabbit Logo */}
+              <div className="order-1 flex items-center shrink-0">
                 <Link
                   to="/"
                   data-tour="home-logo"
-                  className={`flex items-center gap-2 w-[110px] sm:w-[150px] md:w-[170px] h-10 sm:h-11 px-2.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/25 text-white focus:outline-none transition-all ${getThemeGlowClass(
-                    appTheme
-                  )}`}
+                  className={`relative flex items-center gap-2 w-[112px] sm:w-[150px] md:w-[170px] h-10 sm:h-11 px-2.5 rounded-xl bg-black/60 backdrop-blur-md border text-white focus:outline-none focus:ring-2 transition-all ${tokens.glowClass} ${tokens.focusRing}`}
                   style={{
                     backgroundImage: `url(${RABBIT_LOGO_URL})`,
                     backgroundSize: "cover",
@@ -811,30 +1003,17 @@ function RootComponent() {
                 </Link>
               </div>
 
-              {/* Unified Prime / Netflix Search Bar with Icon Inside */}
+              {/* Isolated Search Bar: Full-width Row 2 on Portrait Phones, Center on Tablet/Desktop/TV */}
               {!showFirstStartModal && (
-                <form
-                  onSubmit={handleHeaderSearchSubmit}
-                  data-tour="header-search"
-                  className="relative flex items-center flex-1 max-w-xl mx-2"
-                >
-                  <span className="absolute left-3.5 z-10 text-slate-400 text-xs sm:text-sm pointer-events-none">
-                    🔍
-                  </span>
-                  <input
-                    type="text"
-                    data-tour="global-search-input"
-                    value={headerSearchInput}
-                    onChange={(e) => setHeaderSearchInput(e.target.value)}
-                    placeholder="Search movies, TV shows..."
-                    className="h-10 sm:h-11 w-full rounded-xl border border-white/15 bg-black/60 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 backdrop-blur-xl shadow-inner transition-all"
-                  />
-                </form>
+                <HeaderSearchBar
+                  tokens={tokens}
+                  onSubmitQuery={handleHeaderSearchQuery}
+                />
               )}
 
-              {/* Far Right: Profile Pill with Mascot & Kids Lock Indicator */}
+              {/* Right: Profile Pill with Mascot & Kids Lock Indicator */}
               {savedProfileName && !showFirstStartModal && (
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="order-2 sm:order-3 flex items-center gap-1.5 shrink-0">
                   {kidsLocked && (
                     <span
                       className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider"
@@ -848,18 +1027,18 @@ function RootComponent() {
                     type="button"
                     data-tour="sidebar-toggle"
                     onClick={() => setShowProfileMenu((prev) => !prev)}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition cursor-pointer group relative overflow-hidden border border-white/20 ${
-                      activeHeader.btnBg
-                    } ${getThemeGlowClass(appTheme)}`}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition cursor-pointer group relative overflow-hidden border focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.glowClass} ${tokens.focusRing}`}
                   >
-                    <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-slate-800 shrink-0">
+                    <div
+                      className={`w-5 h-5 rounded-full overflow-hidden border shrink-0 ${tokens.avatarFrame}`}
+                    >
                       <img
                         src={HEADER_ICON_URL}
                         alt="Avatar"
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <span className="truncate max-w-[90px] sm:max-w-[140px] md:max-w-none text-xs">
+                    <span className="truncate max-w-[105px] sm:max-w-[145px] md:max-w-none text-xs">
                       <span className="mr-1">{profileMascot}</span>
                       <strong className="text-white">{savedProfileName}</strong>{" "}
                       {isAdmin
@@ -868,13 +1047,15 @@ function RootComponent() {
                           ? `(${trialDaysRemaining}d)`
                           : ""}
                     </span>
-                    <span className="text-[10px] text-slate-300 group-hover:translate-x-0.5 transition-transform">
+                    <span className="text-[10px] opacity-80 group-hover:translate-x-0.5 transition-transform">
                       ☰
                     </span>
                   </button>
 
                   {isTrialActive && (
-                    <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
+                    <div
+                      className={`hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-bold ${tokens.trialBadge}`}
+                    >
                       <span>⏳ {trialDaysRemaining}d</span>
                     </div>
                   )}
@@ -928,87 +1109,97 @@ function RootComponent() {
             getPrimaryAccentColor={getPrimaryAccentColor}
           />
 
-          {/* Main Route Container with TV Overscan Safe-Zone & Crash Shield */}
-          <main
-            data-tour="app-main"
-            className="rabtv-vidsrc-protected rabtv-overscan-shell mx-auto max-w-7xl px-4 py-4 sm:px-6 md:py-6 overflow-x-hidden pb-10"
-          >
-            <AppErrorBoundary>
-              <Outlet />
-            </AppErrorBoundary>
-          </main>
-
-          {/* Global Attribution Footer: Official TMDB Link, Terms of Service, Tour & Version */}
-          {!showFirstStartModal && (
-            <footer
-              data-tour="app-footer"
-              className="rabtv-vidsrc-protected rabtv-overscan-shell mx-auto max-w-7xl px-4 sm:px-6 pb-10"
+          {/* Dedicated TV/Projector Overscan Safe-Zone Shell (Preserves Inner Tailwind Padding) */}
+          <div className="rabtv-vidsrc-protected rabtv-overscan-shell">
+            {/* Main Route Container with Crash Shield */}
+            <main
+              data-tour="app-main"
+              className="mx-auto max-w-7xl px-2.5 py-3 sm:px-6 md:py-6 overflow-x-clip pb-8"
             >
-              <div className="rounded-2xl border border-white/10 bg-black/45 backdrop-blur-xl px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                <div className="space-y-1">
-                  <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
-                    Metadata, posters & trailers powered by{" "}
-                    <a
-                      href="https://www.themoviedb.org"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-tour="tmdb-link"
-                      onClick={(e) =>
-                        void handleOpenExternal("https://www.themoviedb.org", e)
-                      }
-                      className="inline-flex items-center gap-1 font-extrabold text-cyan-300 hover:text-cyan-200 underline underline-offset-2 transition cursor-pointer"
+              <AppErrorBoundary>
+                <Outlet />
+              </AppErrorBoundary>
+            </main>
+
+            {/* Theme-Matched Global Attribution Footer: Official TMDB Link, ToS, Tour & Version */}
+            {!showFirstStartModal && (
+              <footer
+                data-tour="app-footer"
+                className="mx-auto max-w-7xl px-2.5 sm:px-6 pb-10"
+              >
+                <div
+                  className={`rounded-2xl border backdrop-blur-xl px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left ${tokens.footerShell}`}
+                >
+                  <div className="space-y-1 min-w-0">
+                    <p
+                      className={`text-[11px] sm:text-xs leading-relaxed ${tokens.footerText}`}
                     >
-                      TMDB (themoviedb.org) ↗
-                    </a>
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    This product uses the TMDB API but is not endorsed or
-                    certified by TMDB.
-                  </p>
-                </div>
+                      Metadata, posters & trailers powered by{" "}
+                      <a
+                        href="https://www.themoviedb.org"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-tour="tmdb-link"
+                        onClick={(e) =>
+                          void handleOpenExternal("https://www.themoviedb.org", e)
+                        }
+                        className={`inline-flex items-center gap-1 font-extrabold underline underline-offset-2 transition cursor-pointer ${tokens.footerLink}`}
+                      >
+                        TMDB (themoviedb.org) ↗
+                      </a>
+                    </p>
+                    <p className={`text-[10px] ${tokens.footerSubText}`}>
+                      This product uses the TMDB API but is not endorsed or
+                      certified by TMDB.
+                    </p>
+                  </div>
 
-                <div className="flex items-center justify-center gap-2 flex-wrap shrink-0">
-                  <button
-                    type="button"
-                    data-tour="footer-tos"
-                    onClick={() => {
-                      setTosRequireAccept(false);
-                      setShowTosModal(true);
-                    }}
-                    className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-[11px] font-bold text-slate-200 transition cursor-pointer"
-                  >
-                    📜 Terms of Service
-                  </button>
-                  <button
-                    type="button"
-                    data-tour="footer-walkthrough"
-                    onClick={() => triggerRabbitWalkthrough(0)}
-                    className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-[11px] font-bold text-cyan-200 transition cursor-pointer"
-                  >
-                    🧭 App Tour
-                  </button>
-                  <span
-                    data-tour="app-version"
-                    className="rounded-xl bg-black/60 border border-white/10 px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400"
-                  >
-                    RABBiT TV v2.8
-                  </span>
+                  <div className="flex items-center justify-center gap-2 flex-wrap shrink-0">
+                    <button
+                      type="button"
+                      data-tour="footer-tos"
+                      onClick={() => {
+                        setTosRequireAccept(false);
+                        setShowTosModal(true);
+                      }}
+                      className={`rounded-xl border px-3 py-1.5 text-[11px] font-bold transition cursor-pointer ${tokens.footerBtn}`}
+                    >
+                      📜 Terms of Service
+                    </button>
+                    <button
+                      type="button"
+                      data-tour="footer-walkthrough"
+                      onClick={() => triggerRabbitWalkthrough(0)}
+                      className={`rounded-xl border px-3 py-1.5 text-[11px] font-bold transition cursor-pointer ${tokens.footerBtn}`}
+                    >
+                      🧭 App Tour
+                    </button>
+                    <span
+                      data-tour="app-version"
+                      className={`rounded-xl border px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider ${tokens.footerVersion}`}
+                    >
+                      RABBiT TV v2.8
+                    </span>
+                  </div>
                 </div>
+              </footer>
+            )}
+          </div>
+
+          {/* Optional Couch Corner Clock (Auto-hidden on Player routes where HUD clock is built-in) */}
+          {showCornerClock &&
+            cornerClockText &&
+            !showFirstStartModal &&
+            !isPlayerRoute && (
+              <div
+                data-tour="corner-clock"
+                className={`rabtv-vidsrc-protected fixed bottom-4 left-4 z-30 pointer-events-none rounded-xl border px-3 py-1.5 backdrop-blur-md ${tokens.clockPill}`}
+              >
+                <span className="text-xs font-extrabold tracking-wider">
+                  🕒 {cornerClockText}
+                </span>
               </div>
-            </footer>
-          )}
-
-          {/* Optional Couch Corner Clock */}
-          {showCornerClock && cornerClockText && !showFirstStartModal && (
-            <div
-              data-tour="corner-clock"
-              className="rabtv-vidsrc-protected fixed bottom-4 left-4 z-30 pointer-events-none rounded-xl bg-black/65 border border-white/15 px-3 py-1.5 shadow-xl backdrop-blur-md"
-            >
-              <span className="text-xs font-extrabold tracking-wider text-slate-100">
-                🕒 {cornerClockText}
-              </span>
-            </div>
-          )}
+            )}
 
           {/* USER NOTIFICATION LISTENER TOAST */}
           <UserNotifier appTheme={appTheme} />
