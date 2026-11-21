@@ -236,7 +236,7 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
         onPlaying={() => setIsPlaying(true)}
         onEnded={completeSplash}
         onError={handleVideoError}
-        className="rabtv-splash-video relative z-10 w-full h-full object-contain bg-transparent"
+        className="rabtv-splash-video relative z-10 w-100% h-100% object-contain bg-transparent"
       />
 
       {/* Bottom Controls Overlay: Optional Tap-for-Sound (only if WebView muted it) + Skip Intro */}
