@@ -100,7 +100,10 @@ const RABBIT_LOGO_URL =
 const SIDEBAR_BUTTON_BG_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/sidebar.png";
 
-const SEARCH_WRAPPER_BG_URL =
+const SEARCHWRAPPER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/search.png";
+
+export const BUTTON_WRAPPER_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
 
 const themeStatusBarMap: Record<AppTheme, string> = {
@@ -173,7 +176,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
         focusRing: "focus:ring-red-500",
-        artTint: "bg-red-950/20"      };
+        artTint: "bg-red-950/20",
+      };
     case "midnight":
       return {
         bodyBg: "bg-gradient-to-br from-slate-950/92 via-blue-950/40 to-black/95",
@@ -207,7 +211,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
         focusRing: "focus:ring-sky-400",
-        artTint: "bg-blue-950/25"      };
+        artTint: "bg-blue-950/25",
+      };
     case "emerald":
       return {
         bodyBg: "bg-gradient-to-br from-neutral-950/92 via-emerald-950/40 to-black/95",
@@ -241,7 +246,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
         focusRing: "focus:ring-emerald-400",
-        artTint: "bg-emerald-950/25"      };
+        artTint: "bg-emerald-950/25",
+      };
     case "amber":
       return {
         bodyBg: "bg-gradient-to-br from-stone-950/92 via-yellow-950/40 to-black/95",
@@ -275,7 +281,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
         focusRing: "focus:ring-amber-400",
-        artTint: "bg-amber-950/20"      };
+        artTint: "bg-amber-950/20",
+      };
     case "cyan":
       return {
         bodyBg: "bg-gradient-to-br from-slate-950/92 via-cyan-950/40 to-black/95",
@@ -309,8 +316,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
         focusRing: "focus:ring-cyan-400",
-,
-        artTint: "bg-cyan-950/25"      };
+        artTint: "bg-cyan-950/25",
+      };
     case "violet":
     default:
       return {
@@ -345,8 +352,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
         focusRing: "focus:ring-violet-400",
-,
-        artTint: "bg-purple-950/20"      };
+        artTint: "bg-purple-950/20",
+      };
   }
 }
 
@@ -419,7 +426,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
       <div
         className={`relative flex-1 min-w-0 flex items-center h-10 sm:h-11 rounded-2xl border overflow-hidden shadow-lg transition-all ${tokens.headerBorder} ${tokens.glowClass}`}
         style={{
-          backgroundImage: `url(${SEARCH_WRAPPER_BG_URL})`,
+          backgroundImage: `url(${SEARCHWRAPPER})`,
           backgroundSize: "100% 100%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
@@ -463,7 +470,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         title="Open Search"
         className={`relative h-10 sm:h-11 px-3.5 sm:px-4 rounded-2xl text-xs font-black uppercase tracking-wider shrink-0 overflow-hidden border transition active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
         style={{
-          backgroundImage: `url(${SEARCH_WRAPPER_BG_URL})`,
+          backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
           backgroundSize: "100% 100%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
@@ -476,6 +483,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
     </form>
   );
 });
+
 
 /**
  * Global Crash-Recovery Error Boundary (Theme-Matched via CSS Custom Properties)
