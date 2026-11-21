@@ -163,15 +163,15 @@ const VIEWPORT_HEADER_STYLES = `
     align-items: center;
     height: calc(var(--hdr-u) * 1.22);
     width: calc(var(--hdr-u) * 1.22 * 3.3);
-    padding-left: 37%;
-    padding-right: 17.5%;
+    padding-left: 39.5%;
+    padding-right: 17%;
     flex: 0 0 auto;
     box-sizing: border-box;
   }
 
   .rabtv-hdr-profile-avatar {
     position: absolute;
-    left: 20.8%;
+    left: 23.4%;
     top: 50%;
     transform: translate(-50%, -50%);
     height: 76%;
