@@ -125,8 +125,194 @@ const RABBIT_HEADER_PILL =
 const GREETING_WRAPPER_BG_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/fontwrapper.png";
 
-const SURPRISE_ME_BTN_URL =
+const BUTTON_WRAPPER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
+
+const MOVIE_NIGHT_BTN_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/surpriseme.png";
+
+const REAL_SURPRISE_ME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/real_surprisemmebutton.png";
+
+/**
+ * Viewport-locked layout rules for Home greeting card, dual-button wrapper,
+ * bigger mascot badge, and buttonwrapper-backed section headers across
+ * portrait phones, landscape phones, tablets, desktops, TVs, and projectors.
+ */
+const HOME_VIEWPORT_STYLES = `
+  .rabtv-home-greet-card {
+    --greet-u: clamp(44px, 11.5vw, 62px);
+    position: relative;
+    width: 100%;
+    max-width: 72rem;
+    min-height: clamp(164px, 34vw, 214px);
+    border-radius: 26px;
+    padding: clamp(16px, 3.6vw, 26px) clamp(12px, 3.4vw, 32px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 2.4vw, 16px);
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  /* Smooth feathered edges so fontwrapper.png melts naturally into the app wallpaper */
+  .rabtv-home-greet-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.78;
+    background-size: 112% 185%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.88) 16%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.88) 84%, transparent 100%),
+      linear-gradient(to right, transparent 0%, rgba(0,0,0,0.92) 8%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.92) 92%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.88) 16%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.88) 84%, transparent 100%),
+      linear-gradient(to right, transparent 0%, rgba(0,0,0,0.92) 8%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.92) 92%, transparent 100%);
+    mask-composite: intersect;
+  }
+
+  .rabtv-home-greet-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(0, 0, 0, 0.12) 38%,
+      rgba(0, 0, 0, 0.52) 100%
+    );
+  }
+
+  .rabtv-home-greet-mascot {
+    width: clamp(46px, 12vw, 68px) !important;
+    height: clamp(46px, 12vw, 68px) !important;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.9));
+  }
+
+  .rabtv-home-greet-title {
+    font-size: clamp(16px, 4.4vw, 26px);
+    line-height: 1.15;
+  }
+
+  /* Single wide buttonwrapper.png bay holding BOTH Movie Night and Surprise Me side-by-side */
+  .rabtv-home-dual-wrap {
+    position: relative;
+    width: min(100%, clamp(304px, 90vw, 560px));
+    min-height: clamp(62px, 16vw, 88px);
+    padding: clamp(9px, 2.2vw, 14px) clamp(18px, 5.2vw, 42px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(8px, 2.4vw, 20px);
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+  }
+
+  .rabtv-home-art-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 48%;
+    height: clamp(40px, 10.6vw, 56px);
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-home-art-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.85));
+  }
+
+  /* Section header banner backed cleanly by buttonwrapper.png */
+  .rabtv-section-banner-wrap {
+    position: relative;
+    width: 100%;
+    min-height: clamp(54px, 12vw, 72px);
+    padding: clamp(10px, 2.2vw, 14px) clamp(20px, 5vw, 40px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(6px, 1.5vw, 12px);
+    box-sizing: border-box;
+    border-radius: 9999px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    overflow: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-home-greet-card {
+      min-height: clamp(168px, 18vw, 224px);
+      padding: clamp(18px, 2.2vw, 28px) clamp(24px, 3vw, 40px);
+      gap: clamp(12px, 1.6vw, 18px);
+    }
+
+    .rabtv-home-greet-mascot {
+      width: clamp(54px, 5.2vw, 74px) !important;
+      height: clamp(54px, 5.2vw, 74px) !important;
+    }
+
+    .rabtv-home-greet-title {
+      font-size: clamp(20px, 2.2vw, 28px);
+    }
+
+    .rabtv-home-dual-wrap {
+      width: min(100%, clamp(440px, 56vw, 620px));
+      min-height: clamp(72px, 7.6vw, 94px);
+      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.6vw, 48px);
+      gap: clamp(14px, 2vw, 24px);
+    }
+
+    .rabtv-home-art-btn {
+      height: clamp(46px, 4.9vw, 60px);
+    }
+
+    .rabtv-section-banner-wrap {
+      min-height: clamp(58px, 5.8vw, 76px);
+      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.8vw, 48px);
+    }
+  }
+
+  @media (min-width: 640px) and (max-height: 480px) {
+    .rabtv-home-greet-card {
+      min-height: 138px;
+      padding: 12px 20px;
+      gap: 8px;
+    }
+
+    .rabtv-home-greet-mascot {
+      width: 46px !important;
+      height: 46px !important;
+    }
+
+    .rabtv-home-dual-wrap {
+      min-height: 60px;
+      padding: 8px 26px;
+    }
+
+    .rabtv-home-art-btn {
+      height: 40px;
+    }
+  }
+`;
 
 function getDetailsSearch(item: MediaItem): { id: string; type: "movie" | "tv" } {
   const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
@@ -1706,6 +1892,7 @@ function Home() {
     <main
       className={`min-h-screen ${themeStyles.bg} ${themeStyles.baseText} transition-colors duration-300 pb-12 relative rounded-3xl`}
     >
+      <style>{HOME_VIEWPORT_STYLES}</style>
       <div className="relative z-10">
         {/* Theme-Tinted Translucent Top Navigation Bar (Non-Overlapping Scroll Controls) */}
         <div className="sticky top-0 z-30 mb-4 mt-1 px-2 sm:px-4 py-2 flex justify-center">
@@ -1772,34 +1959,32 @@ function Home() {
         </div>
 
         <div className="mx-auto max-w-7xl px-2 sm:px-6 overflow-x-clip flex flex-col items-center">
-          {/* Centered Greeting & Quick Action Bar — Matches Cover Art Width & ~2/3 Taller */}
+          {/* Blended Greeting Card + Bigger Mascot + Single Button Wrapper Holding Movie Night & Surprise Me */}
           {(greetingText || filteredItems.length > 0) && (
             <div
               data-tour="greeting-header"
-              className="relative mb-5 w-full max-w-6xl min-h-[144px] sm:min-h-[164px] rounded-[24px] bg-transparent border-0 overflow-hidden px-4 sm:px-8 py-5 sm:py-6 flex flex-col items-center justify-center text-center gap-3.5"
+              className="rabtv-home-greet-card mb-5 bg-transparent border-0 text-center"
             >
-              {/* Full-Width Translucent Artwork Backdrop */}
+              {/* Soft-Feathered Artwork Backdrop (Blends Smoothly Into App Wallpaper) */}
               <div
-                className="absolute inset-0 pointer-events-none opacity-85"
+                className="rabtv-home-greet-bg"
                 style={{
                   backgroundImage: `url(${GREETING_WRAPPER_BG_URL})`,
-                  backgroundSize: "115% 195%",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center center",
                 }}
               />
+              <div className="rabtv-home-greet-vignette" />
 
-              <div className="relative z-10 flex flex-wrap items-center justify-center gap-2 max-w-full min-w-0">
+              <div className="relative z-10 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 max-w-full min-w-0">
                 {greetingText && (
-                  <div className="flex items-center justify-center gap-2.5 min-w-0 max-w-full">
+                  <div className="flex items-center justify-center gap-3 min-w-0 max-w-full">
                     <MascotAvatar
                       mascot={profileMascot}
-                      size="sm"
+                      size="lg"
                       rounded="full"
-                      className="border-0 bg-transparent shrink-0"
+                      className={`rabtv-home-greet-mascot border-2 ${themeStyles.dividerBorder}`}
                       alt="Profile Mascot"
                     />
-                    <p className="text-base sm:text-lg md:text-xl font-black tracking-wide text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                    <p className="rabtv-home-greet-title font-black tracking-wide text-white truncate drop-shadow-[0_2px_8px_rgba(0,0,0,0.96)]">
                       {greetingText}
                     </p>
                   </div>
@@ -1812,25 +1997,25 @@ function Home() {
                 )}
               </div>
 
-              <div className="relative z-10 flex items-center justify-center flex-wrap gap-3 max-w-full">
-                {/* Borderless Transparent Movie Night Image Button */}
+              {/* Single Button Wrapper Behind Both Movie Night & Real Surprise Me Buttons */}
+              <div
+                className="rabtv-home-dual-wrap relative z-10"
+                style={{
+                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                }}
+              >
                 <button
                   type="button"
                   data-tour="movie-night-matcher"
                   onClick={() => setShowMatcherModal(true)}
                   aria-label="Movie Night"
                   title="Mood picks & 5-card couch vote"
-                  className={`relative inline-flex items-center justify-center rounded-full bg-transparent border-0 p-0 shadow-none ${
-                    largeButtons ? "h-12" : "h-11"
-                  } opacity-95 hover:opacity-100 transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-                    themeStyles.focusRing
-                  }`}
+                  className={`rabtv-home-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
                 >
                   <img
-                    src={SURPRISE_ME_BTN_URL}
+                    src={MOVIE_NIGHT_BTN_URL}
                     alt="Movie Night"
                     decoding="async"
-                    className="h-full w-auto max-w-[175px] object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.7)]"
                   />
                 </button>
 
@@ -1838,14 +2023,15 @@ function Home() {
                   <button
                     type="button"
                     onClick={handleSurpriseMe}
-                    className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-4 ${
-                      largeButtons ? "h-11 text-xs" : "h-10 text-[11px]"
-                    } font-extrabold shadow-lg transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-                      themeStyles.btnSecondary
-                    } ${themeStyles.focusRing}`}
+                    aria-label="Surprise Me"
                     title="Pick a random title for me"
+                    className={`rabtv-home-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
                   >
-                    <span>🎲 Surprise Me</span>
+                    <img
+                      src={REAL_SURPRISE_ME_BTN_URL}
+                      alt="Surprise Me"
+                      decoding="async"
+                    />
                   </button>
                 )}
               </div>
@@ -2032,18 +2218,23 @@ function Home() {
               data-tour="continue-watching-row"
               className="mb-6 w-full max-w-6xl space-y-3 px-1"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className="rabtv-section-banner-wrap"
+                style={{
+                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                }}
+              >
+                <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                   <span
-                    className={`w-1.5 h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
+                    className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
                   />
-                  <h3 className="text-base sm:text-xl font-black tracking-tight text-white">
+                  <h3 className="text-sm sm:text-lg font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                     ▶ Continue Watching
                   </h3>
                 </div>
                 <Link
                   to="/watch-history"
-                  className={`text-xs font-bold hover:underline shrink-0 ${themeStyles.accentText}`}
+                  className={`relative z-10 text-xs font-extrabold hover:underline shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
                 >
                   Full History →
                 </Link>
@@ -2397,19 +2588,24 @@ function Home() {
             data-tour={activeTab === "My List" ? "favorites-grid" : "catalog-grid"}
             className="mb-8 px-1 w-full max-w-6xl"
           >
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className="rabtv-section-banner-wrap mb-4"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                 <span
-                  className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`}
+                  className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
                 />
-                <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                <h3 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                   {activeTab === "My List"
                     ? "Saved Catalog"
                     : `${activeTab} Catalog`}
                 </h3>
               </div>
               <span
-                className={`text-xs font-semibold px-3 py-1 rounded-full ${themeStyles.accentBadge}`}
+                className={`relative z-10 text-[11px] sm:text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeStyles.accentBadge}`}
               >
                 {filteredItems.length} titles available
               </span>
@@ -2480,16 +2676,23 @@ function Home() {
             <section
               className={`mb-8 px-1 pt-6 border-t w-full max-w-6xl ${themeStyles.dividerBorder}`}
             >
-              <div className="mb-4 flex items-center justify-between px-1">
-                <div className="flex items-center gap-2.5">
+              <div
+                className="rabtv-section-banner-wrap mb-4"
+                style={{
+                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                }}
+              >
+                <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                   <span
-                    className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`}
+                    className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
                   />
-                  <h3 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
-                    <span>✨ Suggested For You</span>
+                  <h3 className="text-sm sm:text-lg md:text-xl font-black text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                    ✨ Suggested For You
                   </h3>
                 </div>
-                <span className={`text-xs font-medium ${themeStyles.accentText}`}>
+                <span
+                  className={`relative z-10 text-[11px] sm:text-xs font-bold shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
+                >
                   Curated from your favorites & watch history
                 </span>
               </div>
