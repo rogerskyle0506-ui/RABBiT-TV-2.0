@@ -173,7 +173,6 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
         focusRing: "focus:ring-red-500",
-,
         artTint: "bg-red-950/20"      };
     case "midnight":
       return {
@@ -208,7 +207,6 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
         focusRing: "focus:ring-sky-400",
-,
         artTint: "bg-blue-950/25"      };
     case "emerald":
       return {
@@ -243,7 +241,6 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
         focusRing: "focus:ring-emerald-400",
-,
         artTint: "bg-emerald-950/25"      };
     case "amber":
       return {
@@ -278,7 +275,6 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
         focusRing: "focus:ring-amber-400",
-,
         artTint: "bg-amber-950/20"      };
     case "cyan":
       return {
