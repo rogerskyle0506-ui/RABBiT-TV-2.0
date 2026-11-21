@@ -1362,7 +1362,7 @@ export function Sidebar({
       <button
         type="button"
         onClick={() => toggleSection(sectionId)}
-        className={`crystal-menu-pill w-full flex items-center justify-between gap-2 px-3.5 sm:px-4 py-3 text-left text-xs font-extrabold text-white relative overflow-hidden rounded-2xl border cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.02] focus:scale-[1.03] hover:-translate-y-0.5 focus:-translate-y-0.5 active:scale-[0.98] focus:outline-none ${
+        className={`crystal-menu-pill w-full max-w-full flex items-center justify-between gap-2 px-3 sm:px-3.5 py-2.5 sm:py-3 text-left text-xs font-extrabold text-white relative overflow-hidden rounded-2xl border cursor-pointer box-border transition-all duration-200 ease-out hover:brightness-110 active:scale-[0.99] focus:outline-none ${
           isActive ? tokens.accordionActive : tokens.accordionIdle
         }`}
       >
@@ -1430,14 +1430,14 @@ export function Sidebar({
         onClick={handleCloseSidebar}
       />
 
-      {/* Crystal Neon Console Blade Drawer (Viewport-Constrained for Portrait, Landscape, Tablet, TV & Projector) */}
+      {/* Crystal Neon Console Blade Drawer (Strictly Inset Inside Glowing Frame on All Viewports) */}
       <div
         data-tour="sidebar"
-        className={`relative w-full max-w-[min(420px,calc(100vw-16px))] h-[calc(100dvh-16px)] sm:h-[calc(100dvh-78px)] max-h-[calc(100dvh-16px)] rounded-[28px] border flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-10 pb-10 px-3 sm:px-4 pointer-events-auto box-border backdrop-blur-2xl ${tokens.drawerShell}`}
+        className={`relative w-full max-w-[min(420px,calc(100vw-16px))] h-[calc(100dvh-16px)] sm:h-[calc(100dvh-78px)] max-h-[calc(100dvh-16px)] rounded-[28px] border flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-12 pb-12 px-[10.5%] sm:px-10 pointer-events-auto box-border backdrop-blur-2xl ${tokens.drawerShell}`}
       >
         {/* Translucent RABBIT_PANEL Neon Outer Frame Layer */}
         <div
-          className="absolute inset-0 pointer-events-none z-0 opacity-65 mix-blend-lighten"
+          className="absolute inset-0 pointer-events-none z-0 opacity-55 mix-blend-lighten"
           style={{
             backgroundImage: `url(${RABBIT_PANEL})`,
             backgroundSize: "100% 100%",
@@ -1452,17 +1452,17 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => handleScrollSidebar("up")}
-          className={`absolute top-2 left-1/2 -translate-x-1/2 z-20 w-14 h-6 border rounded-full flex items-center justify-center text-xs font-bold transition hover:scale-110 cursor-pointer ${tokens.scrollBtn}`}
+          className={`absolute top-2.5 left-1/2 -translate-x-1/2 z-20 w-14 h-6 border rounded-full flex items-center justify-center text-xs font-bold transition hover:scale-105 cursor-pointer ${tokens.scrollBtn}`}
           title="Scroll Up"
           aria-label="Scroll sidebar up"
         >
           ▲
         </button>
 
-        {/* Scrollable Inner Container */}
+        {/* Scrollable Inner Container (Strictly Clipped Inside Neon Frame Safe Zone) */}
         <div
           ref={sidebarContentRef}
-          className="flex-1 overflow-y-auto px-1 pt-2.5 pb-6 w-full scrollbar-none relative z-10 box-border overflow-x-hidden"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-1.5 pt-2 pb-5 w-full max-w-full rounded-2xl scrollbar-none relative z-10 box-border"
           style={{
             maskImage:
               "linear-gradient(to bottom, transparent 0%, black 2.5%, black 97.5%, transparent 100%)",
@@ -1471,20 +1471,20 @@ export function Sidebar({
           }}
         >
           <div className="relative z-10 flex flex-col w-full box-border space-y-3 pb-4">
-            {/* Crystal Profile Header Bar */}
+            {/* Crystal Profile Header Bar (Constrained & Non-Squishing Inside Neon Frame) */}
             <div
               data-tour="sidebar-profile-header"
-              className={`flex items-center justify-between gap-2 rounded-2xl backdrop-blur-xl border px-3 py-2.5 shadow-lg w-full box-border ${tokens.headerBar}`}
+              className={`flex flex-col gap-2.5 rounded-2xl backdrop-blur-xl border p-3 shadow-lg w-full max-w-full overflow-hidden box-border ${tokens.headerBar}`}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0 w-full">
                 <MascotAvatar
                   mascot={profileMascot}
                   size="md"
                   rounded="xl"
-                  className={`border ${tokens.avatarFrame}`}
+                  className={`border shrink-0 ${tokens.avatarFrame}`}
                   alt={savedProfileName || "User Profile"}
                 />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h3
                     className={`text-sm font-black tracking-wide truncate ${getPrimaryAccentColor(
                       appTheme
@@ -1493,12 +1493,12 @@ export function Sidebar({
                     {savedProfileName || "User Profile"}
                   </h3>
                   <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold whitespace-nowrap">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       <span>Online</span>
                     </span>
                     <span
-                      className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${tokens.subBox} ${tokens.mutedText}`}
+                      className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border whitespace-nowrap ${tokens.subBox} ${tokens.mutedText}`}
                     >
                       {ramMode === "low"
                         ? "1-2GB Stick"
@@ -1508,7 +1508,7 @@ export function Sidebar({
                     </span>
                     {seniorEasyMode && (
                       <span
-                        className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${tokens.accordionBadge}`}
+                        className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border whitespace-nowrap ${tokens.accordionBadge}`}
                       >
                         Easy
                       </span>
@@ -1517,14 +1517,14 @@ export function Sidebar({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="grid grid-cols-2 gap-2 w-full">
                 <button
                   type="button"
                   onClick={() => {
                     handleCloseSidebar();
                     triggerOpenProfileSwitcher();
                   }}
-                  className={`px-2.5 py-1.5 rounded-xl border text-xs font-extrabold transition hover:scale-105 active:scale-95 cursor-pointer ${tokens.subtlePill}`}
+                  className={`w-full px-2.5 py-1.5 rounded-xl border text-[11px] font-extrabold whitespace-nowrap transition active:scale-95 cursor-pointer ${tokens.subtlePill}`}
                   title="Switch or Manage Household Profiles"
                 >
                   👥 Profiles
@@ -1532,7 +1532,7 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={handleCloseSidebar}
-                  className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition hover:scale-105 active:scale-95 cursor-pointer ${tokens.secondaryBtn}`}
+                  className={`w-full px-2.5 py-1.5 rounded-xl border text-[11px] font-bold whitespace-nowrap transition active:scale-95 cursor-pointer ${tokens.secondaryBtn}`}
                 >
                   ✕ Close
                 </button>
@@ -3158,7 +3158,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={() => setIsReferralModalOpen(true)}
-                className={`w-full rounded-2xl border p-3 text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none focus:ring-2 ${tokens.referralCard}`}
+                className={`w-full max-w-full overflow-hidden rounded-2xl border p-3 text-left transition-all duration-200 hover:brightness-110 active:scale-[0.99] cursor-pointer focus:outline-none focus:ring-2 ${tokens.referralCard}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
