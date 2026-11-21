@@ -1778,7 +1778,7 @@ function Home() {
               data-tour="greeting-header"
               style={{
                 backgroundImage: `url(${GREETING_WRAPPER_BG_URL})`,
-                backgroundSize: "116% 190%",
+                backgroundSize: "114% 200%",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center center",
               }}
