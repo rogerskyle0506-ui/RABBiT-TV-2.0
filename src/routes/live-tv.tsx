@@ -1,6 +1,6 @@
 // src/routes/live-tv.tsx
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import {
   fetchLiveCategories,
   fetchChannelsByCategory,
@@ -24,12 +24,14 @@ import {
   MAX_FAVORITE_CHANNELS,
   getKidsModeLocked,
   getSavedUserAge,
+  purgeOldTmdbCaches,
 } from '@/lib/settings';
 import { ScrollPillBar } from '@/components/scroll-pill-bar';
 import { getChannelDescription } from '@/lib/channel-descriptions';
 import { channelCategories } from '@/lib/channel-categories';
 import { AppWallpaper } from '@/components/AppWallpaper';
 import { recordWatchHistory } from '@/lib/watch-history';
+import { bgAudio } from '@/lib/background-audio';
 
 export const Route = createFileRoute('/live-tv')({
   component: LiveTvComponent,
@@ -42,6 +44,7 @@ export type LiveDensityOption = 'comfort' | 'compact';
 
 const FAST_HEALTH_CACHE_KEY = 'rabtv_fast_live_health_v2';
 const FAST_HEALTH_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const MAX_CACHED_HEALTH_ENTRIES = 450;
 const PROBE_TIMEOUT_MS = 2600;
 
 const categoryMapping: Record<string, string> = {
@@ -91,6 +94,16 @@ function isChannelKidsSafe(title: string): boolean {
   return !MATURE_LIVE_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+function isSafeHttpUrl(raw: string | undefined | null): boolean {
+  if (!raw) return false;
+  try {
+    const parsed = new URL(raw.trim());
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 interface CachedHealthMap {
   timestamp: number;
   statuses: Record<string, ExtendedHealthStatus>;
@@ -105,7 +118,9 @@ function loadCachedHealthMap(): Record<string, ExtendedHealthStatus> {
     if (!parsed || Date.now() - parsed.timestamp > FAST_HEALTH_CACHE_TTL_MS) {
       return {};
     }
-    return parsed.statuses || {};
+    return parsed.statuses && typeof parsed.statuses === 'object'
+      ? parsed.statuses
+      : {};
   } catch {
     return {};
   }
@@ -113,14 +128,21 @@ function loadCachedHealthMap(): Record<string, ExtendedHealthStatus> {
 
 function saveCachedHealthMap(statuses: Record<string, ExtendedHealthStatus>): void {
   if (typeof window === 'undefined') return;
+  const entries = Object.entries(statuses).slice(0, MAX_CACHED_HEALTH_ENTRIES);
+  const payload: CachedHealthMap = {
+    timestamp: Date.now(),
+    statuses: Object.fromEntries(entries),
+  };
+  const serialized = JSON.stringify(payload);
   try {
-    const payload: CachedHealthMap = {
-      timestamp: Date.now(),
-      statuses,
-    };
-    localStorage.setItem(FAST_HEALTH_CACHE_KEY, JSON.stringify(payload));
+    localStorage.setItem(FAST_HEALTH_CACHE_KEY, serialized);
   } catch {
-    // Ignore storage quota errors on low-storage sticks
+    try {
+      purgeOldTmdbCaches();
+      localStorage.setItem(FAST_HEALTH_CACHE_KEY, serialized);
+    } catch {
+      // Ignore if device storage is critically full
+    }
   }
 }
 
@@ -137,17 +159,27 @@ function normalizeMatchText(text: string): string {
 }
 
 /**
- * Fast, lightweight stream probe with a strict 2.6s timeout.
+ * Fast, lightweight stream probe with strict timeout & parent AbortSignal cancellation.
  * Distinguishes:
  *  - 'online': HTTP 200..299 with valid response
  *  - 'timeout': AbortError (slow stream) or CORS opaque fallback (may still play)
  *  - 'offline': Hard HTTP 4xx/5xx error or dead host
  */
-async function probeSingleChannelFast(url: string): Promise<ExtendedHealthStatus> {
-  if (!url || !url.startsWith('http')) return 'offline';
+async function probeSingleChannelFast(
+  url: string,
+  parentSignal?: AbortSignal
+): Promise<ExtendedHealthStatus> {
+  if (!isSafeHttpUrl(url) || parentSignal?.aborted) return 'offline';
 
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  let timedOut = false;
+  const onParentAbort = () => controller.abort();
+  parentSignal?.addEventListener('abort', onParentAbort, { once: true });
+
+  const timer = window.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, PROBE_TIMEOUT_MS);
 
   try {
     const response = await fetch(url, {
@@ -158,6 +190,7 @@ async function probeSingleChannelFast(url: string): Promise<ExtendedHealthStatus
       },
     });
     window.clearTimeout(timer);
+    parentSignal?.removeEventListener('abort', onParentAbort);
 
     if (response.ok || response.status === 206) {
       return 'online';
@@ -168,12 +201,16 @@ async function probeSingleChannelFast(url: string): Promise<ExtendedHealthStatus
     return 'offline';
   } catch (err: any) {
     window.clearTimeout(timer);
+    parentSignal?.removeEventListener('abort', onParentAbort);
 
-    if (err?.name === 'AbortError') {
+    if (parentSignal?.aborted) return 'checking';
+    if (timedOut || err?.name === 'AbortError') {
       return 'timeout';
     }
 
     const fallbackController = new AbortController();
+    const onParentAbort2 = () => fallbackController.abort();
+    parentSignal?.addEventListener('abort', onParentAbort2, { once: true });
     const fallbackTimer = window.setTimeout(
       () => fallbackController.abort(),
       1800
@@ -185,25 +222,452 @@ async function probeSingleChannelFast(url: string): Promise<ExtendedHealthStatus
         signal: fallbackController.signal,
       });
       window.clearTimeout(fallbackTimer);
+      parentSignal?.removeEventListener('abort', onParentAbort2);
       if (opaqueRes.type === 'opaque') {
         return 'timeout';
       }
       return opaqueRes.ok ? 'online' : 'offline';
     } catch {
       window.clearTimeout(fallbackTimer);
+      parentSignal?.removeEventListener('abort', onParentAbort2);
       return 'offline';
     }
   }
 }
 
-function StatusBadge({ status }: { status: ExtendedHealthStatus }) {
+interface LiveTvThemeTokens {
+  bg: string;
+  baseText: string;
+  mutedText: string;
+  subMutedText: string;
+  accentText: string;
+  accentBar: string;
+  surfacePanel: string;
+  surfaceCard: string;
+  surfaceCardPinned: string;
+  logoStage: string;
+  dividerBorder: string;
+  backCapsule: string;
+  backBadge: string;
+  headerIconBox: string;
+  badge: string;
+  subtleBadge: string;
+  scanBadge: string;
+  scanDot: string;
+  btnActive: string;
+  btnSecondary: string;
+  btnPinned: string;
+  btnIdle: string;
+  pinActive: string;
+  pinIdle: string;
+  playBtn: string;
+  inputClass: string;
+  optionBg: string;
+  toastBanner: string;
+  borderHover: string;
+  focusRing: string;
+  laserLine: string;
+  ambient: string;
+}
+
+function getLiveTvThemeTokens(theme: AppTheme): LiveTvThemeTokens {
+  switch (theme) {
+    case 'red':
+      return {
+        bg: 'bg-gradient-to-br from-zinc-950/88 via-red-950/38 to-black/92',
+        baseText: 'text-zinc-100',
+        mutedText: 'text-zinc-300',
+        subMutedText: 'text-zinc-400',
+        accentText: 'text-red-300',
+        accentBar: 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.95)]',
+        surfacePanel:
+          'bg-zinc-950/78 border-red-500/30 shadow-[0_14px_42px_rgba(239,68,68,0.16)]',
+        surfaceCard:
+          'bg-zinc-950/82 border-red-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+        surfaceCardPinned:
+          'bg-zinc-950/86 border-red-400/70 shadow-[0_10px_28px_rgba(239,68,68,0.22)]',
+        logoStage:
+          'bg-gradient-to-b from-zinc-900/90 via-black to-zinc-950 border-red-500/20 group-hover:border-red-400/45',
+        dividerBorder: 'border-red-500/20',
+        backCapsule:
+          'bg-zinc-950/85 hover:bg-red-950/80 border-red-500/35 hover:border-red-400 text-zinc-100 hover:text-white',
+        backBadge:
+          'bg-gradient-to-tr from-red-600/65 via-rose-500/55 to-orange-500/55 border-red-400/50 text-white',
+        headerIconBox:
+          'bg-gradient-to-br from-red-950 via-rose-900/70 to-black border-red-500/40 shadow-[0_0_22px_rgba(239,68,68,0.28)]',
+        badge: 'bg-red-950/75 border-red-500/35 text-red-200',
+        subtleBadge: 'bg-black/70 border-red-500/25 text-zinc-200',
+        scanBadge: 'bg-zinc-950/90 border-red-500/30 text-zinc-300',
+        scanDot: 'bg-red-400',
+        btnActive:
+          'bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30',
+        btnSecondary:
+          'bg-red-950/55 hover:bg-red-900/80 border-red-500/35 text-red-100 hover:text-white',
+        btnPinned:
+          'bg-red-600/35 border-red-400/75 text-white shadow-[0_0_16px_rgba(239,68,68,0.35)]',
+        btnIdle:
+          'bg-black/60 hover:bg-red-950/55 border-red-500/20 text-zinc-300 hover:text-white',
+        pinActive:
+          'bg-red-600/30 border-red-400/75 text-red-200 shadow-[0_0_10px_rgba(239,68,68,0.45)]',
+        pinIdle:
+          'bg-black/65 border-red-500/25 text-zinc-400 hover:text-red-200 hover:border-red-400/60',
+        playBtn:
+          'bg-red-950/45 group-hover:bg-gradient-to-r group-hover:from-red-600 group-hover:to-rose-600 text-zinc-100 group-hover:text-white border border-red-500/25 group-hover:border-red-400/60',
+        inputClass:
+          'border-red-500/30 bg-black/75 text-white placeholder-zinc-400 focus:ring-2 focus:ring-red-500 focus:border-red-400',
+        optionBg: 'bg-zinc-950 text-white',
+        toastBanner: 'bg-zinc-950/92 border-red-400/55 text-red-100',
+        borderHover: 'hover:border-red-400/70',
+        focusRing: 'focus:ring-red-500',
+        laserLine: 'from-transparent via-red-500 to-rose-400',
+        ambient: 'from-red-600/15 via-transparent to-transparent',
+      };
+    case 'midnight':
+      return {
+        bg: 'bg-gradient-to-br from-slate-950/88 via-blue-950/38 to-black/92',
+        baseText: 'text-slate-100',
+        mutedText: 'text-slate-300',
+        subMutedText: 'text-slate-400',
+        accentText: 'text-sky-300',
+        accentBar: 'bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.95)]',
+        surfacePanel:
+          'bg-slate-950/78 border-blue-500/30 shadow-[0_14px_42px_rgba(59,130,246,0.16)]',
+        surfaceCard:
+          'bg-slate-950/82 border-blue-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+        surfaceCardPinned:
+          'bg-slate-950/86 border-sky-400/70 shadow-[0_10px_28px_rgba(56,189,248,0.22)]',
+        logoStage:
+          'bg-gradient-to-b from-slate-900/90 via-black to-slate-950 border-blue-500/20 group-hover:border-sky-400/45',
+        dividerBorder: 'border-blue-500/20',
+        backCapsule:
+          'bg-slate-950/85 hover:bg-blue-950/80 border-blue-500/35 hover:border-sky-400 text-slate-100 hover:text-white',
+        backBadge:
+          'bg-gradient-to-tr from-blue-600/65 via-sky-500/55 to-cyan-400/55 border-sky-400/50 text-white',
+        headerIconBox:
+          'bg-gradient-to-br from-blue-950 via-sky-900/70 to-black border-blue-500/40 shadow-[0_0_22px_rgba(59,130,246,0.28)]',
+        badge: 'bg-blue-950/75 border-blue-500/35 text-sky-200',
+        subtleBadge: 'bg-black/70 border-blue-500/25 text-slate-200',
+        scanBadge: 'bg-slate-950/90 border-blue-500/30 text-slate-300',
+        scanDot: 'bg-sky-400',
+        btnActive:
+          'bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30',
+        btnSecondary:
+          'bg-blue-950/55 hover:bg-blue-900/80 border-blue-500/35 text-blue-100 hover:text-white',
+        btnPinned:
+          'bg-blue-600/35 border-sky-400/75 text-white shadow-[0_0_16px_rgba(56,189,248,0.35)]',
+        btnIdle:
+          'bg-black/60 hover:bg-blue-950/55 border-blue-500/20 text-slate-300 hover:text-white',
+        pinActive:
+          'bg-blue-600/30 border-sky-400/75 text-sky-200 shadow-[0_0_10px_rgba(56,189,248,0.45)]',
+        pinIdle:
+          'bg-black/65 border-blue-500/25 text-slate-400 hover:text-sky-200 hover:border-sky-400/60',
+        playBtn:
+          'bg-blue-950/45 group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-sky-500 text-slate-100 group-hover:text-white border border-blue-500/25 group-hover:border-sky-400/60',
+        inputClass:
+          'border-blue-500/30 bg-black/75 text-white placeholder-slate-400 focus:ring-2 focus:ring-sky-400 focus:border-sky-400',
+        optionBg: 'bg-slate-950 text-white',
+        toastBanner: 'bg-slate-950/92 border-sky-400/55 text-sky-100',
+        borderHover: 'hover:border-sky-400/70',
+        focusRing: 'focus:ring-sky-400',
+        laserLine: 'from-transparent via-sky-400 to-blue-500',
+        ambient: 'from-blue-600/15 via-transparent to-transparent',
+      };
+    case 'emerald':
+      return {
+        bg: 'bg-gradient-to-br from-neutral-950/88 via-emerald-950/38 to-black/92',
+        baseText: 'text-neutral-100',
+        mutedText: 'text-neutral-300',
+        subMutedText: 'text-neutral-400',
+        accentText: 'text-emerald-300',
+        accentBar: 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]',
+        surfacePanel:
+          'bg-neutral-950/78 border-emerald-500/30 shadow-[0_14px_42px_rgba(16,185,129,0.16)]',
+        surfaceCard:
+          'bg-neutral-950/82 border-emerald-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+        surfaceCardPinned:
+          'bg-neutral-950/86 border-emerald-400/70 shadow-[0_10px_28px_rgba(16,185,129,0.22)]',
+        logoStage:
+          'bg-gradient-to-b from-neutral-900/90 via-black to-neutral-950 border-emerald-500/20 group-hover:border-emerald-400/45',
+        dividerBorder: 'border-emerald-500/20',
+        backCapsule:
+          'bg-neutral-950/85 hover:bg-emerald-950/80 border-emerald-500/35 hover:border-emerald-400 text-neutral-100 hover:text-white',
+        backBadge:
+          'bg-gradient-to-tr from-emerald-600/65 via-teal-500/55 to-green-400/55 border-emerald-400/50 text-white',
+        headerIconBox:
+          'bg-gradient-to-br from-emerald-950 via-teal-900/70 to-black border-emerald-500/40 shadow-[0_0_22px_rgba(16,185,129,0.28)]',
+        badge: 'bg-emerald-950/75 border-emerald-500/35 text-emerald-200',
+        subtleBadge: 'bg-black/70 border-emerald-500/25 text-neutral-200',
+        scanBadge: 'bg-neutral-950/90 border-emerald-500/30 text-neutral-300',
+        scanDot: 'bg-emerald-400',
+        btnActive:
+          'bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30',
+        btnSecondary:
+          'bg-emerald-950/55 hover:bg-emerald-900/80 border-emerald-500/35 text-emerald-100 hover:text-white',
+        btnPinned:
+          'bg-emerald-600/35 border-emerald-400/75 text-white shadow-[0_0_16px_rgba(16,185,129,0.35)]',
+        btnIdle:
+          'bg-black/60 hover:bg-emerald-950/55 border-emerald-500/20 text-neutral-300 hover:text-white',
+        pinActive:
+          'bg-emerald-600/30 border-emerald-400/75 text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.45)]',
+        pinIdle:
+          'bg-black/65 border-emerald-500/25 text-neutral-400 hover:text-emerald-200 hover:border-emerald-400/60',
+        playBtn:
+          'bg-emerald-950/45 group-hover:bg-gradient-to-r group-hover:from-emerald-600 group-hover:to-teal-600 text-neutral-100 group-hover:text-white border border-emerald-500/25 group-hover:border-emerald-400/60',
+        inputClass:
+          'border-emerald-500/30 bg-black/75 text-white placeholder-neutral-400 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400',
+        optionBg: 'bg-neutral-950 text-white',
+        toastBanner: 'bg-neutral-950/92 border-emerald-400/55 text-emerald-100',
+        borderHover: 'hover:border-emerald-400/70',
+        focusRing: 'focus:ring-emerald-400',
+        laserLine: 'from-transparent via-emerald-400 to-teal-400',
+        ambient: 'from-emerald-600/15 via-transparent to-transparent',
+      };
+    case 'amber':
+      return {
+        bg: 'bg-gradient-to-br from-stone-950/88 via-yellow-950/38 to-black/92',
+        baseText: 'text-stone-100',
+        mutedText: 'text-stone-300',
+        subMutedText: 'text-stone-400',
+        accentText: 'text-amber-300',
+        accentBar: 'bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.95)]',
+        surfacePanel:
+          'bg-stone-950/78 border-amber-500/30 shadow-[0_14px_42px_rgba(245,158,11,0.16)]',
+        surfaceCard:
+          'bg-stone-950/82 border-amber-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+        surfaceCardPinned:
+          'bg-stone-950/86 border-amber-400/70 shadow-[0_10px_28px_rgba(245,158,11,0.22)]',
+        logoStage:
+          'bg-gradient-to-b from-stone-900/90 via-black to-stone-950 border-amber-500/20 group-hover:border-amber-400/45',
+        dividerBorder: 'border-amber-500/20',
+        backCapsule:
+          'bg-stone-950/85 hover:bg-amber-950/80 border-amber-500/35 hover:border-amber-400 text-stone-100 hover:text-white',
+        backBadge:
+          'bg-gradient-to-tr from-amber-600/65 via-yellow-500/55 to-orange-500/55 border-amber-400/50 text-white',
+        headerIconBox:
+          'bg-gradient-to-br from-amber-950 via-yellow-900/70 to-black border-amber-500/40 shadow-[0_0_22px_rgba(245,158,11,0.28)]',
+        badge: 'bg-amber-950/75 border-amber-500/35 text-amber-200',
+        subtleBadge: 'bg-black/70 border-amber-500/25 text-stone-200',
+        scanBadge: 'bg-stone-950/90 border-amber-500/30 text-stone-300',
+        scanDot: 'bg-amber-400',
+        btnActive:
+          'bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30',
+        btnSecondary:
+          'bg-amber-950/55 hover:bg-amber-900/80 border-amber-500/35 text-amber-100 hover:text-white',
+        btnPinned:
+          'bg-amber-600/35 border-amber-400/75 text-white shadow-[0_0_16px_rgba(245,158,11,0.35)]',
+        btnIdle:
+          'bg-black/60 hover:bg-amber-950/55 border-amber-500/20 text-stone-300 hover:text-white',
+        pinActive:
+          'bg-amber-600/30 border-amber-400/75 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.45)]',
+        pinIdle:
+          'bg-black/65 border-amber-500/25 text-stone-400 hover:text-amber-200 hover:border-amber-400/60',
+        playBtn:
+          'bg-amber-950/45 group-hover:bg-gradient-to-r group-hover:from-amber-500 group-hover:to-orange-600 text-stone-100 group-hover:text-white border border-amber-500/25 group-hover:border-amber-400/60',
+        inputClass:
+          'border-amber-500/30 bg-black/75 text-white placeholder-stone-400 focus:ring-2 focus:ring-amber-400 focus:border-amber-400',
+        optionBg: 'bg-stone-950 text-white',
+        toastBanner: 'bg-stone-950/92 border-amber-400/55 text-amber-100',
+        borderHover: 'hover:border-amber-400/70',
+        focusRing: 'focus:ring-amber-400',
+        laserLine: 'from-transparent via-amber-400 to-orange-500',
+        ambient: 'from-amber-600/15 via-transparent to-transparent',
+      };
+    case 'cyan':
+      return {
+        bg: 'bg-gradient-to-br from-slate-950/88 via-cyan-950/38 to-black/92',
+        baseText: 'text-slate-100',
+        mutedText: 'text-slate-300',
+        subMutedText: 'text-slate-400',
+        accentText: 'text-cyan-300',
+        accentBar: 'bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]',
+        surfacePanel:
+          'bg-slate-950/78 border-cyan-500/30 shadow-[0_14px_42px_rgba(6,182,212,0.16)]',
+        surfaceCard:
+          'bg-slate-950/82 border-cyan-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+        surfaceCardPinned:
+          'bg-slate-950/86 border-cyan-400/70 shadow-[0_10px_28px_rgba(6,182,212,0.22)]',
+        logoStage:
+          'bg-gradient-to-b from-slate-900/90 via-black to-slate-950 border-cyan-500/20 group-hover:border-cyan-400/45',
+        dividerBorder: 'border-cyan-500/20',
+        backCapsule:
+          'bg-slate-950/85 hover:bg-cyan-950/80 border-cyan-500/35 hover:border-cyan-400 text-slate-100 hover:text-white',
+        backBadge:
+          'bg-gradient-to-tr from-cyan-600/65 via-teal-500/55 to-sky-400/55 border-cyan-400/50 text-white',
+        headerIconBox:
+          'bg-gradient-to-br from-cyan-950 via-teal-900/70 to-black border-cyan-500/40 shadow-[0_0_22px_rgba(6,182,212,0.28)]',
+        badge: 'bg-cyan-950/75 border-cyan-500/35 text-cyan-200',
+        subtleBadge: 'bg-black/70 border-cyan-500/25 text-slate-200',
+        scanBadge: 'bg-slate-950/90 border-cyan-500/30 text-slate-300',
+        scanDot: 'bg-cyan-400',
+        btnActive:
+          'bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30',
+        btnSecondary:
+          'bg-cyan-950/55 hover:bg-cyan-900/80 border-cyan-500/35 text-cyan-100 hover:text-white',
+        btnPinned:
+          'bg-cyan-600/35 border-cyan-400/75 text-white shadow-[0_0_16px_rgba(6,182,212,0.35)]',
+        btnIdle:
+          'bg-black/60 hover:bg-cyan-950/55 border-cyan-500/20 text-slate-300 hover:text-white',
+        pinActive:
+          'bg-cyan-600/30 border-cyan-400/75 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.45)]',
+        pinIdle:
+          'bg-black/65 border-cyan-500/25 text-slate-400 hover:text-cyan-200 hover:border-cyan-400/60',
+        playBtn:
+          'bg-cyan-950/45 group-hover:bg-gradient-to-r group-hover:from-cyan-600 group-hover:to-blue-600 text-slate-100 group-hover:text-white border border-cyan-500/25 group-hover:border-cyan-400/60',
+        inputClass:
+          'border-cyan-500/30 bg-black/75 text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400',
+        optionBg: 'bg-slate-950 text-white',
+        toastBanner: 'bg-slate-950/92 border-cyan-400/55 text-cyan-100',
+        borderHover: 'hover:border-cyan-400/70',
+        focusRing: 'focus:ring-cyan-400',
+        laserLine: 'from-transparent via-cyan-400 to-teal-400',
+        ambient: 'from-cyan-600/15 via-transparent to-transparent',
+      };
+    case 'violet':
+    default:
+      return {
+        bg: 'bg-gradient-to-br from-slate-950/88 via-purple-950/38 to-black/92',
+        baseText: 'text-slate-100',
+        mutedText: 'text-slate-300',
+        subMutedText: 'text-slate-400',
+        accentText: 'text-violet-300',
+        accentBar: 'bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]',
+        surfacePanel:
+          'bg-slate-950/78 border-violet-500/30 shadow-[0_14px_42px_rgba(139,92,246,0.16)]',
+        surfaceCard:
+          'bg-slate-950/82 border-violet-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+        surfaceCardPinned:
+          'bg-slate-950/86 border-violet-400/70 shadow-[0_10px_28px_rgba(139,92,246,0.22)]',
+        logoStage:
+          'bg-gradient-to-b from-slate-900/90 via-black to-slate-950 border-violet-500/20 group-hover:border-violet-400/45',
+        dividerBorder: 'border-violet-500/20',
+        backCapsule:
+          'bg-slate-950/85 hover:bg-purple-950/80 border-violet-500/35 hover:border-violet-400 text-slate-100 hover:text-white',
+        backBadge:
+          'bg-gradient-to-tr from-violet-600/65 via-purple-500/55 to-indigo-500/55 border-violet-400/50 text-white',
+        headerIconBox:
+          'bg-gradient-to-br from-purple-950 via-violet-900/70 to-black border-violet-500/40 shadow-[0_0_22px_rgba(139,92,246,0.28)]',
+        badge: 'bg-purple-950/75 border-violet-500/35 text-violet-200',
+        subtleBadge: 'bg-black/70 border-violet-500/25 text-slate-200',
+        scanBadge: 'bg-slate-950/90 border-violet-500/30 text-slate-300',
+        scanDot: 'bg-violet-400',
+        btnActive:
+          'bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30',
+        btnSecondary:
+          'bg-purple-950/55 hover:bg-purple-900/80 border-violet-500/35 text-purple-100 hover:text-white',
+        btnPinned:
+          'bg-violet-600/35 border-violet-400/75 text-white shadow-[0_0_16px_rgba(139,92,246,0.35)]',
+        btnIdle:
+          'bg-black/60 hover:bg-purple-950/55 border-violet-500/20 text-slate-300 hover:text-white',
+        pinActive:
+          'bg-violet-600/30 border-violet-400/75 text-violet-200 shadow-[0_0_10px_rgba(139,92,246,0.45)]',
+        pinIdle:
+          'bg-black/65 border-violet-500/25 text-slate-400 hover:text-violet-200 hover:border-violet-400/60',
+        playBtn:
+          'bg-purple-950/45 group-hover:bg-gradient-to-r group-hover:from-violet-600 group-hover:to-purple-600 text-slate-100 group-hover:text-white border border-violet-500/25 group-hover:border-violet-400/60',
+        inputClass:
+          'border-violet-500/30 bg-black/75 text-white placeholder-slate-400 focus:ring-2 focus:ring-violet-400 focus:border-violet-400',
+        optionBg: 'bg-slate-950 text-white',
+        toastBanner: 'bg-slate-950/92 border-violet-400/55 text-violet-100',
+        borderHover: 'hover:border-violet-400/70',
+        focusRing: 'focus:ring-violet-400',
+        laserLine: 'from-transparent via-purple-500 to-violet-400',
+        ambient: 'from-violet-600/15 via-transparent to-transparent',
+      };
+  }
+}
+
+/**
+ * Isolated uncontrolled search input with strict LTR flow so Android WebView
+ * never reverses typed characters while filtering live channels.
+ */
+const LiveSearchInput = memo(function LiveSearchInput({
+  tokens,
+  resetSignal,
+  onQueryChange,
+}: {
+  tokens: LiveTvThemeTokens;
+  resetSignal: number;
+  onQueryChange: (q: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [hasText, setHasText] = useState(false);
+
+  useEffect(() => {
+    if (resetSignal > 0 && inputRef.current) {
+      inputRef.current.value = '';
+      setHasText(false);
+    }
+  }, [resetSignal]);
+
+  const handleClear = () => {
+    if (inputRef.current) {
+      inputRef.current.value = '';
+      inputRef.current.focus();
+    }
+    setHasText(false);
+    onQueryChange('');
+  };
+
+  return (
+    <div className="relative flex-1 min-w-0 w-full sm:w-52">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${tokens.accentText}`}
+      >
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input
+        ref={inputRef}
+        type="search"
+        dir="ltr"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        defaultValue=""
+        onInput={(e) => {
+          const val = (e.target as HTMLInputElement).value;
+          setHasText(Boolean(val));
+          onQueryChange(val);
+        }}
+        placeholder="Search channel or CH #..."
+        style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+        className={`w-full h-10 rounded-xl border pl-9 pr-8 text-xs font-bold focus:outline-none transition ${tokens.inputClass}`}
+      />
+      {hasText && (
+        <button
+          type="button"
+          onClick={handleClear}
+          aria-label="Clear channel search"
+          className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-xs hover:text-white cursor-pointer ${tokens.subMutedText}`}
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+});
+
+function StatusBadge({
+  status,
+  tokens,
+}: {
+  status: ExtendedHealthStatus;
+  tokens: LiveTvThemeTokens;
+}) {
   if (status === 'online') {
     return (
       <span
         title="Verified Online"
-        className="inline-flex items-center gap-1 rounded-full bg-emerald-950/90 border border-emerald-400/50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.45)]"
+        className="inline-flex items-center gap-1 rounded-full bg-emerald-950/90 border border-emerald-400/50 px-1.5 sm:px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0"
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
         <span>Live</span>
       </span>
     );
@@ -212,11 +676,11 @@ function StatusBadge({ status }: { status: ExtendedHealthStatus }) {
   if (status === 'timeout') {
     return (
       <span
-        title="Questionable / Timeout — May still play inside the video player"
-        className="inline-flex items-center gap-1 rounded-full bg-amber-950/90 border border-amber-400/50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-300"
+        title="Slow response — may still play inside the video player"
+        className="inline-flex items-center gap-1 rounded-full bg-amber-950/90 border border-amber-400/50 px-1.5 sm:px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-300 shrink-0"
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-        <span>Slow ?</span>
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+        <span>Slow</span>
       </span>
     );
   }
@@ -225,10 +689,10 @@ function StatusBadge({ status }: { status: ExtendedHealthStatus }) {
     return (
       <span
         title="Stream Offline"
-        className="inline-flex items-center gap-1 rounded-full bg-red-950/90 border border-red-500/50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-red-300"
+        className="inline-flex items-center gap-1 rounded-full bg-red-950/90 border border-red-500/50 px-1.5 sm:px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-red-300 shrink-0"
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-        <span>Offline</span>
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+        <span>Off</span>
       </span>
     );
   }
@@ -236,40 +700,44 @@ function StatusBadge({ status }: { status: ExtendedHealthStatus }) {
   return (
     <span
       title="Checking stream health..."
-      className="inline-flex items-center gap-1 rounded-full bg-slate-900/90 border border-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-300"
+      className={`inline-flex items-center gap-1 rounded-full border px-1.5 sm:px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0 ${tokens.scanBadge}`}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-sky-400 animate-ping" />
+      <span
+        className={`h-1.5 w-1.5 rounded-full animate-ping shrink-0 ${tokens.scanDot}`}
+      />
       <span>Scan</span>
     </span>
   );
 }
 
-const ChannelCard = React.memo(function ChannelCard({
+const ChannelCard = memo(function ChannelCard({
   channel,
   status,
   isPinned,
   onTogglePin,
-  laserLineClass,
-  playBtnClass,
-  borderHoverClass,
+  tokens,
   radiusClass,
   largeButtons,
   compact,
   glowOff,
+  isLowRam,
 }: {
   channel: LiveChannel;
   status: ExtendedHealthStatus;
   isPinned: boolean;
   onTogglePin: (channelId: string, channelTitle: string) => void;
-  laserLineClass: string;
-  playBtnClass: string;
-  borderHoverClass: string;
+  tokens: LiveTvThemeTokens;
   radiusClass: string;
   largeButtons: boolean;
   compact: boolean;
   glowOff: boolean;
+  isLowRam: boolean;
 }) {
-  const streamTarget = channel.streamUrl || channel.url;
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  const rawStream = channel.streamUrl || channel.url || '';
+  const safeStream = isSafeHttpUrl(rawStream) ? rawStream.trim() : '';
+  const safeLogo = isSafeHttpUrl(channel.logo) ? channel.logo!.trim() : '';
   const channelId = getChannelKey(channel);
   const rawGroup = channel.groupTitle || (channel as any).category || '';
   const displayRegion = rawGroup
@@ -282,29 +750,35 @@ const ChannelCard = React.memo(function ChannelCard({
 
   return (
     <div
-      className={`group relative flex flex-col justify-between ${radiusClass} bg-slate-950/88 backdrop-blur-xl border ${
+      className={`group relative flex flex-col justify-between w-full min-w-0 box-border ${radiusClass} ${
+        isLowRam ? '' : 'backdrop-blur-xl'
+      } border ${
         isPinned
-          ? 'border-amber-400/50 shadow-[0_12px_32px_rgba(245,158,11,0.18)]'
-          : `border-white/15 ${borderHoverClass} shadow-[0_12px_32px_rgba(0,0,0,0.75)]`
+          ? tokens.surfaceCardPinned
+          : `${tokens.surfaceCard} ${tokens.borderHover}`
       } ${
-        compact ? 'p-2.5 sm:p-3' : 'p-3.5 sm:p-4'
-      } hover:-translate-y-1 transition-all duration-300 text-center overflow-hidden`}
+        compact ? 'p-2.5' : 'p-3 sm:p-3.5'
+      } hover:-translate-y-0.5 transition-all duration-200 text-center overflow-hidden`}
     >
-      {/* Top Bar: Region + Channel Number + Health + Pin Button (kept outside Link for valid HTML & TV D-Pad) */}
-      <div className="flex items-center justify-between gap-1 mb-2 z-20">
-        <div className="flex items-center gap-1 min-w-0">
+      {/* Top Bar: Constrained Region / CH # + Status + Pin Button */}
+      <div className="flex items-center justify-between gap-1 mb-2 z-20 min-w-0">
+        <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
           {channel.channelNumber !== undefined && (
-            <span className="rounded-md bg-white/10 border border-white/15 px-1.5 py-0.5 text-[9px] font-black text-cyan-300 shrink-0">
-              CH {channel.channelNumber}
+            <span
+              className={`rounded-md border px-1.5 py-0.5 text-[9px] font-black shrink-0 ${tokens.badge}`}
+            >
+              #{channel.channelNumber}
             </span>
           )}
-          <span className="rounded-full bg-white/[0.06] border border-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-300 truncate">
+          <span
+            className={`rounded-full border px-1.5 sm:px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider truncate min-w-0 ${tokens.subtleBadge}`}
+          >
             {displayRegion}
           </span>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          <StatusBadge status={status} />
+          <StatusBadge status={status} tokens={tokens} />
           <button
             type="button"
             onClick={() => onTogglePin(channelId, channel.title)}
@@ -315,14 +789,22 @@ const ChannelCard = React.memo(function ChannelCard({
             }
             title={isPinned ? 'Unpin from Favorites' : 'Pin to Top Favorites'}
             className={`flex ${
-              largeButtons ? 'h-8 w-8 text-sm' : 'h-6 w-6 text-xs'
-            } items-center justify-center rounded-full border transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-              isPinned
-                ? 'bg-amber-500/25 border-amber-400/70 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]'
-                : 'bg-black/65 border-white/15 text-slate-400 hover:text-amber-300 hover:border-amber-400/50'
-            }`}
+              largeButtons ? 'h-8 w-8' : 'h-6 w-6'
+            } shrink-0 items-center justify-center rounded-full border transition cursor-pointer focus:outline-none focus:ring-2 ${
+              tokens.focusRing
+            } ${isPinned ? tokens.pinActive : tokens.pinIdle}`}
           >
-            {isPinned ? '★' : '☆'}
+            <svg
+              viewBox="0 0 24 24"
+              fill={isPinned ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-3 h-3"
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
           </button>
         </div>
       </div>
@@ -331,65 +813,72 @@ const ChannelCard = React.memo(function ChannelCard({
       <Link
         to="/live-player"
         search={{
-          url: streamTarget,
+          url: safeStream,
           title: channel.title,
-          logo: channel.logo || '',
+          logo: safeLogo,
           channelId,
         }}
         onClick={() => {
+          bgAudio.pause();
           recordWatchHistory({
             id: channelId,
             title: channel.title,
-            posterPath: channel.logo || '',
+            posterPath: safeLogo,
             type: 'livetv',
           });
         }}
-        className="flex flex-col flex-1 justify-between focus:outline-none focus:ring-4 focus:ring-purple-500/60 rounded-2xl"
+        className={`flex flex-col flex-1 justify-between min-w-0 focus:outline-none focus:ring-2 ${tokens.focusRing} rounded-2xl`}
       >
-        {/* Upfront High-Contrast Logo Showcase Stage */}
+        {/* High-Contrast Logo Showcase Stage */}
         <div
           className={`relative w-full ${
-            compact ? 'h-20 sm:h-24 p-2.5 mb-2' : 'h-28 sm:h-34 p-3.5 mb-3'
-          } rounded-2xl bg-gradient-to-b from-slate-900/90 via-black to-slate-950 border border-white/10 group-hover:border-white/25 overflow-hidden flex items-center justify-center shadow-inner`}
+            compact ? 'h-16 sm:h-20 p-2 mb-2' : 'h-24 sm:h-28 p-3 mb-2.5'
+          } rounded-2xl border overflow-hidden flex items-center justify-center shadow-inner ${
+            tokens.logoStage
+          }`}
         >
           <div
-            className="absolute inset-0 pointer-events-none opacity-75 group-hover:opacity-100 transition-opacity duration-300"
+            className="absolute inset-0 pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity duration-300"
             style={{
               background:
-                'radial-gradient(circle at center, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 45%, transparent 75%)',
+                'radial-gradient(circle at center, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.03) 48%, transparent 74%)',
             }}
           />
 
-          {channel.logo ? (
+          {safeLogo && !logoFailed ? (
             <img
-              src={channel.logo}
+              src={safeLogo}
               alt={channel.title}
               loading="lazy"
               decoding="async"
-              className="relative z-10 max-h-full max-w-full w-auto h-auto object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.85)] transform group-hover:scale-110 transition-transform duration-300"
+              onError={() => setLogoFailed(true)}
+              className="relative z-10 max-h-full max-w-full w-auto h-auto object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] transform group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
-            <div className="relative z-10 flex flex-col items-center justify-center gap-1">
-              <span className="text-xl">📺</span>
-              <span className="text-[10px] font-black tracking-widest uppercase text-slate-300">
-                {channel.title.slice(0, 12)}
+            <div className="relative z-10 flex flex-col items-center justify-center gap-1 px-2">
+              <span
+                className={`text-[11px] font-black tracking-widest uppercase line-clamp-2 ${tokens.accentText}`}
+              >
+                {channel.title}
               </span>
             </div>
           )}
         </div>
 
         {/* Channel Info & Watch Action */}
-        <div className="flex flex-col flex-1 justify-between space-y-2 z-10">
-          <div>
+        <div className="flex flex-col flex-1 justify-between space-y-2 z-10 min-w-0">
+          <div className="min-w-0">
             <h4
               className={`${
-                compact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'
+                compact ? 'text-xs' : 'text-xs sm:text-sm'
               } font-black text-white tracking-tight line-clamp-1`}
             >
               {channel.title}
             </h4>
             {!compact && (
-              <p className="text-[11px] text-slate-400 font-medium line-clamp-2 mt-1 leading-snug min-h-[2.25rem]">
+              <p
+                className={`text-[10px] sm:text-[11px] font-medium line-clamp-2 mt-0.5 leading-snug min-h-[2rem] ${tokens.subMutedText}`}
+              >
                 {description}
               </p>
             )}
@@ -398,22 +887,24 @@ const ChannelCard = React.memo(function ChannelCard({
           <div
             className={`w-full ${
               largeButtons
-                ? 'py-2.5 text-xs'
+                ? 'py-2 text-xs'
                 : compact
                   ? 'py-1.5 text-[10px]'
-                  : 'py-2 text-[11px]'
-            } px-3 rounded-xl font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 ${playBtnClass}`}
+                  : 'py-1.5 sm:py-2 text-[10px] sm:text-[11px]'
+            } px-2.5 rounded-xl font-extrabold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              tokens.playBtn
+            }`}
           >
             <span>▶</span>
-            <span>Watch Live</span>
+            <span>Watch</span>
           </div>
         </div>
       </Link>
 
-      {/* Neon Bottom Laser Highlight */}
+      {/* Active-Theme Bottom Laser Highlight */}
       {!glowOff && (
         <div
-          className={`absolute inset-x-4 bottom-0 h-[2px] bg-gradient-to-r ${laserLineClass} opacity-75 group-hover:opacity-100 pointer-events-none`}
+          className={`absolute inset-x-4 bottom-0 h-[2px] bg-gradient-to-r ${tokens.laserLine} opacity-75 group-hover:opacity-100 pointer-events-none`}
         />
       )}
     </div>
@@ -436,6 +927,7 @@ function LiveTvComponent() {
   const [density, setDensity] = useState<LiveDensityOption>('comfort');
   const [pinnedOnly, setPinnedOnly] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchResetNonce, setSearchResetNonce] = useState<number>(0);
 
   const [rawChannels, setRawChannels] = useState<LiveChannel[]>([]);
   const [healthMap, setHealthMap] = useState<Record<string, ExtendedHealthStatus>>(
@@ -483,6 +975,8 @@ function LiveTvComponent() {
   );
 
   const probeRunIdRef = useRef<number>(0);
+  const probeAbortRef = useRef<AbortController | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   // Sync live settings whenever Sidebar changes anything
   useEffect(() => {
@@ -509,12 +1003,20 @@ function LiveTvComponent() {
     };
   }, []);
 
-  // Keep live guide clock updated
+  // Keep live guide clock updated every 15s
   useEffect(() => {
     const interval = window.setInterval(() => {
       setGuideClock(formatAppTime(new Date(), getClockFormat()));
     }, 15000);
     return () => window.clearInterval(interval);
+  }, []);
+
+  // Cleanup timers & active probes on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+      probeAbortRef.current?.abort();
+    };
   }, []);
 
   // Deduplicate categories so "All" never appears twice
@@ -538,11 +1040,15 @@ function LiveTvComponent() {
   }, []);
 
   /**
-   * High-speed concurrent background health prober.
-   * Adapts concurrency (6 on 1-2GB sticks, 12 on 4GB+ devices) so low-RAM TVs stay snappy.
+   * High-speed concurrent background health prober with full AbortController teardown.
+   * Adapts concurrency (5 on 1-2GB sticks, 10 on 4GB+ devices) so low-RAM TVs stay responsive.
    */
   const runFastBackgroundProbe = useCallback(
     async (channelsToProbe: LiveChannel[], forceRefresh = false) => {
+      probeAbortRef.current?.abort();
+      const runController = new AbortController();
+      probeAbortRef.current = runController;
+
       const runId = ++probeRunIdRef.current;
       const existingCache = forceRefresh ? {} : loadCachedHealthMap();
 
@@ -582,26 +1088,39 @@ function LiveTvComponent() {
       let completed = 0;
       let cursor = 0;
       let lastFlushTime = Date.now();
-      const concurrency = getHardwareLimits().effectiveMode === 'low' ? 6 : 12;
+      const concurrency = getHardwareLimits().effectiveMode === 'low' ? 5 : 10;
 
       const worker = async () => {
         while (cursor < pending.length) {
-          if (probeRunIdRef.current !== runId) return;
+          if (
+            probeRunIdRef.current !== runId ||
+            runController.signal.aborted
+          ) {
+            return;
+          }
           const currentIndex = cursor++;
           const channel = pending[currentIndex];
           if (!channel) continue;
 
           const key = getChannelKey(channel);
           const targetUrl = channel.streamUrl || channel.url;
-          const result = await probeSingleChannelFast(targetUrl);
+          const result = await probeSingleChannelFast(
+            targetUrl,
+            runController.signal
+          );
 
-          if (probeRunIdRef.current !== runId) return;
+          if (
+            probeRunIdRef.current !== runId ||
+            runController.signal.aborted
+          ) {
+            return;
+          }
 
           workingMap[key] = result;
           completed++;
 
           const now = Date.now();
-          if (now - lastFlushTime >= 350 || completed === pending.length) {
+          if (now - lastFlushTime >= 450 || completed === pending.length) {
             lastFlushTime = now;
             setHealthMap({ ...workingMap });
             setProbeProgress({ done: completed, total: pending.length });
@@ -612,7 +1131,7 @@ function LiveTvComponent() {
       const workerCount = Math.min(concurrency, pending.length);
       await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
-      if (probeRunIdRef.current === runId) {
+      if (probeRunIdRef.current === runId && !runController.signal.aborted) {
         setHealthMap({ ...workingMap });
         saveCachedHealthMap(workingMap);
         setProbing(false);
@@ -644,6 +1163,8 @@ function LiveTvComponent() {
         const seen = new Set<string>();
         const uniqueChannels: LiveChannel[] = [];
         for (const ch of fetched) {
+          const streamTarget = ch.streamUrl || ch.url;
+          if (!isSafeHttpUrl(streamTarget)) continue;
           const key = getChannelKey(ch);
           if (!seen.has(key)) {
             seen.add(key);
@@ -667,6 +1188,7 @@ function LiveTvComponent() {
     void loadChannelsInstantly();
     return () => {
       probeRunIdRef.current++;
+      probeAbortRef.current?.abort();
     };
   }, [loadChannelsInstantly]);
 
@@ -687,6 +1209,7 @@ function LiveTvComponent() {
   const handleTogglePin = useCallback((channelId: string, channelTitle: string) => {
     const res = toggleFavoriteChannel(channelId);
     setFavoriteIds(res.favorites);
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     if (res.limitReached) {
       setPinToast(
         `Max ${MAX_FAVORITE_CHANNELS} pinned channels reached — unpin one first.`
@@ -694,11 +1217,11 @@ function LiveTvComponent() {
     } else {
       setPinToast(
         res.added
-          ? `⭐ Pinned "${channelTitle}" to your top Favorites!`
+          ? `Pinned "${channelTitle}" to your top Favorites.`
           : `Removed "${channelTitle}" from Favorites.`
       );
     }
-    window.setTimeout(() => setPinToast(null), 2800);
+    toastTimerRef.current = window.setTimeout(() => setPinToast(null), 2800);
   }, []);
 
   const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
@@ -716,7 +1239,7 @@ function LiveTvComponent() {
     [healthMap, probing]
   );
 
-  // Apply Kids Lock first so mature crime/adult streams are hidden when Kids Mode is active
+  // Apply Kids Safe Mode Lock first
   const ageSafeChannels = useMemo(() => {
     if (!kidsSafeActive) return rawChannels;
     return rawChannels.filter((ch) => isChannelKidsSafe(ch.title));
@@ -798,7 +1321,6 @@ function LiveTvComponent() {
     };
 
     return [...filtered].sort((a, b) => {
-      // Always bubble pinned favorites up slightly in status view
       if (sortBy === 'status') {
         const pinA = favoriteIdSet.has(getChannelKey(a)) ? 0 : 1;
         const pinB = favoriteIdSet.has(getChannelKey(b)) ? 0 : 1;
@@ -828,6 +1350,14 @@ function LiveTvComponent() {
     1,
     Math.ceil(finalFilteredChannels.length / channelsPerPage)
   );
+
+  // Clamp currentPage safely if channelsPerPage or filters shrink totalPages
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const paginatedChannels = useMemo(() => {
     const start = (currentPage - 1) * channelsPerPage;
     return finalFilteredChannels.slice(start, start + channelsPerPage);
@@ -837,16 +1367,19 @@ function LiveTvComponent() {
     const onlinePool = finalFilteredChannels.filter(
       (ch) => resolveChannelStatus(ch) === 'online'
     );
-    const pool =
-      onlinePool.length > 0 ? onlinePool : finalFilteredChannels;
+    const pool = onlinePool.length > 0 ? onlinePool : finalFilteredChannels;
     if (!pool.length) return;
     const picked = pool[Math.floor(Math.random() * pool.length)];
     const targetUrl = picked.streamUrl || picked.url;
+    if (!isSafeHttpUrl(targetUrl)) return;
     const chId = getChannelKey(picked);
+    const safeLogo = isSafeHttpUrl(picked.logo) ? picked.logo!.trim() : '';
+
+    bgAudio.pause();
     recordWatchHistory({
       id: chId,
       title: picked.title,
-      posterPath: picked.logo || '',
+      posterPath: safeLogo,
       type: 'livetv',
     });
     navigate({
@@ -854,7 +1387,7 @@ function LiveTvComponent() {
       search: {
         url: targetUrl,
         title: picked.title,
-        logo: picked.logo || '',
+        logo: safeLogo,
         channelId: chId,
       },
     });
@@ -878,116 +1411,24 @@ function LiveTvComponent() {
     posterShape === 'sharp'
       ? 'rounded-lg'
       : posterShape === 'extra'
-        ? 'rounded-[30px]'
-        : 'rounded-3xl';
+        ? 'rounded-[28px]'
+        : 'rounded-2xl sm:rounded-3xl';
 
   const isCompactMode = density === 'compact' && !largeButtons;
 
+  // Responsive viewport grid tuned for portrait phones, landscape phones, tablets, desktops & TVs
   const gridClass = isCompactMode
     ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2.5 sm:gap-3'
     : largeButtons
-      ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
-      : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4';
+      ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4'
+      : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4';
 
-  const themeStyles = useMemo(() => {
-    switch (appTheme) {
-      case 'red':
-        return {
-          bg: 'bg-gradient-to-br from-zinc-950/90 via-red-950/40 to-black/95',
-          accentText: 'text-red-400',
-          accentBar: 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.95)]',
-          borderGlow: 'border-red-500/30 shadow-[0_16px_50px_rgba(239,68,68,0.2)]',
-          borderHover: 'hover:border-red-400/70',
-          laserLine: 'from-transparent via-red-500 to-amber-400',
-          playBtn:
-            'bg-white/[0.06] group-hover:bg-gradient-to-r group-hover:from-red-600 group-hover:to-amber-600 text-slate-200 group-hover:text-white border border-white/10 group-hover:border-red-400/50',
-          ambient: 'from-red-600/15 via-transparent to-transparent',
-        };
-      case 'midnight':
-        return {
-          bg: 'bg-gradient-to-br from-slate-950/90 via-blue-950/40 to-slate-950/95',
-          accentText: 'text-sky-300',
-          accentBar: 'bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.95)]',
-          borderGlow: 'border-sky-500/30 shadow-[0_16px_50px_rgba(56,189,248,0.2)]',
-          borderHover: 'hover:border-sky-400/70',
-          laserLine: 'from-transparent via-sky-400 to-blue-500',
-          playBtn:
-            'bg-white/[0.06] group-hover:bg-gradient-to-r group-hover:from-sky-500 group-hover:to-blue-600 text-slate-200 group-hover:text-white border border-white/10 group-hover:border-sky-400/50',
-          ambient: 'from-blue-600/15 via-transparent to-transparent',
-        };
-      case 'emerald':
-        return {
-          bg: 'bg-gradient-to-br from-slate-950/90 via-emerald-950/40 to-slate-950/95',
-          accentText: 'text-emerald-300',
-          accentBar: 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]',
-          borderGlow:
-            'border-emerald-500/30 shadow-[0_16px_50px_rgba(16,185,129,0.2)]',
-          borderHover: 'hover:border-emerald-400/70',
-          laserLine: 'from-transparent via-emerald-400 to-cyan-400',
-          playBtn:
-            'bg-white/[0.06] group-hover:bg-gradient-to-r group-hover:from-emerald-500 group-hover:to-teal-600 text-slate-200 group-hover:text-white border border-white/10 group-hover:border-emerald-400/50',
-          ambient: 'from-emerald-600/15 via-transparent to-transparent',
-        };
-      case 'amber':
-        return {
-          bg: 'bg-gradient-to-br from-stone-950/90 via-yellow-950/40 to-neutral-950/95',
-          accentText: 'text-amber-300',
-          accentBar: 'bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.95)]',
-          borderGlow:
-            'border-amber-500/30 shadow-[0_16px_50px_rgba(245,158,11,0.2)]',
-          borderHover: 'hover:border-amber-400/70',
-          laserLine: 'from-transparent via-amber-400 to-orange-500',
-          playBtn:
-            'bg-white/[0.06] group-hover:bg-gradient-to-r group-hover:from-amber-500 group-hover:to-orange-600 text-slate-200 group-hover:text-white border border-white/10 group-hover:border-amber-400/50',
-          ambient: 'from-amber-600/15 via-transparent to-transparent',
-        };
-      case 'cyan':
-        return {
-          bg: 'bg-gradient-to-br from-slate-950/90 via-cyan-950/40 to-slate-950/95',
-          accentText: 'text-cyan-300',
-          accentBar: 'bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]',
-          borderGlow:
-            'border-cyan-500/30 shadow-[0_16px_50px_rgba(6,182,212,0.2)]',
-          borderHover: 'hover:border-cyan-400/70',
-          laserLine: 'from-transparent via-cyan-400 to-sky-500',
-          playBtn:
-            'bg-white/[0.06] group-hover:bg-gradient-to-r group-hover:from-cyan-500 group-hover:to-blue-600 text-slate-200 group-hover:text-white border border-white/10 group-hover:border-cyan-400/50',
-          ambient: 'from-cyan-600/15 via-transparent to-transparent',
-        };
-      case 'violet':
-      default:
-        return {
-          bg: 'bg-gradient-to-br from-slate-950/90 via-purple-950/40 to-slate-950/95',
-          accentText: 'text-violet-300',
-          accentBar: 'bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]',
-          borderGlow:
-            'border-violet-500/30 shadow-[0_16px_50px_rgba(139,92,246,0.2)]',
-          borderHover: 'hover:border-purple-400/70',
-          laserLine: 'from-transparent via-pink-500 to-cyan-400',
-          playBtn:
-            'bg-white/[0.06] group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-cyan-500 text-slate-200 group-hover:text-white border border-white/10 group-hover:border-purple-400/50',
-          ambient: 'from-violet-600/15 via-transparent to-transparent',
-        };
-    }
-  }, [appTheme]);
+  const tokens = useMemo(() => getLiveTvThemeTokens(appTheme), [appTheme]);
 
-  const getPrimaryBgColor = (theme: AppTheme) => {
-    switch (theme) {
-      case 'red':
-        return 'bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30';
-      case 'midnight':
-        return 'bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30';
-      case 'emerald':
-        return 'bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30';
-      case 'amber':
-        return 'bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30';
-      case 'cyan':
-        return 'bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30';
-      case 'violet':
-      default:
-        return 'bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30';
-    }
-  };
+  const getPrimaryBgColor = useCallback(
+    (theme: AppTheme) => getLiveTvThemeTokens(theme).btnActive,
+    []
+  );
 
   const hasActiveFilters =
     selectedCategory !== 'All' ||
@@ -1002,41 +1443,50 @@ function LiveTvComponent() {
     setStatusFilter('all');
     setPinnedOnly(false);
     setSearchQuery('');
+    setSearchResetNonce((n) => n + 1);
   };
 
   return (
     <main
-      className={`min-h-screen ${themeStyles.bg} text-slate-100 transition-colors duration-300 pb-20 px-3 sm:px-6 w-full max-w-full overflow-x-hidden box-border relative rounded-3xl`}
+      className={`min-h-screen ${tokens.bg} ${tokens.baseText} transition-colors duration-300 pb-16 px-2.5 sm:px-6 w-full max-w-full overflow-x-clip box-border relative rounded-3xl`}
     >
       <AppWallpaper />
       {!isLowRam && !reducedMotion && !glowOff && (
         <div
-          className={`absolute inset-x-0 -top-12 h-96 bg-gradient-to-b ${themeStyles.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
+          className={`absolute inset-x-0 -top-12 h-80 bg-gradient-to-b ${tokens.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
         />
       )}
 
-      <header className="py-5 max-w-7xl mx-auto space-y-4 box-border relative z-10">
-        {/* Top Row: Back to Home + Live Clock + Surprise Channel + Reset */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5">
+      <header className="py-3.5 sm:py-5 max-w-7xl mx-auto space-y-3.5 sm:space-y-4 box-border relative z-10">
+        {/* Top Row: Theme-Matched Back Capsule + Clock + Channel Surf + Reset */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Link
             to="/"
-            className={`group inline-flex items-center gap-3 rounded-full bg-slate-900/80 hover:bg-slate-900/95 backdrop-blur-xl pl-4 pr-2 ${
-              largeButtons ? 'py-2.5' : 'py-1.5'
-            } border border-white/15 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-500/50`}
+            className={`group inline-flex items-center gap-2 rounded-full ${
+              isLowRam ? '' : 'backdrop-blur-xl'
+            } pl-3 pr-2 ${
+              largeButtons ? 'py-2' : 'py-1.5'
+            } border shadow-[0_4px_18px_rgba(0,0,0,0.55)] transition-all duration-200 active:scale-95 whitespace-nowrap shrink-0 focus:outline-none focus:ring-2 ${
+              tokens.backCapsule
+            } ${tokens.focusRing}`}
           >
-            <span className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all text-xs font-bold">
+            <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
               ‹
             </span>
-            <span className="text-xs sm:text-sm font-semibold tracking-wide text-slate-100 group-hover:text-white">
+            <span className="text-xs sm:text-sm font-semibold tracking-wide">
               Back to Home
             </span>
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600/50 via-pink-500/40 to-cyan-400/50 border border-purple-300/50 text-[11px] text-white">
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${tokens.backBadge}`}
+            >
               ⟲
             </span>
           </Link>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-slate-950/80 border border-white/15 px-3 py-1.5 text-xs font-extrabold text-slate-200">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span
+              className={`rounded-full border px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-extrabold whitespace-nowrap ${tokens.subtleBadge}`}
+            >
               🕒 {guideClock}
             </span>
 
@@ -1044,7 +1494,7 @@ function LiveTvComponent() {
               <button
                 type="button"
                 onClick={handleSurpriseChannel}
-                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/50 px-3.5 py-1.5 text-xs font-extrabold text-amber-200 hover:text-white shadow transition cursor-pointer"
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold whitespace-nowrap shadow transition cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnSecondary} ${tokens.focusRing}`}
                 title="Jump into a random live broadcast"
               >
                 <span>🎲 Channel Surf</span>
@@ -1055,154 +1505,177 @@ function LiveTvComponent() {
               <button
                 type="button"
                 onClick={resetAllFilters}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 px-3.5 py-1.5 text-xs font-bold text-white shadow transition cursor-pointer"
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] sm:text-xs font-bold whitespace-nowrap shadow transition cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnIdle} ${tokens.focusRing}`}
               >
-                <span>✕ Reset Filters</span>
+                <span>✕ Reset</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Pin Notification Toast */}
+        {/* Theme-Matched Pin Toast */}
         {pinToast && (
-          <div className="rounded-2xl bg-amber-950/85 border border-amber-400/50 px-4 py-2 text-center text-xs font-extrabold text-amber-200 shadow-xl">
+          <div
+            className={`rounded-2xl border px-4 py-2 text-center text-xs font-extrabold shadow-xl ${tokens.toastBanner}`}
+          >
             {pinToast}
           </div>
         )}
 
-        {/* Hero Console Control Deck */}
+        {/* Theme-Matched Translucent Broadcast Console Control Deck */}
         <div
-          className={`rounded-3xl border bg-slate-950/85 backdrop-blur-2xl p-4 sm:p-6 ${themeStyles.borderGlow} space-y-5`}
+          className={`w-full max-w-full box-border overflow-hidden rounded-3xl border ${
+            isLowRam ? '' : 'backdrop-blur-2xl'
+          } p-3.5 sm:p-6 space-y-4 sm:space-y-5 ${tokens.surfacePanel}`}
         >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-white/10 pb-4">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-600/30 via-purple-600/30 to-black border border-white/20 shadow-[0_0_25px_rgba(239,68,68,0.35)] text-2xl">
-                📡
+          {/* Console Header + Responsive Search / Sort / Density / Refresh */}
+          <div
+            className={`flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5 border-b pb-4 ${tokens.dividerBorder}`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl border ${tokens.headerIconBox}`}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`w-5 h-5 sm:w-6 sm:h-6 ${tokens.accentText}`}
+                >
+                  <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
+                  <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" />
+                  <circle cx="12" cy="12" r="2" fill="currentColor" />
+                  <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" />
+                  <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19" />
+                </svg>
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white">
                     Live TV & Sports
                   </h1>
                   {kidsSafeActive && (
-                    <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">
+                    <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0">
                       🧒 Kids Safe
                     </span>
                   )}
                 </div>
-                <p className="text-xs sm:text-sm text-slate-400">
+                <p className={`text-xs leading-snug ${tokens.subMutedText}`}>
                   Instant broadcast feeds with pinned favorites & real-time health radar
                 </p>
               </div>
             </div>
 
-            {/* Quick Search + Sort + Density + Health Refresh */}
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-              <div className="relative flex-1 min-w-[170px] sm:w-52">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
-                  🔍
-                </span>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search channel or CH #..."
-                  className="w-full h-10 rounded-xl border border-white/15 bg-black/75 pl-8 pr-7 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                />
-                {searchQuery && (
+            {/* Portrait & Landscape Safe Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center gap-2 w-full lg:w-auto min-w-0">
+              <LiveSearchInput
+                tokens={tokens}
+                resetSignal={searchResetNonce}
+                onQueryChange={setSearchQuery}
+              />
+
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as LiveSortOption)}
+                  aria-label="Sort Live Channels"
+                  className={`flex-1 sm:flex-initial h-10 rounded-xl border px-2.5 text-xs font-bold focus:outline-none cursor-pointer min-w-0 ${tokens.inputClass}`}
+                >
+                  <option value="status" className={tokens.optionBg}>
+                    Sort: Live First
+                  </option>
+                  <option value="channelNumber" className={tokens.optionBg}>
+                    Sort: Channel #
+                  </option>
+                  <option value="az" className={tokens.optionBg}>
+                    Sort: A–Z
+                  </option>
+                </select>
+
+                {!largeButtons && (
                   <button
                     type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white cursor-pointer"
+                    onClick={() =>
+                      setDensity((d) =>
+                        d === 'comfort' ? 'compact' : 'comfort'
+                      )
+                    }
+                    className={`h-10 px-3 rounded-xl border text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnIdle} ${tokens.focusRing}`}
+                    title="Switch Card Layout Density"
                   >
-                    ✕
+                    {density === 'comfort' ? '▦ Compact' : '▢ Comfort'}
                   </button>
                 )}
-              </div>
 
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as LiveSortOption)}
-                aria-label="Sort Live Channels"
-                className="h-10 rounded-xl border border-white/15 bg-black/75 px-2.5 text-xs font-bold text-white focus:outline-none cursor-pointer"
-              >
-                <option value="status">Sort: Live First</option>
-                <option value="channelNumber">Sort: Channel #</option>
-                <option value="az">Sort: A–Z</option>
-              </select>
-
-              {!largeButtons && (
                 <button
                   type="button"
-                  onClick={() =>
-                    setDensity((d) => (d === 'comfort' ? 'compact' : 'comfort'))
-                  }
-                  className="h-10 px-3 rounded-xl bg-black/70 hover:bg-white/15 border border-white/15 text-xs font-bold text-slate-200 transition cursor-pointer"
-                  title="Switch Card Layout Density"
+                  onClick={() => void handleRefreshHealth()}
+                  disabled={probing}
+                  className={`w-full sm:w-auto h-10 px-3.5 rounded-xl text-xs font-extrabold tracking-wide whitespace-nowrap transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-60 focus:outline-none focus:ring-2 ${tokens.btnActive} ${tokens.focusRing}`}
                 >
-                  {density === 'comfort' ? '▦ Compact' : '▢ Comfort'}
+                  <span className={probing ? 'animate-spin inline-block' : ''}>
+                    ↻
+                  </span>
+                  <span>
+                    {probing
+                      ? `Scan (${probeProgress.done}/${probeProgress.total})`
+                      : 'Refresh'}
+                  </span>
                 </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => void handleRefreshHealth()}
-                disabled={probing}
-                className={`h-10 px-4 rounded-xl text-xs font-extrabold tracking-wide transition flex items-center gap-2 shrink-0 cursor-pointer disabled:opacity-60 ${getPrimaryBgColor(
-                  appTheme
-                )}`}
-              >
-                <span className={probing ? 'animate-spin inline-block' : ''}>↻</span>
-                <span>
-                  {probing
-                    ? `Scan (${probeProgress.done}/${probeProgress.total})`
-                    : 'Refresh Health'}
-                </span>
-              </button>
+              </div>
             </div>
           </div>
 
           {/* 1. STREAM HEALTH STATUS & PINNED FILTER BAR */}
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">
-                1. Filter by Stream Status & Favorites
-              </p>
-              <div className="flex items-center gap-2">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                <p
+                  className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest ${tokens.subMutedText}`}
+                >
+                  1. Stream Status & Favorites
+                </p>
                 {probing && (
-                  <span className="text-[11px] font-bold text-amber-300 animate-pulse">
-                    ⚡ Fast background check running…
+                  <span
+                    className={`text-[10px] sm:text-[11px] font-bold animate-pulse whitespace-nowrap ${tokens.accentText}`}
+                  >
+                    • Scanning feeds…
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setPinnedOnly((p) => !p)}
-                  className={`rounded-full px-3 py-0.5 text-[11px] font-extrabold border transition cursor-pointer ${
-                    pinnedOnly
-                      ? 'bg-amber-500 text-slate-950 border-amber-300 shadow'
-                      : 'bg-amber-950/40 text-amber-300 border-amber-500/35 hover:bg-amber-900/50'
-                  }`}
-                >
-                  ⭐ Pinned ({favoriteIds.length}/{MAX_FAVORITE_CHANNELS})
-                </button>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setPinnedOnly((p) => !p)}
+                className={`rounded-full px-3 py-1 text-[11px] font-extrabold border whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${
+                  tokens.focusRing
+                } ${pinnedOnly ? `${tokens.btnActive} border-transparent` : tokens.btnSecondary}`}
+              >
+                ★ Pinned ({favoriteIds.length}/{MAX_FAVORITE_CHANNELS})
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-0.5">
+            {/* 4 Collision-Proof Status Filter Pills (Never Clipping on Narrow Portrait Phones) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
               <button
                 type="button"
                 onClick={() => handleStatusSelect('all')}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl border text-xs font-extrabold transition-all cursor-pointer ${
+                className={`flex items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl border text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer min-w-0 overflow-hidden focus:outline-none focus:ring-2 ${
+                  tokens.focusRing
+                } ${
                   statusFilter === 'all'
-                    ? `${getPrimaryBgColor(appTheme)} border-white/40 scale-[1.02]`
-                    : 'bg-black/60 hover:bg-white/[0.08] border-white/10 text-slate-300'
+                    ? `${tokens.btnActive} border-white/30`
+                    : tokens.btnIdle
                 }`}
               >
-                <span className="flex items-center gap-2 truncate">
-                  <span>🌐</span>
-                  <span>All Channels</span>
+                <span className="flex items-center gap-1.5 min-w-0 truncate">
+                  <span className="sm:hidden truncate">All</span>
+                  <span className="hidden sm:inline truncate">All Channels</span>
                 </span>
-                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-white">
+                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-white shrink-0">
                   {statusCounts.all}
                 </span>
               </button>
@@ -1210,17 +1683,17 @@ function LiveTvComponent() {
               <button
                 type="button"
                 onClick={() => handleStatusSelect('online')}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl border text-xs font-extrabold transition-all cursor-pointer ${
+                className={`flex items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl border text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer min-w-0 overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
                   statusFilter === 'online'
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.45)] scale-[1.02]'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.4)]'
                     : 'bg-emerald-950/35 hover:bg-emerald-950/60 border-emerald-500/30 text-emerald-300'
                 }`}
               >
-                <span className="flex items-center gap-2 truncate">
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-                  <span>Online</span>
+                <span className="flex items-center gap-1.5 min-w-0 truncate">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                  <span className="truncate">Online</span>
                 </span>
-                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-emerald-200">
+                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-emerald-200 shrink-0">
                   {statusCounts.online}
                 </span>
               </button>
@@ -1228,17 +1701,17 @@ function LiveTvComponent() {
               <button
                 type="button"
                 onClick={() => handleStatusSelect('timeout')}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl border text-xs font-extrabold transition-all cursor-pointer ${
+                className={`flex items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl border text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer min-w-0 overflow-hidden focus:outline-none focus:ring-2 focus:ring-amber-400 ${
                   statusFilter === 'timeout'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.45)] scale-[1.02]'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-300 shadow-[0_0_18px_rgba(245,158,11,0.4)]'
                     : 'bg-amber-950/35 hover:bg-amber-950/60 border-amber-500/30 text-amber-300'
                 }`}
               >
-                <span className="flex items-center gap-2 truncate">
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
-                  <span>Slow / ?</span>
+                <span className="flex items-center gap-1.5 min-w-0 truncate">
+                  <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
+                  <span className="truncate">Slow / ?</span>
                 </span>
-                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-amber-200">
+                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-amber-200 shrink-0">
                   {statusCounts.timeout + statusCounts.checking}
                 </span>
               </button>
@@ -1246,17 +1719,17 @@ function LiveTvComponent() {
               <button
                 type="button"
                 onClick={() => handleStatusSelect('offline')}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl border text-xs font-extrabold transition-all cursor-pointer ${
+                className={`flex items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl border text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer min-w-0 overflow-hidden focus:outline-none focus:ring-2 focus:ring-red-400 ${
                   statusFilter === 'offline'
-                    ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white border-red-300 shadow-[0_0_20px_rgba(239,68,68,0.45)] scale-[1.02]'
+                    ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white border-red-300 shadow-[0_0_18px_rgba(239,68,68,0.4)]'
                     : 'bg-red-950/35 hover:bg-red-950/60 border-red-500/30 text-red-300'
                 }`}
               >
-                <span className="flex items-center gap-2 truncate">
-                  <span className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)]" />
-                  <span>Offline</span>
+                <span className="flex items-center gap-1.5 min-w-0 truncate">
+                  <span className="h-2 w-2 rounded-full bg-red-500 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.9)]" />
+                  <span className="truncate">Offline</span>
                 </span>
-                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-red-200">
+                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-red-200 shrink-0">
                   {statusCounts.offline}
                 </span>
               </button>
@@ -1265,15 +1738,17 @@ function LiveTvComponent() {
 
           {/* 2. REGIONS & FEEDS BAR */}
           <div className="w-full space-y-1.5">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">
+            <div className="flex items-center justify-between gap-2 px-0.5">
+              <p
+                className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest ${tokens.subMutedText}`}
+              >
                 2. Regions & Feeds
               </p>
               {selectedCategory !== 'All' && (
                 <button
                   type="button"
                   onClick={() => setSelectedCategory('All')}
-                  className="text-[11px] font-bold text-amber-300 hover:underline cursor-pointer"
+                  className={`text-[11px] font-bold hover:underline cursor-pointer shrink-0 ${tokens.accentText}`}
                 >
                   Show All Regions
                 </button>
@@ -1282,7 +1757,7 @@ function LiveTvComponent() {
             <ScrollPillBar
               options={categories.map((cat) => ({
                 id: cat,
-                label: cat === 'All' ? '🌐 All Regions' : cat,
+                label: cat === 'All' ? 'All Regions' : cat,
               }))}
               activeId={selectedCategory}
               onSelect={handleCategorySelect}
@@ -1294,15 +1769,17 @@ function LiveTvComponent() {
 
           {/* 3. CATEGORIES & GENRES BAR */}
           <div className="w-full space-y-1.5">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">
+            <div className="flex items-center justify-between gap-2 px-0.5">
+              <p
+                className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest ${tokens.subMutedText}`}
+              >
                 3. Categories & Genres
               </p>
               {selectedGenre !== 'All Genres' && (
                 <button
                   type="button"
                   onClick={() => setSelectedGenre('All Genres')}
-                  className="text-[11px] font-bold text-amber-300 hover:underline cursor-pointer"
+                  className={`text-[11px] font-bold hover:underline cursor-pointer shrink-0 ${tokens.accentText}`}
                 >
                   Show All Genres
                 </button>
@@ -1311,7 +1788,7 @@ function LiveTvComponent() {
             <ScrollPillBar
               options={genreOptions.map((genre) => ({
                 id: genre,
-                label: genre === 'All Genres' ? '✨ All Genres' : genre,
+                label: genre === 'All Genres' ? 'All Genres' : genre,
               }))}
               activeId={selectedGenre}
               onSelect={handleGenreSelect}
@@ -1324,18 +1801,22 @@ function LiveTvComponent() {
       </header>
 
       {/* Main Content Wrapper */}
-      <div className="max-w-7xl mx-auto box-border relative z-10 space-y-7">
-        {/* DEDICATED PINNED FAVORITE CHANNELS SHELF */}
+      <div className="max-w-7xl mx-auto box-border relative z-10 space-y-6 sm:space-y-7">
+        {/* DEDICATED PINNED FAVORITE CHANNELS SHELF (100% Theme-Matched) */}
         {pinnedChannels.length > 0 && !pinnedOnly && !searchQuery.trim() && (
           <section className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2.5">
-                <span className="w-1.5 h-6 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)]" />
-                <h2 className="text-base sm:text-lg font-black tracking-tight text-amber-300">
-                  ⭐ Pinned Favorite Channels
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span
+                  className={`w-1.5 h-6 rounded-full shrink-0 ${tokens.accentBar}`}
+                />
+                <h2
+                  className={`text-base sm:text-lg font-black tracking-tight truncate ${tokens.accentText}`}
+                >
+                  ★ Pinned Favorite Channels
                 </h2>
               </div>
-              <span className="text-xs font-bold text-slate-400">
+              <span className={`text-xs font-bold shrink-0 ${tokens.subMutedText}`}>
                 {pinnedChannels.length} / {MAX_FAVORITE_CHANNELS} pinned
               </span>
             </div>
@@ -1350,13 +1831,12 @@ function LiveTvComponent() {
                     status={resolveChannelStatus(channel)}
                     isPinned={true}
                     onTogglePin={handleTogglePin}
-                    laserLineClass="from-transparent via-amber-400 to-orange-500"
-                    playBtnClass={themeStyles.playBtn}
-                    borderHoverClass="hover:border-amber-400"
+                    tokens={tokens}
                     radiusClass={cardRadiusClass}
                     largeButtons={largeButtons}
                     compact={isCompactMode}
                     glowOff={glowOff}
+                    isLowRam={isLowRam}
                   />
                 );
               })}
@@ -1365,51 +1845,59 @@ function LiveTvComponent() {
         )}
 
         {/* MAIN CHANNELS GRID SECTION */}
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-            <div className="flex items-center gap-2.5">
-              <span className={`w-1.5 h-6 rounded-full ${themeStyles.accentBar}`} />
-              <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
+        <section className="space-y-3.5 sm:space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 px-1">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span
+                className={`w-1.5 h-6 rounded-full shrink-0 ${tokens.accentBar}`}
+              />
+              <h3 className="text-base sm:text-xl font-black tracking-tight text-white truncate">
                 {pinnedOnly
-                  ? '⭐ My Pinned Channels'
+                  ? '★ My Pinned Channels'
                   : selectedGenre !== 'All Genres'
                     ? selectedGenre
                     : selectedCategory}{' '}
                 {statusFilter === 'online'
-                  ? '• Online Feeds'
+                  ? '• Online'
                   : statusFilter === 'timeout'
-                    ? '• Slow / ? Feeds'
+                    ? '• Slow / ?'
                     : statusFilter === 'offline'
-                      ? '• Offline Feeds'
+                      ? '• Offline'
                       : '• All Feeds'}
               </h3>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/70 border border-emerald-500/30 px-3 py-1 text-emerald-300">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/70 border border-emerald-500/30 px-2.5 py-1 text-emerald-300 whitespace-nowrap">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 <span>{statusCounts.online} online</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-950/70 border border-amber-500/30 px-3 py-1 text-amber-300">
-                <span className="h-2 w-2 rounded-full bg-amber-400" />
-                <span>{statusCounts.timeout + statusCounts.checking} slow/?</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-950/70 border border-amber-500/30 px-2.5 py-1 text-amber-300 whitespace-nowrap">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span>{statusCounts.timeout + statusCounts.checking} slow</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-950/70 border border-red-500/30 px-3 py-1 text-red-300">
-                <span className="h-2 w-2 rounded-full bg-red-500" />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-950/70 border border-red-500/30 px-2.5 py-1 text-red-300 whitespace-nowrap">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                 <span>{statusCounts.offline} offline</span>
               </span>
               <span
-                className={`rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 ${themeStyles.accentText}`}
+                className={`rounded-full border px-2.5 py-1 whitespace-nowrap ${tokens.badge}`}
               >
-                {finalFilteredChannels.length} matching • {channelsPerPage}/pg
+                {finalFilteredChannels.length} ch • {channelsPerPage}/pg
               </span>
             </div>
           </div>
 
           {loading ? (
-            <div className="rounded-3xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-12 flex flex-col justify-center items-center gap-3 text-center">
+            <div
+              className={`rounded-3xl border ${
+                isLowRam ? '' : 'backdrop-blur-xl'
+              } p-10 sm:p-12 flex flex-col justify-center items-center gap-3 text-center ${
+                tokens.surfacePanel
+              }`}
+            >
               <div
-                className={`animate-spin rounded-full h-10 w-10 border-t-2 ${themeStyles.accentText}`}
+                className={`animate-spin rounded-full h-9 w-9 border-2 border-t-transparent ${tokens.accentText}`}
               />
               <p className="text-sm font-bold text-white">
                 Loading broadcast channels…
@@ -1427,13 +1915,12 @@ function LiveTvComponent() {
                       status={resolveChannelStatus(channel)}
                       isPinned={favoriteIdSet.has(key)}
                       onTogglePin={handleTogglePin}
-                      laserLineClass={themeStyles.laserLine}
-                      playBtnClass={themeStyles.playBtn}
-                      borderHoverClass={themeStyles.borderHover}
+                      tokens={tokens}
                       radiusClass={cardRadiusClass}
                       largeButtons={largeButtons}
                       compact={isCompactMode}
                       glowOff={glowOff}
+                      isLowRam={isLowRam}
                     />
                   );
                 })}
@@ -1441,7 +1928,11 @@ function LiveTvComponent() {
 
               {/* Pagination Deck */}
               {totalPages > 1 && (
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-3 rounded-2xl bg-slate-950/85 border border-white/15 backdrop-blur-xl p-3.5 mx-auto w-full max-w-md shadow-2xl">
+                <div
+                  className={`mt-6 flex flex-wrap items-center justify-center gap-3 rounded-2xl border ${
+                    isLowRam ? '' : 'backdrop-blur-xl'
+                  } p-3 mx-auto w-full max-w-md shadow-2xl ${tokens.surfacePanel}`}
+                >
                   <button
                     type="button"
                     onClick={() => {
@@ -1452,14 +1943,16 @@ function LiveTvComponent() {
                       });
                     }}
                     disabled={currentPage <= 1}
-                    className={`rounded-xl bg-white/10 hover:bg-white/20 ${
+                    className={`rounded-xl border ${
                       largeButtons ? 'px-5 py-3 text-sm' : 'px-4 py-2 text-xs'
-                    } font-extrabold text-white transition disabled:opacity-40 cursor-pointer`}
+                    } font-extrabold transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
+                      tokens.btnSecondary
+                    } ${tokens.focusRing}`}
                   >
                     ◀ Prev
                   </button>
 
-                  <span className={`text-xs font-black ${themeStyles.accentText}`}>
+                  <span className={`text-xs font-black ${tokens.accentText}`}>
                     Page {currentPage} of {totalPages}
                   </span>
 
@@ -1475,9 +1968,9 @@ function LiveTvComponent() {
                     disabled={currentPage >= totalPages}
                     className={`rounded-xl ${
                       largeButtons ? 'px-5 py-3 text-sm' : 'px-4 py-2 text-xs'
-                    } font-extrabold shadow transition disabled:opacity-40 cursor-pointer ${getPrimaryBgColor(
-                      appTheme
-                    )}`}
+                    } font-extrabold shadow transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
+                      tokens.btnActive
+                    } ${tokens.focusRing}`}
                   >
                     Next ▶
                   </button>
@@ -1485,27 +1978,28 @@ function LiveTvComponent() {
               )}
             </>
           ) : (
-            <div className="rounded-3xl border border-white/15 bg-slate-950/80 backdrop-blur-xl p-10 text-center space-y-3 shadow-2xl">
-              <div className="text-3xl">📡</div>
+            <div
+              className={`rounded-3xl border ${
+                isLowRam ? '' : 'backdrop-blur-xl'
+              } p-8 sm:p-10 text-center space-y-3 shadow-2xl ${tokens.surfacePanel}`}
+            >
               <p className="text-base font-black text-white">
                 {pinnedOnly
                   ? 'You have no pinned favorite channels yet.'
                   : 'No channels match this exact status or filter combination.'}
               </p>
-              <p className="text-xs text-slate-400 max-w-md mx-auto">
+              <p className={`text-xs max-w-md mx-auto ${tokens.subMutedText}`}>
                 {pinnedOnly
-                  ? 'Tap the ☆ star on any channel card (or inside the Live Player) to pin up to 12 favorites here.'
+                  ? `Tap the star on any channel card (or inside the Live Player) to pin up to ${MAX_FAVORITE_CHANNELS} favorites here.`
                   : 'Try switching the Stream Status filter to All Channels or Slow / ?, or reset your region and genre filters.'}
               </p>
               {hasActiveFilters && (
                 <button
                   type="button"
                   onClick={resetAllFilters}
-                  className={`mt-2 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-extrabold text-white shadow-lg transition cursor-pointer ${getPrimaryBgColor(
-                    appTheme
-                  )}`}
+                  className={`mt-2 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-extrabold text-white shadow-lg transition cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnActive} ${tokens.focusRing}`}
                 >
-                  <span>🌐 Show All Channels</span>
+                  <span>Show All Channels</span>
                 </button>
               )}
             </div>
