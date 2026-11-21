@@ -431,7 +431,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
           enterKeyHint="search"
           defaultValue=""
           data-tour="global-search-input"
-          placeholder="Search movies, shows..."
+          placeholder="Search..."
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
           className="relative z-10 h-full flex-1 min-w-0 bg-transparent pl-10 sm:pl-12 pr-14 sm:pr-16 text-xs sm:text-sm font-bold text-white placeholder-slate-200/75 focus:outline-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
         />
@@ -1036,7 +1036,7 @@ function RootComponent() {
           {/* Responsive Theme-Matched Glass Header (~3 lines tall with extra padding & brightened wallpaper) */}
           <header
             data-tour="app-header"
-            className={`rabtv-vidsrc-protected sticky top-0 z-40 border-b transition-colors duration-300 relative overflow-hidden flex items-center min-h-[148px] sm:min-h-[124px] md:min-h-[140px] ${
+            className={`rabtv-vidsrc-protected sticky top-0 z-40 border-b transition-colors duration-300 relative overflow-hidden flex items-center min-h-[154px] sm:min-h-[132px] md:min-h-[148px] ${
               isPlayerRoute ? "rabtv-header-player-route" : ""
             } ${tokens.headerBg} ${tokens.headerBorder} ${tokens.glowClass}`}
           >
@@ -1050,21 +1050,21 @@ function RootComponent() {
             </div>
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/40 pointer-events-none" />
 
-            <div className="relative z-10 mx-auto w-full flex flex-wrap sm:flex-nowrap max-w-7xl items-center justify-between px-2.5 sm:px-6 py-4 sm:py-5 md:py-6 gap-y-3 gap-x-2 sm:gap-4">
-              {/* Left: Borderless Transparent Neon Rabbit Logo */}
+            <div className="relative z-10 mx-auto w-full flex flex-wrap sm:flex-nowrap max-w-7xl items-center justify-between px-2 sm:px-6 py-4 sm:py-5 md:py-6 gap-y-3 gap-x-1.5 sm:gap-4">
+              {/* Left: Large Borderless Neon Rabbit Logo */}
               <div className="order-1 flex items-center shrink-0">
                 <Link
                   to="/"
                   data-tour="home-logo"
                   aria-label="Rabbit TV Home"
                   title="Back to Home"
-                  className={`relative flex items-center justify-center w-[148px] sm:w-[190px] md:w-[220px] h-12 sm:h-14 bg-transparent border-0 text-white opacity-95 hover:opacity-100 focus:outline-none focus:ring-2 rounded-full transition-all hover:scale-[1.03] active:scale-95 ${tokens.focusRing}`}
+                  className={`relative flex items-center justify-center w-[152px] sm:w-[200px] md:w-[240px] h-14 sm:h-16 md:h-[70px] bg-transparent border-0 text-white opacity-95 hover:opacity-100 focus:outline-none focus:ring-2 rounded-full transition-all hover:scale-[1.03] active:scale-95 ${tokens.focusRing}`}
                 >
                   <img
                     src={RABBIT_LOGO_URL}
                     alt="Rabbit TV Home"
                     decoding="async"
-                    className="w-full h-full object-contain scale-[1.12] drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]"
+                    className="w-full h-full object-contain scale-[1.45] sm:scale-[1.42] drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]"
                   />
                 </Link>
               </div>
@@ -1100,16 +1100,17 @@ function RootComponent() {
                   <button
                     type="button"
                     data-tour="sidebar-toggle"
+                    aria-label="Open menu"
                     onClick={() => setShowProfileMenu((prev) => !prev)}
                     style={{
                       backgroundImage: `url(${SIDEBAR_BUTTON_BG_URL})`,
-                      backgroundSize: "108% 132%",
+                      backgroundSize: "100% 132%",
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "center center",
                     }}
-                    className={`flex items-center gap-2 sm:gap-2.5 pl-2 sm:pl-2.5 pr-4 sm:pr-5 w-[186px] sm:w-[224px] md:w-[244px] h-12 sm:h-14 rounded-full bg-transparent border-0 text-xs font-black text-white opacity-95 hover:opacity-100 transition hover:scale-[1.02] active:scale-95 cursor-pointer group relative focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.focusRing}`}
+                    className={`flex items-center gap-3 sm:gap-3.5 pl-[15px] sm:pl-[18px] md:pl-[20px] pr-8 sm:pr-10 md:pr-11 w-[180px] sm:w-[208px] md:w-[228px] h-[54px] sm:h-[60px] md:h-[64px] rounded-full bg-transparent border-0 text-xs font-black text-white opacity-95 hover:opacity-100 transition hover:scale-[1.02] active:scale-95 cursor-pointer group relative focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.focusRing}`}
                   >
-                    <div className="relative z-10 flex items-center justify-center shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-full overflow-hidden">
+                    <div className="relative z-10 flex items-center justify-center shrink-0 w-10 h-10 sm:w-12 sm:h-12 md:w-[50px] md:h-[50px] rounded-full overflow-hidden">
                       <MascotAvatar
                         mascot={profileMascot}
                         size="sm"
@@ -1118,16 +1119,13 @@ function RootComponent() {
                         alt={savedProfileName}
                       />
                     </div>
-                    <span className="relative z-10 flex-1 min-w-0 text-left truncate text-xs sm:text-[13px] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                    <span className="relative z-10 flex-1 min-w-0 text-left truncate text-[11px] sm:text-[13px] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
                       <strong className="text-white">{savedProfileName}</strong>{" "}
                       {isAdmin
                         ? "(Admin)"
                         : isTrialActive
                           ? `(${trialDaysRemaining}d)`
                           : ""}
-                    </span>
-                    <span className="relative z-10 text-xs sm:text-sm font-black opacity-90 group-hover:translate-x-0.5 transition-transform shrink-0 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
-                      ☰
                     </span>
                   </button>
 
