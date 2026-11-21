@@ -106,6 +106,197 @@ const SEARCHWRAPPER =
 export const BUTTON_WRAPPER_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
 
+/**
+ * Viewport-locked header geometry so logo, search wrapper, search button, and
+ * profile pill keep exact proportions and alignment across portrait phones,
+ * landscape phones, tablets, TVs, and projectors.
+ */
+const VIEWPORT_HEADER_STYLES = `
+  .rabtv-hdr-bar {
+    --hdr-u: clamp(35px, 11vw, 52px);
+    min-height: calc(var(--hdr-u) * 3.05);
+  }
+
+  .rabtv-hdr-inner {
+    width: 100%;
+    max-width: 1440px;
+    margin-inline: auto;
+    padding: clamp(10px, 2.6vw, 16px) clamp(8px, 2.4vw, 24px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    row-gap: clamp(8px, 2.2vw, 14px);
+    column-gap: clamp(6px, 1.8vw, 16px);
+  }
+
+  .rabtv-hdr-logo-wrap {
+    order: 1;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+  }
+
+  .rabtv-hdr-logo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: calc(var(--hdr-u) * 1.22);
+    width: calc(var(--hdr-u) * 1.22 * 2.85);
+    flex: 0 0 auto;
+  }
+
+  .rabtv-hdr-profile-wrap {
+    order: 2;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: clamp(4px, 0.8vw, 10px);
+  }
+
+  .rabtv-hdr-profile-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: calc(var(--hdr-u) * 1.22);
+    width: calc(var(--hdr-u) * 1.22 * 3.3);
+    padding-left: 34.5%;
+    padding-right: 20%;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+  }
+
+  .rabtv-hdr-profile-avatar {
+    position: absolute;
+    left: 6.8%;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 74%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .rabtv-hdr-profile-label {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.15;
+    font-size: clamp(10px, calc(var(--hdr-u) * 0.27), 14px);
+  }
+
+  .rabtv-hdr-search-form {
+    order: 3;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1.6vw, 14px);
+    min-width: 0;
+  }
+
+  .rabtv-hdr-search-shell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: var(--hdr-u);
+    width: calc(var(--hdr-u) * 5.8);
+    max-width: calc(100% - (var(--hdr-u) * 2.3) - clamp(6px, 1.6vw, 14px));
+    flex: 0 1 auto;
+    box-sizing: border-box;
+  }
+
+  .rabtv-hdr-search-input {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    padding-left: 14%;
+    padding-right: 27%;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 1;
+    font-size: clamp(11px, calc(var(--hdr-u) * 0.3), 16px);
+    box-sizing: border-box;
+  }
+
+  .rabtv-hdr-search-pill-hit {
+    position: absolute;
+    z-index: 20;
+    right: 2%;
+    top: 10%;
+    bottom: 10%;
+    width: 23%;
+    border: 0;
+    background: transparent;
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+
+  .rabtv-hdr-search-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--hdr-u);
+    width: calc(var(--hdr-u) * 2.3);
+    padding: 0 8px;
+    flex: 0 0 auto;
+    font-size: clamp(10px, calc(var(--hdr-u) * 0.27), 15px);
+    line-height: 1;
+    box-sizing: border-box;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-hdr-bar {
+      --hdr-u: clamp(35px, 5.5vw, 60px);
+      min-height: clamp(78px, 10vw, 136px);
+    }
+
+    .rabtv-hdr-inner {
+      flex-wrap: nowrap;
+      padding: clamp(8px, 1.3vw, 20px) clamp(10px, 2vw, 28px);
+      column-gap: clamp(8px, 1.3vw, 20px);
+    }
+
+    .rabtv-hdr-logo {
+      height: calc(var(--hdr-u) * 1.18);
+      width: calc(var(--hdr-u) * 1.18 * 2.85);
+    }
+
+    .rabtv-hdr-search-form {
+      order: 2;
+      width: auto;
+      flex: 1 1 auto;
+      justify-content: center;
+      gap: clamp(6px, 1vw, 14px);
+    }
+
+    .rabtv-hdr-profile-wrap {
+      order: 3;
+    }
+
+    .rabtv-hdr-profile-btn {
+      height: calc(var(--hdr-u) * 1.16);
+      width: calc(var(--hdr-u) * 1.16 * 3.3);
+    }
+
+    .rabtv-hdr-profile-label {
+      font-size: clamp(10px, calc(var(--hdr-u) * 0.25), 14px);
+    }
+  }
+`;
+
 const themeStatusBarMap: Record<AppTheme, string> = {
   violet: "#0f0728",
   red: "#180505",
@@ -384,7 +575,8 @@ function verifyCurrentAccess(): boolean {
  * 1) Never triggers RootComponent re-renders on keystrokes (eliminates Android WebView
  *    IME caret-reset-to-0 bug that reverses typed words like "talk" -> "klat").
  * 2) Allows empty submission to navigate directly to /search.
- * 3) Wraps cleanly below Logo + Profile on portrait phones so it is never squished.
+ * 3) Uses viewport-locked aspect ratios so search.png and buttonwrapper.png never
+ *    squish or drift across phones, tablets, TVs, and projectors.
  */
 const HeaderSearchBar = memo(function HeaderSearchBar({
   tokens,
@@ -409,10 +601,10 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
     <form
       onSubmit={handleSubmit}
       data-tour="header-search"
-      className="order-3 sm:order-2 w-full sm:w-auto sm:flex-1 sm:max-w-xl relative flex items-center gap-2 min-w-0"
+      className="rabtv-hdr-search-form"
     >
       <div
-        className="relative flex-1 min-w-0 flex items-center h-11 sm:h-12 bg-transparent border-0 opacity-90 hover:opacity-100 focus-within:opacity-100 transition-opacity"
+        className="rabtv-hdr-search-shell bg-transparent border-0 opacity-95 hover:opacity-100 focus-within:opacity-100 transition-opacity"
         style={{
           backgroundImage: `url(${SEARCHWRAPPER})`,
           backgroundSize: "105% 152%",
@@ -433,7 +625,14 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
           data-tour="global-search-input"
           placeholder="Search..."
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
-          className="relative z-10 h-full flex-1 min-w-0 bg-transparent pl-10 sm:pl-12 pr-14 sm:pr-16 text-xs sm:text-sm font-bold text-white placeholder-slate-200/75 focus:outline-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
+          className="rabtv-hdr-search-input bg-transparent font-bold text-white placeholder-slate-200/75 focus:outline-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
+        />
+        {/* Transparent submit hit-target aligned over the inner Search pill of search.png */}
+        <button
+          type="submit"
+          aria-label="Run search"
+          tabIndex={-1}
+          className="rabtv-hdr-search-pill-hit"
         />
       </div>
 
@@ -441,7 +640,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         type="submit"
         aria-label="Search"
         title="Open Search"
-        className={`relative h-11 sm:h-12 min-w-[96px] sm:min-w-[112px] px-4 text-xs font-black uppercase tracking-wider shrink-0 bg-transparent border-0 opacity-90 hover:opacity-100 transition active:scale-95 cursor-pointer focus:outline-none focus:ring-2 rounded-full ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
+        className={`rabtv-hdr-search-btn font-black uppercase tracking-wider bg-transparent border-0 opacity-95 hover:opacity-100 transition active:scale-95 cursor-pointer focus:outline-none focus:ring-2 rounded-full ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
         style={{
           backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
           backgroundSize: "108% 158%",
@@ -995,6 +1194,7 @@ function RootComponent() {
     <html lang="en" data-theme={appTheme}>
       <head>
         <HeadContent />
+        <style>{VIEWPORT_HEADER_STYLES}</style>
         {helpfulMouse && activeCursorUri && (
           <style>{`
             *, button, a, select, input, [role="button"] {
@@ -1033,10 +1233,10 @@ function RootComponent() {
             </div>
           )}
 
-          {/* Responsive Theme-Matched Glass Header (~3 lines tall with extra padding & brightened wallpaper) */}
+          {/* Viewport-Proportional Theme-Matched Glass Header */}
           <header
             data-tour="app-header"
-            className={`rabtv-vidsrc-protected sticky top-0 z-40 border-b transition-colors duration-300 relative overflow-hidden flex items-center min-h-[154px] sm:min-h-[132px] md:min-h-[148px] ${
+            className={`rabtv-vidsrc-protected rabtv-hdr-bar sticky top-0 z-40 border-b transition-colors duration-300 relative overflow-hidden flex items-center ${
               isPlayerRoute ? "rabtv-header-player-route" : ""
             } ${tokens.headerBg} ${tokens.headerBorder} ${tokens.glowClass}`}
           >
@@ -1050,26 +1250,26 @@ function RootComponent() {
             </div>
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/40 pointer-events-none" />
 
-            <div className="relative z-10 mx-auto w-full flex flex-wrap sm:flex-nowrap max-w-7xl items-center justify-between px-2 sm:px-6 py-4 sm:py-5 md:py-6 gap-y-3 gap-x-1.5 sm:gap-4">
-              {/* Left: Large Borderless Neon Rabbit Logo */}
-              <div className="order-1 flex items-center shrink-0">
+            <div className="relative z-10 rabtv-hdr-inner">
+              {/* Left: Viewport-Scaled Borderless Neon Rabbit Logo */}
+              <div className="rabtv-hdr-logo-wrap">
                 <Link
                   to="/"
                   data-tour="home-logo"
                   aria-label="Rabbit TV Home"
                   title="Back to Home"
-                  className={`relative flex items-center justify-center w-[152px] sm:w-[200px] md:w-[240px] h-14 sm:h-16 md:h-[70px] bg-transparent border-0 text-white opacity-95 hover:opacity-100 focus:outline-none focus:ring-2 rounded-full transition-all hover:scale-[1.03] active:scale-95 ${tokens.focusRing}`}
+                  className={`rabtv-hdr-logo bg-transparent border-0 text-white opacity-95 hover:opacity-100 focus:outline-none focus:ring-2 rounded-full transition-all hover:scale-[1.03] active:scale-95 ${tokens.focusRing}`}
                 >
                   <img
                     src={RABBIT_LOGO_URL}
                     alt="Rabbit TV Home"
                     decoding="async"
-                    className="w-full h-full object-contain scale-[1.45] sm:scale-[1.42] drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]"
+                    className="w-full h-full object-contain scale-[1.34] drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]"
                   />
                 </Link>
               </div>
 
-              {/* Isolated Search Bar: Full-width Row 2 on Portrait Phones, Center on Tablet/Desktop/TV */}
+              {/* Isolated Search Bar: Full-width Row 2 on Portrait Phones, Center on Landscape/Tablet/TV/Projector */}
               {!showFirstStartModal && (
                 <HeaderSearchBar
                   tokens={tokens}
@@ -1077,20 +1277,20 @@ function RootComponent() {
                 />
               )}
 
-              {/* Right: Corner Clock Pill + Kids Badge + Borderless Sidebar Profile Pill */}
+              {/* Right: Corner Clock Pill + Kids Badge + Viewport-Locked Sidebar Profile Pill */}
               {savedProfileName && !showFirstStartModal && (
-                <div className="order-2 sm:order-3 flex items-center gap-1.5 shrink-0">
+                <div className="rabtv-hdr-profile-wrap">
                   {showCornerClock && cornerClockText && !isPlayerRoute && (
                     <span
                       data-tour="corner-clock"
-                      className={`hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] font-extrabold tracking-wider ${tokens.clockPill}`}
+                      className={`hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] font-extrabold tracking-wider ${tokens.clockPill}`}
                     >
                       🕒 {cornerClockText}
                     </span>
                   )}
                   {kidsLocked && (
                     <span
-                      className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider"
+                      className="hidden xl:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider"
                       title="Kids Safe Mode Locked"
                     >
                       🧒 Kids
@@ -1108,9 +1308,9 @@ function RootComponent() {
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "center center",
                     }}
-                    className={`flex items-center gap-3 sm:gap-3.5 pl-[15px] sm:pl-[18px] md:pl-[20px] pr-8 sm:pr-10 md:pr-11 w-[180px] sm:w-[208px] md:w-[228px] h-[54px] sm:h-[60px] md:h-[64px] rounded-full bg-transparent border-0 text-xs font-black text-white opacity-95 hover:opacity-100 transition hover:scale-[1.02] active:scale-95 cursor-pointer group relative focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.focusRing}`}
+                    className={`rabtv-hdr-profile-btn rounded-full bg-transparent border-0 font-black text-white opacity-95 hover:opacity-100 transition hover:scale-[1.02] active:scale-95 cursor-pointer group focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.focusRing}`}
                   >
-                    <div className="relative z-10 flex items-center justify-center shrink-0 w-10 h-10 sm:w-12 sm:h-12 md:w-[50px] md:h-[50px] rounded-full overflow-hidden">
+                    <div className="rabtv-hdr-profile-avatar">
                       <MascotAvatar
                         mascot={profileMascot}
                         size="sm"
@@ -1119,7 +1319,7 @@ function RootComponent() {
                         alt={savedProfileName}
                       />
                     </div>
-                    <span className="relative z-10 flex-1 min-w-0 text-left truncate text-[11px] sm:text-[13px] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                    <span className="rabtv-hdr-profile-label relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
                       <strong className="text-white">{savedProfileName}</strong>{" "}
                       {isAdmin
                         ? "(Admin)"
@@ -1131,7 +1331,7 @@ function RootComponent() {
 
                   {isTrialActive && (
                     <div
-                      className={`hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-bold ${tokens.trialBadge}`}
+                      className={`hidden xl:flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-bold ${tokens.trialBadge}`}
                     >
                       <span>⏳ {trialDaysRemaining}d</span>
                     </div>
