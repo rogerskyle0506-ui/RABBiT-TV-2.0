@@ -122,6 +122,12 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 const RABBIT_HEADER_PILL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
 
+const GREETING_WRAPPER_BG_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/fontwrapper.png";
+
+const SURPRISE_ME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/surpriseme.png";
+
 function getDetailsSearch(item: MediaItem): { id: string; type: "movie" | "tv" } {
   const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
   const type: "movie" | "tv" =
@@ -1766,23 +1772,29 @@ function Home() {
         </div>
 
         <div className="mx-auto max-w-7xl px-2 sm:px-6 overflow-x-clip flex flex-col items-center">
-          {/* Personalized Greeting & Quick "Surprise Me" Bar */}
+          {/* Centered Greeting & Quick Action Bar inside Punk-Neon Font Wrapper */}
           {(greetingText || filteredItems.length > 0) && (
             <div
               data-tour="greeting-header"
-              className="mb-4 w-full max-w-6xl flex flex-wrap items-center justify-between gap-2.5 px-1"
+              style={{
+                backgroundImage: `url(${GREETING_WRAPPER_BG_URL})`,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center center",
+              }}
+              className={`relative mb-4 w-full max-w-6xl min-h-[72px] sm:min-h-[84px] rounded-2xl border overflow-hidden px-4 sm:px-8 py-3 flex flex-col items-center justify-center text-center gap-2.5 ${themeStyles.surfacePanel}`}
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="relative z-10 flex flex-wrap items-center justify-center gap-2 max-w-full min-w-0">
                 {greetingText && (
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center justify-center gap-2 min-w-0 max-w-full">
                     <MascotAvatar
                       mascot={profileMascot}
                       size="sm"
                       rounded="full"
-                      className={`border ${themeStyles.dividerBorder}`}
+                      className={`border shrink-0 ${themeStyles.dividerBorder}`}
                       alt="Profile Mascot"
                     />
-                    <p className="text-sm sm:text-base font-black tracking-wide text-white truncate">
+                    <p className="text-sm sm:text-base md:text-lg font-black tracking-wide text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                       {greetingText}
                     </p>
                   </div>
@@ -1795,28 +1807,34 @@ function Home() {
                 )}
               </div>
 
-              <div className="flex items-center flex-wrap gap-2 shrink-0">
+              <div className="relative z-10 flex items-center justify-center flex-wrap gap-2.5 max-w-full">
                 <button
                   type="button"
                   data-tour="movie-night-matcher"
                   onClick={() => setShowMatcherModal(true)}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 ${
-                    largeButtons ? "py-2 text-xs" : "py-1.5 text-[11px]"
-                  } font-extrabold shadow transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-                    themeStyles.btnActive
-                  } ${themeStyles.focusRing}`}
+                  aria-label="Movie Night"
                   title="Mood picks & 5-card couch vote"
+                  className={`relative inline-flex items-center justify-center rounded-xl ${
+                    largeButtons ? "h-11 px-5" : "h-10 px-4"
+                  } overflow-hidden border shadow-lg transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                    themeStyles.dividerBorder
+                  } ${themeStyles.focusRing}`}
                 >
-                  <span>🍿 Movie Night</span>
+                  <img
+                    src={SURPRISE_ME_BTN_URL}
+                    alt="Movie Night"
+                    decoding="async"
+                    className="h-full w-auto max-w-[155px] object-contain"
+                  />
                 </button>
 
                 {(filteredItems.length > 0 || heroItems.length > 0) && (
                   <button
                     type="button"
                     onClick={handleSurpriseMe}
-                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 ${
-                      largeButtons ? "py-2 text-xs" : "py-1.5 text-[11px]"
-                    } font-extrabold shadow transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-4 ${
+                      largeButtons ? "h-11 text-xs" : "h-10 text-[11px]"
+                    } font-extrabold shadow-lg transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
                       themeStyles.btnSecondary
                     } ${themeStyles.focusRing}`}
                     title="Pick a random title for me"
