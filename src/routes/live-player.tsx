@@ -28,6 +28,158 @@ import { AppWallpaper } from '@/components/AppWallpaper';
 import { bgAudio } from '@/lib/background-audio';
 import { LiveMiniGuide, type MiniGuideMode } from '@/components/LiveMiniGuide';
 
+const BUTTON_WRAPPER_URL =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png';
+
+const BACK_TO_HOME_BTN_URL =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png';
+
+/**
+ * Viewport-locked layout rules for Live Player top utility bar (single
+ * buttonwrapper.png holding Back to Home + Live TV Guide side-by-side) and
+ * More Live Channels section banner across portrait, landscape, tablet & TV.
+ */
+const LIVE_PLAYER_VIEWPORT_STYLES = `
+  .rabtv-lp-top-bar {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(8px, 2vw, 12px);
+    box-sizing: border-box;
+  }
+
+  /* Single wide buttonwrapper.png bay holding Backtohome.png + Live TV Guide link */
+  .rabtv-lp-dual-nav-wrap {
+    position: relative;
+    width: min(100%, clamp(288px, 92vw, 440px));
+    min-height: clamp(50px, 13vw, 70px);
+    padding: clamp(6px, 1.6vw, 10px) clamp(14px, 3.8vw, 30px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1.8vw, 14px);
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    flex: 0 1 auto;
+  }
+
+  .rabtv-lp-art-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1.15 1 0;
+    min-width: 0;
+    max-width: 54%;
+    height: clamp(34px, 9vw, 46px);
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-lp-art-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
+  }
+
+  .rabtv-lp-guide-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex: 0.85 1 0;
+    min-width: 0;
+    max-width: 44%;
+    height: clamp(32px, 8.2vw, 42px);
+    padding: 0 clamp(8px, 2vw, 14px);
+    border-radius: 9999px;
+    font-size: clamp(10px, 2.7vw, 12px);
+    white-space: nowrap;
+    box-sizing: border-box;
+  }
+
+  .rabtv-lp-section-banner {
+    position: relative;
+    width: 100%;
+    min-height: clamp(52px, 11.5vw, 68px);
+    padding: clamp(9px, 2vw, 13px) clamp(18px, 4.6vw, 38px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(6px, 1.5vw, 12px);
+    box-sizing: border-box;
+    border-radius: 9999px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    overflow: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-lp-dual-nav-wrap {
+      width: min(100%, clamp(340px, 40vw, 460px));
+      min-height: clamp(56px, 5.8vw, 74px);
+      padding: clamp(7px, 0.85vw, 11px) clamp(18px, 2.2vw, 32px);
+      gap: clamp(8px, 1.1vw, 14px);
+    }
+
+    .rabtv-lp-art-btn {
+      height: clamp(38px, 3.9vw, 48px);
+    }
+
+    .rabtv-lp-guide-pill {
+      height: clamp(34px, 3.5vw, 44px);
+      font-size: clamp(11px, 1.1vw, 13px);
+    }
+
+    .rabtv-lp-section-banner {
+      min-height: clamp(56px, 5.5vw, 72px);
+      padding: clamp(10px, 1.1vw, 14px) clamp(26px, 3.5vw, 44px);
+    }
+  }
+
+  @media (min-width: 640px) and (max-height: 480px) {
+    .rabtv-lp-dual-nav-wrap {
+      width: min(100%, 330px);
+      min-height: 46px;
+      padding: 5px 16px;
+      gap: 6px;
+    }
+
+    .rabtv-lp-art-btn {
+      height: 32px;
+    }
+
+    .rabtv-lp-guide-pill {
+      height: 30px;
+      font-size: 10px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .rabtv-lp-dual-nav-wrap {
+      width: 450px;
+      min-height: 72px;
+    }
+
+    .rabtv-lp-art-btn {
+      height: 46px;
+    }
+  }
+`;
+
 function isSafeHttpUrl(raw: string): boolean {
   if (!raw) return false;
   try {
@@ -99,7 +251,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
   switch (theme) {
     case 'red':
       return {
-        bg: 'bg-gradient-to-br from-zinc-950/90 via-red-950/40 to-black/95',
+        bg: 'bg-gradient-to-br from-zinc-950/65 via-red-950/30 to-black/75',
         baseText: 'text-zinc-100',
         mutedText: 'text-zinc-300',
         subMutedText: 'text-zinc-400',
@@ -112,7 +264,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
         playerGlow:
           'shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(239,68,68,0.24)]',
         surfacePanel:
-          'bg-zinc-950/90 border-red-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
+          'bg-zinc-950/68 border-red-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
         surfaceCard:
           'bg-zinc-950/90 border-red-500/25 shadow-xl',
         logoStage:
@@ -144,7 +296,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
       };
     case 'midnight':
       return {
-        bg: 'bg-gradient-to-br from-slate-950/90 via-blue-950/40 to-black/95',
+        bg: 'bg-gradient-to-br from-slate-950/65 via-blue-950/30 to-black/75',
         baseText: 'text-slate-100',
         mutedText: 'text-slate-300',
         subMutedText: 'text-slate-400',
@@ -157,7 +309,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
         playerGlow:
           'shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(56,189,248,0.24)]',
         surfacePanel:
-          'bg-slate-950/90 border-blue-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
+          'bg-slate-950/68 border-blue-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
         surfaceCard:
           'bg-slate-950/90 border-blue-500/25 shadow-xl',
         logoStage:
@@ -189,7 +341,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
       };
     case 'emerald':
       return {
-        bg: 'bg-gradient-to-br from-neutral-950/90 via-emerald-950/40 to-black/95',
+        bg: 'bg-gradient-to-br from-neutral-950/65 via-emerald-950/30 to-black/75',
         baseText: 'text-neutral-100',
         mutedText: 'text-neutral-300',
         subMutedText: 'text-neutral-400',
@@ -202,7 +354,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
         playerGlow:
           'shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(52,211,153,0.24)]',
         surfacePanel:
-          'bg-neutral-950/90 border-emerald-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
+          'bg-neutral-950/68 border-emerald-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
         surfaceCard:
           'bg-neutral-950/90 border-emerald-500/25 shadow-xl',
         logoStage:
@@ -234,7 +386,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
       };
     case 'amber':
       return {
-        bg: 'bg-gradient-to-br from-stone-950/90 via-yellow-950/40 to-black/95',
+        bg: 'bg-gradient-to-br from-stone-950/65 via-yellow-950/30 to-black/75',
         baseText: 'text-stone-100',
         mutedText: 'text-stone-300',
         subMutedText: 'text-stone-400',
@@ -247,7 +399,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
         playerGlow:
           'shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(245,158,11,0.24)]',
         surfacePanel:
-          'bg-stone-950/90 border-amber-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
+          'bg-stone-950/68 border-amber-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
         surfaceCard:
           'bg-stone-950/90 border-amber-500/25 shadow-xl',
         logoStage:
@@ -279,7 +431,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
       };
     case 'cyan':
       return {
-        bg: 'bg-gradient-to-br from-slate-950/90 via-cyan-950/40 to-black/95',
+        bg: 'bg-gradient-to-br from-slate-950/65 via-cyan-950/30 to-black/75',
         baseText: 'text-slate-100',
         mutedText: 'text-slate-300',
         subMutedText: 'text-slate-400',
@@ -292,7 +444,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
         playerGlow:
           'shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(34,211,238,0.24)]',
         surfacePanel:
-          'bg-slate-950/90 border-cyan-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
+          'bg-slate-950/68 border-cyan-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
         surfaceCard:
           'bg-slate-950/90 border-cyan-500/25 shadow-xl',
         logoStage:
@@ -325,7 +477,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
     case 'violet':
     default:
       return {
-        bg: 'bg-gradient-to-br from-slate-950/90 via-purple-950/40 to-black/95',
+        bg: 'bg-gradient-to-br from-slate-950/65 via-purple-950/30 to-black/75',
         baseText: 'text-slate-100',
         mutedText: 'text-slate-300',
         subMutedText: 'text-slate-400',
@@ -338,7 +490,7 @@ function getLivePlayerThemeTokens(theme: AppTheme): LivePlayerThemeTokens {
         playerGlow:
           'shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_38px_rgba(168,85,247,0.24)]',
         surfacePanel:
-          'bg-slate-950/90 border-violet-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
+          'bg-slate-950/68 border-violet-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]',
         surfaceCard:
           'bg-slate-950/90 border-violet-500/25 shadow-xl',
         logoStage:
@@ -1551,7 +1703,7 @@ function LivePlayerComponent() {
     <div
       className={`min-h-screen ${themeStyles.bg} ${themeStyles.baseText} transition-colors duration-300 pb-14 py-2 sm:py-5 px-2 sm:px-6 md:px-10 w-full max-w-full overflow-x-clip box-border relative rounded-3xl`}
     >
-      <style>{`
+      <style>{`${LIVE_PLAYER_VIEWPORT_STYLES}
         video::-webkit-media-controls,
         video::-webkit-media-controls-start-playback-button {
           display: none !important;
@@ -1567,25 +1719,50 @@ function LivePlayerComponent() {
       )}
 
       <div className="w-full max-w-6xl mx-auto space-y-3 sm:space-y-4 box-border relative z-10">
-        {/* Constrained Top Action Bar (Zero Wrapping Glitches, Zero Right-Edge Clipping) */}
-        <div className="w-full max-w-full flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 min-w-0">
-          <Link
-            to="/live-tv"
-            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 sm:px-3 h-8 sm:h-9 text-[11px] sm:text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
+        {/* Constrained Top Action Bar: Single Button Wrapper Holding Back to Home + Live TV Guide */}
+        <div className="rabtv-lp-top-bar min-w-0">
+          <div
+            className="rabtv-lp-dual-nav-wrap"
+            style={{
+              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+            }}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-3.5 h-3.5 shrink-0"
+            <Link
+              to="/"
+              data-tour="back-to-home"
+              aria-label="Back to Home"
+              title="Back to Home"
+              className={`rabtv-lp-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
             >
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-            <span>Live TV</span>
-          </Link>
+              <img
+                src={BACK_TO_HOME_BTN_URL}
+                alt="Back to Home"
+                decoding="async"
+              />
+            </Link>
+
+            <Link
+              to="/live-tv"
+              aria-label="Back to Live TV Guide"
+              title="Back to Live TV Guide"
+              className={`rabtv-lp-guide-pill border backdrop-blur-md font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.backCapsule} ${themeStyles.focusRing}`}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-3 h-3 shrink-0"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                Live TV
+              </span>
+            </Link>
+          </div>
 
           <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0">
             <button
@@ -2047,20 +2224,25 @@ function LivePlayerComponent() {
 
         {/* Up Next / More Live Channels (Clean Minimal Cards) */}
         <div className="w-full pt-1 space-y-3">
-          <div className="flex items-center justify-between gap-2 px-0.5">
-            <div className="flex items-center gap-2 min-w-0">
+          <div
+            className="rabtv-lp-section-banner"
+            style={{
+              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+            }}
+          >
+            <div className="flex items-center gap-2.5 min-w-0 relative z-10">
               <span
-                className={`w-1 h-5 rounded-full shrink-0 ${themeStyles.accentBar}`}
+                className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
               />
-              <h2 className="text-sm sm:text-base font-black tracking-tight text-white">
-                More Live Channels
+              <h2 className="text-sm sm:text-base md:text-lg font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                📡 More Live Channels
               </h2>
             </div>
 
             <button
               type="button"
               onClick={() => navigate({ to: '/live-tv' })}
-              className={`text-xs font-bold hover:underline cursor-pointer shrink-0 ${themeStyles.accentText}`}
+              className={`relative z-10 text-xs font-extrabold hover:underline cursor-pointer shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
             >
               View All →
             </button>
