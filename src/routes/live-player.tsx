@@ -1276,30 +1276,24 @@ function LivePlayerComponent() {
     [title]
   );
 
-  const hudBtnSize = largeButtons ? 'h-11 w-11' : 'h-9 w-9 sm:h-10 sm:w-10';
+  const hudBtnSize = largeButtons ? 'h-10 w-10 sm:h-11 sm:w-11' : 'h-8 w-8 sm:h-9 sm:w-9';
   const canUsePiP =
     typeof document !== 'undefined' &&
     Boolean((document as any).pictureInPictureEnabled);
 
   /**
-   * Reusable control bar:
-   * - On portrait / compact mobile (non-fullscreen), docked cleanly BELOW the video frame
-   *   so controls NEVER cover the video, channel logo, or "Tuning Live Broadcast" overlay.
-   * - In fullscreen or on wide screens (lg+), floats cleanly along the bottom of the video
-   *   as a slim, single-row bar that auto-fades out while watching.
-   */
-  /**
-   * Sleek, minimalist cinema transport bar (zero emoji clutter, crisp SVG icons).
+   * Collision-proof cinema transport dock (works cleanly in portrait, portrait fullscreen,
+   * landscape, tablet, desktop, and TV without any overlapping selects or clipped buttons).
    */
   const renderControlsBar = (isFloatingOverlay: boolean) => (
     <div
       data-tour="player-controls"
-      className={`flex items-center justify-between gap-2 rounded-xl border px-2.5 sm:px-3.5 py-2 ${
+      className={`w-full max-w-full box-border overflow-hidden flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2 sm:px-3.5 py-2 ${
         isLowRam ? '' : 'backdrop-blur-2xl'
       } ${themeStyles.hudDock}`}
     >
       {/* Left: Transport Controls (Prev / Play-Pause / Next) */}
-      <div className="flex items-center gap-1.5 min-w-0">
+      <div className="flex items-center gap-1.5 shrink-0">
         {prevChannel && (
           <button
             type="button"
@@ -1308,7 +1302,7 @@ function LivePlayerComponent() {
             title={`Previous: ${prevChannel.title}`}
             aria-label="Previous Channel"
           >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 sm:w-4 sm:h-4">
               <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
             </svg>
           </button>
@@ -1323,12 +1317,12 @@ function LivePlayerComponent() {
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 sm:w-4 sm:h-4">
               <rect x="6" y="5" width="4" height="14" rx="1" />
               <rect x="14" y="5" width="4" height="14" rx="1" />
             </svg>
           ) : (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 ml-0.5">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-0.5">
               <path d="M6 4.75a1.25 1.25 0 0 1 1.9-.1l11.25 7.25a1.25 1.25 0 0 1 0 2.1L7.9 21.25A1.25 1.25 0 0 1 6 20.2V4.75Z" />
             </svg>
           )}
@@ -1342,26 +1336,30 @@ function LivePlayerComponent() {
             title={`Next: ${nextChannel.title}`}
             aria-label="Next Channel"
           >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 sm:w-4 sm:h-4">
               <path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z" />
             </svg>
           </button>
         )}
+      </div>
 
-        {/* Quality Selector */}
+      {/* Right: Quality + Aspect + Volume + PiP + Fullscreen (Strict Zero-Overlap Wrapping) */}
+      <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0 max-w-full">
         {qualityLevels.length > 0 && (
           <div
             data-tour="player-quality"
-            className={`flex items-center rounded-lg border px-2 py-1.5 transition min-w-0 ${themeStyles.hudSelectBox}`}
+            className={`flex items-center rounded-lg border px-1.5 sm:px-2 ${
+              largeButtons ? 'h-10 sm:h-11' : 'h-8 sm:h-9'
+            } max-w-[92px] sm:max-w-[132px] overflow-hidden shrink-0 ${themeStyles.hudSelectBox}`}
           >
             <select
               value={selectedQuality}
               onChange={handleQualityChange}
               aria-label="Stream Quality"
-              className="bg-transparent text-[11px] font-bold text-white focus:outline-none cursor-pointer max-w-[96px] sm:max-w-none"
+              className="w-full min-w-0 truncate bg-transparent text-[10px] sm:text-[11px] font-bold text-white focus:outline-none cursor-pointer"
             >
               <option value={-1} className={themeStyles.optionBg}>
-                Auto ({qualityLabel})
+                Auto
               </option>
               {qualityLevels.map((lvl) => (
                 <option
@@ -1375,14 +1373,13 @@ function LivePlayerComponent() {
             </select>
           </div>
         )}
-      </div>
 
-      {/* Right: Aspect / Volume / PiP / Fullscreen */}
-      <div className="flex items-center gap-1.5 shrink-0">
         <button
           type="button"
           onClick={cycleAspectMode}
-          className={`inline-flex items-center justify-center rounded-lg border px-2.5 h-9 sm:h-10 text-[10px] font-bold uppercase tracking-wider transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.hudBtn} ${themeStyles.focusRing}`}
+          className={`inline-flex items-center justify-center rounded-lg border px-2 ${
+            largeButtons ? 'h-10 sm:h-11' : 'h-8 sm:h-9'
+          } text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.hudBtn} ${themeStyles.focusRing}`}
           title="Aspect Ratio: Fit / Fill / Stretch (A)"
         >
           {aspectLabel}
@@ -1390,14 +1387,16 @@ function LivePlayerComponent() {
 
         <div
           data-tour="player-volume"
-          className={`relative flex items-center gap-1.5 rounded-lg border px-1.5 h-9 sm:h-10 ${themeStyles.hudSelectBox}`}
+          className={`relative flex items-center gap-1.5 rounded-lg border px-1 ${
+            largeButtons ? 'h-10 sm:h-11' : 'h-8 sm:h-9'
+          } shrink-0 ${themeStyles.hudSelectBox}`}
           onMouseEnter={() => setShowVolumeSlider(true)}
           onMouseLeave={() => setShowVolumeSlider(false)}
         >
           <button
             type="button"
             onClick={toggleMute}
-            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-white/10 transition cursor-pointer focus:outline-none"
+            className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md hover:bg-white/10 transition cursor-pointer focus:outline-none"
             title={isMuted || volume === 0 ? 'Unmute (M)' : 'Mute (M)'}
             aria-label="Toggle Mute"
           >
@@ -1409,7 +1408,7 @@ function LivePlayerComponent() {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="w-4 h-4 text-red-400"
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400"
               >
                 <path d="M11 5 6 9H2v6h4l5 4V5Z" />
                 <line x1="22" y1="9" x2="16" y2="15" />
@@ -1423,7 +1422,7 @@ function LivePlayerComponent() {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={`w-4 h-4 ${themeStyles.hudAccentIcon}`}
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${themeStyles.hudAccentIcon}`}
               >
                 <path d="M11 5 6 9H2v6h4l5 4V5Z" />
                 <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
@@ -1446,9 +1445,9 @@ function LivePlayerComponent() {
               setIsMuted(newVol === 0);
               if (newVol > 0) setPreviousVolume(newVol);
             }}
-            className={`w-16 sm:w-20 h-1 rounded-lg appearance-none cursor-pointer transition-all ${
+            className={`hidden sm:inline-block w-16 md:w-20 h-1 rounded-lg appearance-none cursor-pointer transition-all ${
               themeStyles.sliderTrack
-            } ${showVolumeSlider ? 'inline-block' : 'hidden sm:inline-block'}`}
+            }`}
             aria-label="Volume"
           />
         </div>
@@ -1492,7 +1491,7 @@ function LivePlayerComponent() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="w-4 h-4"
+              className="w-3.5 h-3.5 sm:w-4 sm:h-4"
             >
               <path d="M8 3v3a2 2 0 0 1-2 2H3" />
               <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
@@ -1507,7 +1506,7 @@ function LivePlayerComponent() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="w-4 h-4"
+              className="w-3.5 h-3.5 sm:w-4 sm:h-4"
             >
               <path d="M15 3h6v6" />
               <path d="M9 21H3v-6" />
@@ -1537,7 +1536,7 @@ function LivePlayerComponent() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="w-4 h-4"
+              className="w-3.5 h-3.5 sm:w-4 sm:h-4"
             >
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -1568,11 +1567,11 @@ function LivePlayerComponent() {
       )}
 
       <div className="w-full max-w-6xl mx-auto space-y-3 sm:space-y-4 box-border relative z-10">
-        {/* Sleek Single-Row Top Action Bar (Zero Pill-Soup, Crisp SVG Icons) */}
-        <div className="w-full flex items-center justify-between gap-2">
+        {/* Constrained Top Action Bar (Zero Wrapping Glitches, Zero Right-Edge Clipping) */}
+        <div className="w-full max-w-full flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 min-w-0">
           <Link
             to="/live-tv"
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 sm:px-3 py-1.5 text-xs font-bold transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
+            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 sm:px-3 h-8 sm:h-9 text-[11px] sm:text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
           >
             <svg
               viewBox="0 0 24 24"
@@ -1581,18 +1580,18 @@ function LivePlayerComponent() {
               strokeWidth="2.4"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="w-3.5 h-3.5"
+              className="w-3.5 h-3.5 shrink-0"
             >
               <path d="M15 18l-6-6 6-6" />
             </svg>
             <span>Live TV</span>
           </Link>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0">
             <button
               type="button"
               onClick={openTuneMiniGuide}
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 sm:px-3 py-1.5 text-xs font-bold transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 sm:px-3 h-8 sm:h-9 text-[11px] sm:text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
               title="Open Slide-Over Channel Guide (G)"
             >
               <svg
@@ -1602,7 +1601,7 @@ function LivePlayerComponent() {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="w-3.5 h-3.5"
+                className="w-3.5 h-3.5 shrink-0"
               >
                 <line x1="4" y1="6" x2="20" y2="6" />
                 <line x1="4" y1="12" x2="20" y2="12" />
@@ -1615,7 +1614,7 @@ function LivePlayerComponent() {
               <button
                 type="button"
                 onClick={isSplitActive ? handleCloseSplitScreen : openSplitMiniGuide}
-                className={`hidden md:inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition cursor-pointer focus:outline-none focus:ring-2 ${
+                className={`hidden md:inline-flex items-center gap-1.5 rounded-lg border px-3 h-9 text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${
                   isSplitActive ? themeStyles.btnPinned : themeStyles.btnSecondary
                 } ${themeStyles.focusRing}`}
                 title={
@@ -1631,7 +1630,7 @@ function LivePlayerComponent() {
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="w-3.5 h-3.5"
+                  className="w-3.5 h-3.5 shrink-0"
                 >
                   <rect x="3" y="4" width="18" height="16" rx="2" />
                   <line x1="12" y1="4" x2="12" y2="20" />
@@ -1644,7 +1643,7 @@ function LivePlayerComponent() {
               type="button"
               data-tour="channel-pin"
               onClick={handleTogglePin}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg border transition cursor-pointer focus:outline-none focus:ring-2 ${
+              className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg border transition cursor-pointer focus:outline-none focus:ring-2 ${
                 isPinned ? themeStyles.btnPinned : themeStyles.btnSecondary
               } ${themeStyles.focusRing}`}
               title={isPinned ? 'Unpin Favorite' : 'Pin to Favorites'}
@@ -1666,7 +1665,7 @@ function LivePlayerComponent() {
             <button
               type="button"
               onClick={handleResyncStream}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg border transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
+              className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg border transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
               title="Resync Stream (R)"
               aria-label="Resync Stream"
             >
@@ -1686,22 +1685,22 @@ function LivePlayerComponent() {
 
             {/* Minimal Signal Indicator */}
             <div
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 h-8 text-[10px] font-extrabold uppercase tracking-wider ${themeStyles.subtleBadge}`}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2 sm:px-2.5 h-8 sm:h-9 text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap shrink-0 ${themeStyles.subtleBadge}`}
             >
               {streamStatus === 'live' ? (
                 <>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                   <span className="text-emerald-300">Live</span>
                 </>
               ) : streamStatus === 'offline' ? (
                 <>
-                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                  <span className="text-red-400">Offline</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+                  <span className="text-red-400">Off</span>
                 </>
               ) : (
                 <>
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping" />
-                  <span className="text-amber-300">Tuning</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+                  <span className="text-amber-300">Sync</span>
                 </>
               )}
             </div>
@@ -1910,15 +1909,15 @@ function LivePlayerComponent() {
                   showControls ? 'opacity-100' : 'opacity-0'
                 }`}
               >
-                <div className="flex items-center gap-2 rounded-lg bg-black/65 backdrop-blur-md border border-white/10 px-2.5 py-1 min-w-0">
+                <div className="flex items-center gap-2 rounded-lg bg-black/65 backdrop-blur-md border border-white/10 px-2.5 py-1 min-w-0 max-w-[65%] overflow-hidden">
                   {logo && (
                     <img
                       src={logo}
                       alt=""
-                      className="h-4 sm:h-5 w-auto max-w-[52px] object-contain shrink-0"
+                      className="h-4 sm:h-5 w-auto max-w-[48px] object-contain shrink-0"
                     />
                   )}
-                  <span className="text-[11px] font-bold text-white truncate max-w-[160px] sm:max-w-xs">
+                  <span className="text-[11px] font-bold text-white truncate">
                     {title}
                   </span>
                 </div>
@@ -2007,11 +2006,11 @@ function LivePlayerComponent() {
           )}
         </div>
 
-        {/* Compact Horizontal Broadcast Info Bar (Replaces Clunky Stacked Card) */}
+        {/* Compact Horizontal Broadcast Info Bar (Strictly Constrained) */}
         <div
-          className={`w-full rounded-2xl border ${
+          className={`w-full max-w-full overflow-hidden box-border rounded-2xl border ${
             isLowRam ? '' : 'backdrop-blur-xl'
-          } p-3.5 sm:p-4 flex items-center gap-3.5 sm:gap-4 ${themeStyles.surfacePanel}`}
+          } p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ${themeStyles.surfacePanel}`}
         >
           <div
             className={`w-16 h-12 sm:w-20 sm:h-14 shrink-0 rounded-xl border flex items-center justify-center p-2 overflow-hidden ${themeStyles.logoStage}`}
@@ -2087,7 +2086,7 @@ function LivePlayerComponent() {
                       logo: channel.logo || '',
                       channelId: channel.channelId || '',
                     }}
-                    className={`group flex flex-col rounded-2xl border ${themeStyles.surfaceCard} ${themeStyles.borderHover} p-2.5 transition-all duration-200 hover:-translate-y-0.5 overflow-hidden text-left focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
+                    className={`group flex flex-col w-full min-w-0 box-border rounded-2xl border ${themeStyles.surfaceCard} ${themeStyles.borderHover} p-2.5 transition-all duration-200 hover:-translate-y-0.5 overflow-hidden text-left focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
                   >
                     <div
                       className={`w-full h-16 sm:h-20 rounded-xl border mb-2 p-2.5 flex items-center justify-center overflow-hidden ${themeStyles.logoStage}`}
