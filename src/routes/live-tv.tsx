@@ -33,6 +33,118 @@ import { AppWallpaper } from '@/components/AppWallpaper';
 import { recordWatchHistory } from '@/lib/watch-history';
 import { bgAudio } from '@/lib/background-audio';
 
+const BUTTON_WRAPPER_URL =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png';
+
+const BACK_TO_HOME_BTN_URL =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png';
+
+/**
+ * Viewport-locked layout rules for Live TV top utility wrapper, Back to Home
+ * artwork button, and buttonwrapper-backed section headers across portrait
+ * phones, landscape phones, tablets, desktops, TVs, and projectors.
+ */
+const LIVETV_VIEWPORT_STYLES = `
+  .rabtv-ltv-top-bar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(8px, 2vw, 14px);
+    box-sizing: border-box;
+  }
+
+  .rabtv-ltv-back-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: clamp(50px, 12.6vw, 68px);
+    width: clamp(188px, 48vw, 260px);
+    max-width: 100%;
+    padding: clamp(7px, 1.8vw, 10px) clamp(16px, 4.2vw, 28px);
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    flex: 0 0 auto;
+  }
+
+  .rabtv-ltv-art-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-ltv-art-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
+  }
+
+  .rabtv-ltv-section-banner {
+    position: relative;
+    width: 100%;
+    min-height: clamp(54px, 12vw, 72px);
+    padding: clamp(10px, 2.2vw, 14px) clamp(20px, 5vw, 40px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(6px, 1.5vw, 12px);
+    box-sizing: border-box;
+    border-radius: 9999px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    overflow: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-ltv-back-wrap {
+      height: clamp(54px, 5.6vw, 72px);
+      width: clamp(210px, 22vw, 284px);
+      padding: clamp(8px, 0.9vw, 11px) clamp(20px, 2.4vw, 32px);
+    }
+
+    .rabtv-ltv-section-banner {
+      min-height: clamp(58px, 5.8vw, 76px);
+      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.8vw, 48px);
+    }
+  }
+
+  @media (min-width: 640px) and (max-height: 480px) {
+    .rabtv-ltv-back-wrap {
+      height: 46px;
+      width: 186px;
+      padding: 6px 16px;
+    }
+
+    .rabtv-ltv-section-banner {
+      min-height: 50px;
+      padding: 8px 24px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .rabtv-ltv-back-wrap {
+      height: 70px;
+      width: 280px;
+    }
+  }
+`;
+
 export const Route = createFileRoute('/live-tv')({
   component: LiveTvComponent,
 });
@@ -274,16 +386,16 @@ function getLiveTvThemeTokens(theme: AppTheme): LiveTvThemeTokens {
   switch (theme) {
     case 'red':
       return {
-        bg: 'bg-gradient-to-br from-zinc-950/88 via-red-950/38 to-black/92',
+        bg: 'bg-gradient-to-br from-zinc-950/65 via-red-950/30 to-black/75',
         baseText: 'text-zinc-100',
         mutedText: 'text-zinc-300',
         subMutedText: 'text-zinc-400',
         accentText: 'text-red-300',
         accentBar: 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.95)]',
         surfacePanel:
-          'bg-zinc-950/78 border-red-500/30 shadow-[0_14px_42px_rgba(239,68,68,0.16)]',
+          'bg-zinc-950/66 border-red-500/30 shadow-[0_14px_42px_rgba(239,68,68,0.16)]',
         surfaceCard:
-          'bg-zinc-950/82 border-red-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+          'bg-zinc-950/72 border-red-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
         surfaceCardPinned:
           'bg-zinc-950/86 border-red-400/70 shadow-[0_10px_28px_rgba(239,68,68,0.22)]',
         logoStage:
@@ -324,16 +436,16 @@ function getLiveTvThemeTokens(theme: AppTheme): LiveTvThemeTokens {
       };
     case 'midnight':
       return {
-        bg: 'bg-gradient-to-br from-slate-950/88 via-blue-950/38 to-black/92',
+        bg: 'bg-gradient-to-br from-slate-950/65 via-blue-950/30 to-black/75',
         baseText: 'text-slate-100',
         mutedText: 'text-slate-300',
         subMutedText: 'text-slate-400',
         accentText: 'text-sky-300',
         accentBar: 'bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.95)]',
         surfacePanel:
-          'bg-slate-950/78 border-blue-500/30 shadow-[0_14px_42px_rgba(59,130,246,0.16)]',
+          'bg-slate-950/66 border-blue-500/30 shadow-[0_14px_42px_rgba(59,130,246,0.16)]',
         surfaceCard:
-          'bg-slate-950/82 border-blue-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+          'bg-slate-950/72 border-blue-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
         surfaceCardPinned:
           'bg-slate-950/86 border-sky-400/70 shadow-[0_10px_28px_rgba(56,189,248,0.22)]',
         logoStage:
@@ -374,16 +486,16 @@ function getLiveTvThemeTokens(theme: AppTheme): LiveTvThemeTokens {
       };
     case 'emerald':
       return {
-        bg: 'bg-gradient-to-br from-neutral-950/88 via-emerald-950/38 to-black/92',
+        bg: 'bg-gradient-to-br from-neutral-950/65 via-emerald-950/30 to-black/75',
         baseText: 'text-neutral-100',
         mutedText: 'text-neutral-300',
         subMutedText: 'text-neutral-400',
         accentText: 'text-emerald-300',
         accentBar: 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.95)]',
         surfacePanel:
-          'bg-neutral-950/78 border-emerald-500/30 shadow-[0_14px_42px_rgba(16,185,129,0.16)]',
+          'bg-neutral-950/66 border-emerald-500/30 shadow-[0_14px_42px_rgba(16,185,129,0.16)]',
         surfaceCard:
-          'bg-neutral-950/82 border-emerald-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+          'bg-neutral-950/72 border-emerald-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
         surfaceCardPinned:
           'bg-neutral-950/86 border-emerald-400/70 shadow-[0_10px_28px_rgba(16,185,129,0.22)]',
         logoStage:
@@ -424,16 +536,16 @@ function getLiveTvThemeTokens(theme: AppTheme): LiveTvThemeTokens {
       };
     case 'amber':
       return {
-        bg: 'bg-gradient-to-br from-stone-950/88 via-yellow-950/38 to-black/92',
+        bg: 'bg-gradient-to-br from-stone-950/65 via-yellow-950/30 to-black/75',
         baseText: 'text-stone-100',
         mutedText: 'text-stone-300',
         subMutedText: 'text-stone-400',
         accentText: 'text-amber-300',
         accentBar: 'bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.95)]',
         surfacePanel:
-          'bg-stone-950/78 border-amber-500/30 shadow-[0_14px_42px_rgba(245,158,11,0.16)]',
+          'bg-stone-950/66 border-amber-500/30 shadow-[0_14px_42px_rgba(245,158,11,0.16)]',
         surfaceCard:
-          'bg-stone-950/82 border-amber-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+          'bg-stone-950/72 border-amber-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
         surfaceCardPinned:
           'bg-stone-950/86 border-amber-400/70 shadow-[0_10px_28px_rgba(245,158,11,0.22)]',
         logoStage:
@@ -474,16 +586,16 @@ function getLiveTvThemeTokens(theme: AppTheme): LiveTvThemeTokens {
       };
     case 'cyan':
       return {
-        bg: 'bg-gradient-to-br from-slate-950/88 via-cyan-950/38 to-black/92',
+        bg: 'bg-gradient-to-br from-slate-950/65 via-cyan-950/30 to-black/75',
         baseText: 'text-slate-100',
         mutedText: 'text-slate-300',
         subMutedText: 'text-slate-400',
         accentText: 'text-cyan-300',
         accentBar: 'bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.95)]',
         surfacePanel:
-          'bg-slate-950/78 border-cyan-500/30 shadow-[0_14px_42px_rgba(6,182,212,0.16)]',
+          'bg-slate-950/66 border-cyan-500/30 shadow-[0_14px_42px_rgba(6,182,212,0.16)]',
         surfaceCard:
-          'bg-slate-950/82 border-cyan-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+          'bg-slate-950/72 border-cyan-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
         surfaceCardPinned:
           'bg-slate-950/86 border-cyan-400/70 shadow-[0_10px_28px_rgba(6,182,212,0.22)]',
         logoStage:
@@ -525,16 +637,16 @@ function getLiveTvThemeTokens(theme: AppTheme): LiveTvThemeTokens {
     case 'violet':
     default:
       return {
-        bg: 'bg-gradient-to-br from-slate-950/88 via-purple-950/38 to-black/92',
+        bg: 'bg-gradient-to-br from-slate-950/65 via-purple-950/30 to-black/75',
         baseText: 'text-slate-100',
         mutedText: 'text-slate-300',
         subMutedText: 'text-slate-400',
         accentText: 'text-violet-300',
         accentBar: 'bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.95)]',
         surfacePanel:
-          'bg-slate-950/78 border-violet-500/30 shadow-[0_14px_42px_rgba(139,92,246,0.16)]',
+          'bg-slate-950/66 border-violet-500/30 shadow-[0_14px_42px_rgba(139,92,246,0.16)]',
         surfaceCard:
-          'bg-slate-950/82 border-violet-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
+          'bg-slate-950/72 border-violet-500/25 shadow-[0_10px_28px_rgba(0,0,0,0.75)]',
         surfaceCardPinned:
           'bg-slate-950/86 border-violet-400/70 shadow-[0_10px_28px_rgba(139,92,246,0.22)]',
         logoStage:
@@ -1450,6 +1562,7 @@ function LiveTvComponent() {
     <main
       className={`min-h-screen ${tokens.bg} ${tokens.baseText} transition-colors duration-300 pb-16 px-2.5 sm:px-6 w-full max-w-full overflow-x-clip box-border relative rounded-3xl`}
     >
+      <style>{LIVETV_VIEWPORT_STYLES}</style>
       <AppWallpaper />
       {!isLowRam && !reducedMotion && !glowOff && (
         <div
@@ -1458,30 +1571,28 @@ function LiveTvComponent() {
       )}
 
       <header className="py-3.5 sm:py-5 max-w-7xl mx-auto space-y-3.5 sm:space-y-4 box-border relative z-10">
-        {/* Top Row: Theme-Matched Back Capsule + Clock + Channel Surf + Reset */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Link
-            to="/"
-            className={`group inline-flex items-center gap-2 rounded-full ${
-              isLowRam ? '' : 'backdrop-blur-xl'
-            } pl-3 pr-2 ${
-              largeButtons ? 'py-2' : 'py-1.5'
-            } border shadow-[0_4px_18px_rgba(0,0,0,0.55)] transition-all duration-200 active:scale-95 whitespace-nowrap shrink-0 focus:outline-none focus:ring-2 ${
-              tokens.backCapsule
-            } ${tokens.focusRing}`}
+        {/* Top Row: Backtohome.png inside Viewport-Locked Button Wrapper + Clock + Channel Surf + Reset */}
+        <div className="rabtv-ltv-top-bar">
+          <div
+            className="rabtv-ltv-back-wrap"
+            style={{
+              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+            }}
           >
-            <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
-              ‹
-            </span>
-            <span className="text-xs sm:text-sm font-semibold tracking-wide">
-              Back to Home
-            </span>
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${tokens.backBadge}`}
+            <Link
+              to="/"
+              data-tour="back-to-home"
+              aria-label="Back to Home"
+              title="Back to Home"
+              className={`rabtv-ltv-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${tokens.focusRing}`}
             >
-              ⟲
-            </span>
-          </Link>
+              <img
+                src={BACK_TO_HOME_BTN_URL}
+                alt="Back to Home"
+                decoding="async"
+              />
+            </Link>
+          </div>
 
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span
@@ -1805,18 +1916,25 @@ function LiveTvComponent() {
         {/* DEDICATED PINNED FAVORITE CHANNELS SHELF (100% Theme-Matched) */}
         {pinnedChannels.length > 0 && !pinnedOnly && !searchQuery.trim() && (
           <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className="rabtv-ltv-section-banner"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                 <span
-                  className={`w-1.5 h-6 rounded-full shrink-0 ${tokens.accentBar}`}
+                  className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${tokens.accentBar}`}
                 />
                 <h2
-                  className={`text-base sm:text-lg font-black tracking-tight truncate ${tokens.accentText}`}
+                  className={`text-sm sm:text-lg font-black tracking-tight truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)] ${tokens.accentText}`}
                 >
                   ★ Pinned Favorite Channels
                 </h2>
               </div>
-              <span className={`text-xs font-bold shrink-0 ${tokens.subMutedText}`}>
+              <span
+                className={`relative z-10 text-xs font-bold shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${tokens.mutedText}`}
+              >
                 {pinnedChannels.length} / {MAX_FAVORITE_CHANNELS} pinned
               </span>
             </div>
@@ -1846,12 +1964,17 @@ function LiveTvComponent() {
 
         {/* MAIN CHANNELS GRID SECTION */}
         <section className="space-y-3.5 sm:space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2.5 px-1">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className="rabtv-ltv-section-banner"
+            style={{
+              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+            }}
+          >
+            <div className="flex items-center gap-2.5 min-w-0 relative z-10">
               <span
-                className={`w-1.5 h-6 rounded-full shrink-0 ${tokens.accentBar}`}
+                className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${tokens.accentBar}`}
               />
-              <h3 className="text-base sm:text-xl font-black tracking-tight text-white truncate">
+              <h3 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 {pinnedOnly
                   ? '★ My Pinned Channels'
                   : selectedGenre !== 'All Genres'
@@ -1867,16 +1990,16 @@ function LiveTvComponent() {
               </h3>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/70 border border-emerald-500/30 px-2.5 py-1 text-emerald-300 whitespace-nowrap">
+            <div className="relative z-10 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-1 text-emerald-300 whitespace-nowrap">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 <span>{statusCounts.online} online</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-950/70 border border-amber-500/30 px-2.5 py-1 text-amber-300 whitespace-nowrap">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-950/80 border border-amber-500/30 px-2.5 py-1 text-amber-300 whitespace-nowrap">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                 <span>{statusCounts.timeout + statusCounts.checking} slow</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-950/70 border border-red-500/30 px-2.5 py-1 text-red-300 whitespace-nowrap">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-950/80 border border-red-500/30 px-2.5 py-1 text-red-300 whitespace-nowrap">
                 <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                 <span>{statusCounts.offline} offline</span>
               </span>
