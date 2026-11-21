@@ -1772,18 +1772,18 @@ function Home() {
         </div>
 
         <div className="mx-auto max-w-7xl px-2 sm:px-6 overflow-x-clip flex flex-col items-center">
-          {/* Centered Greeting & Quick Action Bar inside Borderless Translucent Font Wrapper */}
+          {/* Centered Greeting & Quick Action Bar — Matches Cover Art Width & ~2/3 Taller */}
           {(greetingText || filteredItems.length > 0) && (
             <div
               data-tour="greeting-header"
-              className="relative mb-4 w-full max-w-6xl min-h-[84px] sm:min-h-[96px] rounded-2xl bg-transparent border-0 overflow-hidden px-4 sm:px-8 py-3.5 flex flex-col items-center justify-center text-center gap-2.5"
+              className="relative mb-5 w-full max-w-6xl min-h-[144px] sm:min-h-[164px] rounded-[24px] bg-transparent border-0 overflow-hidden px-4 sm:px-8 py-5 sm:py-6 flex flex-col items-center justify-center text-center gap-3.5"
             >
-              {/* Translucent Artwork Backdrop */}
+              {/* Full-Width Translucent Artwork Backdrop */}
               <div
-                className="absolute inset-0 pointer-events-none opacity-80"
+                className="absolute inset-0 pointer-events-none opacity-85"
                 style={{
                   backgroundImage: `url(${GREETING_WRAPPER_BG_URL})`,
-                  backgroundSize: "100% 100%",
+                  backgroundSize: "115% 195%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
                 }}
@@ -1791,7 +1791,7 @@ function Home() {
 
               <div className="relative z-10 flex flex-wrap items-center justify-center gap-2 max-w-full min-w-0">
                 {greetingText && (
-                  <div className="flex items-center justify-center gap-2 min-w-0 max-w-full">
+                  <div className="flex items-center justify-center gap-2.5 min-w-0 max-w-full">
                     <MascotAvatar
                       mascot={profileMascot}
                       size="sm"
@@ -1799,7 +1799,7 @@ function Home() {
                       className="border-0 bg-transparent shrink-0"
                       alt="Profile Mascot"
                     />
-                    <p className="text-sm sm:text-base md:text-lg font-black tracking-wide text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                    <p className="text-base sm:text-lg md:text-xl font-black tracking-wide text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                       {greetingText}
                     </p>
                   </div>
