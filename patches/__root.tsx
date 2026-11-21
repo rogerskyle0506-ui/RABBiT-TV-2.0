@@ -92,7 +92,7 @@ const STARTUP_ROUTED_KEY = "rabtv_startup_tab_applied";
 const HEADER_ICON_URL = "https://avatars.githubusercontent.com/u/330663733?v=4";
 
 const RABBITHEADERWALL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/HeaderPirate.jpg";
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rootheaderrabbittv.jpg";
 
 const RABBIT_LOGO_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/1794279353317.jpg";
