@@ -92,10 +92,16 @@ const STARTUP_ROUTED_KEY = "rabtv_startup_tab_applied";
 const HEADER_ICON_URL = "https://avatars.githubusercontent.com/u/330663733?v=4";
 
 const RABBITHEADERWALL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rootheaderrabbittv.jpg";
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/HeaderPirate.jpg";
 
 const RABBIT_LOGO_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/1794279353317.jpg";
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/homelogo.png";
+
+const SIDEBAR_BUTTON_BG_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/sidebar.png";
+
+const SEARCH_WRAPPER_BG_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
 
 const themeStatusBarMap: Record<AppTheme, string> = {
   violet: "#0f0728",
@@ -129,6 +135,7 @@ interface RootThemeTokens {
   primaryAccent: string;
   primaryBg: string;
   focusRing: string;
+  artTint: string;
 }
 
 function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
@@ -166,7 +173,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
         focusRing: "focus:ring-red-500",
-      };
+,
+        artTint: "bg-red-950/20"      };
     case "midnight":
       return {
         bodyBg: "bg-gradient-to-br from-slate-950/92 via-blue-950/40 to-black/95",
@@ -200,7 +208,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
         focusRing: "focus:ring-sky-400",
-      };
+,
+        artTint: "bg-blue-950/25"      };
     case "emerald":
       return {
         bodyBg: "bg-gradient-to-br from-neutral-950/92 via-emerald-950/40 to-black/95",
@@ -234,7 +243,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
         focusRing: "focus:ring-emerald-400",
-      };
+,
+        artTint: "bg-emerald-950/25"      };
     case "amber":
       return {
         bodyBg: "bg-gradient-to-br from-stone-950/92 via-yellow-950/40 to-black/95",
@@ -268,7 +278,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
         focusRing: "focus:ring-amber-400",
-      };
+,
+        artTint: "bg-amber-950/20"      };
     case "cyan":
       return {
         bodyBg: "bg-gradient-to-br from-slate-950/92 via-cyan-950/40 to-black/95",
@@ -302,7 +313,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
         focusRing: "focus:ring-cyan-400",
-      };
+,
+        artTint: "bg-cyan-950/25"      };
     case "violet":
     default:
       return {
@@ -337,7 +349,8 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
         primaryBg:
           "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
         focusRing: "focus:ring-violet-400",
-      };
+,
+        artTint: "bg-purple-950/20"      };
   }
 }
 
@@ -407,12 +420,30 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
       data-tour="header-search"
       className="order-3 sm:order-2 w-full sm:w-auto sm:flex-1 sm:max-w-xl relative flex items-center gap-1.5 min-w-0"
     >
-      <div className="relative flex-1 min-w-0">
-        <span
-          className={`absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-xs sm:text-sm pointer-events-none ${tokens.searchIcon}`}
+      <div
+        className={`relative flex-1 min-w-0 flex items-center h-10 sm:h-11 rounded-2xl border overflow-hidden shadow-lg transition-all ${tokens.headerBorder} ${tokens.glowClass}`}
+        style={{
+          backgroundImage: `url(${SEARCH_WRAPPER_BG_URL})`,
+          backgroundSize: "100% 100%",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center center",
+        }}
+      >
+        <div
+          className={`absolute inset-0 pointer-events-none ${tokens.artTint}`}
+        />
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`relative z-10 ml-3 shrink-0 w-3.5 h-3.5 sm:w-4 sm:h-4 pointer-events-none ${tokens.searchIcon}`}
         >
-          🔍
-        </span>
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
         <input
           ref={inputRef}
           type="search"
@@ -426,16 +457,25 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
           data-tour="global-search-input"
           placeholder="Search movies, TV shows..."
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
-          className={`h-10 sm:h-11 w-full rounded-xl border pl-9 pr-3 text-xs sm:text-sm focus:outline-none backdrop-blur-xl shadow-inner transition-all ${tokens.searchInput}`}
+          className="relative z-10 h-full flex-1 min-w-0 bg-transparent px-2.5 text-xs sm:text-sm font-bold text-white placeholder-slate-200/75 focus:outline-none"
         />
       </div>
+
       <button
         type="submit"
         aria-label="Search"
         title="Open Search"
-        className={`h-10 sm:h-11 px-3 sm:px-3.5 rounded-xl text-xs font-extrabold shrink-0 transition active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
+        className={`relative h-10 sm:h-11 px-3.5 sm:px-4 rounded-2xl text-xs font-black uppercase tracking-wider shrink-0 overflow-hidden border transition active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
+        style={{
+          backgroundImage: `url(${SEARCH_WRAPPER_BG_URL})`,
+          backgroundSize: "100% 100%",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center center",
+        }}
       >
-        Search
+        <span className="relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+          Search
+        </span>
       </button>
     </form>
   );
@@ -1024,11 +1064,11 @@ function RootComponent() {
               isPlayerRoute ? "rabtv-header-player-route" : ""
             } ${tokens.headerBg} ${tokens.headerBorder} ${tokens.glowClass}`}
           >
-            <div className="absolute inset-0 pointer-events-none opacity-80">
+            <div className="absolute inset-0 pointer-events-none opacity-25">
               <img
                 src={RABBITHEADERWALL}
                 alt=""
-                className="w-100% h-100% object-cover object-center"
+                className="w-full h-full object-cover object-center"
               />
             </div>
             <div className="absolute inset-0 bg-black/65 pointer-events-none" />
@@ -1039,15 +1079,19 @@ function RootComponent() {
                 <Link
                   to="/"
                   data-tour="home-logo"
-                  className={`relative flex items-center gap-2 w-[112px] sm:w-[150px] md:w-[170px] h-10 sm:h-11 px-2.5 rounded-xl bg-black/60 backdrop-blur-md border text-white focus:outline-none focus:ring-2 transition-all ${tokens.glowClass} ${tokens.focusRing}`}
-                  style={{
-                    backgroundImage: `url(${RABBIT_LOGO_URL})`,
-                    backgroundSize: "cover",
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center center",
-                  }}
+                  aria-label="Rabbit TV Home"
+                  title="Back to Home"
+                  className={`relative flex items-center justify-center w-[132px] sm:w-[172px] md:w-[196px] h-10 sm:h-11 rounded-2xl bg-black/75 border overflow-hidden text-white focus:outline-none focus:ring-2 transition-all ${tokens.glowClass} ${tokens.focusRing}`}
                 >
-                  <div className="absolute inset-0 bg-black/25 rounded-xl pointer-events-none" />
+                  <img
+                    src={RABBIT_LOGO_URL}
+                    alt="Rabbit TV Home"
+                    decoding="async"
+                    className="w-full h-full object-fill"
+                  />
+                  <div
+                    className={`absolute inset-0 pointer-events-none mix-blend-color opacity-35 ${tokens.artTint}`}
+                  />
                 </Link>
               </div>
 
@@ -1083,16 +1127,25 @@ function RootComponent() {
                     type="button"
                     data-tour="sidebar-toggle"
                     onClick={() => setShowProfileMenu((prev) => !prev)}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition cursor-pointer group relative overflow-hidden border focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.glowClass} ${tokens.focusRing}`}
+                    style={{
+                      backgroundImage: `url(${SIDEBAR_BUTTON_BG_URL})`,
+                      backgroundSize: "100% 100%",
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "center center",
+                    }}
+                    className={`flex items-center gap-2.5 px-2.5 sm:px-3.5 h-10 sm:h-11 rounded-2xl text-xs font-black text-white shadow-lg transition cursor-pointer group relative overflow-hidden border focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.glowClass} ${tokens.focusRing}`}
                   >
+                    <div
+                      className={`absolute inset-0 pointer-events-none ${tokens.artTint}`}
+                    />
                     <MascotAvatar
                       mascot={profileMascot}
                       size="sm"
                       rounded="full"
-                      className={`border ${tokens.avatarFrame}`}
+                      className={`relative z-10 border ${tokens.avatarFrame}`}
                       alt={savedProfileName}
                     />
-                    <span className="truncate max-w-[105px] sm:max-w-[145px] md:max-w-none text-xs">
+                    <span className="relative z-10 truncate max-w-[100px] sm:max-w-[145px] md:max-w-[180px] text-xs drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
                       <strong className="text-white">{savedProfileName}</strong>{" "}
                       {isAdmin
                         ? "(Admin)"
@@ -1100,7 +1153,7 @@ function RootComponent() {
                           ? `(${trialDaysRemaining}d)`
                           : ""}
                     </span>
-                    <span className="text-[10px] opacity-80 group-hover:translate-x-0.5 transition-transform">
+                    <span className="relative z-10 text-xs font-black opacity-90 group-hover:translate-x-0.5 transition-transform drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
                       ☰
                     </span>
                   </button>
