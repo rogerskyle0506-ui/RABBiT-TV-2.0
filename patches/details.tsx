@@ -51,6 +51,118 @@ const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 const RABBIT_PANEL_ALT =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
 
+const BUTTON_WRAPPER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
+
+const BACK_TO_HOME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
+
+/**
+ * Viewport-locked layout rules for Details top utility wrapper, Back to Home
+ * artwork button, and buttonwrapper-backed section headers across portrait
+ * phones, landscape phones, tablets, desktops, TVs, and projectors.
+ */
+const DETAILS_VIEWPORT_STYLES = `
+  .rabtv-det-top-bar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(8px, 2vw, 14px);
+    box-sizing: border-box;
+  }
+
+  .rabtv-det-back-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: clamp(50px, 12.6vw, 68px);
+    width: clamp(188px, 48vw, 260px);
+    max-width: 100%;
+    padding: clamp(7px, 1.8vw, 10px) clamp(16px, 4.2vw, 28px);
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    flex: 0 0 auto;
+  }
+
+  .rabtv-det-art-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-det-art-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
+  }
+
+  .rabtv-det-section-banner {
+    position: relative;
+    width: 100%;
+    min-height: clamp(54px, 12vw, 72px);
+    padding: clamp(10px, 2.2vw, 14px) clamp(20px, 5vw, 40px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(6px, 1.5vw, 12px);
+    box-sizing: border-box;
+    border-radius: 9999px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    overflow: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-det-back-wrap {
+      height: clamp(54px, 5.6vw, 72px);
+      width: clamp(210px, 22vw, 284px);
+      padding: clamp(8px, 0.9vw, 11px) clamp(20px, 2.4vw, 32px);
+    }
+
+    .rabtv-det-section-banner {
+      min-height: clamp(58px, 5.8vw, 76px);
+      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.8vw, 48px);
+    }
+  }
+
+  @media (min-width: 640px) and (max-height: 480px) {
+    .rabtv-det-back-wrap {
+      height: 46px;
+      width: 186px;
+      padding: 6px 16px;
+    }
+
+    .rabtv-det-section-banner {
+      min-height: 50px;
+      padding: 8px 24px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .rabtv-det-back-wrap {
+      height: 70px;
+      width: 280px;
+    }
+  }
+`;
+
 export const Route = createFileRoute("/details")({
   component: DetailsPage,
   validateSearch: (search: Record<string, unknown>) => ({
@@ -99,7 +211,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
   switch (theme) {
     case "red":
       return {
-        pageBg: "bg-gradient-to-br from-zinc-950/88 via-red-950/42 to-black/95",
+        pageBg: "bg-gradient-to-br from-zinc-950/65 via-red-950/30 to-black/75",
         baseText: "text-zinc-100",
         mutedText: "text-zinc-300",
         subMutedText: "text-zinc-400",
@@ -112,7 +224,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
         badge: "text-red-200 border-red-500/35 bg-red-950/75",
         subtleBadge: "text-zinc-200 border-red-500/25 bg-black/75",
         surfacePanel:
-          "bg-zinc-950/90 border-red-500/30 shadow-[0_16px_50px_rgba(239,68,68,0.18)]",
+          "bg-zinc-950/68 border-red-500/30 shadow-[0_16px_50px_rgba(239,68,68,0.18)]",
         subPanel: "bg-black/70 border-red-500/25",
         dropdownMenu: "bg-zinc-950/98 border-red-500/35 shadow-2xl",
         selectBtn:
@@ -148,7 +260,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
     case "midnight":
       return {
         pageBg:
-          "bg-gradient-to-br from-slate-950/88 via-blue-950/42 to-black/95",
+          "bg-gradient-to-br from-slate-950/65 via-blue-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
@@ -161,7 +273,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
         badge: "text-sky-200 border-blue-500/35 bg-blue-950/75",
         subtleBadge: "text-slate-200 border-blue-500/25 bg-black/75",
         surfacePanel:
-          "bg-slate-950/90 border-blue-500/30 shadow-[0_16px_50px_rgba(59,130,246,0.18)]",
+          "bg-slate-950/68 border-blue-500/30 shadow-[0_16px_50px_rgba(59,130,246,0.18)]",
         subPanel: "bg-black/70 border-blue-500/25",
         dropdownMenu: "bg-slate-950/98 border-blue-500/35 shadow-2xl",
         selectBtn:
@@ -197,7 +309,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
     case "emerald":
       return {
         pageBg:
-          "bg-gradient-to-br from-neutral-950/88 via-emerald-950/42 to-black/95",
+          "bg-gradient-to-br from-neutral-950/65 via-emerald-950/30 to-black/75",
         baseText: "text-neutral-100",
         mutedText: "text-neutral-300",
         subMutedText: "text-neutral-400",
@@ -210,7 +322,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
         badge: "text-emerald-200 border-emerald-500/35 bg-emerald-950/75",
         subtleBadge: "text-neutral-200 border-emerald-500/25 bg-black/75",
         surfacePanel:
-          "bg-neutral-950/90 border-emerald-500/30 shadow-[0_16px_50px_rgba(16,185,129,0.18)]",
+          "bg-neutral-950/68 border-emerald-500/30 shadow-[0_16px_50px_rgba(16,185,129,0.18)]",
         subPanel: "bg-black/70 border-emerald-500/25",
         dropdownMenu: "bg-neutral-950/98 border-emerald-500/35 shadow-2xl",
         selectBtn:
@@ -246,7 +358,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
     case "amber":
       return {
         pageBg:
-          "bg-gradient-to-br from-stone-950/88 via-yellow-950/42 to-black/95",
+          "bg-gradient-to-br from-stone-950/65 via-yellow-950/30 to-black/75",
         baseText: "text-stone-100",
         mutedText: "text-stone-300",
         subMutedText: "text-stone-400",
@@ -259,7 +371,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
         badge: "text-amber-200 border-amber-500/35 bg-amber-950/75",
         subtleBadge: "text-stone-200 border-amber-500/25 bg-black/75",
         surfacePanel:
-          "bg-stone-950/90 border-amber-500/30 shadow-[0_16px_50px_rgba(245,158,11,0.18)]",
+          "bg-stone-950/68 border-amber-500/30 shadow-[0_16px_50px_rgba(245,158,11,0.18)]",
         subPanel: "bg-black/70 border-amber-500/25",
         dropdownMenu: "bg-stone-950/98 border-amber-500/35 shadow-2xl",
         selectBtn:
@@ -295,7 +407,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
     case "cyan":
       return {
         pageBg:
-          "bg-gradient-to-br from-slate-950/88 via-cyan-950/42 to-black/95",
+          "bg-gradient-to-br from-slate-950/65 via-cyan-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
@@ -308,7 +420,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
         badge: "text-cyan-200 border-cyan-500/35 bg-cyan-950/75",
         subtleBadge: "text-slate-200 border-cyan-500/25 bg-black/75",
         surfacePanel:
-          "bg-slate-950/90 border-cyan-500/30 shadow-[0_16px_50px_rgba(6,182,212,0.18)]",
+          "bg-slate-950/68 border-cyan-500/30 shadow-[0_16px_50px_rgba(6,182,212,0.18)]",
         subPanel: "bg-black/70 border-cyan-500/25",
         dropdownMenu: "bg-slate-950/98 border-cyan-500/35 shadow-2xl",
         selectBtn:
@@ -345,7 +457,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
     default:
       return {
         pageBg:
-          "bg-gradient-to-br from-slate-950/88 via-purple-950/42 to-black/95",
+          "bg-gradient-to-br from-slate-950/65 via-purple-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
@@ -358,7 +470,7 @@ function getDetailsThemeTokens(theme: AppTheme): DetailsThemeTokens {
         badge: "text-violet-200 border-violet-500/35 bg-purple-950/75",
         subtleBadge: "text-slate-200 border-violet-500/25 bg-black/75",
         surfacePanel:
-          "bg-slate-950/90 border-violet-500/30 shadow-[0_16px_50px_rgba(139,92,246,0.18)]",
+          "bg-slate-950/68 border-violet-500/30 shadow-[0_16px_50px_rgba(139,92,246,0.18)]",
         subPanel: "bg-black/70 border-violet-500/25",
         dropdownMenu: "bg-slate-950/98 border-violet-500/35 shadow-2xl",
         selectBtn:
@@ -1565,7 +1677,7 @@ export function DetailsPage() {
     <div
       className={`min-h-screen w-full max-w-full ${activeTheme.pageBg} ${activeTheme.baseText} p-2.5 sm:p-6 md:p-10 overflow-x-clip scroll-smooth transition-colors duration-300 pb-16 relative rounded-3xl`}
     >
-      <style>{`
+      <style>{`${DETAILS_VIEWPORT_STYLES}
         @keyframes heartbeatSlow {
           0%, 100% { opacity: 0.85; transform: scale(0.98); }
           50% { opacity: 1; transform: scale(1.03); }
@@ -1592,36 +1704,35 @@ export function DetailsPage() {
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none z-0" />
 
       <div className="relative z-10 max-w-5xl mx-auto min-w-0">
-        {/* Top-Left Theme-Matched "Back to Home" Capsule Pill */}
-        <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
-          <Link
-            to="/"
-            data-tour="back-to-home"
-            className={`group inline-flex items-center gap-2.5 rounded-full backdrop-blur-xl pl-3.5 pr-2 ${
-              largeButtons ? "py-2.5" : "py-1.5"
-            } border shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 ${
-              activeTheme.backCapsule
-            } ${activeTheme.ring}`}
+        {/* Top Utility Bar: Backtohome.png inside Viewport-Locked Button Wrapper + IMDb Link */}
+        <div className="rabtv-det-top-bar mb-4">
+          <div
+            className="rabtv-det-back-wrap"
+            style={{
+              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+            }}
           >
-            <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
-              ‹
-            </span>
-            <span className="text-xs sm:text-sm font-semibold tracking-wide">
-              Back to Home
-            </span>
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${activeTheme.backBadge}`}
+            <Link
+              to="/"
+              data-tour="back-to-home"
+              aria-label="Back to Home"
+              title="Back to Home"
+              className={`rabtv-det-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${activeTheme.ring}`}
             >
-              ⟲
-            </span>
-          </Link>
+              <img
+                src={BACK_TO_HOME_BTN_URL}
+                alt="Back to Home"
+                decoding="async"
+              />
+            </Link>
+          </div>
 
           <a
             href={imdbLink}
             target="_blank"
             rel="noopener noreferrer"
             data-tour="imdb-link"
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition hover:scale-105 focus:outline-none focus:ring-2 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-extrabold backdrop-blur-md transition hover:scale-105 focus:outline-none focus:ring-2 shrink-0 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
             title="View Official IMDb Listing"
           >
             <span>⭐ IMDb ↗</span>
@@ -2367,17 +2478,22 @@ export function DetailsPage() {
             <div
               className={`mt-5 pt-5 border-t space-y-4 w-full ${activeTheme.dividerBorder}`}
             >
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-left w-full">
-                <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className="rabtv-det-section-banner mb-3"
+                style={{
+                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                }}
+              >
+                <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                   <span
-                    className={`w-1.5 h-6 rounded-full shrink-0 ${activeTheme.accentBar}`}
+                    className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${activeTheme.accentBar}`}
                   />
-                  <h3 className="text-base sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
-                    <span>✨ Similar Recommended Titles</span>
+                  <h3 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                    ✨ Similar Recommended Titles
                   </h3>
                 </div>
                 <span
-                  className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${activeTheme.badge}`}
+                  className={`relative z-10 text-[11px] sm:text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${activeTheme.badge}`}
                 >
                   {mappedRecommendations.length} matches
                 </span>
