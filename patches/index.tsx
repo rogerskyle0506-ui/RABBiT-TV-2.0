@@ -229,13 +229,13 @@ export function MediaCard({
         return {
           glow: "group-hover:shadow-[0_8px_28px_rgba(239,68,68,0.32)]",
           ring: "focus-within:ring-red-500 focus:ring-red-500",
-          accentBadge: "text-red-300 border-red-500/35 bg-red-950/80",
-          ratingBadge: "text-red-200 border-red-500/35 bg-black/85",
-          typeBadge: "text-zinc-100 border-red-500/30 bg-black/85",
-          belowPanel: "bg-gradient-to-b from-zinc-950 to-black border-t border-red-500/25",
-          watchBar: "bg-black/95 border-t border-red-500/25",
+          accentBadge: "text-red-300 border-red-500/35 bg-red-950/65",
+          ratingBadge: "text-red-200 border-red-500/35 bg-black/75",
+          typeBadge: "text-zinc-100 border-red-500/30 bg-black/75",
+          belowPanel: "bg-gradient-to-b from-zinc-950/80 to-black/85 border-t border-red-500/25 backdrop-blur-sm",
+          watchBar: "bg-black/80 border-t border-red-500/25 backdrop-blur-sm",
           watchBtn:
-            "bg-red-950/55 hover:bg-red-900/80 border-red-500/30 text-white",
+            "bg-red-950/45 hover:bg-red-900/75 border-red-500/30 text-white",
           mutedText: "text-zinc-300",
           subMutedText: "text-zinc-400",
           ratingText: "text-red-300",
@@ -245,13 +245,13 @@ export function MediaCard({
         return {
           glow: "group-hover:shadow-[0_8px_28px_rgba(59,130,246,0.32)]",
           ring: "focus-within:ring-blue-400 focus:ring-blue-400",
-          accentBadge: "text-sky-300 border-blue-500/35 bg-blue-950/80",
-          ratingBadge: "text-sky-200 border-blue-500/35 bg-black/85",
-          typeBadge: "text-slate-100 border-blue-500/30 bg-black/85",
-          belowPanel: "bg-gradient-to-b from-slate-950 to-black border-t border-blue-500/25",
-          watchBar: "bg-black/95 border-t border-blue-500/25",
+          accentBadge: "text-sky-300 border-blue-500/35 bg-blue-950/65",
+          ratingBadge: "text-sky-200 border-blue-500/35 bg-black/75",
+          typeBadge: "text-slate-100 border-blue-500/30 bg-black/75",
+          belowPanel: "bg-gradient-to-b from-slate-950/80 to-black/85 border-t border-blue-500/25 backdrop-blur-sm",
+          watchBar: "bg-black/80 border-t border-blue-500/25 backdrop-blur-sm",
           watchBtn:
-            "bg-blue-950/55 hover:bg-blue-900/80 border-blue-500/30 text-white",
+            "bg-blue-950/45 hover:bg-blue-900/75 border-blue-500/30 text-white",
           mutedText: "text-slate-300",
           subMutedText: "text-slate-400",
           ratingText: "text-sky-300",
@@ -261,13 +261,13 @@ export function MediaCard({
         return {
           glow: "group-hover:shadow-[0_8px_28px_rgba(16,185,129,0.32)]",
           ring: "focus-within:ring-emerald-400 focus:ring-emerald-400",
-          accentBadge: "text-emerald-300 border-emerald-500/35 bg-emerald-950/80",
-          ratingBadge: "text-emerald-200 border-emerald-500/35 bg-black/85",
-          typeBadge: "text-neutral-100 border-emerald-500/30 bg-black/85",
-          belowPanel: "bg-gradient-to-b from-neutral-950 to-black border-t border-emerald-500/25",
-          watchBar: "bg-black/95 border-t border-emerald-500/25",
+          accentBadge: "text-emerald-300 border-emerald-500/35 bg-emerald-950/65",
+          ratingBadge: "text-emerald-200 border-emerald-500/35 bg-black/75",
+          typeBadge: "text-neutral-100 border-emerald-500/30 bg-black/75",
+          belowPanel: "bg-gradient-to-b from-neutral-950/80 to-black/85 border-t border-emerald-500/25 backdrop-blur-sm",
+          watchBar: "bg-black/80 border-t border-emerald-500/25 backdrop-blur-sm",
           watchBtn:
-            "bg-emerald-950/55 hover:bg-emerald-900/80 border-emerald-500/30 text-white",
+            "bg-emerald-950/45 hover:bg-emerald-900/75 border-emerald-500/30 text-white",
           mutedText: "text-neutral-300",
           subMutedText: "text-neutral-400",
           ratingText: "text-emerald-300",
@@ -277,13 +277,13 @@ export function MediaCard({
         return {
           glow: "group-hover:shadow-[0_8px_28px_rgba(245,158,11,0.32)]",
           ring: "focus-within:ring-amber-400 focus:ring-amber-400",
-          accentBadge: "text-amber-300 border-amber-500/35 bg-amber-950/80",
-          ratingBadge: "text-amber-200 border-amber-500/35 bg-black/85",
-          typeBadge: "text-stone-100 border-amber-500/30 bg-black/85",
-          belowPanel: "bg-gradient-to-b from-stone-950 to-black border-t border-amber-500/25",
-          watchBar: "bg-black/95 border-t border-amber-500/25",
+          accentBadge: "text-amber-300 border-amber-500/35 bg-amber-950/65",
+          ratingBadge: "text-amber-200 border-amber-500/35 bg-black/75",
+          typeBadge: "text-stone-100 border-amber-500/30 bg-black/75",
+          belowPanel: "bg-gradient-to-b from-stone-950/80 to-black/85 border-t border-amber-500/25 backdrop-blur-sm",
+          watchBar: "bg-black/80 border-t border-amber-500/25 backdrop-blur-sm",
           watchBtn:
-            "bg-amber-950/55 hover:bg-amber-900/80 border-amber-500/30 text-white",
+            "bg-amber-950/45 hover:bg-amber-900/75 border-amber-500/30 text-white",
           mutedText: "text-stone-300",
           subMutedText: "text-stone-400",
           ratingText: "text-amber-300",
@@ -293,13 +293,13 @@ export function MediaCard({
         return {
           glow: "group-hover:shadow-[0_8px_28px_rgba(6,182,212,0.32)]",
           ring: "focus-within:ring-cyan-400 focus:ring-cyan-400",
-          accentBadge: "text-cyan-300 border-cyan-500/35 bg-cyan-950/80",
-          ratingBadge: "text-cyan-200 border-cyan-500/35 bg-black/85",
-          typeBadge: "text-slate-100 border-cyan-500/30 bg-black/85",
-          belowPanel: "bg-gradient-to-b from-slate-950 to-black border-t border-cyan-500/25",
-          watchBar: "bg-black/95 border-t border-cyan-500/25",
+          accentBadge: "text-cyan-300 border-cyan-500/35 bg-cyan-950/65",
+          ratingBadge: "text-cyan-200 border-cyan-500/35 bg-black/75",
+          typeBadge: "text-slate-100 border-cyan-500/30 bg-black/75",
+          belowPanel: "bg-gradient-to-b from-slate-950/80 to-black/85 border-t border-cyan-500/25 backdrop-blur-sm",
+          watchBar: "bg-black/80 border-t border-cyan-500/25 backdrop-blur-sm",
           watchBtn:
-            "bg-cyan-950/55 hover:bg-cyan-900/80 border-cyan-500/30 text-white",
+            "bg-cyan-950/45 hover:bg-cyan-900/75 border-cyan-500/30 text-white",
           mutedText: "text-slate-300",
           subMutedText: "text-slate-400",
           ratingText: "text-cyan-300",
@@ -310,13 +310,13 @@ export function MediaCard({
         return {
           glow: "group-hover:shadow-[0_8px_28px_rgba(139,92,246,0.32)]",
           ring: "focus-within:ring-violet-400 focus:ring-violet-400",
-          accentBadge: "text-violet-300 border-violet-500/35 bg-purple-950/80",
-          ratingBadge: "text-violet-200 border-violet-500/35 bg-black/85",
-          typeBadge: "text-slate-100 border-violet-500/30 bg-black/85",
-          belowPanel: "bg-gradient-to-b from-slate-950 to-black border-t border-violet-500/25",
-          watchBar: "bg-black/95 border-t border-violet-500/25",
+          accentBadge: "text-violet-300 border-violet-500/35 bg-purple-950/65",
+          ratingBadge: "text-violet-200 border-violet-500/35 bg-black/75",
+          typeBadge: "text-slate-100 border-violet-500/30 bg-black/75",
+          belowPanel: "bg-gradient-to-b from-slate-950/80 to-black/85 border-t border-violet-500/25 backdrop-blur-sm",
+          watchBar: "bg-black/80 border-t border-violet-500/25 backdrop-blur-sm",
           watchBtn:
-            "bg-purple-950/55 hover:bg-purple-900/80 border-violet-500/30 text-white",
+            "bg-purple-950/45 hover:bg-purple-900/75 border-violet-500/30 text-white",
           mutedText: "text-slate-300",
           subMutedText: "text-slate-400",
           ratingText: "text-violet-300",
@@ -646,7 +646,7 @@ const NewShelfQuickBar = memo(function NewShelfQuickBar({
   return (
     <form
       onSubmit={handleSubmit}
-      className={`w-full max-w-4xl mx-auto rounded-2xl p-3 sm:p-4 space-y-2.5 backdrop-blur-xl ${surfaceClass}`}
+      className={`w-full max-w-4xl mx-auto rounded-2xl p-3 sm:p-4 space-y-2.5 backdrop-blur-md ${surfaceClass}`}
     >
       <div className="flex items-center justify-between gap-2">
         <span
@@ -681,7 +681,7 @@ const NewShelfQuickBar = memo(function NewShelfQuickBar({
           spellCheck={false}
           placeholder="Shelf name (e.g. Comfort Shows, Weekend Sci-Fi)"
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
-          className={`flex-1 min-w-0 h-10 rounded-xl border border-white/15 bg-black/75 px-3 text-xs font-bold text-white placeholder-white/40 focus:outline-none focus:ring-2 ${focusRingClass}`}
+          className={`flex-1 min-w-0 h-10 rounded-xl border border-white/15 bg-black/55 px-3 text-xs font-bold text-white placeholder-white/45 focus:outline-none focus:ring-2 ${focusRingClass}`}
         />
         <button
           type="submit"
@@ -1414,274 +1414,274 @@ function Home() {
     return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 justify-items-center";
   }, [cardSize]);
 
-  // Comprehensive per-theme visual tokens — zero hardcoded blue/slate/amber fallbacks
+  // Comprehensive per-theme visual tokens with clean glass transparency
   const themeStyles =
     {
       violet: {
-        bg: "bg-gradient-to-br from-slate-950/75 via-purple-950/35 to-black/85",
+        bg: "bg-gradient-to-br from-slate-950/55 via-purple-950/25 to-black/65",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
-        cardGradient: "from-purple-950/85 via-slate-950 to-indigo-950/85",
-        navShell: "border-violet-500/35 shadow-[0_12px_36px_rgba(139,92,246,0.22)]",
-        navOverlay: "bg-gradient-to-r from-black/75 via-purple-950/60 to-black/75",
+        cardGradient: "from-purple-950/65 via-slate-950/70 to-indigo-950/65",
+        navShell: "border-violet-500/30 shadow-[0_12px_36px_rgba(139,92,246,0.2)]",
+        navOverlay: "bg-gradient-to-r from-black/45 via-purple-950/35 to-black/45",
         heroContainer:
-          "bg-gradient-to-b from-slate-950 via-purple-950/25 to-black border border-violet-500/40 shadow-[0_20px_50px_rgba(139,92,246,0.22)]",
-        heroImageFade: "from-slate-950/90",
+          "bg-gradient-to-b from-slate-950/80 via-purple-950/20 to-black/85 border border-violet-500/35 shadow-[0_20px_50px_rgba(139,92,246,0.2)]",
+        heroImageFade: "from-slate-950/80",
         heroPanelBg:
-          "bg-gradient-to-b from-slate-950/95 via-purple-950/20 to-black/95 border-t border-violet-500/25",
+          "bg-gradient-to-b from-slate-950/75 via-purple-950/25 to-black/80 backdrop-blur-md border-t border-violet-500/25",
         surfacePanel:
-          "bg-slate-950/80 border border-violet-500/25 shadow-[0_10px_30px_rgba(139,92,246,0.14)]",
+          "bg-slate-950/55 border border-violet-500/25 shadow-[0_10px_30px_rgba(139,92,246,0.14)]",
         dividerBorder: "border-violet-500/20",
         btnActive:
-          "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
+          "bg-gradient-to-r from-violet-600/95 via-purple-600/95 to-indigo-600/95 text-white shadow-lg shadow-violet-600/30",
         btnSecondary:
-          "bg-purple-950/65 hover:bg-purple-900/80 border border-violet-500/35 text-purple-100 hover:text-white",
+          "bg-purple-950/40 hover:bg-purple-900/65 border border-violet-500/30 text-purple-100 hover:text-white backdrop-blur-md",
         pillInactive:
-          "bg-purple-950/45 hover:bg-purple-900/65 text-purple-100 border border-violet-500/20",
+          "bg-purple-950/30 hover:bg-purple-900/55 text-purple-100 border border-violet-500/20 backdrop-blur-sm",
         scrollArrowBtn:
-          "bg-black/80 hover:bg-purple-950 text-violet-300 hover:text-white border border-violet-500/35",
+          "bg-black/55 hover:bg-purple-950/80 text-violet-300 hover:text-white border border-violet-500/30 backdrop-blur-sm",
         accentText: "text-violet-300",
         accentBar: "bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.9)]",
-        accentBadge: "bg-purple-950/80 border border-violet-500/40 text-violet-200",
-        subtleBadge: "bg-black/70 border border-violet-500/25 text-slate-200",
-        ratingBadge: "bg-purple-950/75 border border-violet-400/40 text-violet-200",
+        accentBadge: "bg-purple-950/60 border border-violet-500/35 text-violet-200 backdrop-blur-sm",
+        subtleBadge: "bg-black/50 border border-violet-500/25 text-slate-200 backdrop-blur-sm",
+        ratingBadge: "bg-purple-950/55 border border-violet-400/35 text-violet-200 backdrop-blur-sm",
         dotInactive: "bg-violet-300/30 hover:bg-violet-300/65",
         focusRing: "focus:ring-violet-400",
         activeTile:
-          "bg-gradient-to-b from-violet-900/50 via-purple-950/70 to-slate-950/90 border-2 border-violet-400 shadow-[0_0_25px_rgba(139,92,246,0.45)] scale-[1.03]",
+          "bg-gradient-to-b from-violet-900/40 via-purple-950/55 to-slate-950/70 border-2 border-violet-400 shadow-[0_0_25px_rgba(139,92,246,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-purple-950/35 to-black/80 hover:from-purple-900/45 hover:to-black/85 border border-violet-500/20 hover:border-violet-400/45",
+          "bg-gradient-to-b from-purple-950/20 to-black/50 hover:from-purple-900/35 hover:to-black/65 border border-violet-500/20 hover:border-violet-400/45",
         scrollReminderArrow:
           "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.85)]",
       },
       red: {
-        bg: "bg-gradient-to-br from-zinc-950/80 via-red-950/40 to-black/90",
+        bg: "bg-gradient-to-br from-zinc-950/55 via-red-950/25 to-black/65",
         baseText: "text-zinc-100",
         mutedText: "text-zinc-300",
         subMutedText: "text-zinc-400",
-        cardGradient: "from-red-950/85 via-zinc-950 to-black",
-        navShell: "border-red-500/40 shadow-[0_12px_36px_rgba(239,68,68,0.22)]",
-        navOverlay: "bg-gradient-to-r from-black/85 via-red-950/65 to-black/85",
+        cardGradient: "from-red-950/65 via-zinc-950/70 to-black/75",
+        navShell: "border-red-500/30 shadow-[0_12px_36px_rgba(239,68,68,0.2)]",
+        navOverlay: "bg-gradient-to-r from-black/50 via-red-950/35 to-black/50",
         heroContainer:
-          "bg-gradient-to-b from-zinc-950 via-red-950/25 to-black border border-red-500/45 shadow-[0_20px_50px_rgba(239,68,68,0.22)]",
-        heroImageFade: "from-zinc-950/95",
+          "bg-gradient-to-b from-zinc-950/80 via-red-950/20 to-black/85 border border-red-500/35 shadow-[0_20px_50px_rgba(239,68,68,0.2)]",
+        heroImageFade: "from-zinc-950/80",
         heroPanelBg:
-          "bg-gradient-to-b from-zinc-950/95 via-red-950/25 to-black border-t border-red-500/30",
+          "bg-gradient-to-b from-zinc-950/75 via-red-950/25 to-black/80 backdrop-blur-md border-t border-red-500/25",
         surfacePanel:
-          "bg-zinc-950/85 border border-red-500/30 shadow-[0_10px_30px_rgba(239,68,68,0.14)]",
-        dividerBorder: "border-red-500/25",
+          "bg-zinc-950/55 border border-red-500/25 shadow-[0_10px_30px_rgba(239,68,68,0.14)]",
+        dividerBorder: "border-red-500/20",
         btnActive:
-          "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/35",
+          "bg-gradient-to-r from-red-600/95 via-rose-600/95 to-orange-600/95 text-white shadow-lg shadow-red-600/35",
         btnSecondary:
-          "bg-red-950/65 hover:bg-red-900/80 border border-red-500/35 text-red-100 hover:text-white",
+          "bg-red-950/40 hover:bg-red-900/65 border border-red-500/30 text-red-100 hover:text-white backdrop-blur-md",
         pillInactive:
-          "bg-red-950/40 hover:bg-red-900/65 text-red-100 border border-red-500/20",
+          "bg-red-950/30 hover:bg-red-900/55 text-red-100 border border-red-500/20 backdrop-blur-sm",
         scrollArrowBtn:
-          "bg-black/85 hover:bg-red-950 text-red-300 hover:text-white border border-red-500/40",
+          "bg-black/55 hover:bg-red-950/80 text-red-300 hover:text-white border border-red-500/30 backdrop-blur-sm",
         accentText: "text-red-400",
         accentBar: "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]",
-        accentBadge: "bg-red-950/80 border border-red-500/40 text-red-200",
-        subtleBadge: "bg-black/75 border border-red-500/25 text-zinc-200",
-        ratingBadge: "bg-red-950/75 border border-red-400/40 text-red-200",
+        accentBadge: "bg-red-950/60 border border-red-500/35 text-red-200 backdrop-blur-sm",
+        subtleBadge: "bg-black/50 border border-red-500/25 text-zinc-200 backdrop-blur-sm",
+        ratingBadge: "bg-red-950/55 border border-red-400/35 text-red-200 backdrop-blur-sm",
         dotInactive: "bg-red-300/30 hover:bg-red-300/65",
         focusRing: "focus:ring-red-500",
         activeTile:
-          "bg-gradient-to-b from-red-900/50 via-red-950/75 to-black/95 border-2 border-red-400 shadow-[0_0_25px_rgba(239,68,68,0.45)] scale-[1.03]",
+          "bg-gradient-to-b from-red-900/40 via-red-950/55 to-black/75 border-2 border-red-400 shadow-[0_0_25px_rgba(239,68,68,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-red-950/30 to-black/85 hover:from-red-900/45 hover:to-black/90 border border-red-500/20 hover:border-red-400/45",
+          "bg-gradient-to-b from-red-950/20 to-black/50 hover:from-red-900/35 hover:to-black/65 border border-red-500/20 hover:border-red-400/45",
         scrollReminderArrow:
           "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.85)]",
       },
       midnight: {
-        bg: "bg-gradient-to-br from-slate-950/75 via-blue-950/35 to-black/85",
+        bg: "bg-gradient-to-br from-slate-950/55 via-blue-950/25 to-black/65",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
-        cardGradient: "from-blue-950/85 via-slate-950 to-sky-950/85",
-        navShell: "border-blue-500/35 shadow-[0_12px_36px_rgba(59,130,246,0.22)]",
-        navOverlay: "bg-gradient-to-r from-black/75 via-blue-950/60 to-black/75",
+        cardGradient: "from-blue-950/65 via-slate-950/70 to-sky-950/65",
+        navShell: "border-blue-500/30 shadow-[0_12px_36px_rgba(59,130,246,0.2)]",
+        navOverlay: "bg-gradient-to-r from-black/45 via-blue-950/35 to-black/45",
         heroContainer:
-          "bg-gradient-to-b from-slate-950 via-blue-950/25 to-black border border-blue-500/40 shadow-[0_20px_50px_rgba(59,130,246,0.22)]",
-        heroImageFade: "from-slate-950/90",
+          "bg-gradient-to-b from-slate-950/80 via-blue-950/20 to-black/85 border border-blue-500/35 shadow-[0_20px_50px_rgba(59,130,246,0.2)]",
+        heroImageFade: "from-slate-950/80",
         heroPanelBg:
-          "bg-gradient-to-b from-slate-950/95 via-blue-950/20 to-black/95 border-t border-blue-500/25",
+          "bg-gradient-to-b from-slate-950/75 via-blue-950/25 to-black/80 backdrop-blur-md border-t border-blue-500/25",
         surfacePanel:
-          "bg-slate-950/80 border border-blue-500/25 shadow-[0_10px_30px_rgba(59,130,246,0.14)]",
+          "bg-slate-950/55 border border-blue-500/25 shadow-[0_10px_30px_rgba(59,130,246,0.14)]",
         dividerBorder: "border-blue-500/20",
         btnActive:
-          "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
+          "bg-gradient-to-r from-blue-600/95 via-cyan-600/95 to-sky-600/95 text-white shadow-lg shadow-blue-600/30",
         btnSecondary:
-          "bg-blue-950/65 hover:bg-blue-900/80 border border-blue-500/35 text-blue-100 hover:text-white",
+          "bg-blue-950/40 hover:bg-blue-900/65 border border-blue-500/30 text-blue-100 hover:text-white backdrop-blur-md",
         pillInactive:
-          "bg-blue-950/45 hover:bg-blue-900/65 text-blue-100 border border-blue-500/20",
+          "bg-blue-950/30 hover:bg-blue-900/55 text-blue-100 border border-blue-500/20 backdrop-blur-sm",
         scrollArrowBtn:
-          "bg-black/80 hover:bg-blue-950 text-sky-300 hover:text-white border border-blue-500/35",
+          "bg-black/55 hover:bg-blue-950/80 text-sky-300 hover:text-white border border-blue-500/30 backdrop-blur-sm",
         accentText: "text-sky-300",
         accentBar: "bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.9)]",
-        accentBadge: "bg-blue-950/80 border border-blue-500/40 text-sky-200",
-        subtleBadge: "bg-black/70 border border-blue-500/25 text-slate-200",
-        ratingBadge: "bg-blue-950/75 border border-sky-400/40 text-sky-200",
+        accentBadge: "bg-blue-950/60 border border-blue-500/35 text-sky-200 backdrop-blur-sm",
+        subtleBadge: "bg-black/50 border border-blue-500/25 text-slate-200 backdrop-blur-sm",
+        ratingBadge: "bg-blue-950/55 border border-sky-400/35 text-sky-200 backdrop-blur-sm",
         dotInactive: "bg-sky-300/30 hover:bg-sky-300/65",
         focusRing: "focus:ring-blue-400",
         activeTile:
-          "bg-gradient-to-b from-blue-900/50 via-sky-950/70 to-slate-950/90 border-2 border-sky-400 shadow-[0_0_25px_rgba(56,189,248,0.45)] scale-[1.03]",
+          "bg-gradient-to-b from-blue-900/40 via-sky-950/55 to-slate-950/70 border-2 border-sky-400 shadow-[0_0_25px_rgba(56,189,248,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-blue-950/35 to-black/80 hover:from-blue-900/45 hover:to-black/85 border border-blue-500/20 hover:border-sky-400/45",
+          "bg-gradient-to-b from-blue-950/20 to-black/50 hover:from-blue-900/35 hover:to-black/65 border border-blue-500/20 hover:border-sky-400/45",
         scrollReminderArrow:
           "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.85)]",
       },
       emerald: {
-        bg: "bg-gradient-to-br from-neutral-950/80 via-emerald-950/35 to-black/90",
+        bg: "bg-gradient-to-br from-neutral-950/55 via-emerald-950/25 to-black/65",
         baseText: "text-neutral-100",
         mutedText: "text-neutral-300",
         subMutedText: "text-neutral-400",
-        cardGradient: "from-emerald-950/85 via-neutral-950 to-teal-950/85",
-        navShell: "border-emerald-500/35 shadow-[0_12px_36px_rgba(16,185,129,0.22)]",
-        navOverlay: "bg-gradient-to-r from-black/80 via-emerald-950/60 to-black/80",
+        cardGradient: "from-emerald-950/65 via-neutral-950/70 to-teal-950/65",
+        navShell: "border-emerald-500/30 shadow-[0_12px_36px_rgba(16,185,129,0.2)]",
+        navOverlay: "bg-gradient-to-r from-black/50 via-emerald-950/35 to-black/50",
         heroContainer:
-          "bg-gradient-to-b from-neutral-950 via-emerald-950/25 to-black border border-emerald-500/40 shadow-[0_20px_50px_rgba(16,185,129,0.22)]",
-        heroImageFade: "from-neutral-950/95",
+          "bg-gradient-to-b from-neutral-950/80 via-emerald-950/20 to-black/85 border border-emerald-500/35 shadow-[0_20px_50px_rgba(16,185,129,0.2)]",
+        heroImageFade: "from-neutral-950/80",
         heroPanelBg:
-          "bg-gradient-to-b from-neutral-950/95 via-emerald-950/20 to-black border-t border-emerald-500/25",
+          "bg-gradient-to-b from-neutral-950/75 via-emerald-950/25 to-black/80 backdrop-blur-md border-t border-emerald-500/25",
         surfacePanel:
-          "bg-neutral-950/85 border border-emerald-500/25 shadow-[0_10px_30px_rgba(16,185,129,0.14)]",
+          "bg-neutral-950/55 border border-emerald-500/25 shadow-[0_10px_30px_rgba(16,185,129,0.14)]",
         dividerBorder: "border-emerald-500/20",
         btnActive:
-          "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
+          "bg-gradient-to-r from-emerald-600/95 via-teal-600/95 to-green-600/95 text-white shadow-lg shadow-emerald-600/30",
         btnSecondary:
-          "bg-emerald-950/65 hover:bg-emerald-900/80 border border-emerald-500/35 text-emerald-100 hover:text-white",
+          "bg-emerald-950/40 hover:bg-emerald-900/65 border border-emerald-500/30 text-emerald-100 hover:text-white backdrop-blur-md",
         pillInactive:
-          "bg-emerald-950/40 hover:bg-emerald-900/65 text-emerald-100 border border-emerald-500/20",
+          "bg-emerald-950/30 hover:bg-emerald-900/55 text-emerald-100 border border-emerald-500/20 backdrop-blur-sm",
         scrollArrowBtn:
-          "bg-black/80 hover:bg-emerald-950 text-emerald-300 hover:text-white border border-emerald-500/35",
+          "bg-black/55 hover:bg-emerald-950/80 text-emerald-300 hover:text-white border border-emerald-500/30 backdrop-blur-sm",
         accentText: "text-emerald-300",
         accentBar: "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]",
         accentBadge:
-          "bg-emerald-950/80 border border-emerald-500/40 text-emerald-200",
-        subtleBadge: "bg-black/75 border border-emerald-500/25 text-neutral-200",
+          "bg-emerald-950/60 border border-emerald-500/35 text-emerald-200 backdrop-blur-sm",
+        subtleBadge: "bg-black/50 border border-emerald-500/25 text-neutral-200 backdrop-blur-sm",
         ratingBadge:
-          "bg-emerald-950/75 border border-emerald-400/40 text-emerald-200",
+          "bg-emerald-950/55 border border-emerald-400/35 text-emerald-200 backdrop-blur-sm",
         dotInactive: "bg-emerald-300/30 hover:bg-emerald-300/65",
         focusRing: "focus:ring-emerald-400",
         activeTile:
-          "bg-gradient-to-b from-emerald-900/50 via-emerald-950/70 to-black/95 border-2 border-emerald-400 shadow-[0_0_25px_rgba(52,211,153,0.45)] scale-[1.03]",
+          "bg-gradient-to-b from-emerald-900/40 via-emerald-950/55 to-black/75 border-2 border-emerald-400 shadow-[0_0_25px_rgba(52,211,153,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-emerald-950/35 to-black/85 hover:from-emerald-900/45 hover:to-black/90 border border-emerald-500/20 hover:border-emerald-400/45",
+          "bg-gradient-to-b from-emerald-950/20 to-black/50 hover:from-emerald-900/35 hover:to-black/65 border border-emerald-500/20 hover:border-emerald-400/45",
         scrollReminderArrow:
           "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.85)]",
       },
       amber: {
-        bg: "bg-gradient-to-br from-stone-950/80 via-yellow-950/35 to-black/90",
+        bg: "bg-gradient-to-br from-stone-950/55 via-yellow-950/25 to-black/65",
         baseText: "text-stone-100",
         mutedText: "text-stone-300",
         subMutedText: "text-stone-400",
-        cardGradient: "from-yellow-950/85 via-stone-950 to-amber-950/85",
-        navShell: "border-amber-500/35 shadow-[0_12px_36px_rgba(245,158,11,0.22)]",
-        navOverlay: "bg-gradient-to-r from-black/80 via-yellow-950/60 to-black/80",
+        cardGradient: "from-yellow-950/65 via-stone-950/70 to-amber-950/65",
+        navShell: "border-amber-500/30 shadow-[0_12px_36px_rgba(245,158,11,0.2)]",
+        navOverlay: "bg-gradient-to-r from-black/50 via-yellow-950/35 to-black/50",
         heroContainer:
-          "bg-gradient-to-b from-stone-950 via-amber-950/25 to-black border border-amber-500/40 shadow-[0_20px_50px_rgba(245,158,11,0.22)]",
-        heroImageFade: "from-stone-950/95",
+          "bg-gradient-to-b from-stone-950/80 via-amber-950/20 to-black/85 border border-amber-500/35 shadow-[0_20px_50px_rgba(245,158,11,0.2)]",
+        heroImageFade: "from-stone-950/80",
         heroPanelBg:
-          "bg-gradient-to-b from-stone-950/95 via-amber-950/20 to-black border-t border-amber-500/25",
+          "bg-gradient-to-b from-stone-950/75 via-amber-950/25 to-black/80 backdrop-blur-md border-t border-amber-500/25",
         surfacePanel:
-          "bg-stone-950/85 border border-amber-500/25 shadow-[0_10px_30px_rgba(245,158,11,0.14)]",
+          "bg-stone-950/55 border border-amber-500/25 shadow-[0_10px_30px_rgba(245,158,11,0.14)]",
         dividerBorder: "border-amber-500/20",
         btnActive:
-          "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
+          "bg-gradient-to-r from-amber-500/95 via-amber-600/95 to-yellow-600/95 text-white shadow-lg shadow-amber-600/30",
         btnSecondary:
-          "bg-amber-950/65 hover:bg-amber-900/80 border border-amber-500/35 text-amber-100 hover:text-white",
+          "bg-amber-950/40 hover:bg-amber-900/65 border border-amber-500/30 text-amber-100 hover:text-white backdrop-blur-md",
         pillInactive:
-          "bg-amber-950/40 hover:bg-amber-900/65 text-amber-100 border border-amber-500/20",
+          "bg-amber-950/30 hover:bg-amber-900/55 text-amber-100 border border-amber-500/20 backdrop-blur-sm",
         scrollArrowBtn:
-          "bg-black/80 hover:bg-amber-950 text-amber-300 hover:text-white border border-amber-500/35",
+          "bg-black/55 hover:bg-amber-950/80 text-amber-300 hover:text-white border border-amber-500/30 backdrop-blur-sm",
         accentText: "text-amber-300",
         accentBar: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)]",
-        accentBadge: "bg-amber-950/80 border border-amber-500/40 text-amber-200",
-        subtleBadge: "bg-black/75 border border-amber-500/25 text-stone-200",
-        ratingBadge: "bg-amber-950/75 border border-amber-400/40 text-amber-200",
+        accentBadge: "bg-amber-950/60 border border-amber-500/35 text-amber-200 backdrop-blur-sm",
+        subtleBadge: "bg-black/50 border border-amber-500/25 text-stone-200 backdrop-blur-sm",
+        ratingBadge: "bg-amber-950/55 border border-amber-400/35 text-amber-200 backdrop-blur-sm",
         dotInactive: "bg-amber-300/30 hover:bg-amber-300/65",
         focusRing: "focus:ring-amber-400",
         activeTile:
-          "bg-gradient-to-b from-amber-900/50 via-amber-950/70 to-black/95 border-2 border-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.45)] scale-[1.03]",
+          "bg-gradient-to-b from-amber-900/40 via-amber-950/55 to-black/75 border-2 border-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-amber-950/35 to-black/85 hover:from-amber-900/45 hover:to-black/90 border border-amber-500/20 hover:border-amber-400/45",
+          "bg-gradient-to-b from-amber-950/20 to-black/50 hover:from-amber-900/35 hover:to-black/65 border border-amber-500/20 hover:border-amber-400/45",
         scrollReminderArrow:
           "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.85)]",
       },
       cyan: {
-        bg: "bg-gradient-to-br from-slate-950/75 via-cyan-950/35 to-black/85",
+        bg: "bg-gradient-to-br from-slate-950/55 via-cyan-950/25 to-black/65",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
-        cardGradient: "from-cyan-950/85 via-slate-950 to-teal-950/85",
-        navShell: "border-cyan-500/35 shadow-[0_12px_36px_rgba(6,182,212,0.22)]",
-        navOverlay: "bg-gradient-to-r from-black/75 via-cyan-950/60 to-black/75",
+        cardGradient: "from-cyan-950/65 via-slate-950/70 to-teal-950/65",
+        navShell: "border-cyan-500/30 shadow-[0_12px_36px_rgba(6,182,212,0.2)]",
+        navOverlay: "bg-gradient-to-r from-black/45 via-cyan-950/35 to-black/45",
         heroContainer:
-          "bg-gradient-to-b from-slate-950 via-cyan-950/25 to-black border border-cyan-500/40 shadow-[0_20px_50px_rgba(6,182,212,0.22)]",
-        heroImageFade: "from-slate-950/90",
+          "bg-gradient-to-b from-slate-950/80 via-cyan-950/20 to-black/85 border border-cyan-500/35 shadow-[0_20px_50px_rgba(6,182,212,0.2)]",
+        heroImageFade: "from-slate-950/80",
         heroPanelBg:
-          "bg-gradient-to-b from-slate-950/95 via-cyan-950/20 to-black/95 border-t border-cyan-500/25",
+          "bg-gradient-to-b from-slate-950/75 via-cyan-950/25 to-black/80 backdrop-blur-md border-t border-cyan-500/25",
         surfacePanel:
-          "bg-slate-950/80 border border-cyan-500/25 shadow-[0_10px_30px_rgba(6,182,212,0.14)]",
+          "bg-slate-950/55 border border-cyan-500/25 shadow-[0_10px_30px_rgba(6,182,212,0.14)]",
         dividerBorder: "border-cyan-500/20",
         btnActive:
-          "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
+          "bg-gradient-to-r from-cyan-600/95 via-teal-600/95 to-blue-600/95 text-white shadow-lg shadow-cyan-600/30",
         btnSecondary:
-          "bg-cyan-950/65 hover:bg-cyan-900/80 border border-cyan-500/35 text-cyan-100 hover:text-white",
+          "bg-cyan-950/40 hover:bg-cyan-900/65 border border-cyan-500/30 text-cyan-100 hover:text-white backdrop-blur-md",
         pillInactive:
-          "bg-cyan-950/45 hover:bg-cyan-900/65 text-cyan-100 border border-cyan-500/20",
+          "bg-cyan-950/30 hover:bg-cyan-900/55 text-cyan-100 border border-cyan-500/20 backdrop-blur-sm",
         scrollArrowBtn:
-          "bg-black/80 hover:bg-cyan-950 text-cyan-300 hover:text-white border border-cyan-500/35",
+          "bg-black/55 hover:bg-cyan-950/80 text-cyan-300 hover:text-white border border-cyan-500/30 backdrop-blur-sm",
         accentText: "text-cyan-300",
         accentBar: "bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)]",
-        accentBadge: "bg-cyan-950/80 border border-cyan-500/40 text-cyan-200",
-        subtleBadge: "bg-black/70 border border-cyan-500/25 text-slate-200",
-        ratingBadge: "bg-cyan-950/75 border border-cyan-400/40 text-cyan-200",
+        accentBadge: "bg-cyan-950/60 border border-cyan-500/35 text-cyan-200 backdrop-blur-sm",
+        subtleBadge: "bg-black/50 border border-cyan-500/25 text-slate-200 backdrop-blur-sm",
+        ratingBadge: "bg-cyan-950/55 border border-cyan-400/35 text-cyan-200 backdrop-blur-sm",
         dotInactive: "bg-cyan-300/30 hover:bg-cyan-300/65",
         focusRing: "focus:ring-cyan-400",
         activeTile:
-          "bg-gradient-to-b from-cyan-900/50 via-cyan-950/70 to-slate-950/90 border-2 border-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.45)] scale-[1.03]",
+          "bg-gradient-to-b from-cyan-900/40 via-cyan-950/55 to-slate-950/70 border-2 border-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.45)] scale-[1.03]",
         inactiveTile:
-          "bg-gradient-to-b from-cyan-950/35 to-black/80 hover:from-cyan-900/45 hover:to-black/85 border border-cyan-500/20 hover:border-cyan-400/45",
+          "bg-gradient-to-b from-cyan-950/20 to-black/50 hover:from-cyan-900/35 hover:to-black/65 border border-cyan-500/20 hover:border-cyan-400/45",
         scrollReminderArrow:
           "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.85)]",
       },
     }[appTheme] ?? {
-      bg: "bg-gradient-to-br from-slate-950/75 via-purple-950/35 to-black/85",
+      bg: "bg-gradient-to-br from-slate-950/55 via-purple-950/25 to-black/65",
       baseText: "text-slate-100",
       mutedText: "text-slate-300",
       subMutedText: "text-slate-400",
-      cardGradient: "from-purple-950/85 via-slate-950 to-indigo-950/85",
-      navShell: "border-violet-500/35 shadow-[0_12px_36px_rgba(139,92,246,0.22)]",
-      navOverlay: "bg-gradient-to-r from-black/75 via-purple-950/60 to-black/75",
+      cardGradient: "from-purple-950/65 via-slate-950/70 to-indigo-950/65",
+      navShell: "border-violet-500/30 shadow-[0_12px_36px_rgba(139,92,246,0.2)]",
+      navOverlay: "bg-gradient-to-r from-black/45 via-purple-950/35 to-black/45",
       heroContainer:
-        "bg-gradient-to-b from-slate-950 via-purple-950/25 to-black border border-violet-500/40 shadow-[0_20px_50px_rgba(139,92,246,0.22)]",
-      heroImageFade: "from-slate-950/90",
+        "bg-gradient-to-b from-slate-950/80 via-purple-950/20 to-black/85 border border-violet-500/35 shadow-[0_20px_50px_rgba(139,92,246,0.2)]",
+      heroImageFade: "from-slate-950/80",
       heroPanelBg:
-        "bg-gradient-to-b from-slate-950/95 via-purple-950/20 to-black/95 border-t border-violet-500/25",
+        "bg-gradient-to-b from-slate-950/75 via-purple-950/25 to-black/80 backdrop-blur-md border-t border-violet-500/25",
       surfacePanel:
-        "bg-slate-950/80 border border-violet-500/25 shadow-[0_10px_30px_rgba(139,92,246,0.14)]",
+        "bg-slate-950/55 border border-violet-500/25 shadow-[0_10px_30px_rgba(139,92,246,0.14)]",
       dividerBorder: "border-violet-500/20",
       btnActive:
-        "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
+        "bg-gradient-to-r from-violet-600/95 via-purple-600/95 to-indigo-600/95 text-white shadow-lg shadow-violet-600/30",
       btnSecondary:
-        "bg-purple-950/65 hover:bg-purple-900/80 border border-violet-500/35 text-purple-100 hover:text-white",
+        "bg-purple-950/40 hover:bg-purple-900/65 border border-violet-500/30 text-purple-100 hover:text-white backdrop-blur-md",
       pillInactive:
-        "bg-purple-950/45 hover:bg-purple-900/65 text-purple-100 border border-violet-500/20",
+        "bg-purple-950/30 hover:bg-purple-900/55 text-purple-100 border border-violet-500/20 backdrop-blur-sm",
       scrollArrowBtn:
-        "bg-black/80 hover:bg-purple-950 text-violet-300 hover:text-white border border-violet-500/35",
+        "bg-black/55 hover:bg-purple-950/80 text-violet-300 hover:text-white border border-violet-500/30 backdrop-blur-sm",
       accentText: "text-violet-300",
       accentBar: "bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.9)]",
-      accentBadge: "bg-purple-950/80 border border-violet-500/40 text-violet-200",
-      subtleBadge: "bg-black/70 border border-violet-500/25 text-slate-200",
-      ratingBadge: "bg-purple-950/75 border border-violet-400/40 text-violet-200",
+      accentBadge: "bg-purple-950/60 border border-violet-500/35 text-violet-200 backdrop-blur-sm",
+      subtleBadge: "bg-black/50 border border-violet-500/25 text-slate-200 backdrop-blur-sm",
+      ratingBadge: "bg-purple-950/55 border border-violet-400/35 text-violet-200 backdrop-blur-sm",
       dotInactive: "bg-violet-300/30 hover:bg-violet-300/65",
       focusRing: "focus:ring-violet-400",
       activeTile:
-        "bg-gradient-to-b from-violet-900/50 via-purple-950/70 to-slate-950/90 border-2 border-violet-400 shadow-[0_0_25px_rgba(139,92,246,0.45)] scale-[1.03]",
+        "bg-gradient-to-b from-violet-900/40 via-purple-950/55 to-slate-950/70 border-2 border-violet-400 shadow-[0_0_25px_rgba(139,92,246,0.45)] scale-[1.03]",
       inactiveTile:
-        "bg-gradient-to-b from-purple-950/35 to-black/80 hover:from-purple-900/45 hover:to-black/85 border border-violet-500/20 hover:border-violet-400/45",
+        "bg-gradient-to-b from-purple-950/20 to-black/50 hover:from-purple-900/35 hover:to-black/65 border border-violet-500/20 hover:border-violet-400/45",
       scrollReminderArrow:
         "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.85)]",
     };
@@ -1707,7 +1707,7 @@ function Home() {
       className={`min-h-screen ${themeStyles.bg} ${themeStyles.baseText} transition-colors duration-300 pb-12 relative rounded-3xl`}
     >
       <div className="relative z-10">
-        {/* Theme-Tinted Top Navigation Bar (Non-Overlapping Scroll Controls) */}
+        {/* Theme-Tinted Translucent Top Navigation Bar (Non-Overlapping Scroll Controls) */}
         <div className="sticky top-0 z-30 mb-4 mt-1 px-2 sm:px-4 py-2 flex justify-center">
           <div
             className={`relative max-w-6xl w-full flex items-center gap-1.5 rounded-2xl overflow-hidden border px-2 py-2 ${themeStyles.navShell}`}
@@ -1772,18 +1772,23 @@ function Home() {
         </div>
 
         <div className="mx-auto max-w-7xl px-2 sm:px-6 overflow-x-clip flex flex-col items-center">
-          {/* Centered Greeting & Quick Action Bar inside Punk-Neon Font Wrapper */}
+          {/* Centered Greeting & Quick Action Bar inside Borderless Translucent Font Wrapper */}
           {(greetingText || filteredItems.length > 0) && (
             <div
               data-tour="greeting-header"
-              style={{
-                backgroundImage: `url(${GREETING_WRAPPER_BG_URL})`,
-                backgroundSize: "114% 200%",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center center",
-              }}
-              className={`relative mb-4 w-full max-w-6xl min-h-[72px] sm:min-h-[84px] rounded-2xl border overflow-hidden px-4 sm:px-8 py-3 flex flex-col items-center justify-center text-center gap-2.5 ${themeStyles.surfacePanel}`}
+              className="relative mb-4 w-full max-w-6xl min-h-[84px] sm:min-h-[96px] rounded-2xl bg-transparent border-0 overflow-hidden px-4 sm:px-8 py-3.5 flex flex-col items-center justify-center text-center gap-2.5"
             >
+              {/* Translucent Artwork Backdrop */}
+              <div
+                className="absolute inset-0 pointer-events-none opacity-80"
+                style={{
+                  backgroundImage: `url(${GREETING_WRAPPER_BG_URL})`,
+                  backgroundSize: "100% 100%",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center center",
+                }}
+              />
+
               <div className="relative z-10 flex flex-wrap items-center justify-center gap-2 max-w-full min-w-0">
                 {greetingText && (
                   <div className="flex items-center justify-center gap-2 min-w-0 max-w-full">
@@ -1791,7 +1796,7 @@ function Home() {
                       mascot={profileMascot}
                       size="sm"
                       rounded="full"
-                      className={`border shrink-0 ${themeStyles.dividerBorder}`}
+                      className="border-0 bg-transparent shrink-0"
                       alt="Profile Mascot"
                     />
                     <p className="text-sm sm:text-base md:text-lg font-black tracking-wide text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
@@ -1801,30 +1806,31 @@ function Home() {
                 )}
                 {/* Semantic Kids Safe status indicator */}
                 {kidsLocked && (
-                  <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0">
+                  <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0 backdrop-blur-sm">
                     🧒 Kids Safe Mode
                   </span>
                 )}
               </div>
 
-              <div className="relative z-10 flex items-center justify-center flex-wrap gap-2.5 max-w-full">
+              <div className="relative z-10 flex items-center justify-center flex-wrap gap-3 max-w-full">
+                {/* Borderless Transparent Movie Night Image Button */}
                 <button
                   type="button"
                   data-tour="movie-night-matcher"
                   onClick={() => setShowMatcherModal(true)}
                   aria-label="Movie Night"
                   title="Mood picks & 5-card couch vote"
-                  className={`relative inline-flex items-center justify-center rounded-xl ${
-                    largeButtons ? "h-11 px-5" : "h-10 px-4"
-                  } overflow-hidden border shadow-lg transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-                    themeStyles.dividerBorder
-                  } ${themeStyles.focusRing}`}
+                  className={`relative inline-flex items-center justify-center rounded-full bg-transparent border-0 p-0 shadow-none ${
+                    largeButtons ? "h-12" : "h-11"
+                  } opacity-95 hover:opacity-100 transition hover:scale-105 active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                    themeStyles.focusRing
+                  }`}
                 >
                   <img
                     src={SURPRISE_ME_BTN_URL}
                     alt="Movie Night"
                     decoding="async"
-                    className="h-full w-auto max-w-[155px] object-contain"
+                    className="h-full w-auto max-w-[175px] object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.7)]"
                   />
                 </button>
 
@@ -2010,7 +2016,7 @@ function Home() {
             </div>
           ) : (
             <section
-              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-gradient-to-br ${themeStyles.cardGradient} border ${themeStyles.dividerBorder} shadow-2xl relative h-[280px] sm:h-[340px] flex flex-col items-center justify-center`}
+              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-gradient-to-br ${themeStyles.cardGradient} border ${themeStyles.dividerBorder} shadow-2xl relative h-[280px] sm:h-[340px] flex flex-col items-center justify-center backdrop-blur-md`}
             >
               <div className={`text-center px-4 ${themeStyles.mutedText}`}>
                 {loading
@@ -2056,7 +2062,7 @@ function Home() {
                     return (
                       <div
                         key={entry.showId}
-                        className={`group shrink-0 w-40 sm:w-48 flex flex-col overflow-hidden ${posterAppearance.radiusClass} ${themeStyles.surfacePanel} transition-all duration-300 hover:-translate-y-1`}
+                        className={`group shrink-0 w-40 sm:w-48 flex flex-col overflow-hidden backdrop-blur-md ${posterAppearance.radiusClass} ${themeStyles.surfacePanel} transition-all duration-300 hover:-translate-y-1`}
                       >
                         <Link
                           to="/details"
@@ -2132,7 +2138,7 @@ function Home() {
               data-tour="catalog-filters"
               className="mb-6 space-y-4 flex flex-col items-center justify-center text-center w-full max-w-6xl"
             >
-              {/* Disney+ Style Brand Hub Tiles (Netflix, Prime, Disney+, All) */}
+              {/* Disney+ Style Translucent Brand Hub Tiles (Netflix, Prime, Disney+, All) */}
               <div data-tour="provider-filter" className="w-full px-1">
                 <div className="grid grid-cols-4 gap-2.5 sm:gap-4 w-full">
                   {providerCategories.map((prov) => {
@@ -2143,7 +2149,7 @@ function Home() {
                         key={prov.name}
                         type="button"
                         onClick={() => handleProviderSelect(prov.name)}
-                        className={`relative group h-14 sm:h-20 rounded-2xl p-2 sm:p-3 transition-all duration-300 cursor-pointer flex items-center justify-center overflow-hidden backdrop-blur-xl focus:outline-none focus:ring-2 ${
+                        className={`relative group h-14 sm:h-20 rounded-2xl p-2 sm:p-3 transition-all duration-300 cursor-pointer flex items-center justify-center overflow-hidden backdrop-blur-md focus:outline-none focus:ring-2 ${
                           themeStyles.focusRing
                         } ${
                           isActive
@@ -2173,7 +2179,7 @@ function Home() {
               {/* Sleek Theme-Matched Glass Genre Ribbon (Non-Overlapping Scroll Controls) */}
               <div data-tour="genre-filter" className="flex justify-center w-full px-1">
                 <div
-                  className={`relative w-full flex items-center gap-1.5 rounded-2xl backdrop-blur-xl overflow-hidden px-2 py-2 ${themeStyles.surfacePanel}`}
+                  className={`relative w-full flex items-center gap-1.5 rounded-2xl backdrop-blur-md overflow-hidden px-2 py-2 ${themeStyles.surfacePanel}`}
                 >
                   <button
                     type="button"
@@ -2232,7 +2238,7 @@ function Home() {
           {activeTab === "My List" && (
             <section className="mb-6 flex justify-center w-full max-w-4xl px-1">
               <div
-                className={`relative w-full flex items-center gap-1.5 rounded-2xl backdrop-blur-xl overflow-hidden px-2 py-2 ${themeStyles.surfacePanel}`}
+                className={`relative w-full flex items-center gap-1.5 rounded-2xl backdrop-blur-md overflow-hidden px-2 py-2 ${themeStyles.surfacePanel}`}
               >
                 <button
                   type="button"
@@ -2379,7 +2385,7 @@ function Home() {
                   setCustomShelves(getCustomShelves());
                   setMyListSubTab("all");
                 }}
-                className="rounded-xl bg-red-950/70 hover:bg-red-700 border border-red-500/40 px-3 py-1.5 text-[11px] font-extrabold text-red-200 hover:text-white transition cursor-pointer"
+                className="rounded-xl bg-red-950/60 hover:bg-red-700 border border-red-500/40 px-3 py-1.5 text-[11px] font-extrabold text-red-200 hover:text-white transition cursor-pointer backdrop-blur-sm"
               >
                 🗑️ Delete This Custom Shelf
               </button>
@@ -2425,7 +2431,7 @@ function Home() {
               </div>
             ) : (
               <div
-                className={`rounded-2xl backdrop-blur-xl p-8 text-center mx-1 ${themeStyles.surfacePanel}`}
+                className={`rounded-2xl backdrop-blur-md p-8 text-center mx-1 ${themeStyles.surfacePanel}`}
               >
                 <p className={`text-sm ${themeStyles.mutedText}`}>
                   {activeTab === "My List"
@@ -2506,7 +2512,7 @@ function Home() {
           {activeTab !== "My List" && totalPages > 1 && (
             <div
               data-tour="load-more"
-              className={`mb-4 flex items-center justify-center gap-4 rounded-2xl backdrop-blur-xl p-3 mx-2 w-full max-w-sm shadow-xl ${themeStyles.surfacePanel}`}
+              className={`mb-4 flex items-center justify-center gap-4 rounded-2xl backdrop-blur-md p-3 mx-2 w-full max-w-sm shadow-xl ${themeStyles.surfacePanel}`}
             >
               <button
                 type="button"
