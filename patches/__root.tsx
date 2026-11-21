@@ -427,7 +427,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         className={`relative flex-1 min-w-0 flex items-center h-10 sm:h-11 overflow-hidden shadow-lg transition-all ${tokens.headerBorder} ${tokens.glowClass}`}
         style={{
           backgroundImage: `url(${SEARCHWRAPPER})`,
-          backgroundSize: "116% 175%",
+          backgroundSize: "113% 168%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
