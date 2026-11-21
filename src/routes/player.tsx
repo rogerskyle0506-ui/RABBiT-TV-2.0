@@ -46,6 +46,160 @@ import { initAdBlockerGlobalInterceptors } from "@/lib/adblocker";
 
 const FETCH_TIMEOUT_MS = 8000;
 
+const BUTTON_WRAPPER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
+
+const BACK_TO_HOME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
+
+const TV_DETAILS_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/TvDetails.png";
+
+/**
+ * Viewport-locked layout rules for Player top utility wrapper (single
+ * buttonwrapper.png holding BOTH Back to Home + TV/Movie Details side-by-side)
+ * and recommended catalog header across portrait, landscape, tablet, desktop & TV.
+ */
+const PLAYER_VIEWPORT_STYLES = `
+  .rabtv-plr-top-bar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(8px, 2vw, 14px);
+    box-sizing: border-box;
+  }
+
+  /* Single wide buttonwrapper.png bay holding BOTH Back to Home + TV/Movie Details */
+  .rabtv-plr-dual-nav-wrap {
+    position: relative;
+    width: min(100%, clamp(304px, 94vw, 490px));
+    min-height: clamp(54px, 14vw, 76px);
+    padding: clamp(7px, 1.9vw, 11px) clamp(16px, 4.4vw, 34px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(8px, 2vw, 16px);
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    flex: 0 1 auto;
+  }
+
+  .rabtv-plr-nav-art-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 48%;
+    height: clamp(36px, 9.6vw, 50px);
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-plr-nav-art-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
+  }
+
+  .rabtv-plr-movie-details-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 48%;
+    height: clamp(34px, 9vw, 46px);
+    padding: 0 clamp(8px, 2vw, 14px);
+    border-radius: 9999px;
+    font-size: clamp(11px, 2.8vw, 13px);
+    white-space: nowrap;
+    box-sizing: border-box;
+  }
+
+  .rabtv-plr-section-banner {
+    position: relative;
+    width: 100%;
+    min-height: clamp(54px, 12vw, 72px);
+    padding: clamp(10px, 2.2vw, 14px) clamp(20px, 5vw, 40px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(6px, 1.5vw, 12px);
+    box-sizing: border-box;
+    border-radius: 9999px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    overflow: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-plr-dual-nav-wrap {
+      width: min(100%, clamp(380px, 44vw, 510px));
+      min-height: clamp(60px, 6.2vw, 78px);
+      padding: clamp(8px, 0.9vw, 12px) clamp(22px, 2.6vw, 36px);
+      gap: clamp(10px, 1.3vw, 18px);
+    }
+
+    .rabtv-plr-nav-art-btn {
+      height: clamp(40px, 4.2vw, 52px);
+    }
+
+    .rabtv-plr-movie-details-pill {
+      height: clamp(38px, 4vw, 48px);
+      font-size: clamp(11px, 1.2vw, 14px);
+    }
+
+    .rabtv-plr-section-banner {
+      min-height: clamp(58px, 5.8vw, 76px);
+      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.8vw, 48px);
+    }
+  }
+
+  @media (min-width: 640px) and (max-height: 480px) {
+    .rabtv-plr-dual-nav-wrap {
+      width: min(100%, 360px);
+      min-height: 48px;
+      padding: 6px 18px;
+      gap: 8px;
+    }
+
+    .rabtv-plr-nav-art-btn {
+      height: 34px;
+    }
+
+    .rabtv-plr-movie-details-pill {
+      height: 32px;
+      font-size: 11px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .rabtv-plr-dual-nav-wrap {
+      width: 500px;
+      min-height: 76px;
+    }
+
+    .rabtv-plr-nav-art-btn {
+      height: 50px;
+    }
+  }
+`;
+
 export const Route = createFileRoute("/player")({
   component: PlayerPage,
   validateSearch: (search: Record<string, unknown>) => ({
@@ -165,12 +319,12 @@ function getPlayerThemeTokens(theme: AppTheme): PlayerThemeTokens {
   switch (theme) {
     case "red":
       return {
-        pageBg: "bg-gradient-to-br from-zinc-950/88 via-red-950/42 to-black/95",
+        pageBg: "bg-gradient-to-br from-zinc-950/65 via-red-950/30 to-black/75",
         baseText: "text-zinc-100",
         mutedText: "text-zinc-300",
         subMutedText: "text-zinc-400",
         surfacePanel:
-          "bg-zinc-950/90 border-red-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+          "bg-zinc-950/68 border-red-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
         dropdownMenu:
           "bg-zinc-950/98 border-red-500/35 shadow-2xl",
         selectBtn:
@@ -209,12 +363,12 @@ function getPlayerThemeTokens(theme: AppTheme): PlayerThemeTokens {
     case "midnight":
       return {
         pageBg:
-          "bg-gradient-to-br from-slate-950/88 via-blue-950/42 to-black/95",
+          "bg-gradient-to-br from-slate-950/65 via-blue-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
         surfacePanel:
-          "bg-slate-950/90 border-blue-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+          "bg-slate-950/68 border-blue-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
         dropdownMenu:
           "bg-slate-950/98 border-blue-500/35 shadow-2xl",
         selectBtn:
@@ -253,12 +407,12 @@ function getPlayerThemeTokens(theme: AppTheme): PlayerThemeTokens {
     case "emerald":
       return {
         pageBg:
-          "bg-gradient-to-br from-neutral-950/88 via-emerald-950/42 to-black/95",
+          "bg-gradient-to-br from-neutral-950/65 via-emerald-950/30 to-black/75",
         baseText: "text-neutral-100",
         mutedText: "text-neutral-300",
         subMutedText: "text-neutral-400",
         surfacePanel:
-          "bg-neutral-950/90 border-emerald-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+          "bg-neutral-950/68 border-emerald-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
         dropdownMenu:
           "bg-neutral-950/98 border-emerald-500/35 shadow-2xl",
         selectBtn:
@@ -298,12 +452,12 @@ function getPlayerThemeTokens(theme: AppTheme): PlayerThemeTokens {
     case "amber":
       return {
         pageBg:
-          "bg-gradient-to-br from-stone-950/88 via-yellow-950/42 to-black/95",
+          "bg-gradient-to-br from-stone-950/65 via-yellow-950/30 to-black/75",
         baseText: "text-stone-100",
         mutedText: "text-stone-300",
         subMutedText: "text-stone-400",
         surfacePanel:
-          "bg-stone-950/90 border-amber-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+          "bg-stone-950/68 border-amber-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
         dropdownMenu:
           "bg-stone-950/98 border-amber-500/35 shadow-2xl",
         selectBtn:
@@ -343,12 +497,12 @@ function getPlayerThemeTokens(theme: AppTheme): PlayerThemeTokens {
     case "cyan":
       return {
         pageBg:
-          "bg-gradient-to-br from-slate-950/88 via-cyan-950/42 to-black/95",
+          "bg-gradient-to-br from-slate-950/65 via-cyan-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
         surfacePanel:
-          "bg-slate-950/90 border-cyan-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+          "bg-slate-950/68 border-cyan-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
         dropdownMenu:
           "bg-slate-950/98 border-cyan-500/35 shadow-2xl",
         selectBtn:
@@ -389,12 +543,12 @@ function getPlayerThemeTokens(theme: AppTheme): PlayerThemeTokens {
     default:
       return {
         pageBg:
-          "bg-gradient-to-br from-slate-950/88 via-purple-950/42 to-black/95",
+          "bg-gradient-to-br from-slate-950/65 via-purple-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
         surfacePanel:
-          "bg-slate-950/90 border-violet-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
+          "bg-slate-950/68 border-violet-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.8)]",
         dropdownMenu:
           "bg-slate-950/98 border-violet-500/35 shadow-2xl",
         selectBtn:
@@ -1172,6 +1326,7 @@ export function PlayerPage() {
     <div
       className={`player-view-wrapper min-h-screen w-full max-w-full ${themeTokens.pageBg} ${themeTokens.baseText} py-3 sm:py-6 px-2.5 sm:px-6 md:px-10 overflow-x-clip scroll-smooth transition-colors duration-300 pb-16 relative rounded-3xl`}
     >
+      <style>{PLAYER_VIEWPORT_STYLES}</style>
       <AppWallpaper backdropUrl={backdropUrl} />
       {!isLowRam && !reducedMotion && !glowOff && (
         <div
@@ -1199,71 +1354,79 @@ export function PlayerPage() {
       )}
 
       <div className="relative z-10 max-w-6xl mx-auto flex flex-col gap-4 sm:gap-5 min-w-0">
-        {/* Top Navigation Row: Theme-Matched Capsules + Live Clock & Sleep Indicator */}
-        <div className="w-full flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+        {/* Top Navigation Row: Single Button Wrapper Holding Back to Home + TV/Movie Details */}
+        <div className="rabtv-plr-top-bar">
+          <div
+            className="rabtv-plr-dual-nav-wrap"
+            style={{
+              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+            }}
+          >
             <Link
               to="/"
               data-tour="back-to-home"
-              className={`group inline-flex items-center gap-2 rounded-full backdrop-blur-xl pl-3 pr-2 ${
-                largeButtons ? "py-2.5" : "py-1.5"
-              } border shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 ${
-                themeTokens.backCapsule
-              } ${themeTokens.ring}`}
+              aria-label="Back to Home"
+              title="Back to Home"
+              className={`rabtv-plr-nav-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
             >
-              <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
-                ‹
-              </span>
-              <span className="text-xs sm:text-sm font-semibold tracking-wide">
-                Back to Home
-              </span>
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${themeTokens.backBadge}`}
-              >
-                ⟲
-              </span>
+              <img
+                src={BACK_TO_HOME_BTN_URL}
+                alt="Back to Home"
+                decoding="async"
+              />
             </Link>
 
-            <button
-              type="button"
-              onClick={handleReturnToDetails}
-              className={`group inline-flex items-center gap-2 rounded-full backdrop-blur-xl pl-3 pr-2 ${
-                largeButtons ? "py-2.5" : "py-1.5"
-              } border shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${
-                themeTokens.backCapsule
-              } ${themeTokens.ring}`}
-            >
-              <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
-                ‹
-              </span>
-              <span className="text-xs sm:text-sm font-semibold tracking-wide">
-                {inferredMediaType === "tv" ? "TV Details" : "Movie Details"}
-              </span>
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-bold ${themeTokens.backBadge}`}
+            {inferredMediaType === "tv" ? (
+              <button
+                type="button"
+                onClick={handleReturnToDetails}
+                aria-label="Back to TV Details"
+                title="Back to TV Details"
+                className={`rabtv-plr-nav-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
               >
-                ⓘ
-              </span>
-            </button>
+                <img
+                  src={TV_DETAILS_BTN_URL}
+                  alt="TV Details"
+                  decoding="async"
+                />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleReturnToDetails}
+                aria-label="Back to Movie Details"
+                title="Back to Movie Details"
+                className={`rabtv-plr-movie-details-pill border backdrop-blur-md font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.backCapsule} ${themeTokens.ring}`}
+              >
+                <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                  Movie Details
+                </span>
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${themeTokens.backBadge}`}
+                >
+                  ⓘ
+                </span>
+              </button>
+            )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {sleepTimerMin > 0 && (
               <span
-                className={`rounded-full border px-3 py-1 text-[11px] font-extrabold ${themeTokens.badge}`}
+                className={`rounded-full border px-3 py-1.5 text-[11px] font-extrabold backdrop-blur-md ${themeTokens.badge}`}
               >
                 🌙 Sleep: {sleepTimerMin}m
               </span>
             )}
             <span
-              className={`rounded-full border px-3 py-1 text-[11px] font-extrabold ${themeTokens.subtleBadge}`}
+              className={`rounded-full border px-3 py-1.5 text-[11px] font-extrabold backdrop-blur-md ${themeTokens.subtleBadge}`}
             >
               🕒 {liveClock}
             </span>
             <button
               type="button"
               onClick={() => setCinemaDimMode((d) => !d)}
-              className={`rounded-full border ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
+              className={`rounded-full border backdrop-blur-md ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
               title="Dim surroundings around the player (L)"
             >
               💡 Lights Out
@@ -1775,17 +1938,22 @@ export function PlayerPage() {
           <div
             className={`w-full mt-2 pt-6 border-t space-y-4 ${themeTokens.dividerBorder}`}
           >
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-left w-full">
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className="rabtv-plr-section-banner mb-3"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                 <span
-                  className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                  className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
                 />
-                <h2 className="text-base sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
-                  <span>✨ Similar Recommended Titles</span>
+                <h2 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                  ✨ Similar Recommended Titles
                 </h2>
               </div>
               <span
-                className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeTokens.badge}`}
+                className={`relative z-10 text-[11px] sm:text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeTokens.badge}`}
               >
                 {mappedRecommendations.length} matches
               </span>
