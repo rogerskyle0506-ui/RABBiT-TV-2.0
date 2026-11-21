@@ -31,6 +31,214 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 const RECENT_SEARCHES_KEY = "rabtv_recent_searches_v1";
 const FETCH_TIMEOUT_MS = 8500;
 
+const BUTTON_WRAPPER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
+
+const BACK_TO_HOME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
+
+const REAL_SURPRISE_ME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/real_surprisemmebutton.png";
+
+const SEARCH_BUTTON_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/searchbutton.png";
+
+/**
+ * Viewport-locked layout rules for Search top utility wrapper (single
+ * buttonwrapper.png holding Back to Home + Surprise Me), custom Search submit
+ * artwork button, and buttonwrapper-backed section headers across portrait
+ * phones, landscape phones, tablets, desktops, TVs, and projectors.
+ */
+const SEARCH_VIEWPORT_STYLES = `
+  .rabtv-srch-top-bar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(8px, 2vw, 14px);
+    box-sizing: border-box;
+  }
+
+  .rabtv-srch-back-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: clamp(50px, 12.6vw, 68px);
+    width: clamp(188px, 48vw, 260px);
+    max-width: 100%;
+    padding: clamp(7px, 1.8vw, 10px) clamp(16px, 4.2vw, 28px);
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    flex: 0 0 auto;
+  }
+
+  /* Single wide buttonwrapper.png holding BOTH Back to Home + Surprise Me */
+  .rabtv-srch-dual-wrap {
+    position: relative;
+    width: min(100%, clamp(304px, 94vw, 500px));
+    min-height: clamp(54px, 14vw, 76px);
+    padding: clamp(7px, 1.9vw, 11px) clamp(16px, 4.4vw, 34px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(8px, 2vw, 16px);
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    flex: 0 1 auto;
+  }
+
+  .rabtv-srch-art-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 48%;
+    height: clamp(36px, 9.6vw, 50px);
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-srch-art-btn-single {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-srch-art-btn img,
+  .rabtv-srch-art-btn-single img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
+  }
+
+  .rabtv-srch-submit-art {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: clamp(44px, 11vw, 52px);
+    width: clamp(136px, 38vw, 176px);
+    max-width: 100%;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-srch-submit-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.85));
+  }
+
+  .rabtv-srch-section-banner {
+    position: relative;
+    width: 100%;
+    min-height: clamp(54px, 12vw, 72px);
+    padding: clamp(10px, 2.2vw, 14px) clamp(20px, 5vw, 40px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(6px, 1.5vw, 12px);
+    box-sizing: border-box;
+    border-radius: 9999px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    overflow: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-srch-back-wrap {
+      height: clamp(54px, 5.6vw, 72px);
+      width: clamp(210px, 22vw, 284px);
+      padding: clamp(8px, 0.9vw, 11px) clamp(20px, 2.4vw, 32px);
+    }
+
+    .rabtv-srch-dual-wrap {
+      width: min(100%, clamp(380px, 46vw, 520px));
+      min-height: clamp(60px, 6.2vw, 78px);
+      padding: clamp(8px, 0.9vw, 12px) clamp(22px, 2.6vw, 36px);
+      gap: clamp(10px, 1.3vw, 18px);
+    }
+
+    .rabtv-srch-art-btn {
+      height: clamp(40px, 4.2vw, 52px);
+    }
+
+    .rabtv-srch-submit-art {
+      height: clamp(46px, 4.6vw, 54px);
+      width: clamp(142px, 14vw, 178px);
+    }
+
+    .rabtv-srch-section-banner {
+      min-height: clamp(58px, 5.8vw, 76px);
+      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.8vw, 48px);
+    }
+  }
+
+  @media (min-width: 640px) and (max-height: 480px) {
+    .rabtv-srch-back-wrap {
+      height: 46px;
+      width: 186px;
+      padding: 6px 16px;
+    }
+
+    .rabtv-srch-dual-wrap {
+      width: min(100%, 360px);
+      min-height: 48px;
+      padding: 6px 18px;
+      gap: 8px;
+    }
+
+    .rabtv-srch-art-btn {
+      height: 34px;
+    }
+
+    .rabtv-srch-section-banner {
+      min-height: 50px;
+      padding: 8px 24px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .rabtv-srch-dual-wrap {
+      width: 510px;
+      min-height: 76px;
+    }
+
+    .rabtv-srch-art-btn {
+      height: 50px;
+    }
+  }
+`;
+
 interface PersonMatch {
   id: number;
   name: string;
@@ -257,7 +465,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
   switch (theme) {
     case "red":
       return {
-        bg: "bg-gradient-to-br from-zinc-950/85 via-red-950/40 to-black/95",
+        bg: "bg-gradient-to-br from-zinc-950/65 via-red-950/30 to-black/75",
         baseText: "text-zinc-100",
         mutedText: "text-zinc-300",
         subMutedText: "text-zinc-400",
@@ -265,7 +473,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBar: "bg-red-500 shadow-[0_0_14px_rgba(239,68,68,0.95)]",
         accentBadge: "bg-red-950/80 border border-red-500/40 text-red-200",
         surfacePanel:
-          "bg-zinc-950/88 border-red-500/35 shadow-[0_16px_50px_rgba(239,68,68,0.18)]",
+          "bg-zinc-950/68 border-red-500/35 shadow-[0_16px_50px_rgba(239,68,68,0.18)]",
         controlBox: "bg-black/75 border-red-500/25",
         dividerBorder: "border-red-500/20",
         inputClass:
@@ -293,7 +501,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
       };
     case "midnight":
       return {
-        bg: "bg-gradient-to-br from-slate-950/85 via-blue-950/40 to-black/95",
+        bg: "bg-gradient-to-br from-slate-950/65 via-blue-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
@@ -301,7 +509,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBar: "bg-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.95)]",
         accentBadge: "bg-blue-950/80 border border-blue-500/40 text-sky-200",
         surfacePanel:
-          "bg-slate-950/88 border-blue-500/35 shadow-[0_16px_50px_rgba(59,130,246,0.18)]",
+          "bg-slate-950/68 border-blue-500/35 shadow-[0_16px_50px_rgba(59,130,246,0.18)]",
         controlBox: "bg-black/75 border-blue-500/25",
         dividerBorder: "border-blue-500/20",
         inputClass:
@@ -329,7 +537,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
       };
     case "emerald":
       return {
-        bg: "bg-gradient-to-br from-neutral-950/85 via-emerald-950/40 to-black/95",
+        bg: "bg-gradient-to-br from-neutral-950/65 via-emerald-950/30 to-black/75",
         baseText: "text-neutral-100",
         mutedText: "text-neutral-300",
         subMutedText: "text-neutral-400",
@@ -338,7 +546,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBadge:
           "bg-emerald-950/80 border border-emerald-500/40 text-emerald-200",
         surfacePanel:
-          "bg-neutral-950/88 border-emerald-500/35 shadow-[0_16px_50px_rgba(16,185,129,0.18)]",
+          "bg-neutral-950/68 border-emerald-500/35 shadow-[0_16px_50px_rgba(16,185,129,0.18)]",
         controlBox: "bg-black/75 border-emerald-500/25",
         dividerBorder: "border-emerald-500/20",
         inputClass:
@@ -366,7 +574,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
       };
     case "amber":
       return {
-        bg: "bg-gradient-to-br from-stone-950/85 via-yellow-950/40 to-black/95",
+        bg: "bg-gradient-to-br from-stone-950/65 via-yellow-950/30 to-black/75",
         baseText: "text-stone-100",
         mutedText: "text-stone-300",
         subMutedText: "text-stone-400",
@@ -374,7 +582,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBar: "bg-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.95)]",
         accentBadge: "bg-amber-950/80 border border-amber-500/40 text-amber-200",
         surfacePanel:
-          "bg-stone-950/88 border-amber-500/35 shadow-[0_16px_50px_rgba(245,158,11,0.18)]",
+          "bg-stone-950/68 border-amber-500/35 shadow-[0_16px_50px_rgba(245,158,11,0.18)]",
         controlBox: "bg-black/75 border-amber-500/25",
         dividerBorder: "border-amber-500/20",
         inputClass:
@@ -402,7 +610,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
       };
     case "cyan":
       return {
-        bg: "bg-gradient-to-br from-slate-950/85 via-cyan-950/40 to-black/95",
+        bg: "bg-gradient-to-br from-slate-950/65 via-cyan-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
@@ -410,7 +618,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBar: "bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.95)]",
         accentBadge: "bg-cyan-950/80 border border-cyan-500/40 text-cyan-200",
         surfacePanel:
-          "bg-slate-950/88 border-cyan-500/35 shadow-[0_16px_50px_rgba(6,182,212,0.18)]",
+          "bg-slate-950/68 border-cyan-500/35 shadow-[0_16px_50px_rgba(6,182,212,0.18)]",
         controlBox: "bg-black/75 border-cyan-500/25",
         dividerBorder: "border-cyan-500/20",
         inputClass:
@@ -439,7 +647,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
     case "violet":
     default:
       return {
-        bg: "bg-gradient-to-br from-slate-950/85 via-purple-950/40 to-black/95",
+        bg: "bg-gradient-to-br from-slate-950/65 via-purple-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
@@ -447,7 +655,7 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBar: "bg-violet-500 shadow-[0_0_14px_rgba(139,92,246,0.95)]",
         accentBadge: "bg-purple-950/80 border border-violet-500/40 text-violet-200",
         surfacePanel:
-          "bg-slate-950/88 border-violet-500/35 shadow-[0_16px_50px_rgba(139,92,246,0.18)]",
+          "bg-slate-950/68 border-violet-500/35 shadow-[0_16px_50px_rgba(139,92,246,0.18)]",
         controlBox: "bg-black/75 border-violet-500/25",
         dividerBorder: "border-violet-500/20",
         inputClass:
@@ -565,13 +773,17 @@ const SearchInputForm = memo(function SearchInputForm({
       </div>
       <button
         type="submit"
-        className={`w-full sm:w-auto px-7 ${
-          largeButtons ? "py-4 text-sm" : "py-3.5 text-xs"
-        } rounded-2xl font-black uppercase tracking-wider shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-          tokens.btn
+        aria-label="Search and Filter"
+        title="Search & Filter"
+        className={`rabtv-srch-submit-art self-center rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${
+          largeButtons ? "scale-105" : ""
         } ${tokens.focusRing}`}
       >
-        Search & Filter
+        <img
+          src={SEARCH_BUTTON_URL}
+          alt="Search"
+          decoding="async"
+        />
       </button>
     </form>
   );
@@ -1274,6 +1486,7 @@ function SearchPage() {
       data-tour="search-page"
       className={`min-h-screen ${themeTokens.bg} ${themeTokens.baseText} px-2.5 sm:px-6 py-4 sm:py-5 pb-16 flex flex-col items-center relative rounded-3xl overflow-x-clip`}
     >
+      <style>{SEARCH_VIEWPORT_STYLES}</style>
       <AppWallpaper />
       {!isLowRam && !reducedMotion && !glowOff && (
         <div
@@ -1282,59 +1495,73 @@ function SearchPage() {
       )}
 
       <div className="mx-auto max-w-7xl w-full space-y-5 sm:space-y-6 relative z-10 min-w-0">
-        {/* Top Capsule Row: Back to Home + Kids Mode Badge + Surprise Me + Reset */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              to="/"
-              className={`group inline-flex items-center gap-2.5 rounded-full backdrop-blur-xl pl-3.5 pr-2 ${
-                largeButtons ? "py-2.5" : "py-1.5"
-              } border shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 ${
-                themeTokens.backCapsule
-              } ${themeTokens.focusRing}`}
+        {/* Top Utility Row: Single Button Wrapper Holding Back to Home + Real Surprise Me */}
+        <div className="rabtv-srch-top-bar">
+          <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
+            <div
+              className={
+                filteredResults.length > 0
+                  ? "rabtv-srch-dual-wrap"
+                  : "rabtv-srch-back-wrap"
+              }
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
             >
-              <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
-                ‹
-              </span>
-              <span className="text-xs sm:text-sm font-semibold tracking-wide">
-                Back to Home
-              </span>
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${themeTokens.backBadge}`}
+              <Link
+                to="/"
+                data-tour="back-to-home"
+                aria-label="Back to Home"
+                title="Back to Home"
+                className={`${
+                  filteredResults.length > 0
+                    ? "rabtv-srch-art-btn"
+                    : "rabtv-srch-art-btn-single"
+                } rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${
+                  themeTokens.focusRing
+                }`}
               >
-                ⟲
-              </span>
-            </Link>
+                <img
+                  src={BACK_TO_HOME_BTN_URL}
+                  alt="Back to Home"
+                  decoding="async"
+                />
+              </Link>
+
+              {filteredResults.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSurpriseMe}
+                  aria-label="Surprise Me"
+                  title="Pick a random title from these results"
+                  className={`rabtv-srch-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
+                >
+                  <img
+                    src={REAL_SURPRISE_ME_BTN_URL}
+                    alt="Surprise Me"
+                    decoding="async"
+                  />
+                </button>
+              )}
+            </div>
 
             {/* Semantic Kids Safe indicator */}
             {kidsLocked && (
-              <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">
+              <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0 backdrop-blur-sm">
                 🧒 Kids Safe Mode
               </span>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {filteredResults.length > 0 && (
-              <button
-                type="button"
-                onClick={handleSurpriseMe}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-extrabold shadow transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
-                title="Pick a random title from these results"
-              >
-                <span>🎲 Surprise Me</span>
-              </button>
-            )}
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={resetAllFilters}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold shadow transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
-              >
-                <span>✕ Reset All Filters</span>
-              </button>
-            )}
-          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetAllFilters}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold shadow backdrop-blur-md transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+            >
+              <span>✕ Reset All Filters</span>
+            </button>
+          )}
         </div>
 
         {/* Theme-Matched Crystal Glass Search & Discovery Control Deck */}
@@ -1631,18 +1858,23 @@ function SearchPage() {
         {/* MATCHING LIVE TV CHANNELS CROSS-SEARCH SHELF */}
         {matchingLiveChannels.length > 0 && (
           <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className="rabtv-srch-section-banner"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                 <span
-                  className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                  className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
                 />
-                <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
+                <h3 className="text-sm sm:text-lg font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                   📡 Matching Live TV Channels
                 </h3>
               </div>
               <Link
                 to="/live-tv"
-                className={`text-xs font-bold hover:underline shrink-0 ${themeTokens.accentText}`}
+                className={`relative z-10 text-xs font-extrabold hover:underline shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
               >
                 Open Live TV Guide →
               </Link>
@@ -1708,13 +1940,25 @@ function SearchPage() {
         {/* MATCHING ACTORS / CREATORS STRIP */}
         {matchedPeople.length > 0 && !selectedPerson && (
           <section className="space-y-3">
-            <div className="flex items-center gap-2.5 px-1">
+            <div
+              className="rabtv-srch-section-banner"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+                <span
+                  className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                />
+                <h3 className="text-sm sm:text-lg font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                  🎭 Matching Actors & Creators
+                </h3>
+              </div>
               <span
-                className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
-              />
-              <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
-                🎭 Matching Actors & Creators (Tap for Filmography)
-              </h3>
+                className={`relative z-10 text-[11px] font-bold shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
+              >
+                Tap for Filmography
+              </span>
             </div>
 
             <div className="flex gap-4 overflow-x-auto pb-2 px-1 scrollbar-none">
@@ -1759,12 +2003,17 @@ function SearchPage() {
         )}
 
         {/* RESULTS HEADER */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-1 w-full">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div
+          className="rabtv-srch-section-banner"
+          style={{
+            backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+          }}
+        >
+          <div className="flex items-center gap-2.5 min-w-0 relative z-10">
             <span
-              className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+              className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
             />
-            <h2 className="text-lg sm:text-xl font-black tracking-tight text-white truncate">
+            <h2 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
               {selectedPerson
                 ? `${selectedPerson.name} — Credits`
                 : activeUrlQuery
@@ -1775,7 +2024,7 @@ function SearchPage() {
             </h2>
           </div>
           <span
-            className={`text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeTokens.accentBadge}`}
+            className={`relative z-10 text-[11px] sm:text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeTokens.accentBadge}`}
           >
             {filteredResults.length} titles{" "}
             {totalPages > 1 ? `• Page ${page}/${totalPages}` : ""}
