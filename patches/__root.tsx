@@ -92,7 +92,7 @@ const STARTUP_ROUTED_KEY = "rabtv_startup_tab_applied";
 const HEADER_ICON_URL = "https://avatars.githubusercontent.com/u/330663733?v=4";
 
 const RABBITHEADERWALL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/HeaderPirate.jpg";
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rootheaderrabbittv.jpg";
 
 const RABBIT_LOGO_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/homelogo.png";
@@ -427,7 +427,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         className={`relative flex-1 min-w-0 flex items-center h-10 sm:h-11 overflow-hidden shadow-lg transition-all ${tokens.headerBorder} ${tokens.glowClass}`}
         style={{
           backgroundImage: `url(${SEARCHWRAPPER})`,
-          backgroundSize: "120% 165%",
+          backgroundSize: "116% 175%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
@@ -468,10 +468,10 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         type="submit"
         aria-label="Search"
         title="Open Search"
-        className={`relative h-10 sm:h-11 px-3.5 sm:px-4 text-xs font-black uppercase tracking-wider shrink-0 overflow-hidden transition active:scale-95 cursor-pointer ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
+        className={`relative h-10 sm:h-11 px-3.5 sm:px-4 text-xs font-black uppercase tracking-wider shrink-0 overflow-hidden transition active:scale-95 cursor-pointer ${tokens.searchSubmitBtn}`}
         style={{
           backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-          backgroundSize: "120% 180%",
+          backgroundSize: "120% 188%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
