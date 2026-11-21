@@ -13,6 +13,7 @@ const GITHUB_REPO =
   ((import.meta as any).env?.VITE_GH_REPO as string) ||
   "rogerskyle0506-ui/RABBiT-TV-2.0";
 const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_REPO}`;
+const DEFAULT_RELEASES_PAGE_URL = `https://github.com/${GITHUB_REPO}/releases`;
 const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
 const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
 const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
@@ -53,6 +54,8 @@ export interface UpdateCheckResult {
   currentVersion: string;
   latestVersion: string;
   downloadUrl: string;
+  releasePageUrl?: string;
+  assetName?: string;
   fileSizeBytes?: number;
   publishedAt?: string;
   releaseNotes?: string;
@@ -64,9 +67,43 @@ export interface UpdateCheckResult {
 interface CandidateBuild {
   version: string;
   downloadUrl: string;
+  releasePageUrl: string;
+  assetName: string;
+  channel: UpdateChannel;
   fileSizeBytes?: number;
   publishedAt?: string;
   releaseNotes?: string;
+}
+
+/**
+ * Determines the build channel strictly from the APK filename:
+ * - Ends in ".apk" AND contains "nightly" -> "nightly"
+ * - Ends in ".apk" AND missing "nightly"  -> "stable"
+ * - Anything else                         -> null
+ */
+export function getApkChannelFromFilename(
+  fileName: string
+): UpdateChannel | null {
+  const lowerName = String(fileName || "").trim().toLowerCase();
+  if (!lowerName.endsWith(".apk")) return null;
+  return lowerName.includes("nightly") ? "nightly" : "stable";
+}
+
+function getFileNameFromUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl.trim());
+    const lastSegment = parsed.pathname.split("/").pop() || "";
+    return decodeURIComponent(lastSegment);
+  } catch {
+    return "";
+  }
+}
+
+function getSafeReleasesPageUrl(rawUrl?: string): string {
+  if (rawUrl && isTrustedDownloadUrl(rawUrl)) {
+    return rawUrl.trim();
+  }
+  return DEFAULT_RELEASES_PAGE_URL;
 }
 
 /**
@@ -104,7 +141,7 @@ export function compareVersions(v1: string, v2: string): number {
 }
 
 /**
- * Security: Strictly ensures APK download URLs originate from official GitHub hosts over HTTPS.
+ * Security: Strictly ensures APK download and release URLs originate from official GitHub hosts over HTTPS.
  */
 export function isTrustedDownloadUrl(rawUrl: string): boolean {
   if (!rawUrl || typeof rawUrl !== "string") return false;
@@ -246,29 +283,35 @@ export async function checkFleetPolicy(): Promise<FleetPolicySnapshot | null> {
   }
 }
 
+/**
+ * Dynamically extracts the version numbers from filenames like:
+ * - rabbittv-v2.4.8.8.apk
+ * - rabbittv-v2.4.8.8-nightly.apk
+ */
 function extractVersionFromAssetOrTag(
   assetName: string,
   tagName?: string
 ): string {
-  const assetMatch = String(assetName || "").match(
-    /v?(\d+\.\d+\.\d+(?:\.\d+)?)/i
-  );
+  const assetStr = String(assetName || "");
+  const assetMatch =
+    assetStr.match(/v(\d+(?:\.\d+)*)/i) ||
+    assetStr.match(/(\d+\.\d+(?:\.\d+)*)/);
   if (assetMatch?.[1]) return assetMatch[1];
 
-  const tagMatch = String(tagName || "").match(/v?(\d+\.\d+\.\d+(?:\.\d+)?)/i);
+  const tagStr = String(tagName || "");
+  const tagMatch =
+    tagStr.match(/v(\d+(?:\.\d+)*)/i) || tagStr.match(/(\d+\.\d+(?:\.\d+)*)/);
   if (tagMatch?.[1]) return tagMatch[1];
 
-  return String(tagName || "")
-    .replace(/^v/i, "")
-    .trim();
+  return tagStr.replace(/^v/i, "").split("-")[0].trim();
 }
 
 function pickHigherCandidate(
   currentBest: CandidateBuild | null,
   candidate: CandidateBuild
-): CandidateBuild {
+): CandidateBuild | null {
   if (!candidate.version || !isTrustedDownloadUrl(candidate.downloadUrl)) {
-    return currentBest as CandidateBuild;
+    return currentBest;
   }
   if (!currentBest) return candidate;
   return compareVersions(candidate.version, currentBest.version) > 0
@@ -292,7 +335,8 @@ function cleanReleaseNotes(raw?: string): string {
 
 /**
  * Resolves the highest available APK build for the selected track by scanning
- * both GitHub Releases and the nightly manifest in parallel.
+ * GitHub Releases (and nightly manifest when on nightly), strictly separating
+ * stable vs. nightly based on whether "nightly" is present in the APK filename.
  */
 async function resolveLatestBuild(
   channel: UpdateChannel
@@ -308,7 +352,7 @@ async function resolveLatestBuild(
   let best: CandidateBuild | null = null;
 
   const releasesPromise = fetchWithTimeout(
-    `${GITHUB_API_BASE}/releases?per_page=15`,
+    `${GITHUB_API_BASE}/releases?per_page=30`,
     { headers, cache: "no-store" }
   )
     .then(async (res) => (res.ok ? res.json() : []))
@@ -329,69 +373,73 @@ async function resolveLatestBuild(
     manifestPromise,
   ]);
 
-  // 1. Evaluate all recent GitHub Releases and keep the highest numeric version
+  // 1. Evaluate recent GitHub Releases strictly matching APK filename channel
   if (Array.isArray(releasesList)) {
     for (const release of releasesList) {
+      if (release?.draft) continue;
+
+      const releasePageUrl = getSafeReleasesPageUrl(release?.html_url);
       const assets = Array.isArray(release?.assets) ? release.assets : [];
       for (const asset of assets) {
-        const nameLower = String(asset?.name || "").toLowerCase();
-        if (!nameLower.endsWith(".apk")) continue;
+        const assetName = String(asset?.name || "").trim();
+        const assetChannel = getApkChannelFromFilename(assetName);
 
-        const isNightlyAsset =
-          nameLower.includes("nightly") || Boolean(release?.prerelease);
-        if (channel === "nightly" && !isNightlyAsset) continue;
-        if (channel === "stable" && isNightlyAsset) continue;
+        // Ignore non-APK files and any APK that does not match the selected channel
+        if (assetChannel !== channel) continue;
+
+        const version = extractVersionFromAssetOrTag(
+          assetName,
+          release.tag_name
+        );
+        if (!version) continue;
 
         const candidate: CandidateBuild = {
-          version: extractVersionFromAssetOrTag(asset.name, release.tag_name),
+          version,
           downloadUrl: String(asset.browser_download_url || ""),
+          releasePageUrl,
+          assetName,
+          channel: assetChannel,
           fileSizeBytes: typeof asset.size === "number" ? asset.size : undefined,
           publishedAt: release.published_at || release.created_at,
           releaseNotes: cleanReleaseNotes(release.body),
         };
-        best = pickHigherCandidate(best, candidate);
-      }
-    }
 
-    // Fallback: if no track-specific APK matched, check any APK on the newest release
-    if (!best) {
-      for (const release of releasesList) {
-        const assets = Array.isArray(release?.assets) ? release.assets : [];
-        const anyApk = assets.find((a: any) =>
-          String(a?.name || "")
-            .toLowerCase()
-            .endsWith(".apk")
-        );
-        if (anyApk) {
-          best = pickHigherCandidate(best, {
-            version: extractVersionFromAssetOrTag(
-              anyApk.name,
-              release.tag_name
-            ),
-            downloadUrl: String(anyApk.browser_download_url || ""),
-            fileSizeBytes:
-              typeof anyApk.size === "number" ? anyApk.size : undefined,
-            publishedAt: release.published_at || release.created_at,
-            releaseNotes: cleanReleaseNotes(release.body),
-          });
-        }
+        best = pickHigherCandidate(best, candidate);
       }
     }
   }
 
-  // 2. Compare against updates/nightly_manifest.json on main
-  if (manifestData && typeof manifestData === "object") {
-    const manifestVersion = String(
-      manifestData.versionName || manifestData.version || ""
-    ).trim();
+  // 2. When on nightly, compare against updates/nightly_manifest.json on main
+  if (channel === "nightly" && manifestData && typeof manifestData === "object") {
     const manifestUrl = String(
       manifestData.apkUrl || manifestData.download_url || ""
     ).trim();
+    const manifestFileName = getFileNameFromUrl(manifestUrl);
+    const manifestChannel = getApkChannelFromFilename(manifestFileName);
 
-    if (manifestVersion && isTrustedDownloadUrl(manifestUrl)) {
+    const manifestVersion =
+      extractVersionFromAssetOrTag(
+        manifestFileName,
+        String(manifestData.versionName || manifestData.version || "")
+      ) || "";
+
+    const manifestReleasePage = getSafeReleasesPageUrl(
+      manifestData.releasePageUrl ||
+        manifestData.releaseUrl ||
+        manifestData.html_url
+    );
+
+    if (
+      manifestChannel === "nightly" &&
+      manifestVersion &&
+      isTrustedDownloadUrl(manifestUrl)
+    ) {
       best = pickHigherCandidate(best, {
         version: manifestVersion,
         downloadUrl: manifestUrl,
+        releasePageUrl: manifestReleasePage,
+        assetName: manifestFileName,
+        channel: "nightly",
         publishedAt: manifestData.publishedAt || manifestData.date,
         releaseNotes: cleanReleaseNotes(
           manifestData.notes || manifestData.changelog
@@ -401,6 +449,264 @@ async function resolveLatestBuild(
   }
 
   return best;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Direct Download + Chrome Release Assets Fallback Engine
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Launches Chrome (or the system browser if Chrome is not installed on Android TV)
+ * directly to the GitHub release assets page.
+ */
+export async function openReleaseAssetsInChrome(
+  releasePageUrl?: string
+): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  const targetUrl = getSafeReleasesPageUrl(releasePageUrl);
+  const isCapacitor = !!(window as any).Capacitor;
+  const isAndroid = /android/i.test(navigator.userAgent || "");
+
+  // Build an Android Chrome intent URL that falls back to the default browser if Chrome isn't installed
+  let chromeIntentUrl = targetUrl;
+  try {
+    const parsed = new URL(targetUrl);
+    chromeIntentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
+  } catch {
+    chromeIntentUrl = targetUrl;
+  }
+
+  if (isCapacitor) {
+    // 1. Try launching Chrome specifically via Capacitor AppLauncher (if installed)
+    if (isAndroid) {
+      try {
+        const launcherModule = await import(
+          /* @vite-ignore */ "@capacitor/app-launcher"
+        );
+        if (launcherModule?.AppLauncher?.openUrl) {
+          const chromeCheck = launcherModule.AppLauncher.canOpenUrl
+            ? await launcherModule.AppLauncher.canOpenUrl({
+                url: "com.android.chrome",
+              }).catch(() => ({ value: false }))
+            : { value: true };
+
+          await launcherModule.AppLauncher.openUrl({
+            url: chromeCheck?.value ? chromeIntentUrl : targetUrl,
+          });
+          return true;
+        }
+      } catch {
+        // Plugin not installed; move to Capacitor Browser
+      }
+    }
+
+    // 2. Capacitor Browser (opens Chrome Custom Tabs / Chrome on Android)
+    try {
+      const browserModule = await import(
+        /* @vite-ignore */ "@capacitor/browser"
+      );
+      if (browserModule?.Browser?.open) {
+        await browserModule.Browser.open({ url: targetUrl });
+        return true;
+      }
+    } catch (browserErr) {
+      console.warn(
+        "Capacitor Browser unavailable, falling back to window.open:",
+        browserErr
+      );
+    }
+  }
+
+  // 3. Standard browser / final fallback
+  try {
+    const opened = window.open(targetUrl, "_blank", "noopener,noreferrer");
+    if (opened) return true;
+  } catch {
+    // Ignore and try direct navigation below
+  }
+
+  try {
+    window.location.href = targetUrl;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Attempts a direct native APK download & install on Android/Capacitor.
+ * Returns true if direct download + install handoff succeeded, false if unavailable or failed.
+ */
+async function tryNativeDirectApkDownload(
+  url: string,
+  fileName: string,
+  onStatus?: (message: string) => void
+): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+
+  // 1. Check for a custom Android WebView / Capacitor native updater bridge
+  const customBridge =
+    (window as any).RabbitTvUpdater ||
+    (window as any).AndroidUpdater ||
+    (window as any).Capacitor?.Plugins?.RabbitUpdater ||
+    (window as any).Capacitor?.Plugins?.ApkUpdater;
+
+  if (customBridge && typeof customBridge.downloadAndInstallApk === "function") {
+    try {
+      onStatus?.("Downloading update directly...");
+      await customBridge.downloadAndInstallApk({ url, fileName });
+      return true;
+    } catch (bridgeErr) {
+      console.warn("Custom native updater bridge failed:", bridgeErr);
+    }
+  }
+
+  // 2. Use Capacitor Filesystem.downloadFile + FileOpener (bypasses WebView CORS & opens APK installer)
+  try {
+    const filesystemModule = await import(
+      /* @vite-ignore */ "@capacitor/filesystem"
+    );
+    const Filesystem = filesystemModule?.Filesystem;
+    const Directory = filesystemModule?.Directory;
+
+    if (!Filesystem || typeof Filesystem.downloadFile !== "function") {
+      return false;
+    }
+
+    // Make sure a native FileOpener is present before downloading so the APK can actually be installed
+    let fileOpener: any = null;
+    try {
+      const openerMod = await import(
+        /* @vite-ignore */ "@capacitor-community/file-opener"
+      );
+      fileOpener = openerMod?.FileOpener || null;
+    } catch {
+      try {
+        const capawesomeMod = await import(
+          /* @vite-ignore */ "@capawesome-team/capacitor-file-opener"
+        );
+        fileOpener = capawesomeMod?.FileOpener || null;
+      } catch {
+        fileOpener = null;
+      }
+    }
+
+    if (!fileOpener || typeof fileOpener.open !== "function") {
+      return false;
+    }
+
+    onStatus?.("Downloading APK directly...");
+    const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const downloadResult = await Filesystem.downloadFile({
+      url,
+      path: safeFileName,
+      directory: Directory?.Cache ?? "CACHE",
+    });
+
+    const savedPath = downloadResult?.path;
+    if (!savedPath) {
+      return false;
+    }
+
+    onStatus?.("Opening Android installer...");
+    await fileOpener.open({
+      filePath: savedPath,
+      contentType: "application/vnd.android.package-archive",
+      openWithDefault: true,
+    });
+
+    return true;
+  } catch (nativeErr) {
+    console.warn(
+      "Direct native APK download unavailable or failed, will fall back to Chrome assets page:",
+      nativeErr
+    );
+    return false;
+  }
+}
+
+/**
+ * Attempts a direct APK download in a standard web browser.
+ */
+async function tryWebDirectApkDownload(
+  url: string,
+  fileName: string,
+  onStatus?: (message: string) => void
+): Promise<boolean> {
+  if (typeof document === "undefined") return false;
+
+  onStatus?.("Starting direct download...");
+
+  // Direct anchor download works in desktop & mobile Chrome without CORS issues
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.setAttribute("download", fileName);
+    a.setAttribute("rel", "noopener noreferrer");
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return true;
+  } catch (err) {
+    console.warn("Direct browser anchor download failed:", err);
+    return false;
+  }
+}
+
+/**
+ * Primary download handler:
+ * 1. Tries to download the APK directly (native on Capacitor, direct file download on web).
+ * 2. If direct download is not possible or fails, launches Chrome straight to the release assets page.
+ */
+export async function downloadAndInstallApk(
+  url: string,
+  fileName: string,
+  releasePageUrl?: string,
+  onStatus?: (message: string) => void
+): Promise<boolean> {
+  try {
+    if (typeof window === "undefined") return false;
+
+    const safeReleasePage = getSafeReleasesPageUrl(releasePageUrl);
+
+    if (!isTrustedDownloadUrl(url)) {
+      console.warn("Blocked untrusted APK download URL:", url);
+      onStatus?.("Opening GitHub Releases in Chrome...");
+      return await openReleaseAssetsInChrome(safeReleasePage);
+    }
+
+    const isCapacitor = !!(window as any).Capacitor;
+
+    if (isCapacitor) {
+      // Step 1: Attempt direct native in-app download + Android package installer
+      const nativeSuccess = await tryNativeDirectApkDownload(
+        url,
+        fileName,
+        onStatus
+      );
+      if (nativeSuccess) {
+        return true;
+      }
+
+      // Step 2: Direct in-app download not possible -> launch Chrome directly to the assets page
+      onStatus?.("Opening Releases page in Chrome...");
+      return await openReleaseAssetsInChrome(safeReleasePage);
+    }
+
+    // Web browser: try direct APK download first, then fall back to the release assets page
+    const webSuccess = await tryWebDirectApkDownload(url, fileName, onStatus);
+    if (webSuccess) {
+      return true;
+    }
+
+    onStatus?.("Opening Releases page in Chrome...");
+    return await openReleaseAssetsInChrome(safeReleasePage);
+  } catch (err) {
+    console.error("Failed to download APK directly, opening Releases page:", err);
+    onStatus?.("Opening Releases page in Chrome...");
+    return await openReleaseAssetsInChrome(releasePageUrl);
+  }
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -476,6 +782,7 @@ function showCrystalUpdateModal(result: UpdateCheckResult): void {
     result.status === "update_available" ||
     result.status === "mandatory_update";
   const isError = result.status === "error";
+  const releaseAssetsPage = getSafeReleasesPageUrl(result.releasePageUrl);
 
   const overlay = document.createElement("div");
   overlay.id = UPDATE_MODAL_DOM_ID;
@@ -726,7 +1033,8 @@ function showCrystalUpdateModal(result: UpdateCheckResult): void {
   if (isUpdate && result.downloadUrl) {
     const dlBtn = document.createElement("button");
     dlBtn.type = "button";
-    dlBtn.textContent = `⬇ Download & Install v${result.latestVersion}`;
+    const defaultLabel = `⬇ Download & Install v${result.latestVersion}`;
+    dlBtn.textContent = defaultLabel;
     Object.assign(dlBtn.style, {
       width: "100%",
       padding: btnPadding,
@@ -741,18 +1049,40 @@ function showCrystalUpdateModal(result: UpdateCheckResult): void {
       cursor: "pointer",
       boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
     });
-    dlBtn.onclick = () => {
-      void downloadAndInstallApk(
+
+    const fallbackFileName =
+      result.channel === "nightly"
+        ? `rabbittv-v${result.latestVersion}-nightly.apk`
+        : `rabbittv-v${result.latestVersion}.apk`;
+
+    dlBtn.onclick = async () => {
+      if (dlBtn.disabled) return;
+      dlBtn.disabled = true;
+      dlBtn.style.opacity = "0.75";
+      dlBtn.textContent = `⏳ Downloading v${result.latestVersion}...`;
+
+      await downloadAndInstallApk(
         result.downloadUrl,
-        `rabtv-${result.channel}-v${result.latestVersion}.apk`
+        result.assetName || fallbackFileName,
+        releaseAssetsPage,
+        (statusMsg) => {
+          dlBtn.textContent = `⏳ ${statusMsg}`;
+        }
       );
-      if (!result.isMandatory) cleanupModal();
+
+      if (!result.isMandatory) {
+        cleanupModal();
+      } else {
+        dlBtn.disabled = false;
+        dlBtn.style.opacity = "1";
+        dlBtn.textContent = defaultLabel;
+      }
     };
     actionsWrap.appendChild(dlBtn);
     primaryBtn = dlBtn;
   }
 
-  // Secondary Row: Copy Link + Skip / Close
+  // Secondary Row: Open Assets Page in Chrome + Copy Link / Skip
   const secondaryRow = document.createElement("div");
   Object.assign(secondaryRow.style, {
     display: "grid",
@@ -761,7 +1091,26 @@ function showCrystalUpdateModal(result: UpdateCheckResult): void {
     gap: "8px",
   });
 
-  if (result.downloadUrl) {
+  if (isUpdate || isError) {
+    const assetsBtn = document.createElement("button");
+    assetsBtn.type = "button";
+    assetsBtn.textContent = "🌐 Open Assets Page";
+    Object.assign(assetsBtn.style, {
+      padding: btnPadding,
+      borderRadius: "14px",
+      border: "1px solid rgba(255,255,255,0.16)",
+      background: "rgba(255,255,255,0.08)",
+      color: "#f1f5f9",
+      fontSize: btnFontSize,
+      fontWeight: "800",
+      cursor: "pointer",
+    });
+    assetsBtn.onclick = () => {
+      void openReleaseAssetsInChrome(releaseAssetsPage);
+    };
+    secondaryRow.appendChild(assetsBtn);
+    if (!primaryBtn) primaryBtn = assetsBtn;
+  } else if (result.downloadUrl) {
     const copyBtn = document.createElement("button");
     copyBtn.type = "button";
     copyBtn.textContent = "📋 Copy APK Link";
@@ -813,6 +1162,33 @@ function showCrystalUpdateModal(result: UpdateCheckResult): void {
 
   if (secondaryRow.childElementCount > 0) {
     actionsWrap.appendChild(secondaryRow);
+  }
+
+  if (isUpdate && result.downloadUrl) {
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.textContent = "📋 Copy Direct APK Link";
+    Object.assign(copyBtn.style, {
+      width: "100%",
+      padding: btnPadding,
+      borderRadius: "14px",
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: "rgba(255,255,255,0.04)",
+      color: "#cbd5e1",
+      fontSize: btnFontSize,
+      fontWeight: "700",
+      cursor: "pointer",
+    });
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(result.downloadUrl);
+        copyBtn.textContent = "✓ Link Copied!";
+        copyBtn.style.color = "#34d399";
+      } catch {
+        copyBtn.textContent = "Select URL Above";
+      }
+    };
+    actionsWrap.appendChild(copyBtn);
   }
 
   if (!result.isMandatory && !isUpdate) {
@@ -877,6 +1253,7 @@ export async function checkForAppUpdates(
           currentVersion,
           latestVersion: currentVersion,
           downloadUrl: "",
+          releasePageUrl: DEFAULT_RELEASES_PAGE_URL,
           isMandatory: false,
         };
       }
@@ -904,9 +1281,10 @@ export async function checkForAppUpdates(
         currentVersion,
         latestVersion: "",
         downloadUrl: "",
+        releasePageUrl: DEFAULT_RELEASES_PAGE_URL,
         isMandatory: isBelowMinVersion,
         minAppVersion,
-        errorMessage: `Could not resolve a valid APK build on the ${channel.toUpperCase()} track.`,
+        errorMessage: `Could not find a matching ${channel.toUpperCase()} APK build.`,
       };
       if (!silent || isBelowMinVersion) {
         showCrystalUpdateModal(errResult);
@@ -935,6 +1313,8 @@ export async function checkForAppUpdates(
           currentVersion,
           latestVersion: latestBuild.version,
           downloadUrl: latestBuild.downloadUrl,
+          releasePageUrl: latestBuild.releasePageUrl,
+          assetName: latestBuild.assetName,
           isMandatory: false,
           minAppVersion,
         };
@@ -946,6 +1326,8 @@ export async function checkForAppUpdates(
         currentVersion,
         latestVersion: latestBuild.version,
         downloadUrl: latestBuild.downloadUrl,
+        releasePageUrl: latestBuild.releasePageUrl,
+        assetName: latestBuild.assetName,
         fileSizeBytes: latestBuild.fileSizeBytes,
         publishedAt: latestBuild.publishedAt,
         releaseNotes: latestBuild.releaseNotes,
@@ -969,6 +1351,8 @@ export async function checkForAppUpdates(
       currentVersion,
       latestVersion: latestBuild.version,
       downloadUrl: latestBuild.downloadUrl,
+      releasePageUrl: latestBuild.releasePageUrl,
+      assetName: latestBuild.assetName,
       fileSizeBytes: latestBuild.fileSizeBytes,
       publishedAt: latestBuild.publishedAt,
       isMandatory: false,
@@ -987,6 +1371,7 @@ export async function checkForAppUpdates(
       currentVersion,
       latestVersion: "",
       downloadUrl: "",
+      releasePageUrl: DEFAULT_RELEASES_PAGE_URL,
       isMandatory: false,
       errorMessage:
         err?.name === "AbortError"
@@ -997,56 +1382,5 @@ export async function checkForAppUpdates(
       showCrystalUpdateModal(errResult);
     }
     return errResult;
-  }
-}
-
-/**
- * Dispatches verified APK download or opens direct native browser download intent.
- */
-export async function downloadAndInstallApk(
-  url: string,
-  fileName: string
-): Promise<boolean> {
-  try {
-    if (typeof window === "undefined") return false;
-    if (!isTrustedDownloadUrl(url)) {
-      console.warn("Blocked untrusted APK download URL:", url);
-      return false;
-    }
-
-    const isCapacitor = !!(window as any).Capacitor;
-
-    if (isCapacitor) {
-      try {
-        // @vite-ignore prevents Vite static resolution breakages
-        const browserModule = await import(
-          /* @vite-ignore */ "@capacitor/browser"
-        );
-        await browserModule.Browser.open({ url });
-        return true;
-      } catch (nativeErr: any) {
-        console.warn(
-          "Capacitor Browser plugin unavailable, falling back to anchor trigger:",
-          nativeErr
-        );
-      }
-    }
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.setAttribute("download", fileName);
-    a.setAttribute("target", "_blank");
-    a.setAttribute("rel", "noopener noreferrer");
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    return true;
-  } catch (err: any) {
-    console.error("Failed to trigger APK download:", err);
-    if (typeof window !== "undefined" && isTrustedDownloadUrl(url)) {
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-    return false;
   }
 }
