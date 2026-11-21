@@ -1024,7 +1024,7 @@ function RootComponent() {
               isPlayerRoute ? "rabtv-header-player-route" : ""
             } ${tokens.headerBg} ${tokens.headerBorder} ${tokens.glowClass}`}
           >
-            <div className="absolute inset-0 pointer-events-none opacity-50">
+            <div className="absolute inset-0 pointer-events-none opacity-80">
               <img
                 src={RABBITHEADERWALL}
                 alt=""
