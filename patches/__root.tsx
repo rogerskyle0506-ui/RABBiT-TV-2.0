@@ -427,7 +427,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         className={`relative flex-1 min-w-0 flex items-center h-10 sm:h-11 overflow-hidden shadow-lg transition-all ${tokens.headerBorder} ${tokens.glowClass}`}
         style={{
           backgroundImage: `url(${SEARCHWRAPPER})`,
-          backgroundSize: "150% 120%",
+          backgroundSize: "120% 165%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
@@ -468,10 +468,10 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         type="submit"
         aria-label="Search"
         title="Open Search"
-        className={`relative h-10 sm:h-11 px-3.5 sm:px-4 rounded-2xl text-xs font-black uppercase tracking-wider shrink-0 overflow-hidden transition active:scale-95 cursor-pointer focus:outline-none ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
+        className={`relative h-10 sm:h-11 px-3.5 sm:px-4 text-xs font-black uppercase tracking-wider shrink-0 overflow-hidden transition active:scale-95 cursor-pointer ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
         style={{
           backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-          backgroundSize: "120% 160%",
+          backgroundSize: "120% 180%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
