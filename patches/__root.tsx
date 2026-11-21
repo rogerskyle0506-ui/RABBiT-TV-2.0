@@ -114,7 +114,7 @@ export const BUTTON_WRAPPER_URL =
 const VIEWPORT_HEADER_STYLES = `
   .rabtv-hdr-bar {
     --hdr-u: clamp(35px, 11vw, 52px);
-    min-height: calc(var(--hdr-u) * 3.05);
+    min-height: calc(var(--hdr-u) * 3.25);
   }
 
   .rabtv-hdr-inner {
@@ -135,6 +135,7 @@ const VIEWPORT_HEADER_STYLES = `
     flex: 0 0 auto;
     display: flex;
     align-items: center;
+    max-width: calc(100% - (var(--hdr-u) * 4.15));
   }
 
   .rabtv-hdr-logo {
@@ -142,8 +143,9 @@ const VIEWPORT_HEADER_STYLES = `
     display: flex;
     align-items: center;
     justify-content: center;
-    height: calc(var(--hdr-u) * 1.22);
-    width: calc(var(--hdr-u) * 1.22 * 2.85);
+    height: calc(var(--hdr-u) * 1.52);
+    width: calc(var(--hdr-u) * 4.25);
+    max-width: 100%;
     flex: 0 0 auto;
   }
 
@@ -161,18 +163,18 @@ const VIEWPORT_HEADER_STYLES = `
     align-items: center;
     height: calc(var(--hdr-u) * 1.22);
     width: calc(var(--hdr-u) * 1.22 * 3.3);
-    padding-left: 34.5%;
-    padding-right: 20%;
+    padding-left: 37%;
+    padding-right: 17.5%;
     flex: 0 0 auto;
     box-sizing: border-box;
   }
 
   .rabtv-hdr-profile-avatar {
     position: absolute;
-    left: 6.8%;
+    left: 20.8%;
     top: 50%;
-    transform: translateY(-50%);
-    height: 74%;
+    transform: translate(-50%, -50%);
+    height: 76%;
     aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
@@ -221,7 +223,7 @@ const VIEWPORT_HEADER_STYLES = `
     width: 100%;
     height: 100%;
     min-width: 0;
-    padding-left: 14%;
+    padding-left: 15.5%;
     padding-right: 27%;
     padding-top: 0;
     padding-bottom: 0;
@@ -259,8 +261,8 @@ const VIEWPORT_HEADER_STYLES = `
 
   @media (min-width: 640px) {
     .rabtv-hdr-bar {
-      --hdr-u: clamp(35px, 5.5vw, 60px);
-      min-height: clamp(78px, 10vw, 136px);
+      --hdr-u: clamp(35px, 5.4vw, 60px);
+      min-height: clamp(82px, 10.5vw, 140px);
     }
 
     .rabtv-hdr-inner {
@@ -269,9 +271,13 @@ const VIEWPORT_HEADER_STYLES = `
       column-gap: clamp(8px, 1.3vw, 20px);
     }
 
+    .rabtv-hdr-logo-wrap {
+      max-width: none;
+    }
+
     .rabtv-hdr-logo {
-      height: calc(var(--hdr-u) * 1.18);
-      width: calc(var(--hdr-u) * 1.18 * 2.85);
+      height: calc(var(--hdr-u) * 1.42);
+      width: calc(var(--hdr-u) * 3.95);
     }
 
     .rabtv-hdr-search-form {
@@ -280,6 +286,10 @@ const VIEWPORT_HEADER_STYLES = `
       flex: 1 1 auto;
       justify-content: center;
       gap: clamp(6px, 1vw, 14px);
+    }
+
+    .rabtv-hdr-search-shell {
+      width: calc(var(--hdr-u) * 5.5);
     }
 
     .rabtv-hdr-profile-wrap {
@@ -1264,7 +1274,7 @@ function RootComponent() {
                     src={RABBIT_LOGO_URL}
                     alt="Rabbit TV Home"
                     decoding="async"
-                    className="w-full h-full object-contain scale-[1.34] drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]"
+                    className="w-full h-full object-contain scale-[1.38] drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]"
                   />
                 </Link>
               </div>
