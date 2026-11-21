@@ -424,10 +424,10 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
       className="order-3 sm:order-2 w-full sm:w-auto sm:flex-1 sm:max-w-xl relative flex items-center gap-1.5 min-w-0"
     >
       <div
-        className={`relative flex-1 min-w-0 flex items-center h-10 sm:h-11 rounded-2xl border overflow-hidden shadow-lg transition-all ${tokens.headerBorder} ${tokens.glowClass}`}
+        className={`relative flex-1 min-w-0 flex items-center h-10 sm:h-11 overflow-hidden shadow-lg transition-all ${tokens.headerBorder} ${tokens.glowClass}`}
         style={{
           backgroundImage: `url(${SEARCHWRAPPER})`,
-          backgroundSize: "100% 100%",
+          backgroundSize: "150% 120%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
@@ -458,7 +458,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
           enterKeyHint="search"
           defaultValue=""
           data-tour="global-search-input"
-          placeholder="Search movies, TV shows..."
+          placeholder="..."
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
           className="relative z-10 h-full flex-1 min-w-0 bg-transparent px-2.5 text-xs sm:text-sm font-bold text-white placeholder-slate-200/75 focus:outline-none"
         />
@@ -468,10 +468,10 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         type="submit"
         aria-label="Search"
         title="Open Search"
-        className={`relative h-10 sm:h-11 px-3.5 sm:px-4 rounded-2xl text-xs font-black uppercase tracking-wider shrink-0 overflow-hidden border transition active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
+        className={`relative h-10 sm:h-11 px-3.5 sm:px-4 rounded-2xl text-xs font-black uppercase tracking-wider shrink-0 overflow-hidden transition active:scale-95 cursor-pointer focus:outline-none ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
         style={{
           backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-          backgroundSize: "100% 100%",
+          backgroundSize: "120% 160%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
