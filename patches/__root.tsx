@@ -145,214 +145,202 @@ function getRootThemeTokens(theme: AppTheme): RootThemeTokens {
   switch (theme) {
     case "red":
       return {
-        bodyBg: "bg-gradient-to-br from-zinc-950/75 via-red-950/30 to-black/80",
+        bodyBg: "bg-gradient-to-br from-zinc-950/78 via-red-950/30 to-black/82",
         bodyText: "text-zinc-100",
         headerBg: "bg-red-950/25 backdrop-blur-md",
         headerBorder: "border-red-500/35",
         glowClass: "border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.38)]",
-        cardBg: "bg-zinc-950/85 border-red-500/30 shadow-2xl backdrop-blur-xl",
-        profileBtn:
-          "bg-red-950/50 border-red-500/35 text-red-100 hover:bg-red-900/75 shadow-sm",
-        avatarFrame: "border-red-400/45 bg-zinc-900",
+        cardBg: "bg-zinc-950/90 border-red-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn: "text-red-100",
+        avatarFrame: "bg-transparent",
         searchInput:
-          "border-red-500/30 bg-black/50 text-white placeholder-zinc-400 focus:ring-2 focus:ring-red-500 focus:border-red-400/60",
+          "border-red-500/30 bg-black/55 text-white placeholder-zinc-300 focus:ring-2 focus:ring-red-500 focus:border-red-400/60",
         searchIcon: "text-red-300",
-        searchSubmitBtn:
-          "bg-red-950/60 hover:bg-red-800/80 border border-red-500/40 text-red-100 hover:text-white",
+        searchSubmitBtn: "text-red-100 hover:text-white",
         trialBadge:
-          "bg-red-950/45 border-red-500/40 text-red-200 backdrop-blur-md",
+          "bg-red-950/50 border-red-500/35 text-red-200 backdrop-blur-md",
         footerShell:
-          "border-red-500/25 bg-zinc-950/50 shadow-[0_8px_30px_rgba(239,68,68,0.12)]",
+          "border-red-500/20 bg-zinc-950/55 shadow-[0_8px_30px_rgba(239,68,68,0.12)]",
         footerText: "text-zinc-300",
         footerSubText: "text-zinc-400",
         footerLink: "text-red-300 hover:text-red-200",
         footerBtn:
-          "bg-red-950/40 hover:bg-red-900/65 border-red-500/35 text-red-100 hover:text-white backdrop-blur-md",
+          "bg-red-950/45 hover:bg-red-900/70 border-red-500/30 text-red-100 hover:text-white backdrop-blur-sm",
         footerVersion:
-          "bg-black/50 border-red-500/25 text-zinc-300 backdrop-blur-md",
+          "bg-black/50 border-red-500/25 text-zinc-300",
         clockPill:
-          "bg-zinc-950/55 border-red-500/35 text-red-100 backdrop-blur-md shadow-[0_6px_20px_rgba(239,68,68,0.2)]",
+          "bg-zinc-950/60 border-red-500/35 text-red-100 backdrop-blur-md shadow-[0_6px_20px_rgba(239,68,68,0.2)]",
         primaryAccent: "text-red-400",
         primaryBg:
           "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
-        focusRing: "focus:ring-red-500 focus-visible:ring-red-500",
-        artTint: "bg-red-950/20",
+        focusRing: "focus:ring-red-500",
+        artTint: "bg-red-950/15",
       };
     case "midnight":
       return {
-        bodyBg: "bg-gradient-to-br from-slate-950/75 via-blue-950/30 to-black/80",
+        bodyBg: "bg-gradient-to-br from-slate-950/78 via-blue-950/30 to-black/82",
         bodyText: "text-slate-100",
         headerBg: "bg-blue-950/25 backdrop-blur-md",
         headerBorder: "border-blue-500/35",
         glowClass: "border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.38)]",
-        cardBg: "bg-slate-950/85 border-blue-500/30 shadow-2xl backdrop-blur-xl",
-        profileBtn:
-          "bg-blue-950/50 border-blue-500/35 text-blue-100 hover:bg-blue-900/75 shadow-sm",
-        avatarFrame: "border-sky-400/45 bg-slate-900",
+        cardBg: "bg-slate-950/90 border-blue-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn: "text-blue-100",
+        avatarFrame: "bg-transparent",
         searchInput:
-          "border-blue-500/30 bg-black/50 text-white placeholder-slate-400 focus:ring-2 focus:ring-sky-400 focus:border-sky-400/60",
+          "border-blue-500/30 bg-black/55 text-white placeholder-slate-300 focus:ring-2 focus:ring-sky-400 focus:border-sky-400/60",
         searchIcon: "text-sky-300",
-        searchSubmitBtn:
-          "bg-blue-950/60 hover:bg-blue-800/80 border border-blue-500/40 text-sky-100 hover:text-white",
+        searchSubmitBtn: "text-sky-100 hover:text-white",
         trialBadge:
-          "bg-blue-950/45 border-blue-500/40 text-sky-200 backdrop-blur-md",
+          "bg-blue-950/50 border-blue-500/35 text-sky-200 backdrop-blur-md",
         footerShell:
-          "border-blue-500/25 bg-slate-950/50 shadow-[0_8px_30px_rgba(59,130,246,0.12)]",
+          "border-blue-500/20 bg-slate-950/55 shadow-[0_8px_30px_rgba(59,130,246,0.12)]",
         footerText: "text-slate-300",
         footerSubText: "text-slate-400",
         footerLink: "text-sky-300 hover:text-sky-200",
         footerBtn:
-          "bg-blue-950/40 hover:bg-blue-900/65 border-blue-500/35 text-blue-100 hover:text-white backdrop-blur-md",
+          "bg-blue-950/45 hover:bg-blue-900/70 border-blue-500/30 text-blue-100 hover:text-white backdrop-blur-sm",
         footerVersion:
-          "bg-black/50 border-blue-500/25 text-slate-300 backdrop-blur-md",
+          "bg-black/50 border-blue-500/25 text-slate-300",
         clockPill:
-          "bg-slate-950/55 border-blue-500/35 text-sky-100 backdrop-blur-md shadow-[0_6px_20px_rgba(59,130,246,0.2)]",
+          "bg-slate-950/60 border-blue-500/35 text-sky-100 backdrop-blur-md shadow-[0_6px_20px_rgba(59,130,246,0.2)]",
         primaryAccent: "text-sky-300",
         primaryBg:
           "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/30",
-        focusRing: "focus:ring-sky-400 focus-visible:ring-sky-400",
-        artTint: "bg-blue-950/25",
+        focusRing: "focus:ring-sky-400",
+        artTint: "bg-blue-950/15",
       };
     case "emerald":
       return {
-        bodyBg: "bg-gradient-to-br from-neutral-950/75 via-emerald-950/30 to-black/80",
+        bodyBg: "bg-gradient-to-br from-neutral-950/78 via-emerald-950/30 to-black/82",
         bodyText: "text-neutral-100",
         headerBg: "bg-emerald-950/25 backdrop-blur-md",
         headerBorder: "border-emerald-500/35",
         glowClass: "border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.38)]",
-        cardBg: "bg-neutral-950/85 border-emerald-500/30 shadow-2xl backdrop-blur-xl",
-        profileBtn:
-          "bg-emerald-950/50 border-emerald-500/35 text-emerald-100 hover:bg-emerald-900/75 shadow-sm",
-        avatarFrame: "border-emerald-400/45 bg-neutral-900",
+        cardBg: "bg-neutral-950/90 border-emerald-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn: "text-emerald-100",
+        avatarFrame: "bg-transparent",
         searchInput:
-          "border-emerald-500/30 bg-black/50 text-white placeholder-neutral-400 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400/60",
+          "border-emerald-500/30 bg-black/55 text-white placeholder-neutral-300 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400/60",
         searchIcon: "text-emerald-300",
-        searchSubmitBtn:
-          "bg-emerald-950/60 hover:bg-emerald-800/80 border border-emerald-500/40 text-emerald-100 hover:text-white",
+        searchSubmitBtn: "text-emerald-100 hover:text-white",
         trialBadge:
-          "bg-emerald-950/45 border-emerald-500/40 text-emerald-200 backdrop-blur-md",
+          "bg-emerald-950/50 border-emerald-500/35 text-emerald-200 backdrop-blur-md",
         footerShell:
-          "border-emerald-500/25 bg-neutral-950/50 shadow-[0_8px_30px_rgba(16,185,129,0.12)]",
+          "border-emerald-500/20 bg-neutral-950/55 shadow-[0_8px_30px_rgba(16,185,129,0.12)]",
         footerText: "text-neutral-300",
         footerSubText: "text-neutral-400",
         footerLink: "text-emerald-300 hover:text-emerald-200",
         footerBtn:
-          "bg-emerald-950/40 hover:bg-emerald-900/65 border-emerald-500/35 text-emerald-100 hover:text-white backdrop-blur-md",
+          "bg-emerald-950/45 hover:bg-emerald-900/70 border-emerald-500/30 text-emerald-100 hover:text-white backdrop-blur-sm",
         footerVersion:
-          "bg-black/50 border-emerald-500/25 text-neutral-300 backdrop-blur-md",
+          "bg-black/50 border-emerald-500/25 text-neutral-300",
         clockPill:
-          "bg-neutral-950/55 border-emerald-500/35 text-emerald-100 backdrop-blur-md shadow-[0_6px_20px_rgba(16,185,129,0.2)]",
+          "bg-neutral-950/60 border-emerald-500/35 text-emerald-100 backdrop-blur-md shadow-[0_6px_20px_rgba(16,185,129,0.2)]",
         primaryAccent: "text-emerald-300",
         primaryBg:
           "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
-        focusRing: "focus:ring-emerald-400 focus-visible:ring-emerald-400",
-        artTint: "bg-emerald-950/25",
+        focusRing: "focus:ring-emerald-400",
+        artTint: "bg-emerald-950/15",
       };
     case "amber":
       return {
-        bodyBg: "bg-gradient-to-br from-stone-950/75 via-yellow-950/30 to-black/80",
+        bodyBg: "bg-gradient-to-br from-stone-950/78 via-yellow-950/30 to-black/82",
         bodyText: "text-stone-100",
         headerBg: "bg-yellow-950/25 backdrop-blur-md",
         headerBorder: "border-amber-500/35",
         glowClass: "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.38)]",
-        cardBg: "bg-stone-950/85 border-amber-500/30 shadow-2xl backdrop-blur-xl",
-        profileBtn:
-          "bg-amber-950/50 border-amber-500/35 text-amber-100 hover:bg-amber-900/75 shadow-sm",
-        avatarFrame: "border-amber-400/45 bg-stone-900",
+        cardBg: "bg-stone-950/90 border-amber-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn: "text-amber-100",
+        avatarFrame: "bg-transparent",
         searchInput:
-          "border-amber-500/30 bg-black/50 text-white placeholder-stone-400 focus:ring-2 focus:ring-amber-400 focus:border-amber-400/60",
+          "border-amber-500/30 bg-black/55 text-white placeholder-stone-300 focus:ring-2 focus:ring-amber-400 focus:border-amber-400/60",
         searchIcon: "text-amber-300",
-        searchSubmitBtn:
-          "bg-amber-950/60 hover:bg-amber-800/80 border border-amber-500/40 text-amber-100 hover:text-white",
+        searchSubmitBtn: "text-amber-100 hover:text-white",
         trialBadge:
-          "bg-amber-950/45 border-amber-500/40 text-amber-200 backdrop-blur-md",
+          "bg-amber-950/50 border-amber-500/35 text-amber-200 backdrop-blur-md",
         footerShell:
-          "border-amber-500/25 bg-stone-950/50 shadow-[0_8px_30px_rgba(245,158,11,0.12)]",
+          "border-amber-500/20 bg-stone-950/55 shadow-[0_8px_30px_rgba(245,158,11,0.12)]",
         footerText: "text-stone-300",
         footerSubText: "text-stone-400",
         footerLink: "text-amber-300 hover:text-amber-200",
         footerBtn:
-          "bg-amber-950/40 hover:bg-amber-900/65 border-amber-500/35 text-amber-100 hover:text-white backdrop-blur-md",
+          "bg-amber-950/45 hover:bg-amber-900/70 border-amber-500/30 text-amber-100 hover:text-white backdrop-blur-sm",
         footerVersion:
-          "bg-black/50 border-amber-500/25 text-stone-300 backdrop-blur-md",
+          "bg-black/50 border-amber-500/25 text-stone-300",
         clockPill:
-          "bg-stone-950/55 border-amber-500/35 text-amber-100 backdrop-blur-md shadow-[0_6px_20px_rgba(245,158,11,0.2)]",
+          "bg-stone-950/60 border-amber-500/35 text-amber-100 backdrop-blur-md shadow-[0_6px_20px_rgba(245,158,11,0.2)]",
         primaryAccent: "text-amber-300",
         primaryBg:
           "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
-        focusRing: "focus:ring-amber-400 focus-visible:ring-amber-400",
-        artTint: "bg-amber-950/20",
+        focusRing: "focus:ring-amber-400",
+        artTint: "bg-amber-950/15",
       };
     case "cyan":
       return {
-        bodyBg: "bg-gradient-to-br from-slate-950/75 via-cyan-950/30 to-black/80",
+        bodyBg: "bg-gradient-to-br from-slate-950/78 via-cyan-950/30 to-black/82",
         bodyText: "text-slate-100",
         headerBg: "bg-cyan-950/25 backdrop-blur-md",
         headerBorder: "border-cyan-500/35",
         glowClass: "border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.38)]",
-        cardBg: "bg-slate-950/85 border-cyan-500/30 shadow-2xl backdrop-blur-xl",
-        profileBtn:
-          "bg-cyan-950/50 border-cyan-500/35 text-cyan-100 hover:bg-cyan-900/75 shadow-sm",
-        avatarFrame: "border-cyan-400/45 bg-slate-900",
+        cardBg: "bg-slate-950/90 border-cyan-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn: "text-cyan-100",
+        avatarFrame: "bg-transparent",
         searchInput:
-          "border-cyan-500/30 bg-black/50 text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400/60",
+          "border-cyan-500/30 bg-black/55 text-white placeholder-slate-300 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400/60",
         searchIcon: "text-cyan-300",
-        searchSubmitBtn:
-          "bg-cyan-950/60 hover:bg-cyan-800/80 border border-cyan-500/40 text-cyan-100 hover:text-white",
+        searchSubmitBtn: "text-cyan-100 hover:text-white",
         trialBadge:
-          "bg-cyan-950/45 border-cyan-500/40 text-cyan-200 backdrop-blur-md",
+          "bg-cyan-950/50 border-cyan-500/35 text-cyan-200 backdrop-blur-md",
         footerShell:
-          "border-cyan-500/25 bg-slate-950/50 shadow-[0_8px_30px_rgba(6,182,212,0.12)]",
+          "border-cyan-500/20 bg-slate-950/55 shadow-[0_8px_30px_rgba(6,182,212,0.12)]",
         footerText: "text-slate-300",
         footerSubText: "text-slate-400",
         footerLink: "text-cyan-300 hover:text-cyan-200",
         footerBtn:
-          "bg-cyan-950/40 hover:bg-cyan-900/65 border-cyan-500/35 text-cyan-100 hover:text-white backdrop-blur-md",
+          "bg-cyan-950/45 hover:bg-cyan-900/70 border-cyan-500/30 text-cyan-100 hover:text-white backdrop-blur-sm",
         footerVersion:
-          "bg-black/50 border-cyan-500/25 text-slate-300 backdrop-blur-md",
+          "bg-black/50 border-cyan-500/25 text-slate-300",
         clockPill:
-          "bg-slate-950/55 border-cyan-500/35 text-cyan-100 backdrop-blur-md shadow-[0_6px_20px_rgba(6,182,212,0.2)]",
+          "bg-slate-950/60 border-cyan-500/35 text-cyan-100 backdrop-blur-md shadow-[0_6px_20px_rgba(6,182,212,0.2)]",
         primaryAccent: "text-cyan-300",
         primaryBg:
           "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
-        focusRing: "focus:ring-cyan-400 focus-visible:ring-cyan-400",
-        artTint: "bg-cyan-950/25",
+        focusRing: "focus:ring-cyan-400",
+        artTint: "bg-cyan-950/15",
       };
     case "violet":
     default:
       return {
-        bodyBg: "bg-gradient-to-br from-slate-950/75 via-purple-950/30 to-black/80",
+        bodyBg: "bg-gradient-to-br from-slate-950/78 via-purple-950/30 to-black/82",
         bodyText: "text-slate-100",
         headerBg: "bg-purple-950/25 backdrop-blur-md",
         headerBorder: "border-violet-500/35",
         glowClass: "border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.38)]",
-        cardBg: "bg-slate-950/85 border-violet-500/30 shadow-2xl backdrop-blur-xl",
-        profileBtn:
-          "bg-purple-950/50 border-violet-500/35 text-purple-100 hover:bg-purple-900/75 shadow-sm",
-        avatarFrame: "border-violet-400/45 bg-slate-900",
+        cardBg: "bg-slate-950/90 border-violet-500/30 shadow-2xl backdrop-blur-xl",
+        profileBtn: "text-purple-100",
+        avatarFrame: "bg-transparent",
         searchInput:
-          "border-violet-500/30 bg-black/50 text-white placeholder-slate-400 focus:ring-2 focus:ring-violet-400 focus:border-violet-400/60",
+          "border-violet-500/30 bg-black/55 text-white placeholder-slate-300 focus:ring-2 focus:ring-violet-400 focus:border-violet-400/60",
         searchIcon: "text-violet-300",
-        searchSubmitBtn:
-          "bg-purple-950/60 hover:bg-purple-800/80 border border-violet-500/40 text-purple-100 hover:text-white",
+        searchSubmitBtn: "text-purple-100 hover:text-white",
         trialBadge:
-          "bg-purple-950/45 border-violet-500/40 text-violet-200 backdrop-blur-md",
+          "bg-purple-950/50 border-violet-500/35 text-violet-200 backdrop-blur-md",
         footerShell:
-          "border-violet-500/25 bg-slate-950/50 shadow-[0_8px_30px_rgba(139,92,246,0.12)]",
+          "border-violet-500/20 bg-slate-950/55 shadow-[0_8px_30px_rgba(139,92,246,0.12)]",
         footerText: "text-slate-300",
         footerSubText: "text-slate-400",
         footerLink: "text-violet-300 hover:text-violet-200",
         footerBtn:
-          "bg-purple-950/40 hover:bg-purple-900/65 border-violet-500/35 text-purple-100 hover:text-white backdrop-blur-md",
+          "bg-purple-950/45 hover:bg-purple-900/70 border-violet-500/30 text-purple-100 hover:text-white backdrop-blur-sm",
         footerVersion:
-          "bg-black/50 border-violet-500/25 text-slate-300 backdrop-blur-md",
+          "bg-black/50 border-violet-500/25 text-slate-300",
         clockPill:
-          "bg-slate-950/55 border-violet-500/35 text-purple-100 backdrop-blur-md shadow-[0_6px_20px_rgba(139,92,246,0.2)]",
+          "bg-slate-950/60 border-violet-500/35 text-purple-100 backdrop-blur-md shadow-[0_6px_20px_rgba(139,92,246,0.2)]",
         primaryAccent: "text-violet-400",
         primaryBg:
           "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
-        focusRing: "focus:ring-violet-400 focus-visible:ring-violet-400",
-        artTint: "bg-purple-950/20",
+        focusRing: "focus:ring-violet-400",
+        artTint: "bg-purple-950/15",
       };
   }
 }
@@ -397,7 +385,6 @@ function verifyCurrentAccess(): boolean {
  *    IME caret-reset-to-0 bug that reverses typed words like "talk" -> "klat").
  * 2) Allows empty submission to navigate directly to /search.
  * 3) Wraps cleanly below Logo + Profile on portrait phones so it is never squished.
- * 4) Uses transparent borderless wrappers so custom PNG button graphics render cleanly.
  */
 const HeaderSearchBar = memo(function HeaderSearchBar({
   tokens,
@@ -425,10 +412,10 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
       className="order-3 sm:order-2 w-full sm:w-auto sm:flex-1 sm:max-w-xl relative flex items-center gap-2 min-w-0"
     >
       <div
-        className="relative flex-1 min-w-0 flex items-center h-11 sm:h-12 bg-transparent border-0 transition-opacity opacity-95 hover:opacity-100"
+        className="relative flex-1 min-w-0 flex items-center h-11 sm:h-12 bg-transparent border-0 opacity-90 hover:opacity-100 focus-within:opacity-100 transition-opacity"
         style={{
           backgroundImage: `url(${SEARCHWRAPPER})`,
-          backgroundSize: "108% 155%",
+          backgroundSize: "105% 152%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
@@ -444,9 +431,9 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
           enterKeyHint="search"
           defaultValue=""
           data-tour="global-search-input"
-          placeholder="Search..."
+          placeholder="Search movies, shows..."
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
-          className="relative z-10 h-full flex-1 min-w-0 bg-transparent pl-10 sm:pl-12 pr-16 sm:pr-20 text-xs sm:text-sm font-bold text-white placeholder-slate-200/75 focus:outline-none"
+          className="relative z-10 h-full flex-1 min-w-0 bg-transparent pl-10 sm:pl-12 pr-14 sm:pr-16 text-xs sm:text-sm font-bold text-white placeholder-slate-200/75 focus:outline-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
         />
       </div>
 
@@ -454,15 +441,15 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         type="submit"
         aria-label="Search"
         title="Open Search"
-        className={`relative h-11 sm:h-12 px-5 sm:px-6 bg-transparent border-0 text-xs font-black uppercase tracking-wider text-white shrink-0 transition-all hover:scale-[1.03] active:scale-95 cursor-pointer opacity-95 hover:opacity-100 focus:outline-none focus-visible:ring-2 rounded-xl ${tokens.focusRing}`}
+        className={`relative h-11 sm:h-12 min-w-[96px] sm:min-w-[112px] px-4 text-xs font-black uppercase tracking-wider shrink-0 bg-transparent border-0 opacity-90 hover:opacity-100 transition active:scale-95 cursor-pointer focus:outline-none focus:ring-2 rounded-full ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
         style={{
           backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-          backgroundSize: "112% 165%",
+          backgroundSize: "108% 158%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
       >
-        <span className="relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+        <span className="relative z-10 text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
           Search
         </span>
       </button>
@@ -1046,23 +1033,24 @@ function RootComponent() {
             </div>
           )}
 
-          {/* Responsive Theme-Matched Glass Header (~3 lines tall with room to breathe & brighter wallpaper) */}
+          {/* Responsive Theme-Matched Glass Header (~3 lines tall with extra padding & brightened wallpaper) */}
           <header
             data-tour="app-header"
-            className={`rabtv-vidsrc-protected sticky top-0 z-40 border-b transition-colors duration-300 relative overflow-hidden ${
+            className={`rabtv-vidsrc-protected sticky top-0 z-40 border-b transition-colors duration-300 relative overflow-hidden flex items-center min-h-[148px] sm:min-h-[124px] md:min-h-[140px] ${
               isPlayerRoute ? "rabtv-header-player-route" : ""
-            } ${tokens.headerBg} ${tokens.headerBorder}`}
+            } ${tokens.headerBg} ${tokens.headerBorder} ${tokens.glowClass}`}
           >
-            <div className="absolute inset-0 pointer-events-none opacity-55">
+            {/* Brightened Header Wallpaper */}
+            <div className="absolute inset-0 pointer-events-none opacity-50">
               <img
                 src={RABBITHEADERWALL}
                 alt=""
                 className="w-full h-full object-cover object-center brightness-110 contrast-105"
               />
             </div>
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/25 to-black/45 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/40 pointer-events-none" />
 
-            <div className="relative z-10 mx-auto flex flex-wrap sm:flex-nowrap max-w-7xl min-h-[132px] sm:min-h-[116px] items-center content-center justify-between px-3 sm:px-6 py-4 sm:py-5 gap-x-2.5 gap-y-3 sm:gap-4">
+            <div className="relative z-10 mx-auto w-full flex flex-wrap sm:flex-nowrap max-w-7xl items-center justify-between px-2.5 sm:px-6 py-4 sm:py-5 md:py-6 gap-y-3 gap-x-2 sm:gap-4">
               {/* Left: Borderless Transparent Neon Rabbit Logo */}
               <div className="order-1 flex items-center shrink-0">
                 <Link
@@ -1070,13 +1058,13 @@ function RootComponent() {
                   data-tour="home-logo"
                   aria-label="Rabbit TV Home"
                   title="Back to Home"
-                  className={`relative flex items-center justify-center w-[138px] sm:w-[184px] md:w-[212px] h-12 sm:h-14 bg-transparent border-0 text-white rounded-2xl focus:outline-none focus-visible:ring-2 transition-transform hover:scale-[1.03] active:scale-95 ${tokens.focusRing}`}
+                  className={`relative flex items-center justify-center w-[148px] sm:w-[190px] md:w-[220px] h-12 sm:h-14 bg-transparent border-0 text-white opacity-95 hover:opacity-100 focus:outline-none focus:ring-2 rounded-full transition-all hover:scale-[1.03] active:scale-95 ${tokens.focusRing}`}
                 >
                   <img
                     src={RABBIT_LOGO_URL}
                     alt="Rabbit TV Home"
                     decoding="async"
-                    className="w-full h-full object-contain drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
+                    className="w-full h-full object-contain scale-[1.12] drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]"
                   />
                 </Link>
               </div>
@@ -1089,7 +1077,7 @@ function RootComponent() {
                 />
               )}
 
-              {/* Right: Corner Clock Pill + Kids Badge + Larger Borderless Sidebar Pill */}
+              {/* Right: Corner Clock Pill + Kids Badge + Borderless Sidebar Profile Pill */}
               {savedProfileName && !showFirstStartModal && (
                 <div className="order-2 sm:order-3 flex items-center gap-1.5 shrink-0">
                   {showCornerClock && cornerClockText && !isPlayerRoute && (
@@ -1102,7 +1090,7 @@ function RootComponent() {
                   )}
                   {kidsLocked && (
                     <span
-                      className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md"
+                      className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider"
                       title="Kids Safe Mode Locked"
                     >
                       🧒 Kids
@@ -1115,20 +1103,22 @@ function RootComponent() {
                     onClick={() => setShowProfileMenu((prev) => !prev)}
                     style={{
                       backgroundImage: `url(${SIDEBAR_BUTTON_BG_URL})`,
-                      backgroundSize: "104% 120%",
+                      backgroundSize: "108% 132%",
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "center center",
                     }}
-                    className={`flex items-center gap-2 sm:gap-2.5 pl-[11px] sm:pl-[14px] pr-3.5 sm:pr-4 w-[188px] sm:w-[236px] h-[52px] sm:h-14 bg-transparent border-0 text-xs sm:text-sm font-black text-white transition-transform hover:scale-[1.03] active:scale-95 cursor-pointer group relative focus:outline-none focus-visible:ring-2 rounded-2xl ${tokens.focusRing}`}
+                    className={`flex items-center gap-2 sm:gap-2.5 pl-2 sm:pl-2.5 pr-4 sm:pr-5 w-[186px] sm:w-[224px] md:w-[244px] h-12 sm:h-14 rounded-full bg-transparent border-0 text-xs font-black text-white opacity-95 hover:opacity-100 transition hover:scale-[1.02] active:scale-95 cursor-pointer group relative focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.focusRing}`}
                   >
-                    <MascotAvatar
-                      mascot={profileMascot}
-                      size="sm"
-                      rounded="full"
-                      className="relative z-10 !w-9 !h-9 sm:!w-11 sm:!h-11 !border-0 !bg-transparent shrink-0 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]"
-                      alt={savedProfileName}
-                    />
-                    <span className="relative z-10 flex-1 text-left truncate text-[11px] sm:text-xs drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                    <div className="relative z-10 flex items-center justify-center shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-full overflow-hidden">
+                      <MascotAvatar
+                        mascot={profileMascot}
+                        size="sm"
+                        rounded="full"
+                        className="!w-full !h-full border-0 bg-transparent [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
+                        alt={savedProfileName}
+                      />
+                    </div>
+                    <span className="relative z-10 flex-1 min-w-0 text-left truncate text-xs sm:text-[13px] drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
                       <strong className="text-white">{savedProfileName}</strong>{" "}
                       {isAdmin
                         ? "(Admin)"
@@ -1136,7 +1126,7 @@ function RootComponent() {
                           ? `(${trialDaysRemaining}d)`
                           : ""}
                     </span>
-                    <span className="relative z-10 text-xs sm:text-sm font-black opacity-90 group-hover:translate-x-0.5 transition-transform drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                    <span className="relative z-10 text-xs sm:text-sm font-black opacity-90 group-hover:translate-x-0.5 transition-transform shrink-0 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
                       ☰
                     </span>
                   </button>
