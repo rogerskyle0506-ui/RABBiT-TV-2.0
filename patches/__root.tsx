@@ -106,6 +106,18 @@ const SEARCHWRAPPER =
 export const BUTTON_WRAPPER_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
 
+export const SEARCH_BUTTON_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/searchbutton.png";
+
+export const BACK_TO_HOME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
+
+export const TV_DETAILS_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/TvDetails.png";
+
+export const REAL_SURPRISE_ME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/real_surprisemmebutton.png";
+
 /**
  * Viewport-locked header geometry so logo, search wrapper, search button, and
  * profile pill keep exact proportions and alignment across portrait phones,
@@ -113,29 +125,32 @@ export const BUTTON_WRAPPER_URL =
  */
 const VIEWPORT_HEADER_STYLES = `
   .rabtv-hdr-bar {
-    --hdr-u: clamp(35px, 11vw, 52px);
-    min-height: calc(var(--hdr-u) * 3.25);
+    --hdr-u: clamp(36px, 10.6vw, 52px);
+    min-height: calc(var(--hdr-u) * 3.15);
   }
 
   .rabtv-hdr-inner {
     width: 100%;
     max-width: 1440px;
     margin-inline: auto;
-    padding: clamp(10px, 2.6vw, 16px) clamp(8px, 2.4vw, 24px);
+    padding: clamp(8px, 2.2vw, 15px) clamp(8px, 2.2vw, 24px);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    row-gap: clamp(8px, 2.2vw, 14px);
-    column-gap: clamp(6px, 1.8vw, 16px);
+    row-gap: clamp(8px, 2vw, 12px);
+    column-gap: clamp(6px, 1.4vw, 16px);
+    box-sizing: border-box;
   }
 
   .rabtv-hdr-logo-wrap {
     order: 1;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     align-items: center;
-    max-width: calc(100% - (var(--hdr-u) * 4.15));
+    justify-content: flex-start;
+    max-width: calc(100% - (var(--hdr-u) * 3.85) - clamp(6px, 1.4vw, 12px));
   }
 
   .rabtv-hdr-logo {
@@ -143,10 +158,11 @@ const VIEWPORT_HEADER_STYLES = `
     display: flex;
     align-items: center;
     justify-content: center;
-    height: calc(var(--hdr-u) * 1.52);
-    width: calc(var(--hdr-u) * 4.25);
+    height: calc(var(--hdr-u) * 1.66);
+    width: calc(var(--hdr-u) * 4.9);
     max-width: 100%;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    box-sizing: border-box;
   }
 
   .rabtv-hdr-profile-wrap {
@@ -161,10 +177,10 @@ const VIEWPORT_HEADER_STYLES = `
     position: relative;
     display: flex;
     align-items: center;
-    height: calc(var(--hdr-u) * 1.22);
-    width: calc(var(--hdr-u) * 1.22 * 3.3);
-    padding-left: 39.5%;
-    padding-right: 17%;
+    height: calc(var(--hdr-u) * 1.24);
+    width: calc(var(--hdr-u) * 1.24 * 3.18);
+    padding-left: 39%;
+    padding-right: 20.5%;
     flex: 0 0 auto;
     box-sizing: border-box;
   }
@@ -193,7 +209,7 @@ const VIEWPORT_HEADER_STYLES = `
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.15;
-    font-size: clamp(10px, calc(var(--hdr-u) * 0.27), 14px);
+    font-size: clamp(10px, calc(var(--hdr-u) * 0.26), 14px);
   }
 
   .rabtv-hdr-search-form {
@@ -202,18 +218,18 @@ const VIEWPORT_HEADER_STYLES = `
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: clamp(6px, 1.6vw, 14px);
     min-width: 0;
+    box-sizing: border-box;
   }
 
   .rabtv-hdr-search-shell {
     position: relative;
     display: flex;
     align-items: center;
-    height: var(--hdr-u);
-    width: calc(var(--hdr-u) * 5.8);
-    max-width: calc(100% - (var(--hdr-u) * 2.3) - clamp(6px, 1.6vw, 14px));
-    flex: 0 1 auto;
+    height: calc(var(--hdr-u) * 1.06);
+    width: min(100%, calc(var(--hdr-u) * 8.6));
+    max-width: 100%;
+    flex: 1 1 auto;
     box-sizing: border-box;
   }
 
@@ -223,8 +239,8 @@ const VIEWPORT_HEADER_STYLES = `
     width: 100%;
     height: 100%;
     min-width: 0;
-    padding-left: 15.5%;
-    padding-right: 27%;
+    padding-left: 14.5%;
+    padding-right: 26.5%;
     padding-top: 0;
     padding-bottom: 0;
     line-height: 1;
@@ -232,52 +248,52 @@ const VIEWPORT_HEADER_STYLES = `
     box-sizing: border-box;
   }
 
+  /* Interactive transparent submit hit-target locked over the baked-in Search pill of search.png */
   .rabtv-hdr-search-pill-hit {
     position: absolute;
     z-index: 20;
-    right: 2%;
-    top: 10%;
-    bottom: 10%;
-    width: 23%;
+    right: 2.2%;
+    top: 12%;
+    bottom: 12%;
+    width: 22.8%;
     border: 0;
     background: transparent;
     border-radius: 9999px;
     cursor: pointer;
+    transition: background-color 150ms ease, transform 120ms ease, box-shadow 150ms ease;
   }
 
-  .rabtv-hdr-search-btn {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: var(--hdr-u);
-    width: calc(var(--hdr-u) * 2.3);
-    padding: 0 8px;
-    flex: 0 0 auto;
-    font-size: clamp(10px, calc(var(--hdr-u) * 0.27), 15px);
-    line-height: 1;
-    box-sizing: border-box;
+  .rabtv-hdr-search-pill-hit:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.16);
   }
 
+  .rabtv-hdr-search-pill-hit:active {
+    background-color: rgba(255, 255, 255, 0.16);
+    transform: scale(0.96);
+  }
+
+  /* Landscape phones, tablets, desktops, TVs & projectors */
   @media (min-width: 640px) {
     .rabtv-hdr-bar {
-      --hdr-u: clamp(35px, 5.4vw, 60px);
-      min-height: clamp(82px, 10.5vw, 140px);
+      --hdr-u: clamp(34px, 5vw, 56px);
+      min-height: clamp(76px, 9.6vw, 130px);
     }
 
     .rabtv-hdr-inner {
       flex-wrap: nowrap;
-      padding: clamp(8px, 1.3vw, 20px) clamp(10px, 2vw, 28px);
-      column-gap: clamp(8px, 1.3vw, 20px);
+      padding: clamp(7px, 1.15vw, 18px) clamp(10px, 2vw, 28px);
+      column-gap: clamp(8px, 1.4vw, 20px);
     }
 
     .rabtv-hdr-logo-wrap {
+      flex: 0 0 auto;
       max-width: none;
     }
 
     .rabtv-hdr-logo {
-      height: calc(var(--hdr-u) * 1.42);
-      width: calc(var(--hdr-u) * 3.95);
+      height: calc(var(--hdr-u) * 1.54);
+      width: calc(var(--hdr-u) * 4.55);
     }
 
     .rabtv-hdr-search-form {
@@ -285,11 +301,12 @@ const VIEWPORT_HEADER_STYLES = `
       width: auto;
       flex: 1 1 auto;
       justify-content: center;
-      gap: clamp(6px, 1vw, 14px);
+      max-width: 640px;
     }
 
     .rabtv-hdr-search-shell {
-      width: calc(var(--hdr-u) * 5.5);
+      height: calc(var(--hdr-u) * 1.04);
+      width: min(100%, calc(var(--hdr-u) * 7.8));
     }
 
     .rabtv-hdr-profile-wrap {
@@ -297,12 +314,31 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-profile-btn {
-      height: calc(var(--hdr-u) * 1.16);
-      width: calc(var(--hdr-u) * 1.16 * 3.3);
+      height: calc(var(--hdr-u) * 1.18);
+      width: calc(var(--hdr-u) * 1.18 * 3.24);
     }
 
     .rabtv-hdr-profile-label {
       font-size: clamp(10px, calc(var(--hdr-u) * 0.25), 14px);
+    }
+  }
+
+  /* Short phone landscape guard (keeps header slim so video & catalog stay roomy) */
+  @media (min-width: 640px) and (max-height: 480px) {
+    .rabtv-hdr-bar {
+      --hdr-u: clamp(30px, 7.6dvh, 40px);
+      min-height: clamp(58px, 15dvh, 78px);
+    }
+
+    .rabtv-hdr-inner {
+      padding: 6px clamp(10px, 2vw, 20px);
+    }
+  }
+
+  /* Large TVs, 4K monitors & projectors */
+  @media (min-width: 1280px) {
+    .rabtv-hdr-bar {
+      --hdr-u: clamp(48px, 3.6vw, 60px);
     }
   }
 `;
@@ -617,7 +653,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         className="rabtv-hdr-search-shell bg-transparent border-0 opacity-95 hover:opacity-100 focus-within:opacity-100 transition-opacity"
         style={{
           backgroundImage: `url(${SEARCHWRAPPER})`,
-          backgroundSize: "105% 152%",
+          backgroundSize: "103% 148%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
@@ -633,35 +669,18 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
           enterKeyHint="search"
           defaultValue=""
           data-tour="global-search-input"
-          placeholder="Search..."
+          placeholder="Search movies, TV shows..."
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
           className="rabtv-hdr-search-input bg-transparent font-bold text-white placeholder-slate-200/75 focus:outline-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
         />
-        {/* Transparent submit hit-target aligned over the inner Search pill of search.png */}
+        {/* Transparent interactive submit button aligned directly over the Search button in search.png */}
         <button
           type="submit"
-          aria-label="Run search"
-          tabIndex={-1}
-          className="rabtv-hdr-search-pill-hit"
+          aria-label="Search"
+          title="Search"
+          className={`rabtv-hdr-search-pill-hit focus:outline-none focus-visible:ring-2 ${tokens.focusRing}`}
         />
       </div>
-
-      <button
-        type="submit"
-        aria-label="Search"
-        title="Open Search"
-        className={`rabtv-hdr-search-btn font-black uppercase tracking-wider bg-transparent border-0 opacity-95 hover:opacity-100 transition active:scale-95 cursor-pointer focus:outline-none focus:ring-2 rounded-full ${tokens.searchSubmitBtn} ${tokens.focusRing}`}
-        style={{
-          backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-          backgroundSize: "108% 158%",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center center",
-        }}
-      >
-        <span className="relative z-10 text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
-          Search
-        </span>
-      </button>
     </form>
   );
 });
@@ -1274,7 +1293,7 @@ function RootComponent() {
                     src={RABBIT_LOGO_URL}
                     alt="Rabbit TV Home"
                     decoding="async"
-                    className="w-full h-full object-contain scale-[1.38] drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]"
+                    className="w-full h-full object-contain scale-[1.46] drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]"
                   />
                 </Link>
               </div>
