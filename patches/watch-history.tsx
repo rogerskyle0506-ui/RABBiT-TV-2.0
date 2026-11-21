@@ -52,6 +52,118 @@ import {
   type EpisodeRadarAlert,
 } from "@/lib/episode-radar";
 
+const BUTTON_WRAPPER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
+
+const BACK_TO_HOME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
+
+/**
+ * Viewport-locked layout rules for Watch History top utility wrapper, Back to
+ * Home artwork button, and buttonwrapper-backed section headers across portrait
+ * phones, landscape phones, tablets, desktops, TVs, and projectors.
+ */
+const WATCH_HISTORY_VIEWPORT_STYLES = `
+  .rabtv-wh-top-bar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(8px, 2vw, 14px);
+    box-sizing: border-box;
+  }
+
+  .rabtv-wh-back-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: clamp(50px, 12.6vw, 68px);
+    width: clamp(188px, 48vw, 260px);
+    max-width: 100%;
+    padding: clamp(7px, 1.8vw, 10px) clamp(16px, 4.2vw, 28px);
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    flex: 0 0 auto;
+  }
+
+  .rabtv-wh-art-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-wh-art-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
+  }
+
+  .rabtv-wh-section-banner {
+    position: relative;
+    width: 100%;
+    min-height: clamp(54px, 12vw, 72px);
+    padding: clamp(10px, 2.2vw, 14px) clamp(20px, 5vw, 40px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(6px, 1.5vw, 12px);
+    box-sizing: border-box;
+    border-radius: 9999px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    overflow: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-wh-back-wrap {
+      height: clamp(54px, 5.6vw, 72px);
+      width: clamp(210px, 22vw, 284px);
+      padding: clamp(8px, 0.9vw, 11px) clamp(20px, 2.4vw, 32px);
+    }
+
+    .rabtv-wh-section-banner {
+      min-height: clamp(58px, 5.8vw, 76px);
+      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.8vw, 48px);
+    }
+  }
+
+  @media (min-width: 640px) and (max-height: 480px) {
+    .rabtv-wh-back-wrap {
+      height: 46px;
+      width: 186px;
+      padding: 6px 16px;
+    }
+
+    .rabtv-wh-section-banner {
+      min-height: 50px;
+      padding: 8px 24px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .rabtv-wh-back-wrap {
+      height: 70px;
+      width: 280px;
+    }
+  }
+`;
+
 export const Route = createFileRoute("/watch-history")({
   component: WatchHistoryComponent,
 });
@@ -108,7 +220,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
   switch (theme) {
     case "red":
       return {
-        pageBg: "bg-gradient-to-br from-zinc-950/88 via-red-950/42 to-black/95",
+        pageBg: "bg-gradient-to-br from-zinc-950/65 via-red-950/30 to-black/75",
         baseText: "text-zinc-100",
         mutedText: "text-zinc-300",
         subMutedText: "text-zinc-400",
@@ -117,7 +229,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
         badgeBg: "bg-red-950/75 border-red-500/35 text-red-200",
         subtleBadge: "bg-black/75 border-red-500/25 text-zinc-200",
         surfacePanel:
-          "bg-zinc-950/90 border-red-500/30 shadow-[0_12px_36px_rgba(239,68,68,0.16)]",
+          "bg-zinc-950/68 border-red-500/30 shadow-[0_12px_36px_rgba(239,68,68,0.16)]",
         subPanel: "bg-black/70 border-red-500/25",
         cardFooter:
           "bg-gradient-to-b from-zinc-950 to-black border-t border-red-500/25",
@@ -164,7 +276,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
     case "midnight":
       return {
         pageBg:
-          "bg-gradient-to-br from-slate-950/88 via-blue-950/42 to-black/95",
+          "bg-gradient-to-br from-slate-950/65 via-blue-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
@@ -173,7 +285,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
         badgeBg: "bg-blue-950/75 border-blue-500/35 text-sky-200",
         subtleBadge: "bg-black/75 border-blue-500/25 text-slate-200",
         surfacePanel:
-          "bg-slate-950/90 border-blue-500/30 shadow-[0_12px_36px_rgba(59,130,246,0.16)]",
+          "bg-slate-950/68 border-blue-500/30 shadow-[0_12px_36px_rgba(59,130,246,0.16)]",
         subPanel: "bg-black/70 border-blue-500/25",
         cardFooter:
           "bg-gradient-to-b from-slate-950 to-black border-t border-blue-500/25",
@@ -220,7 +332,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
     case "emerald":
       return {
         pageBg:
-          "bg-gradient-to-br from-neutral-950/88 via-emerald-950/42 to-black/95",
+          "bg-gradient-to-br from-neutral-950/65 via-emerald-950/30 to-black/75",
         baseText: "text-neutral-100",
         mutedText: "text-neutral-300",
         subMutedText: "text-neutral-400",
@@ -229,7 +341,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
         badgeBg: "bg-emerald-950/75 border-emerald-500/35 text-emerald-200",
         subtleBadge: "bg-black/75 border-emerald-500/25 text-neutral-200",
         surfacePanel:
-          "bg-neutral-950/90 border-emerald-500/30 shadow-[0_12px_36px_rgba(16,185,129,0.16)]",
+          "bg-neutral-950/68 border-emerald-500/30 shadow-[0_12px_36px_rgba(16,185,129,0.16)]",
         subPanel: "bg-black/70 border-emerald-500/25",
         cardFooter:
           "bg-gradient-to-b from-neutral-950 to-black border-t border-emerald-500/25",
@@ -276,7 +388,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
     case "amber":
       return {
         pageBg:
-          "bg-gradient-to-br from-stone-950/88 via-yellow-950/42 to-black/95",
+          "bg-gradient-to-br from-stone-950/65 via-yellow-950/30 to-black/75",
         baseText: "text-stone-100",
         mutedText: "text-stone-300",
         subMutedText: "text-stone-400",
@@ -285,7 +397,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
         badgeBg: "bg-amber-950/75 border-amber-500/35 text-amber-200",
         subtleBadge: "bg-black/75 border-amber-500/25 text-stone-200",
         surfacePanel:
-          "bg-stone-950/90 border-amber-500/30 shadow-[0_12px_36px_rgba(245,158,11,0.16)]",
+          "bg-stone-950/68 border-amber-500/30 shadow-[0_12px_36px_rgba(245,158,11,0.16)]",
         subPanel: "bg-black/70 border-amber-500/25",
         cardFooter:
           "bg-gradient-to-b from-stone-950 to-black border-t border-amber-500/25",
@@ -332,7 +444,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
     case "cyan":
       return {
         pageBg:
-          "bg-gradient-to-br from-slate-950/88 via-cyan-950/42 to-black/95",
+          "bg-gradient-to-br from-slate-950/65 via-cyan-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
@@ -341,7 +453,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
         badgeBg: "bg-cyan-950/75 border-cyan-500/35 text-cyan-200",
         subtleBadge: "bg-black/75 border-cyan-500/25 text-slate-200",
         surfacePanel:
-          "bg-slate-950/90 border-cyan-500/30 shadow-[0_12px_36px_rgba(6,182,212,0.16)]",
+          "bg-slate-950/68 border-cyan-500/30 shadow-[0_12px_36px_rgba(6,182,212,0.16)]",
         subPanel: "bg-black/70 border-cyan-500/25",
         cardFooter:
           "bg-gradient-to-b from-slate-950 to-black border-t border-cyan-500/25",
@@ -389,7 +501,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
     default:
       return {
         pageBg:
-          "bg-gradient-to-br from-slate-950/88 via-purple-950/42 to-black/95",
+          "bg-gradient-to-br from-slate-950/65 via-purple-950/30 to-black/75",
         baseText: "text-slate-100",
         mutedText: "text-slate-300",
         subMutedText: "text-slate-400",
@@ -398,7 +510,7 @@ function getWatchHistoryThemeTokens(theme: AppTheme): WatchHistoryThemeTokens {
         badgeBg: "bg-purple-950/75 border-violet-500/35 text-violet-200",
         subtleBadge: "bg-black/75 border-violet-500/25 text-slate-200",
         surfacePanel:
-          "bg-slate-950/90 border-violet-500/30 shadow-[0_12px_36px_rgba(139,92,246,0.16)]",
+          "bg-slate-950/68 border-violet-500/30 shadow-[0_12px_36px_rgba(139,92,246,0.16)]",
         subPanel: "bg-black/70 border-violet-500/25",
         cardFooter:
           "bg-gradient-to-b from-slate-950 to-black border-t border-violet-500/25",
@@ -930,6 +1042,7 @@ function WatchHistoryComponent() {
       data-tour="history-page"
       className={`min-h-screen w-full max-w-full ${themeTokens.pageBg} ${themeTokens.baseText} p-2.5 sm:p-6 md:p-10 space-y-5 sm:space-y-6 transition-colors duration-300 pb-16 overflow-x-clip relative rounded-3xl`}
     >
+      <style>{WATCH_HISTORY_VIEWPORT_STYLES}</style>
       <AppWallpaper />
       {!isLowRam && !reducedMotion && !glowOff && (
         <div
@@ -938,42 +1051,41 @@ function WatchHistoryComponent() {
       )}
 
       <div className="relative z-10 max-w-7xl mx-auto space-y-5 sm:space-y-6 min-w-0">
-        {/* Top Capsule Row: Back to Home + Quick Shortcuts */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              to="/"
-              data-tour="back-to-home"
-              className={`group inline-flex items-center gap-2 rounded-full backdrop-blur-xl pl-3 pr-2 ${
-                largeButtons ? "py-2.5" : "py-1.5"
-              } border shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 ${
-                themeTokens.backCapsule
-              } ${themeTokens.focusRing}`}
+        {/* Top Utility Row: Backtohome.png inside Viewport-Locked Button Wrapper + Quick Shortcuts */}
+        <div className="rabtv-wh-top-bar">
+          <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
+            <div
+              className="rabtv-wh-back-wrap"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
             >
-              <span className="opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all text-xs font-bold">
-                ‹
-              </span>
-              <span className="text-xs sm:text-sm font-semibold tracking-wide">
-                Back to Home
-              </span>
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${themeTokens.backBadge}`}
+              <Link
+                to="/"
+                data-tour="back-to-home"
+                aria-label="Back to Home"
+                title="Back to Home"
+                className={`rabtv-wh-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
               >
-                ⟲
-              </span>
-            </Link>
+                <img
+                  src={BACK_TO_HOME_BTN_URL}
+                  alt="Back to Home"
+                  decoding="async"
+                />
+              </Link>
+            </div>
 
             <Link
               to="/"
               search={{ tab: "My List" }}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border backdrop-blur-md px-3.5 py-2 text-xs font-bold transition shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
             >
               <span>🔖 My List</span>
             </Link>
 
             <Link
               to="/live-tv"
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border backdrop-blur-md px-3.5 py-2 text-xs font-bold transition shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
             >
               <span>📡 Live TV</span>
             </Link>
@@ -983,7 +1095,7 @@ function WatchHistoryComponent() {
             type="button"
             data-tour="history-export"
             onClick={handleExportActivity}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+            className={`inline-flex items-center gap-1.5 rounded-full border backdrop-blur-md px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
           >
             <span>💾 Export History JSON</span>
           </button>
@@ -1365,17 +1477,22 @@ function WatchHistoryComponent() {
             {/* 1. RECENTLY WATCHED LIVE TV */}
             {showLiveSection && (
               <section className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className="rabtv-wh-section-banner"
+                  style={{
+                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  }}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                     <span
-                      className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                      className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
                     />
-                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                    <h2 className="text-sm sm:text-lg font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                       📡 Recently Watched Live TV
                     </h2>
                   </div>
                   <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full border shrink-0 ${themeTokens.badgeBg}`}
+                    className={`relative z-10 text-xs font-bold px-3 py-1 rounded-full border shrink-0 ${themeTokens.badgeBg}`}
                   >
                     Last {filteredLive.length}
                   </span>
@@ -1486,17 +1603,22 @@ function WatchHistoryComponent() {
             {/* 2. MOVIES - IN PROGRESS */}
             {showInProgressMovies && (
               <section className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className="rabtv-wh-section-banner"
+                  style={{
+                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  }}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                     <span
-                      className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                      className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
                     />
-                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                    <h2 className="text-sm sm:text-lg font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                       🎬 Movies — In Progress
                     </h2>
                   </div>
                   <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full border shrink-0 ${themeTokens.badgeBg}`}
+                    className={`relative z-10 text-xs font-bold px-3 py-1 rounded-full border shrink-0 ${themeTokens.badgeBg}`}
                   >
                     {inProgressMovies.length}
                   </span>
@@ -1529,17 +1651,22 @@ function WatchHistoryComponent() {
             {/* 3. TV SHOWS - IN PROGRESS */}
             {showInProgressShows && (
               <section className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className="rabtv-wh-section-banner"
+                  style={{
+                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  }}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                     <span
-                      className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                      className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
                     />
-                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                    <h2 className="text-sm sm:text-lg font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                       📺 TV Shows — In Progress
                     </h2>
                   </div>
                   <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full border shrink-0 ${themeTokens.badgeBg}`}
+                    className={`relative z-10 text-xs font-bold px-3 py-1 rounded-full border shrink-0 ${themeTokens.badgeBg}`}
                   >
                     {inProgressShows.length}
                   </span>
@@ -1585,14 +1712,19 @@ function WatchHistoryComponent() {
             {/* 4. COMPLETED */}
             {showCompletedSection && (
               <section className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-1.5 h-6 rounded-full shrink-0 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
-                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                <div
+                  className="rabtv-wh-section-banner"
+                  style={{
+                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  }}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+                    <span className="w-1.5 h-5 sm:h-6 rounded-full shrink-0 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
+                    <h2 className="text-sm sm:text-lg font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                       ✓ Completed
                     </h2>
                   </div>
-                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-950/75 border border-emerald-500/35 text-emerald-300 shrink-0">
+                  <span className="relative z-10 text-xs font-bold px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/35 text-emerald-300 shrink-0">
                     {(activeTab !== "tv" ? completedMovies.length : 0) +
                       (activeTab !== "movies" ? completedShows.length : 0)}
                   </span>
@@ -1656,17 +1788,22 @@ function WatchHistoryComponent() {
             {/* 5. DISLIKED / REMOVED */}
             {showDislikedSection && (
               <section className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className="rabtv-wh-section-banner"
+                  style={{
+                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  }}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                     <span
-                      className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                      className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
                     />
-                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                    <h2 className="text-sm sm:text-lg font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                       👎 Disliked / Hidden Globally
                     </h2>
                   </div>
                   <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full border shrink-0 ${themeTokens.badgeBg}`}
+                    className={`relative z-10 text-xs font-bold px-3 py-1 rounded-full border shrink-0 ${themeTokens.badgeBg}`}
                   >
                     {filteredDisliked.length}
                   </span>
