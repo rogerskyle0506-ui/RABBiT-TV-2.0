@@ -51,20 +51,22 @@ const LIVE_PLAYER_VIEWPORT_STYLES = `
     box-sizing: border-box;
   }
 
-  /* Single wide buttonwrapper.png bay holding Backtohome.png + Live TV Guide link */
+  /* Single wide buttonwrapper.png bay holding Backtohome.png + Live TV Guide cleanly */
   .rabtv-lp-dual-nav-wrap {
     position: relative;
-    width: min(100%, clamp(288px, 92vw, 440px));
-    min-height: clamp(50px, 13vw, 70px);
-    padding: clamp(6px, 1.6vw, 10px) clamp(14px, 3.8vw, 30px);
+    width: min(100%, clamp(312px, 94vw, 500px));
+    height: clamp(62px, 16.2vw, 84px);
+    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 36px);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: clamp(6px, 1.8vw, 14px);
+    gap: clamp(8px, 2.2vw, 16px);
     box-sizing: border-box;
-    background-size: 100% 100%;
+    border-radius: 9999px;
+    background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
+    overflow: hidden;
     flex: 0 1 auto;
   }
 
@@ -73,14 +75,16 @@ const LIVE_PLAYER_VIEWPORT_STYLES = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    flex: 1.15 1 0;
+    flex: 1 1 0;
     min-width: 0;
-    max-width: 54%;
-    height: clamp(34px, 9vw, 46px);
+    max-width: 48%;
+    height: 100%;
     background: transparent;
     border: 0;
     padding: 0;
     cursor: pointer;
+    overflow: hidden;
+    border-radius: 9999px;
     transition: transform 160ms ease, filter 160ms ease;
   }
 
@@ -89,6 +93,7 @@ const LIVE_PLAYER_VIEWPORT_STYLES = `
     height: 100%;
     object-fit: contain;
     display: block;
+    transform: scale(1.44);
     filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
   }
 
@@ -98,84 +103,97 @@ const LIVE_PLAYER_VIEWPORT_STYLES = `
     align-items: center;
     justify-content: center;
     gap: 5px;
-    flex: 0.85 1 0;
+    flex: 1 1 0;
     min-width: 0;
-    max-width: 44%;
-    height: clamp(32px, 8.2vw, 42px);
+    max-width: 46%;
+    height: 76%;
     padding: 0 clamp(8px, 2vw, 14px);
     border-radius: 9999px;
-    font-size: clamp(10px, 2.7vw, 12px);
+    font-size: clamp(10px, 2.7vw, 13px);
     white-space: nowrap;
     box-sizing: border-box;
   }
 
+  /* Viewport-locked single-row section header banner backed by full-height buttonwrapper.png */
   .rabtv-lp-section-banner {
     position: relative;
     width: 100%;
-    min-height: clamp(52px, 11.5vw, 68px);
-    padding: clamp(9px, 2vw, 13px) clamp(18px, 4.6vw, 38px);
+    height: clamp(54px, 13.8vw, 72px);
+    padding: 0 clamp(24px, 6.4vw, 46px);
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
-    gap: clamp(6px, 1.5vw, 12px);
+    gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
-    background-size: 100% 100%;
+    background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
   }
 
+  .rabtv-lp-section-title {
+    font-size: clamp(13px, 3.5vw, 19px);
+    line-height: 1.1;
+  }
+
+  .rabtv-lp-section-meta {
+    font-size: clamp(10px, 2.7vw, 12px);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
   @media (min-width: 640px) {
     .rabtv-lp-dual-nav-wrap {
-      width: min(100%, clamp(340px, 40vw, 460px));
-      min-height: clamp(56px, 5.8vw, 74px);
-      padding: clamp(7px, 0.85vw, 11px) clamp(18px, 2.2vw, 32px);
-      gap: clamp(8px, 1.1vw, 14px);
-    }
-
-    .rabtv-lp-art-btn {
-      height: clamp(38px, 3.9vw, 48px);
+      width: min(100%, clamp(370px, 44vw, 500px));
+      height: clamp(66px, 6.8vw, 86px);
+      padding: clamp(9px, 1vw, 13px) clamp(26px, 3.2vw, 42px);
+      gap: clamp(10px, 1.4vw, 18px);
     }
 
     .rabtv-lp-guide-pill {
-      height: clamp(34px, 3.5vw, 44px);
-      font-size: clamp(11px, 1.1vw, 13px);
+      height: 74%;
+      font-size: clamp(11px, 1.15vw, 13px);
     }
 
     .rabtv-lp-section-banner {
-      min-height: clamp(56px, 5.5vw, 72px);
-      padding: clamp(10px, 1.1vw, 14px) clamp(26px, 3.5vw, 44px);
+      height: clamp(60px, 6vw, 76px);
+      padding: 0 clamp(34px, 4.2vw, 54px);
+    }
+
+    .rabtv-lp-section-title {
+      font-size: clamp(16px, 1.7vw, 21px);
+    }
+
+    .rabtv-lp-section-meta {
+      font-size: clamp(11px, 1.1vw, 13px);
     }
   }
 
   @media (min-width: 640px) and (max-height: 480px) {
     .rabtv-lp-dual-nav-wrap {
-      width: min(100%, 330px);
-      min-height: 46px;
-      padding: 5px 16px;
-      gap: 6px;
-    }
-
-    .rabtv-lp-art-btn {
-      height: 32px;
+      width: min(100%, 350px);
+      height: 52px;
+      padding: 6px 20px;
+      gap: 8px;
     }
 
     .rabtv-lp-guide-pill {
-      height: 30px;
+      height: 76%;
       font-size: 10px;
+    }
+
+    .rabtv-lp-section-banner {
+      height: 52px;
+      padding: 0 28px;
     }
   }
 
   @media (min-width: 1280px) {
     .rabtv-lp-dual-nav-wrap {
-      width: 450px;
-      min-height: 72px;
-    }
-
-    .rabtv-lp-art-btn {
-      height: 46px;
+      width: 490px;
+      height: 84px;
     }
   }
 `;
@@ -2230,11 +2248,11 @@ function LivePlayerComponent() {
               backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
             }}
           >
-            <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+            <div className="flex items-center gap-2 min-w-0 relative z-10">
               <span
-                className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
+                className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeStyles.accentBar}`}
               />
-              <h2 className="text-sm sm:text-base md:text-lg font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+              <h2 className="rabtv-lp-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 📡 More Live Channels
               </h2>
             </div>
@@ -2242,7 +2260,7 @@ function LivePlayerComponent() {
             <button
               type="button"
               onClick={() => navigate({ to: '/live-tv' })}
-              className={`relative z-10 text-xs font-extrabold hover:underline cursor-pointer shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
+              className={`rabtv-lp-section-meta relative z-10 font-extrabold hover:underline cursor-pointer shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
             >
               View All →
             </button>
