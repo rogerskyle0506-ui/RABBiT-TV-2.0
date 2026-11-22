@@ -140,137 +140,107 @@ const REAL_SURPRISE_ME_BTN_URL =
  * portrait phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const HOME_VIEWPORT_STYLES = `
-  /* Base: Portrait Phones (< 640px) — Compact, Theme-Blended Greeting Card */
+  /* Shared Alpha-Safe Studded Wrapper Art Layer (Hue-rotates ONLY neon pixels, ZERO boxes!) */
+  .rabtv-art-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 110% 188%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    filter: var(--rabtv-wrap-filter, drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)));
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Base: Portrait Phones (< 640px) — Seamless Floating Punk Neon Greeting Stage */
   .rabtv-home-greet-card {
     position: relative;
-    isolation: isolate;
     width: 100%;
     max-width: 72rem;
-    min-height: clamp(130px, 31vw, 174px);
-    border-radius: 26px;
-    padding: clamp(12px, 3vw, 22px) clamp(10px, 2.8vw, 24px);
+    min-height: clamp(122px, 29vw, 162px);
+    padding: clamp(10px, 2.6vw, 18px) clamp(10px, 2.6vw, 24px) clamp(14px, 3.2vw, 20px);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: clamp(8px, 2vw, 14px);
-    overflow: hidden;
+    gap: clamp(9px, 2.2vw, 14px);
+    overflow: visible;
     box-sizing: border-box;
   }
 
-  /* Smooth feathered edges so fontwrapper.png melts naturally into the app wallpaper */
+  /* Organic elliptical radial feather so fontwrapper.png melts into the background with ZERO box edges */
   .rabtv-home-greet-bg {
     position: absolute;
-    inset: 0;
+    inset: -4px 0;
     pointer-events: none;
-    opacity: 0.72;
-    background-size: 112% 185%;
+    opacity: 0.52;
+    background-size: 114% 190%;
     background-repeat: no-repeat;
     background-position: center center;
-    -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.85) 18%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.85) 82%, transparent 100%),
-      linear-gradient(to right, transparent 0%, rgba(0,0,0,0.9) 10%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.9) 90%, transparent 100%);
-    -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.85) 18%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.85) 82%, transparent 100%),
-      linear-gradient(to right, transparent 0%, rgba(0,0,0,0.9) 10%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.9) 90%, transparent 100%);
-    mask-composite: intersect;
-  }
-
-  .rabtv-home-greet-tint {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: var(--rabtv-art-tint);
-    mix-blend-mode: color;
-    opacity: calc(var(--rabtv-art-tint-opacity) * 0.65);
-  }
-
-  .rabtv-home-greet-vignette {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(
-      ellipse at center,
-      var(--rabtv-art-soft) 0%,
-      rgba(0, 0, 0, 0.56) 100%
+    -webkit-mask-image: radial-gradient(
+      ellipse 70% 66% at 50% 48%,
+      rgba(0, 0, 0, 0.92) 22%,
+      rgba(0, 0, 0, 0.42) 60%,
+      transparent 98%
+    );
+    mask-image: radial-gradient(
+      ellipse 70% 66% at 50% 48%,
+      rgba(0, 0, 0, 0.92) 22%,
+      rgba(0, 0, 0, 0.42) 60%,
+      transparent 98%
     );
   }
 
+  .rabtv-home-greet-laser {
+    position: absolute;
+    inset-inline: 12%;
+    bottom: 0;
+    height: 1px;
+    background: var(--rabtv-neon-line, linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.65), transparent));
+    pointer-events: none;
+  }
+
   .rabtv-home-greet-mascot {
-    width: clamp(46px, 11.8vw, 66px) !important;
-    height: clamp(46px, 11.8vw, 66px) !important;
+    width: clamp(46px, 11.8vw, 64px) !important;
+    height: clamp(46px, 11.8vw, 64px) !important;
     flex-shrink: 0;
     overflow: hidden;
     border-radius: 9999px;
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.9))
-      drop-shadow(0 0 8px var(--rabtv-art-glow));
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.92))
+      drop-shadow(0 0 6px var(--rabtv-neon-glow, rgba(168, 85, 247, 0.34)));
   }
 
   .rabtv-home-greet-title {
     font-size: clamp(16px, 4.3vw, 24px);
     line-height: 1.15;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
   }
 
-  /* Compact, Sleek Theme-Tinted Wrapper for Movie Night + Surprise Me */
+  /* Compact, Sleek Studded Bay for Movie Night + Surprise Me (Zero Overlay Slabs!) */
   .rabtv-home-dual-wrap {
     position: relative;
-    isolation: isolate;
-    width: min(88%, 296px);
-    height: clamp(46px, 12.2vw, 56px);
-    padding: 6px clamp(15px, 4.2vw, 22px);
+    width: min(92%, 318px);
+    height: clamp(48px, 12.6vw, 58px);
+    padding: 5px clamp(15px, 4vw, 22px);
     display: flex;
     align-items: center;
     justify-content: space-evenly;
     gap: clamp(8px, 2vw, 14px);
     box-sizing: border-box;
     border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
     overflow: hidden;
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8))
-      drop-shadow(0 0 10px var(--rabtv-art-glow));
-  }
-
-  /* Subtle theme tint on wrapper rim without hiding metallic studs or details */
-  .rabtv-home-dual-wrap::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 9999px;
-    background: radial-gradient(
-      ellipse at center,
-      var(--rabtv-art-soft) 0%,
-      transparent 82%
-    );
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .rabtv-home-dual-wrap::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 9999px;
-    background: var(--rabtv-art-tint);
-    mix-blend-mode: color;
-    opacity: var(--rabtv-art-tint-opacity);
-    pointer-events: none;
-    z-index: 2;
   }
 
   .rabtv-home-art-btn {
     position: relative;
     z-index: 6;
-    isolation: isolate;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: 1 1 0;
     min-width: 0;
-    max-width: 45%;
-    height: 82%;
+    max-width: 47%;
+    height: 86%;
     background: transparent;
     border: 0;
     padding: 0;
@@ -280,17 +250,8 @@ const HOME_VIEWPORT_STYLES = `
     transition: transform 160ms ease, filter 160ms ease;
   }
 
-  /* Gentle theme tint over Movie Night & Surprise Me pills (keeps text crisp white!) */
-  .rabtv-home-art-btn::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 9999px;
-    background: var(--rabtv-art-tint);
-    mix-blend-mode: color;
-    opacity: var(--rabtv-btn-tint-opacity);
-    pointer-events: none;
-    z-index: 2;
+  .rabtv-home-art-btn:hover {
+    filter: brightness(1.08) drop-shadow(0 0 8px var(--rabtv-neon-glow, rgba(168, 85, 247, 0.34)));
   }
 
   .rabtv-home-art-btn img {
@@ -298,24 +259,23 @@ const HOME_VIEWPORT_STYLES = `
     height: 100%;
     object-fit: contain;
     display: block;
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.88));
   }
 
-  /* Compact 1:1 visual height match between Movie Night & Surprise Me */
+  /* Crisp 1:1 visual height match between Movie Night & Surprise Me */
   .rabtv-home-art-btn--movie img {
-    transform: scale(1.04);
+    transform: scale(1.10);
   }
 
   .rabtv-home-art-btn--surprise img {
-    transform: scale(1.42);
+    transform: scale(1.48);
   }
 
-  /* Sleek Full-Width Theme-Tinted Centered Section Header Banner */
+  /* Sleek Full-Width Alpha-Clean Section Header Banner */
   .rabtv-section-banner-wrap {
     position: relative;
-    isolation: isolate;
     width: 100%;
-    height: clamp(46px, 12vw, 58px);
+    height: clamp(44px, 11.4vw, 54px);
     padding: 0 clamp(24px, 6vw, 48px);
     display: flex;
     flex-wrap: nowrap;
@@ -324,42 +284,11 @@ const HOME_VIEWPORT_STYLES = `
     gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
     overflow: hidden;
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8))
-      drop-shadow(0 0 10px var(--rabtv-art-glow));
-  }
-
-  .rabtv-section-banner-wrap::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 9999px;
-    background: radial-gradient(
-      ellipse at center,
-      var(--rabtv-art-soft) 0%,
-      transparent 82%
-    );
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .rabtv-section-banner-wrap::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 9999px;
-    background: var(--rabtv-art-tint);
-    mix-blend-mode: color;
-    opacity: var(--rabtv-art-tint-opacity);
-    pointer-events: none;
-    z-index: 2;
   }
 
   .rabtv-section-banner-title {
-    font-size: clamp(13.5px, 3.7vw, 20px);
+    font-size: clamp(13.5px, 3.7vw, 19.5px);
     line-height: 1.1;
     text-align: center;
   }
@@ -377,14 +306,14 @@ const HOME_VIEWPORT_STYLES = `
   /* Tablets, Landscape Phones, PCs, Google TV & Fire Sticks (>= 640px) */
   @media (min-width: 640px) {
     .rabtv-home-greet-card {
-      min-height: clamp(142px, 15.5vw, 188px);
-      padding: clamp(14px, 1.8vw, 22px) clamp(16px, 2.4vw, 32px);
+      min-height: clamp(134px, 14.5vw, 178px);
+      padding: clamp(12px, 1.6vw, 20px) clamp(16px, 2.4vw, 32px) clamp(16px, 2vw, 22px);
       gap: clamp(10px, 1.3vw, 15px);
     }
 
     .rabtv-home-greet-mascot {
-      width: clamp(52px, 4.8vw, 68px) !important;
-      height: clamp(52px, 4.8vw, 68px) !important;
+      width: clamp(50px, 4.6vw, 66px) !important;
+      height: clamp(50px, 4.6vw, 66px) !important;
     }
 
     .rabtv-home-greet-title {
@@ -392,19 +321,19 @@ const HOME_VIEWPORT_STYLES = `
     }
 
     .rabtv-home-dual-wrap {
-      width: min(76%, clamp(304px, 38vw, 412px));
+      width: min(76%, clamp(320px, 38vw, 410px));
       height: clamp(48px, 5vw, 60px);
       padding: 6px clamp(18px, 2.4vw, 28px);
       gap: clamp(10px, 1.4vw, 18px);
     }
 
     .rabtv-home-art-btn {
-      max-width: 44%;
-      height: 82%;
+      max-width: 45%;
+      height: 86%;
     }
 
     .rabtv-section-banner-wrap {
-      height: clamp(50px, 5vw, 66px);
+      height: clamp(48px, 4.8vw, 62px);
       padding: 0 clamp(36px, 4.5vw, 60px);
     }
 
@@ -421,8 +350,8 @@ const HOME_VIEWPORT_STYLES = `
   /* Short Phone Landscape Guard (max-height <= 500px) */
   @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-home-greet-card {
-      min-height: 118px;
-      padding: 8px 14px;
+      min-height: 112px;
+      padding: 8px 14px 10px;
       gap: 6px;
     }
 
@@ -436,13 +365,13 @@ const HOME_VIEWPORT_STYLES = `
     }
 
     .rabtv-home-dual-wrap {
-      width: min(72%, 296px);
+      width: min(72%, 304px);
       height: 42px;
-      padding: 5px 16px;
+      padding: 4px 16px;
     }
 
     .rabtv-section-banner-wrap {
-      height: clamp(42px, 10.5dvh, 52px);
+      height: clamp(40px, 10dvh, 50px);
       padding: 0 32px;
     }
   }
@@ -450,13 +379,13 @@ const HOME_VIEWPORT_STYLES = `
   /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
     .rabtv-home-dual-wrap {
-      width: 420px;
+      width: 416px;
       height: 62px;
-      padding: 7px 30px;
+      padding: 6px 30px;
     }
 
     .rabtv-section-banner-wrap {
-      height: clamp(58px, 4.3vw, 70px);
+      height: clamp(56px, 4.1vw, 66px);
     }
   }
 `;
@@ -2112,15 +2041,15 @@ function Home() {
               data-tour="greeting-header"
               className="rabtv-home-greet-card mb-5 bg-transparent border-0 text-center"
             >
-              {/* Soft-Feathered Artwork Backdrop (Blends Smoothly Into App Wallpaper) */}
+              {/* Organic Elliptical Feathered Artwork Backdrop (Zero Hard Box Edges) */}
               <div
                 className="rabtv-home-greet-bg"
+                aria-hidden="true"
                 style={{
                   backgroundImage: `url(${GREETING_WRAPPER_BG_URL})`,
                 }}
               />
-              <div className="rabtv-home-greet-tint" />
-              <div className="rabtv-home-greet-vignette" />
+              <div className="rabtv-home-greet-laser" aria-hidden="true" />
 
               <div className="relative z-10 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 max-w-full min-w-0">
                 {greetingText && (
@@ -2145,13 +2074,15 @@ function Home() {
                 )}
               </div>
 
-              {/* Single Button Wrapper Behind Both Movie Night & Real Surprise Me Buttons */}
-              <div
-                className="rabtv-home-dual-wrap relative z-10"
-                style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                }}
-              >
+              {/* Single Theme-Tuned Studded Wrapper Behind Movie Night & Surprise Me */}
+              <div className="rabtv-home-dual-wrap relative z-10">
+                <div
+                  className="rabtv-art-bg"
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  }}
+                />
                 <button
                   type="button"
                   data-tour="movie-night-matcher"
@@ -2366,12 +2297,14 @@ function Home() {
               data-tour="continue-watching-row"
               className="mb-6 w-full max-w-6xl space-y-3 px-1"
             >
-              <div
-                className="rabtv-section-banner-wrap"
-                style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                }}
-              >
+              <div className="rabtv-section-banner-wrap">
+                <div
+                  className="rabtv-art-bg"
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  }}
+                />
                 <h3 className="rabtv-section-banner-title relative z-10 font-black tracking-tight text-white truncate px-14 sm:px-24 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                   ▶ Continue Watching
                 </h3>
@@ -2731,12 +2664,14 @@ function Home() {
             data-tour={activeTab === "My List" ? "favorites-grid" : "catalog-grid"}
             className="mb-8 px-1 w-full max-w-6xl"
           >
-            <div
-              className="rabtv-section-banner-wrap mb-4"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
-            >
+            <div className="rabtv-section-banner-wrap mb-4">
+              <div
+                className="rabtv-art-bg"
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                }}
+              />
               <h3 className="rabtv-section-banner-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 {activeTab === "My List"
                   ? "Saved Catalog"
@@ -2809,12 +2744,14 @@ function Home() {
             <section
               className={`mb-8 px-1 pt-6 border-t w-full max-w-6xl ${themeStyles.dividerBorder}`}
             >
-              <div
-                className="rabtv-section-banner-wrap mb-4"
-                style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                }}
-              >
+              <div className="rabtv-section-banner-wrap mb-4">
+                <div
+                  className="rabtv-art-bg"
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  }}
+                />
                 <h3 className="rabtv-section-banner-title relative z-10 font-black text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                   ✨ Suggested For You
                 </h3>
