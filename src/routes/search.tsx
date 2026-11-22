@@ -50,95 +50,14 @@ const SEARCH_BUTTON_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const SEARCH_VIEWPORT_STYLES = `
-  /* Base: Portrait Phones (< 640px) — Full-width button wrappers matching dividers & cards */
-  .rabtv-srch-top-bar {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: clamp(8px, 2vw, 12px);
-    box-sizing: border-box;
-  }
-
-  /* Full-width studded buttonwrapper.png bay (1 button or 2 buttons side-by-side) */
-  .rabtv-srch-dual-wrap,
-  .rabtv-srch-back-wrap {
-    position: relative;
-    width: 100%;
-    height: clamp(64px, 16.6vw, 86px);
-    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
-    gap: clamp(10px, 2.6vw, 24px);
-    box-sizing: border-box;
-    border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    overflow: hidden;
-  }
-
-  .rabtv-srch-art-btn {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1 1 0;
-    min-width: 0;
-    max-width: 48%;
-    height: 100%;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    overflow: hidden;
-    border-radius: 9999px;
-    transition: transform 160ms ease, filter 160ms ease;
-  }
-
-  .rabtv-srch-art-btn-single {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: min(100%, 260px);
-    height: 100%;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    overflow: hidden;
-    border-radius: 9999px;
-    transition: transform 160ms ease, filter 160ms ease;
-  }
-
-  .rabtv-srch-art-btn img,
-  .rabtv-srch-art-btn-single img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
-  }
-
-  /* Calibrated 1:1 visual height match between Back to Home & Surprise Me */
-  .rabtv-srch-art-btn--home img,
-  .rabtv-srch-art-btn-single img {
-    transform: scale(1.44);
-  }
-
-  .rabtv-srch-art-btn--surprise img {
-    transform: scale(1.56);
-  }
-
+  /* Uses shared global .rabtv-dual-wrapper & .rabtv-section-banner from __root.tsx */
   .rabtv-srch-submit-art {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: clamp(46px, 11.8vw, 54px);
-    width: clamp(146px, 40vw, 184px);
+    height: clamp(42px, 10.8vw, 50px);
+    width: clamp(134px, 36vw, 172px);
     max-width: 100%;
     background: transparent;
     border: 0;
@@ -147,7 +66,7 @@ const SEARCH_VIEWPORT_STYLES = `
     overflow: hidden;
     border-radius: 9999px;
     flex: 0 0 auto;
-    transition: transform 160ms ease, filter 160ms ease;
+    transition: transform 150ms ease;
   }
 
   .rabtv-srch-submit-art img {
@@ -155,103 +74,14 @@ const SEARCH_VIEWPORT_STYLES = `
     height: 100%;
     object-fit: contain;
     display: block;
-    transform: scale(1.16);
-    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.85));
+    transform: scale(1.14);
+    filter: var(--rabtv-search-filter);
   }
 
-  /* Full-width centered section header banner backed by buttonwrapper.png */
-  .rabtv-srch-section-banner {
-    position: relative;
-    width: 100%;
-    height: clamp(54px, 13.8vw, 72px);
-    padding: 0 clamp(24px, 6vw, 48px);
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(8px, 2vw, 16px);
-    box-sizing: border-box;
-    border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    overflow: hidden;
-  }
-
-  .rabtv-srch-section-title {
-    font-size: clamp(13.5px, 3.8vw, 20px);
-    line-height: 1.1;
-    text-align: center;
-  }
-
-  .rabtv-srch-section-action {
-    position: absolute;
-    right: clamp(22px, 5.5vw, 44px);
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: clamp(10px, 2.7vw, 13px);
-    line-height: 1.1;
-    white-space: nowrap;
-  }
-
-  /* Landscape Phones, Tablets, PCs, Google TV & Fire Sticks (>= 640px) */
   @media (min-width: 640px) {
-    .rabtv-srch-dual-wrap,
-    .rabtv-srch-back-wrap {
-      width: 100%;
-      height: clamp(70px, 7.2vw, 94px);
-      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
-      gap: clamp(16px, 2.4vw, 36px);
-    }
-
-    .rabtv-srch-art-btn {
-      max-width: 44%;
-    }
-
     .rabtv-srch-submit-art {
-      height: clamp(46px, 4.8vw, 56px);
-      width: clamp(148px, 15vw, 186px);
-    }
-
-    .rabtv-srch-section-banner {
-      height: clamp(58px, 5.8vw, 76px);
-      padding: 0 clamp(36px, 4.5vw, 60px);
-    }
-
-    .rabtv-srch-section-title {
-      font-size: clamp(17px, 1.8vw, 23px);
-    }
-
-    .rabtv-srch-section-action {
-      right: clamp(32px, 4vw, 54px);
-      font-size: clamp(11px, 1.15vw, 13.5px);
-    }
-  }
-
-  /* Short Phone Landscape Guard (max-height <= 500px) */
-  @media (min-width: 640px) and (max-height: 500px) {
-    .rabtv-srch-dual-wrap,
-    .rabtv-srch-back-wrap {
-      height: clamp(52px, 13dvh, 64px);
-      padding: 7px clamp(24px, 4vw, 44px);
-    }
-
-    .rabtv-srch-section-banner {
-      height: clamp(48px, 12dvh, 58px);
-      padding: 0 32px;
-    }
-  }
-
-  /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
-  @media (min-width: 1280px) {
-    .rabtv-srch-dual-wrap,
-    .rabtv-srch-back-wrap {
-      height: clamp(82px, 6vw, 98px);
-      padding: 12px 68px;
-    }
-
-    .rabtv-srch-section-banner {
-      height: clamp(68px, 4.8vw, 82px);
+      height: clamp(44px, 4.5vw, 52px);
+      width: clamp(142px, 14vw, 176px);
     }
   }
 `;
@@ -1512,28 +1342,30 @@ function SearchPage() {
       )}
 
       <div className="mx-auto max-w-7xl w-full space-y-5 sm:space-y-6 relative z-10 min-w-0">
-        {/* Top Utility Row: Full-Width Studded Button Wrapper Holding Back to Home + Real Surprise Me */}
-        <div className="rabtv-srch-top-bar">
+        {/* Top Utility Row: Compact Theme-Tuned Wrapper — Back to Home Left, Surprise Me Right */}
+        <div className="rabtv-page-top-bar">
           <div
             className={
               filteredResults.length > 0
-                ? "rabtv-srch-dual-wrap"
-                : "rabtv-srch-back-wrap"
+                ? "rabtv-dual-wrapper"
+                : "rabtv-single-wrapper"
             }
-            style={{
-              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-            }}
           >
+            <div
+              className="rabtv-art-bg"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            />
             <Link
               to="/"
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`${
-                filteredResults.length > 0
-                  ? "rabtv-srch-art-btn rabtv-srch-art-btn--home"
-                  : "rabtv-srch-art-btn-single"
-              } rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${
+              className={`rabtv-wrap-art-btn ${
+                filteredResults.length > 0 ? "rabtv-wrap-art-btn--left" : ""
+              } rabtv-wrap-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${
                 themeTokens.focusRing
               }`}
             >
@@ -1550,7 +1382,7 @@ function SearchPage() {
                 onClick={handleSurpriseMe}
                 aria-label="Surprise Me"
                 title="Pick a random title from these results"
-                className={`rabtv-srch-art-btn rabtv-srch-art-btn--surprise rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
+                className={`rabtv-wrap-art-btn rabtv-wrap-art-btn--right rabtv-wrap-art-btn--surprise rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
               >
                 <img
                   src={REAL_SURPRISE_ME_BTN_URL}
@@ -1585,7 +1417,7 @@ function SearchPage() {
         {/* Theme-Matched Crystal Glass Search & Discovery Control Deck */}
         <div
           className={`rounded-3xl border ${
-            isLowRam ? "" : "backdrop-blur-2xl"
+            isLowRam ? "" : "backdrop-blur-md"
           } p-3.5 sm:p-6 space-y-4 ${themeTokens.surfacePanel}`}
         >
           {/* Isolated Uncontrolled Search Form (Immune to Android WebView Backwards-Typing Bug) */}
@@ -1876,18 +1708,20 @@ function SearchPage() {
         {/* MATCHING LIVE TV CHANNELS CROSS-SEARCH SHELF */}
         {matchingLiveChannels.length > 0 && (
           <section className="space-y-3">
-            <div
-              className="rabtv-srch-section-banner"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
-            >
-              <h3 className="rabtv-srch-section-title relative z-10 font-black tracking-tight text-white truncate px-16 sm:px-24 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+            <div className="rabtv-section-banner">
+              <div
+                className="rabtv-art-bg"
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                }}
+              />
+              <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate px-14 sm:px-24 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 📡 Matching Live TV
               </h3>
               <Link
                 to="/live-tv"
-                className={`rabtv-srch-section-action z-10 font-extrabold hover:underline drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
+                className={`rabtv-section-banner-action font-extrabold hover:underline drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
               >
                 Guide →
               </Link>
@@ -1953,13 +1787,15 @@ function SearchPage() {
         {/* MATCHING ACTORS / CREATORS STRIP */}
         {matchedPeople.length > 0 && !selectedPerson && (
           <section className="space-y-3">
-            <div
-              className="rabtv-srch-section-banner"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
-            >
-              <h3 className="rabtv-srch-section-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+            <div className="rabtv-section-banner">
+              <div
+                className="rabtv-art-bg"
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                }}
+              />
+              <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 🎭 Matching Cast & Crew
               </h3>
             </div>
@@ -2006,13 +1842,15 @@ function SearchPage() {
         )}
 
         {/* RESULTS HEADER */}
-        <div
-          className="rabtv-srch-section-banner"
-          style={{
-            backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-          }}
-        >
-          <h2 className="rabtv-srch-section-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+        <div className="rabtv-section-banner">
+          <div
+            className="rabtv-art-bg"
+            aria-hidden="true"
+            style={{
+              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+            }}
+          />
+          <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
             {selectedPerson
               ? `${selectedPerson.name} — Credits`
               : activeUrlQuery
@@ -2070,7 +1908,7 @@ function SearchPage() {
             {/* Pagination Deck */}
             {totalPages > 1 && !selectedPerson && (
               <div
-                className={`mt-4 flex items-center justify-center gap-4 rounded-2xl border backdrop-blur-xl p-3 mx-auto w-full max-w-sm ${themeTokens.surfacePanel}`}
+                className={`mt-4 flex items-center justify-center gap-4 rounded-2xl border backdrop-blur-sm p-3 mx-auto w-full max-w-sm ${themeTokens.surfacePanel}`}
               >
                 <button
                   type="button"
@@ -2118,7 +1956,7 @@ function SearchPage() {
           </>
         ) : (
           <div
-            className={`rounded-3xl border p-10 sm:p-12 text-center backdrop-blur-xl space-y-3 ${themeTokens.surfacePanel}`}
+            className={`rounded-3xl border p-10 sm:p-12 text-center backdrop-blur-sm space-y-3 ${themeTokens.surfacePanel}`}
           >
             <div className="text-3xl">🔍</div>
             <p className="text-base font-bold text-white">
