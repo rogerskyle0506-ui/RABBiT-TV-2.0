@@ -5,8 +5,6 @@ import {
   AppTheme,
   getSavedTheme,
   getHardwareLimits,
-  getReducedMotion,
-  getGlowIntensity,
 } from "@/lib/settings";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { MascotAvatar } from "@/components/MascotAvatar";
@@ -54,6 +52,7 @@ function getClubTheme(theme: AppTheme) {
         pageBg: "bg-gradient-to-br from-zinc-950/65 via-red-950/30 to-black/75",
         panel: "bg-zinc-950/70 border-red-500/30 shadow-[0_14px_40px_rgba(239,68,68,0.16)]",
         sub: "bg-black/70 border-red-500/20",
+        divider: "border-red-500/20",
         accent: "text-red-400",
         badge: "bg-red-950/75 border-red-500/35 text-red-200",
         btnPrimary: "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/30",
@@ -69,6 +68,7 @@ function getClubTheme(theme: AppTheme) {
         pageBg: "bg-gradient-to-br from-slate-950/65 via-blue-950/30 to-black/75",
         panel: "bg-slate-950/70 border-blue-500/30 shadow-[0_14px_40px_rgba(59,130,246,0.16)]",
         sub: "bg-black/70 border-blue-500/20",
+        divider: "border-blue-500/20",
         accent: "text-sky-300",
         badge: "bg-blue-950/75 border-blue-500/35 text-sky-200",
         btnPrimary: "bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 text-white shadow-lg shadow-blue-600/30",
@@ -84,6 +84,7 @@ function getClubTheme(theme: AppTheme) {
         pageBg: "bg-gradient-to-br from-neutral-950/65 via-emerald-950/30 to-black/75",
         panel: "bg-neutral-950/70 border-emerald-500/30 shadow-[0_14px_40px_rgba(16,185,129,0.16)]",
         sub: "bg-black/70 border-emerald-500/20",
+        divider: "border-emerald-500/20",
         accent: "text-emerald-300",
         badge: "bg-emerald-950/75 border-emerald-500/35 text-emerald-200",
         btnPrimary: "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/30",
@@ -99,6 +100,7 @@ function getClubTheme(theme: AppTheme) {
         pageBg: "bg-gradient-to-br from-stone-950/65 via-yellow-950/30 to-black/75",
         panel: "bg-stone-950/70 border-amber-500/30 shadow-[0_14px_40px_rgba(245,158,11,0.16)]",
         sub: "bg-black/70 border-amber-500/20",
+        divider: "border-amber-500/20",
         accent: "text-amber-300",
         badge: "bg-amber-950/75 border-amber-500/35 text-amber-200",
         btnPrimary: "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/30",
@@ -114,6 +116,7 @@ function getClubTheme(theme: AppTheme) {
         pageBg: "bg-gradient-to-br from-slate-950/65 via-cyan-950/30 to-black/75",
         panel: "bg-slate-950/70 border-cyan-500/30 shadow-[0_14px_40px_rgba(6,182,212,0.16)]",
         sub: "bg-black/70 border-cyan-500/20",
+        divider: "border-cyan-500/20",
         accent: "text-cyan-300",
         badge: "bg-cyan-950/75 border-cyan-500/35 text-cyan-200",
         btnPrimary: "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/30",
@@ -130,6 +133,7 @@ function getClubTheme(theme: AppTheme) {
         pageBg: "bg-gradient-to-br from-slate-950/65 via-purple-950/30 to-black/75",
         panel: "bg-slate-950/70 border-violet-500/30 shadow-[0_14px_40px_rgba(139,92,246,0.16)]",
         sub: "bg-black/70 border-violet-500/20",
+        divider: "border-violet-500/20",
         accent: "text-violet-300",
         badge: "bg-purple-950/75 border-violet-500/35 text-violet-200",
         btnPrimary: "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30",
@@ -397,7 +401,7 @@ function CommunityPage() {
                 mascot={myMascot}
                 size="lg"
                 rounded="full"
-                className="h-12 w-12 shrink-0"
+                className="h-12 w-12 shrink-0 overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
                 alt="My Mascot"
               />
               <div className="min-w-0">
@@ -569,7 +573,7 @@ function CommunityPage() {
               </button>
 
               {blockedIds.length > 0 && (
-                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                <div className={`pt-2 border-t ${tokens.divider} flex items-center justify-between text-[11px]`}>
                   <span className={tokens.subMuted}>
                     Blocked members: {blockedIds.length}
                   </span>
@@ -604,7 +608,7 @@ function CommunityPage() {
                   mascot={myMascot}
                   size="lg"
                   rounded="full"
-                  className="h-16 w-16 shrink-0"
+                  className="h-16 w-16 shrink-0 overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
                   alt="My Mascot"
                 />
                 <div className="min-w-0">
@@ -703,7 +707,7 @@ function CommunityPage() {
                             mascot={prof.mascot}
                             size="lg"
                             rounded="full"
-                            className="h-12 w-12 shrink-0"
+                            className="h-12 w-12 shrink-0 overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
                             alt={prof.handle}
                           />
                           <div className="min-w-0 flex-1">
@@ -748,7 +752,7 @@ function CommunityPage() {
                       </div>
 
                       {!isMe && (
-                        <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                        <div className={`flex items-center gap-2 pt-2 border-t ${tokens.divider}`}>
                           <button
                             type="button"
                             onClick={() => setInviteTarget(prof)}
@@ -762,7 +766,7 @@ function CommunityPage() {
                               const r = await reportCommunityItem("profile", prof.publicId);
                               showToast(r.ok, r.ok ? "🚩 Profile reported." : r.error || "Failed.");
                             }}
-                            className="rounded-xl border border-white/15 bg-black/50 px-2.5 py-2 text-[11px] cursor-pointer"
+                            className={`rounded-xl border px-2.5 py-2 text-[11px] cursor-pointer transition ${tokens.btnSecondary}`}
                             title="Report profile"
                           >
                             🚩
@@ -773,7 +777,7 @@ function CommunityPage() {
                               blockCommunityUser(prof.publicId);
                               showToast(true, `🚫 Blocked ${prof.handle}.`);
                             }}
-                            className="rounded-xl border border-white/15 bg-black/50 px-2.5 py-2 text-[11px] cursor-pointer"
+                            className={`rounded-xl border px-2.5 py-2 text-[11px] cursor-pointer transition ${tokens.btnSecondary}`}
                             title="Block user"
                           >
                             🚫
@@ -830,7 +834,7 @@ function CommunityPage() {
                               mascot={peerMascot}
                               size="sm"
                               rounded="full"
-                              className="h-9 w-9 shrink-0"
+                              className="h-9 w-9 shrink-0 overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
                               alt={peerHandle}
                             />
                             <div className="min-w-0">
@@ -911,7 +915,7 @@ function CommunityPage() {
                 <div className={`rounded-3xl border p-4 flex flex-col justify-between gap-3 min-h-[320px] ${tokens.panel}`}>
                   {activeThread ? (
                     <>
-                      <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/10">
+                      <div className={`flex items-center justify-between gap-2 pb-2 border-b ${tokens.divider}`}>
                         <div className="min-w-0">
                           <h3 className="text-sm font-black text-white truncate">
                             💬 {activeThread.title}
@@ -988,7 +992,7 @@ function CommunityPage() {
 
                       <form
                         onSubmit={(e) => void handleSendChatMsg(e, activeThread.threadId)}
-                        className="space-y-2 pt-2 border-t border-white/10"
+                        className={`space-y-2 pt-2 border-t ${tokens.divider}`}
                       >
                         <div className="flex items-center justify-between text-[10px]">
                           <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer">
@@ -1082,7 +1086,7 @@ function CommunityPage() {
                           mascot={rev.authorMascot}
                           size="sm"
                           rounded="full"
-                          className="h-6 w-6 shrink-0"
+                          className="h-6 w-6 shrink-0 overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
                           alt={rev.authorHandle}
                         />
                         <span className={`font-extrabold ${tokens.accent}`}>
