@@ -124,62 +124,34 @@ export const REAL_SURPRISE_ME_BTN_URL =
  * landscape phones, tablets, TVs, and projectors.
  */
 const VIEWPORT_HEADER_STYLES = `
+  /* Base: Portrait Phones (< 640px) — Strict 2-Row Viewport-Locked Grid */
   .rabtv-hdr-bar {
-    --hdr-u: clamp(36px, 10.6vw, 52px);
-    min-height: calc(var(--hdr-u) * 3.2);
+    --hdr-u: clamp(34px, 9.6vw, 48px);
+    min-height: clamp(114px, 31vw, 152px);
   }
 
   .rabtv-hdr-inner {
     width: 100%;
     max-width: 1440px;
     margin-inline: auto;
-    padding: clamp(8px, 2.2vw, 14px) clamp(8px, 2.2vw, 24px);
-    display: flex;
-    flex-wrap: wrap;
+    padding: clamp(8px, 2.2vw, 14px) clamp(8px, 2.4vw, 24px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "profile logo"
+      "search  search";
     align-items: center;
-    justify-content: space-between;
-    row-gap: clamp(8px, 2vw, 12px);
-    column-gap: clamp(4px, 1.2vw, 16px);
+    row-gap: clamp(8px, 2.2vw, 12px);
+    column-gap: clamp(6px, 1.8vw, 14px);
     box-sizing: border-box;
   }
 
-  .rabtv-hdr-logo-wrap {
-    order: 1;
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    max-width: calc(100% - (var(--hdr-u) * 3.85) - 6px);
-    overflow: visible;
-  }
-
-  .rabtv-hdr-logo {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    height: calc(var(--hdr-u) * 1.82);
-    width: calc(var(--hdr-u) * 5.25);
-    max-width: 100%;
-    flex: 0 1 auto;
-    box-sizing: border-box;
-    overflow: visible;
-  }
-
-  .rabtv-hdr-logo-img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: left center;
-    transform: scale(1.24);
-    transform-origin: left center;
-    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.92));
-  }
-
+  /* LEFT: Menu / Profile Pill */
   .rabtv-hdr-profile-wrap {
-    order: 2;
-    flex: 0 0 auto;
+    grid-area: profile;
+    justify-self: start;
+    min-width: 0;
+    max-width: 100%;
     display: flex;
     align-items: center;
     gap: clamp(4px, 0.8vw, 10px);
@@ -189,20 +161,22 @@ const VIEWPORT_HEADER_STYLES = `
     position: relative;
     display: flex;
     align-items: center;
-    height: calc(var(--hdr-u) * 1.26);
-    width: calc(var(--hdr-u) * 1.26 * 3.16);
-    padding-left: 37%;
-    padding-right: 19%;
+    height: clamp(46px, 13vw, 62px);
+    width: min(100%, clamp(150px, 44.5vw, 212px));
+    padding-left: 41.5%;
+    padding-right: 17.5%;
     flex: 0 0 auto;
     box-sizing: border-box;
+    overflow: hidden;
   }
 
+  /* Calibrated directly onto the glowing purple avatar ring of sidebar.png */
   .rabtv-hdr-profile-avatar {
     position: absolute;
-    left: 23.2%;
+    left: 20.6%;
     top: 50%;
     transform: translate(-50%, -50%);
-    height: 75%;
+    height: 68%;
     aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
@@ -221,11 +195,46 @@ const VIEWPORT_HEADER_STYLES = `
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.15;
-    font-size: clamp(10px, calc(var(--hdr-u) * 0.255), 14px);
+    font-size: clamp(10px, 2.9vw, 13.5px);
   }
 
+  /* RIGHT: RABBiT TV Home Logo */
+  .rabtv-hdr-logo-wrap {
+    grid-area: logo;
+    justify-self: end;
+    min-width: 0;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    overflow: visible;
+  }
+
+  .rabtv-hdr-logo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: clamp(50px, 14.2vw, 68px);
+    width: min(100%, clamp(154px, 45.5vw, 224px));
+    flex: 0 1 auto;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+
+  .rabtv-hdr-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: right center;
+    transform: scale(1.16);
+    transform-origin: right center;
+    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.92));
+  }
+
+  /* ROW 2 (Portrait) / CENTER (Landscape, Tablet, PC, TV): Unclipped Search Bar */
   .rabtv-hdr-search-form {
-    order: 3;
+    grid-area: search;
     width: 100%;
     display: flex;
     align-items: center;
@@ -238,37 +247,36 @@ const VIEWPORT_HEADER_STYLES = `
     position: relative;
     display: flex;
     align-items: center;
-    height: calc(var(--hdr-u) * 1.08);
-    width: min(100%, calc(var(--hdr-u) * 8.8));
+    height: clamp(48px, 13.6vw, 62px);
+    width: 100%;
     max-width: 100%;
-    flex: 1 1 auto;
     box-sizing: border-box;
+    overflow: visible;
   }
 
-  /* Generous left padding clears the magnifying glass icon cleanly on all devices */
   .rabtv-hdr-search-input {
     position: relative;
     z-index: 10;
     width: 100%;
     height: 100%;
     min-width: 0;
-    padding-left: 18.2%;
-    padding-right: 26.8%;
+    padding-left: 16.8%;
+    padding-right: 27%;
     padding-top: 0;
     padding-bottom: 0;
     line-height: 1;
-    font-size: clamp(11px, calc(var(--hdr-u) * 0.285), 15px);
+    font-size: clamp(11.5px, 3.2vw, 15px);
     box-sizing: border-box;
   }
 
-  /* Interactive transparent submit hit-target locked over the baked-in Search pill of search.png */
+  /* Transparent interactive submit hit-target locked over the Search pill in search.png */
   .rabtv-hdr-search-pill-hit {
     position: absolute;
     z-index: 20;
-    right: 2.2%;
-    top: 12%;
-    bottom: 12%;
-    width: 22.8%;
+    right: 2.8%;
+    top: 14%;
+    bottom: 14%;
+    width: 23.2%;
     border: 0;
     background: transparent;
     border-radius: 9999px;
@@ -286,84 +294,123 @@ const VIEWPORT_HEADER_STYLES = `
     transform: scale(0.96);
   }
 
-  /* Landscape phones, tablets, desktops, TVs & projectors */
+  /* Landscape Phones, Tablets, PCs, Google TV, Fire Sticks & Projectors (>= 640px) */
   @media (min-width: 640px) {
     .rabtv-hdr-bar {
-      --hdr-u: clamp(34px, 4.9vw, 56px);
-      min-height: clamp(78px, 9.8vw, 132px);
+      --hdr-u: clamp(34px, 4.8vw, 56px);
+      min-height: clamp(72px, 9.2vw, 124px);
     }
 
     .rabtv-hdr-inner {
-      flex-wrap: nowrap;
-      padding: clamp(7px, 1.15vw, 18px) clamp(10px, 2vw, 28px);
-      column-gap: clamp(10px, 1.5vw, 22px);
-    }
-
-    .rabtv-hdr-logo-wrap {
-      flex: 0 0 auto;
-      max-width: none;
-    }
-
-    .rabtv-hdr-logo {
-      height: calc(var(--hdr-u) * 1.66);
-      width: calc(var(--hdr-u) * 4.85);
-    }
-
-    .rabtv-hdr-logo-img {
-      transform: scale(1.22);
-      transform-origin: center center;
-      object-position: center center;
-    }
-
-    .rabtv-hdr-search-form {
-      order: 2;
-      width: auto;
-      flex: 1 1 auto;
-      justify-content: center;
-      max-width: 640px;
-    }
-
-    .rabtv-hdr-search-shell {
-      height: calc(var(--hdr-u) * 1.06);
-      width: min(100%, calc(var(--hdr-u) * 8.0));
-    }
-
-    .rabtv-hdr-search-input {
-      padding-left: 16.8%;
-      padding-right: 26.2%;
-      font-size: clamp(11px, calc(var(--hdr-u) * 0.275), 15px);
-    }
-
-    .rabtv-hdr-profile-wrap {
-      order: 3;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas: "profile search logo";
+      padding: clamp(7px, 1.1vw, 16px) clamp(10px, 2vw, 28px);
+      column-gap: clamp(10px, 1.6vw, 22px);
+      row-gap: 0;
     }
 
     .rabtv-hdr-profile-btn {
-      height: calc(var(--hdr-u) * 1.2);
-      width: calc(var(--hdr-u) * 1.2 * 3.24);
+      height: clamp(46px, 5.8vw, 66px);
+      width: clamp(156px, 20vw, 232px);
+      padding-left: 41.5%;
+      padding-right: 17.5%;
     }
 
     .rabtv-hdr-profile-label {
-      font-size: clamp(10px, calc(var(--hdr-u) * 0.245), 14px);
+      font-size: clamp(10.5px, 1.3vw, 14px);
+    }
+
+    .rabtv-hdr-search-form {
+      justify-self: center;
+      width: 100%;
+      max-width: min(100%, 620px);
+    }
+
+    .rabtv-hdr-search-shell {
+      height: clamp(44px, 5.5vw, 64px);
+      width: 100%;
+      max-width: 620px;
+    }
+
+    .rabtv-hdr-search-input {
+      padding-left: 15.8%;
+      padding-right: 26.5%;
+      font-size: clamp(11px, 1.35vw, 15px);
+    }
+
+    .rabtv-hdr-logo {
+      height: clamp(50px, 6.4vw, 76px);
+      width: clamp(156px, 20vw, 250px);
+    }
+
+    .rabtv-hdr-logo-img {
+      transform: scale(1.14);
+      transform-origin: right center;
     }
   }
 
-  /* Short phone landscape guard (keeps header slim so video & catalog stay roomy) */
-  @media (min-width: 640px) and (max-height: 480px) {
+  /* Short Phone Landscape Guard (e.g. Android phone rotated sideways, max-height <= 500px) */
+  @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-hdr-bar {
-      --hdr-u: clamp(30px, 7.6dvh, 40px);
-      min-height: clamp(60px, 15.5dvh, 80px);
+      min-height: clamp(58px, 15dvh, 76px);
     }
 
     .rabtv-hdr-inner {
       padding: 6px clamp(10px, 2vw, 20px);
+      column-gap: clamp(8px, 1.4vw, 16px);
+    }
+
+    .rabtv-hdr-profile-btn {
+      height: clamp(40px, 10.5dvh, 52px);
+      width: clamp(138px, 21vw, 184px);
+    }
+
+    .rabtv-hdr-search-shell {
+      height: clamp(38px, 10dvh, 50px);
+    }
+
+    .rabtv-hdr-logo {
+      height: clamp(42px, 11dvh, 56px);
+      width: clamp(138px, 21vw, 188px);
     }
   }
 
-  /* Large TVs, 4K monitors & projectors */
+  /* Desktop / PC (1024px - 1279px) */
+  @media (min-width: 1024px) {
+    .rabtv-hdr-profile-btn {
+      height: clamp(54px, 4.8vw, 66px);
+      width: clamp(190px, 18vw, 236px);
+    }
+
+    .rabtv-hdr-search-shell {
+      height: clamp(52px, 4.6vw, 64px);
+    }
+
+    .rabtv-hdr-logo {
+      height: clamp(60px, 5.4vw, 76px);
+      width: clamp(196px, 18.5vw, 256px);
+    }
+  }
+
+  /* Google TV, Fire TV Stick, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
     .rabtv-hdr-bar {
-      --hdr-u: clamp(48px, 3.6vw, 60px);
+      min-height: clamp(92px, 7.2vw, 126px);
+    }
+
+    .rabtv-hdr-profile-btn {
+      height: clamp(58px, 4.2vw, 70px);
+      width: clamp(210px, 16vw, 252px);
+    }
+
+    .rabtv-hdr-search-shell {
+      height: clamp(56px, 4.2vw, 68px);
+      max-width: 660px;
+    }
+
+    .rabtv-hdr-logo {
+      height: clamp(66px, 4.8vw, 82px);
+      width: clamp(220px, 17vw, 276px);
     }
   }
 `;
@@ -678,7 +725,7 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
         className="rabtv-hdr-search-shell bg-transparent border-0 opacity-95 hover:opacity-100 focus-within:opacity-100 transition-opacity"
         style={{
           backgroundImage: `url(${SEARCHWRAPPER})`,
-          backgroundSize: "103% 148%",
+          backgroundSize: "100% 100%",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
         }}
@@ -1305,7 +1352,78 @@ function RootComponent() {
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/40 pointer-events-none" />
 
             <div className="relative z-10 rabtv-hdr-inner">
-              {/* Left: Viewport-Scaled Borderless Neon Rabbit Logo */}
+              {/* LEFT: Viewport-Locked Sidebar Menu / Profile Pill + Optional TV Badges */}
+              <div className="rabtv-hdr-profile-wrap">
+                {savedProfileName && !showFirstStartModal && (
+                  <>
+                    <button
+                      type="button"
+                      data-tour="sidebar-toggle"
+                      aria-label="Open menu"
+                      onClick={() => setShowProfileMenu((prev) => !prev)}
+                      style={{
+                        backgroundImage: `url(${SIDEBAR_BUTTON_BG_URL})`,
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center center",
+                      }}
+                      className={`rabtv-hdr-profile-btn rounded-full bg-transparent border-0 font-black text-white opacity-95 hover:opacity-100 transition hover:scale-[1.02] active:scale-95 cursor-pointer group focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.focusRing}`}
+                    >
+                      <div className="rabtv-hdr-profile-avatar">
+                        <MascotAvatar
+                          mascot={profileMascot}
+                          size="sm"
+                          rounded="full"
+                          className="!w-full !h-full !border-0 !bg-transparent !shadow-none [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
+                          alt={savedProfileName}
+                        />
+                      </div>
+                      <span className="rabtv-hdr-profile-label relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                        <strong className="text-white">{savedProfileName}</strong>
+                        {isAdmin
+                          ? " 👑"
+                          : isTrialActive
+                            ? ` (${trialDaysRemaining}d)`
+                            : ""}
+                      </span>
+                    </button>
+
+                    {showCornerClock && cornerClockText && !isPlayerRoute && (
+                      <span
+                        data-tour="corner-clock"
+                        className={`hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] font-extrabold tracking-wider shrink-0 ${tokens.clockPill}`}
+                      >
+                        🕒 {cornerClockText}
+                      </span>
+                    )}
+                    {kidsLocked && (
+                      <span
+                        className="hidden xl:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider shrink-0"
+                        title="Kids Safe Mode Locked"
+                      >
+                        🧒 Kids
+                      </span>
+                    )}
+                    {isTrialActive && (
+                      <div
+                        className={`hidden xl:flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-bold shrink-0 ${tokens.trialBadge}`}
+                      >
+                        <span>⏳ {trialDaysRemaining}d</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* ROW 2 (Portrait) / CENTER (Landscape, Tablet, PC, TV): Unclipped Search Bar */}
+              {!showFirstStartModal && (
+                <HeaderSearchBar
+                  tokens={tokens}
+                  onSubmitQuery={handleHeaderSearchQuery}
+                />
+              )}
+
+              {/* RIGHT: Viewport-Scaled Borderless Neon Rabbit Home Logo */}
               <div className="rabtv-hdr-logo-wrap">
                 <Link
                   to="/"
@@ -1322,76 +1440,6 @@ function RootComponent() {
                   />
                 </Link>
               </div>
-
-              {/* Isolated Search Bar: Full-width Row 2 on Portrait Phones, Center on Landscape/Tablet/TV/Projector */}
-              {!showFirstStartModal && (
-                <HeaderSearchBar
-                  tokens={tokens}
-                  onSubmitQuery={handleHeaderSearchQuery}
-                />
-              )}
-
-              {/* Right: Corner Clock Pill + Kids Badge + Viewport-Locked Sidebar Profile Pill */}
-              {savedProfileName && !showFirstStartModal && (
-                <div className="rabtv-hdr-profile-wrap">
-                  {showCornerClock && cornerClockText && !isPlayerRoute && (
-                    <span
-                      data-tour="corner-clock"
-                      className={`hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] font-extrabold tracking-wider ${tokens.clockPill}`}
-                    >
-                      🕒 {cornerClockText}
-                    </span>
-                  )}
-                  {kidsLocked && (
-                    <span
-                      className="hidden xl:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider"
-                      title="Kids Safe Mode Locked"
-                    >
-                      🧒 Kids
-                    </span>
-                  )}
-
-                  <button
-                    type="button"
-                    data-tour="sidebar-toggle"
-                    aria-label="Open menu"
-                    onClick={() => setShowProfileMenu((prev) => !prev)}
-                    style={{
-                      backgroundImage: `url(${SIDEBAR_BUTTON_BG_URL})`,
-                      backgroundSize: "100% 132%",
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "center center",
-                    }}
-                    className={`rabtv-hdr-profile-btn rounded-full bg-transparent border-0 font-black text-white opacity-95 hover:opacity-100 transition hover:scale-[1.02] active:scale-95 cursor-pointer group focus:outline-none focus:ring-2 ${tokens.profileBtn} ${tokens.focusRing}`}
-                  >
-                    <div className="rabtv-hdr-profile-avatar">
-                      <MascotAvatar
-                        mascot={profileMascot}
-                        size="sm"
-                        rounded="full"
-                        className="!w-full !h-full border-0 bg-transparent [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
-                        alt={savedProfileName}
-                      />
-                    </div>
-                    <span className="rabtv-hdr-profile-label relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
-                      <strong className="text-white">{savedProfileName}</strong>{" "}
-                      {isAdmin
-                        ? "(Admin)"
-                        : isTrialActive
-                          ? `(${trialDaysRemaining}d)`
-                          : ""}
-                    </span>
-                  </button>
-
-                  {isTrialActive && (
-                    <div
-                      className={`hidden xl:flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-bold ${tokens.trialBadge}`}
-                    >
-                      <span>⏳ {trialDaysRemaining}d</span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </header>
 
