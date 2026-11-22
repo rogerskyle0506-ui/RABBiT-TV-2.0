@@ -140,19 +140,20 @@ const REAL_SURPRISE_ME_BTN_URL =
  * portrait phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const HOME_VIEWPORT_STYLES = `
-  /* Base: Portrait Phones (< 640px) — Full-width matching Hero & Dividers (max-w-6xl) */
+  /* Base: Portrait Phones (< 640px) — Compact, Theme-Blended Greeting Card */
   .rabtv-home-greet-card {
     position: relative;
+    isolation: isolate;
     width: 100%;
     max-width: 72rem;
-    min-height: clamp(164px, 37vw, 224px);
+    min-height: clamp(130px, 31vw, 174px);
     border-radius: 26px;
-    padding: clamp(14px, 3.6vw, 26px) clamp(8px, 2.4vw, 24px);
+    padding: clamp(12px, 3vw, 22px) clamp(10px, 2.8vw, 24px);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: clamp(10px, 2.4vw, 16px);
+    gap: clamp(8px, 2vw, 14px);
     overflow: hidden;
     box-sizing: border-box;
   }
@@ -162,18 +163,27 @@ const HOME_VIEWPORT_STYLES = `
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.78;
+    opacity: 0.72;
     background-size: 112% 185%;
     background-repeat: no-repeat;
     background-position: center center;
     -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.88) 16%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.88) 84%, transparent 100%),
-      linear-gradient(to right, transparent 0%, rgba(0,0,0,0.92) 8%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.92) 92%, transparent 100%);
+      linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.85) 18%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.85) 82%, transparent 100%),
+      linear-gradient(to right, transparent 0%, rgba(0,0,0,0.9) 10%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.9) 90%, transparent 100%);
     -webkit-mask-composite: source-in;
     mask-image:
-      linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.88) 16%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.88) 84%, transparent 100%),
-      linear-gradient(to right, transparent 0%, rgba(0,0,0,0.92) 8%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.92) 92%, transparent 100%);
+      linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.85) 18%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.85) 82%, transparent 100%),
+      linear-gradient(to right, transparent 0%, rgba(0,0,0,0.9) 10%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.9) 90%, transparent 100%);
     mask-composite: intersect;
+  }
+
+  .rabtv-home-greet-tint {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: var(--rabtv-art-tint);
+    mix-blend-mode: color;
+    opacity: calc(var(--rabtv-art-tint-opacity) * 0.65);
   }
 
   .rabtv-home-greet-vignette {
@@ -182,52 +192,85 @@ const HOME_VIEWPORT_STYLES = `
     pointer-events: none;
     background: radial-gradient(
       ellipse at center,
-      rgba(0, 0, 0, 0.12) 38%,
-      rgba(0, 0, 0, 0.52) 100%
+      var(--rabtv-art-soft) 0%,
+      rgba(0, 0, 0, 0.56) 100%
     );
   }
 
   .rabtv-home-greet-mascot {
-    width: clamp(50px, 13vw, 72px) !important;
-    height: clamp(50px, 13vw, 72px) !important;
+    width: clamp(46px, 11.8vw, 66px) !important;
+    height: clamp(46px, 11.8vw, 66px) !important;
     flex-shrink: 0;
     overflow: hidden;
     border-radius: 9999px;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.92));
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.9))
+      drop-shadow(0 0 8px var(--rabtv-art-glow));
   }
 
   .rabtv-home-greet-title {
-    font-size: clamp(16px, 4.4vw, 26px);
+    font-size: clamp(16px, 4.3vw, 24px);
     line-height: 1.15;
   }
 
-  /* Full-Width Studded Button Wrapper (Matches Hero Cover Art & Divider Width) */
+  /* Compact, Sleek Theme-Tinted Wrapper for Movie Night + Surprise Me */
   .rabtv-home-dual-wrap {
     position: relative;
-    width: 100%;
-    height: clamp(66px, 17vw, 88px);
-    padding: clamp(9px, 2.2vw, 13px) clamp(18px, 5vw, 44px);
+    isolation: isolate;
+    width: min(88%, 296px);
+    height: clamp(46px, 12.2vw, 56px);
+    padding: 6px clamp(15px, 4.2vw, 22px);
     display: flex;
     align-items: center;
     justify-content: space-evenly;
-    gap: clamp(10px, 2.6vw, 24px);
+    gap: clamp(8px, 2vw, 14px);
     box-sizing: border-box;
     border-radius: 9999px;
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8))
+      drop-shadow(0 0 10px var(--rabtv-art-glow));
+  }
+
+  /* Subtle theme tint on wrapper rim without hiding metallic studs or details */
+  .rabtv-home-dual-wrap::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: radial-gradient(
+      ellipse at center,
+      var(--rabtv-art-soft) 0%,
+      transparent 82%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-home-dual-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--rabtv-art-tint);
+    mix-blend-mode: color;
+    opacity: var(--rabtv-art-tint-opacity);
+    pointer-events: none;
+    z-index: 2;
   }
 
   .rabtv-home-art-btn {
     position: relative;
+    z-index: 6;
+    isolation: isolate;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: 1 1 0;
     min-width: 0;
-    max-width: 46%;
-    height: 100%;
+    max-width: 45%;
+    height: 82%;
     background: transparent;
     border: 0;
     padding: 0;
@@ -237,28 +280,42 @@ const HOME_VIEWPORT_STYLES = `
     transition: transform 160ms ease, filter 160ms ease;
   }
 
+  /* Gentle theme tint over Movie Night & Surprise Me pills (keeps text crisp white!) */
+  .rabtv-home-art-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--rabtv-art-tint);
+    mix-blend-mode: color;
+    opacity: var(--rabtv-btn-tint-opacity);
+    pointer-events: none;
+    z-index: 2;
+  }
+
   .rabtv-home-art-btn img {
     width: 100%;
     height: 100%;
     object-fit: contain;
     display: block;
-    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
   }
 
-  /* 1:1 visual height match between Movie Night & Surprise Me across all devices */
+  /* Compact 1:1 visual height match between Movie Night & Surprise Me */
   .rabtv-home-art-btn--movie img {
-    transform: scale(1.12);
+    transform: scale(1.04);
   }
 
   .rabtv-home-art-btn--surprise img {
-    transform: scale(1.56);
+    transform: scale(1.42);
   }
 
-  /* Full-Width Centered Section Header Banner backed by buttonwrapper.png */
+  /* Sleek Full-Width Theme-Tinted Centered Section Header Banner */
   .rabtv-section-banner-wrap {
     position: relative;
+    isolation: isolate;
     width: 100%;
-    height: clamp(54px, 13.8vw, 72px);
+    height: clamp(46px, 12vw, 58px);
     padding: 0 clamp(24px, 6vw, 48px);
     display: flex;
     flex-wrap: nowrap;
@@ -271,10 +328,38 @@ const HOME_VIEWPORT_STYLES = `
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8))
+      drop-shadow(0 0 10px var(--rabtv-art-glow));
+  }
+
+  .rabtv-section-banner-wrap::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: radial-gradient(
+      ellipse at center,
+      var(--rabtv-art-soft) 0%,
+      transparent 82%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-section-banner-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--rabtv-art-tint);
+    mix-blend-mode: color;
+    opacity: var(--rabtv-art-tint-opacity);
+    pointer-events: none;
+    z-index: 2;
   }
 
   .rabtv-section-banner-title {
-    font-size: clamp(14px, 3.9vw, 21px);
+    font-size: clamp(13.5px, 3.7vw, 20px);
     line-height: 1.1;
     text-align: center;
   }
@@ -292,38 +377,39 @@ const HOME_VIEWPORT_STYLES = `
   /* Tablets, Landscape Phones, PCs, Google TV & Fire Sticks (>= 640px) */
   @media (min-width: 640px) {
     .rabtv-home-greet-card {
-      min-height: clamp(174px, 18.5vw, 232px);
-      padding: clamp(18px, 2.2vw, 28px) clamp(16px, 2.4vw, 32px);
-      gap: clamp(12px, 1.6vw, 18px);
+      min-height: clamp(142px, 15.5vw, 188px);
+      padding: clamp(14px, 1.8vw, 22px) clamp(16px, 2.4vw, 32px);
+      gap: clamp(10px, 1.3vw, 15px);
     }
 
     .rabtv-home-greet-mascot {
-      width: clamp(58px, 5.4vw, 76px) !important;
-      height: clamp(58px, 5.4vw, 76px) !important;
+      width: clamp(52px, 4.8vw, 68px) !important;
+      height: clamp(52px, 4.8vw, 68px) !important;
     }
 
     .rabtv-home-greet-title {
-      font-size: clamp(20px, 2.2vw, 28px);
+      font-size: clamp(19px, 2vw, 26px);
     }
 
     .rabtv-home-dual-wrap {
-      width: 100%;
-      height: clamp(72px, 7.6vw, 96px);
-      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
-      gap: clamp(16px, 2.4vw, 36px);
+      width: min(76%, clamp(304px, 38vw, 412px));
+      height: clamp(48px, 5vw, 60px);
+      padding: 6px clamp(18px, 2.4vw, 28px);
+      gap: clamp(10px, 1.4vw, 18px);
     }
 
     .rabtv-home-art-btn {
       max-width: 44%;
+      height: 82%;
     }
 
     .rabtv-section-banner-wrap {
-      height: clamp(58px, 5.8vw, 76px);
+      height: clamp(50px, 5vw, 66px);
       padding: 0 clamp(36px, 4.5vw, 60px);
     }
 
     .rabtv-section-banner-title {
-      font-size: clamp(17px, 1.8vw, 23px);
+      font-size: clamp(16px, 1.7vw, 22px);
     }
 
     .rabtv-section-banner-action {
@@ -335,27 +421,28 @@ const HOME_VIEWPORT_STYLES = `
   /* Short Phone Landscape Guard (max-height <= 500px) */
   @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-home-greet-card {
-      min-height: 136px;
-      padding: 10px 14px;
-      gap: 8px;
+      min-height: 118px;
+      padding: 8px 14px;
+      gap: 6px;
     }
 
     .rabtv-home-greet-mascot {
-      width: 44px !important;
-      height: 44px !important;
+      width: 40px !important;
+      height: 40px !important;
     }
 
     .rabtv-home-greet-title {
-      font-size: clamp(16px, 2.4vw, 22px);
+      font-size: clamp(15px, 2.2vw, 20px);
     }
 
     .rabtv-home-dual-wrap {
-      height: clamp(56px, 13.5dvh, 68px);
-      padding: 7px clamp(24px, 4vw, 44px);
+      width: min(72%, 296px);
+      height: 42px;
+      padding: 5px 16px;
     }
 
     .rabtv-section-banner-wrap {
-      height: clamp(48px, 12dvh, 58px);
+      height: clamp(42px, 10.5dvh, 52px);
       padding: 0 32px;
     }
   }
@@ -363,12 +450,13 @@ const HOME_VIEWPORT_STYLES = `
   /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
     .rabtv-home-dual-wrap {
-      height: clamp(86px, 6.2vw, 104px);
-      padding: 13px 68px;
+      width: 420px;
+      height: 62px;
+      padding: 7px 30px;
     }
 
     .rabtv-section-banner-wrap {
-      height: clamp(68px, 4.8vw, 82px);
+      height: clamp(58px, 4.3vw, 70px);
     }
   }
 `;
@@ -2031,6 +2119,7 @@ function Home() {
                   backgroundImage: `url(${GREETING_WRAPPER_BG_URL})`,
                 }}
               />
+              <div className="rabtv-home-greet-tint" />
               <div className="rabtv-home-greet-vignette" />
 
               <div className="relative z-10 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 max-w-full min-w-0">
