@@ -2339,7 +2339,7 @@ function LivePlayerComponent() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             />
-            <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate px-10 sm:px-20 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+            <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate px-12 sm:px-24 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
               📡 More Live Channels
             </h2>
 
