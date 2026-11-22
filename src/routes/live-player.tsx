@@ -20,6 +20,12 @@ import {
 } from '@/lib/settings';
 import {
   fetchAllChannels,
+  getBackupStreamsForChannel,
+  getChannelReliabilityScore,
+  reportChannelPlaybackSuccess,
+  reportChannelPlaybackFailure,
+  hideLiveChannel,
+  isSafeStreamUrl,
   type LiveChannel,
 } from '@/lib/live-feed-service';
 import { logLiveChannelWatch } from '@/lib/watch-history';
@@ -214,13 +220,7 @@ const LIVE_PLAYER_VIEWPORT_STYLES = `
 `;
 
 function isSafeHttpUrl(raw: string): boolean {
-  if (!raw) return false;
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-  } catch {
-    return false;
-  }
+  return isSafeStreamUrl(raw, { allowLocalLan: true });
 }
 
 export const Route = createFileRoute('/live-player')({
@@ -626,16 +626,6 @@ function LivePlayerComponent() {
   const secondaryHlsRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
 
-  const safePrimaryUrl = useMemo(
-    () => (isSafeHttpUrl(streamUrl) ? streamUrl : ''),
-    [streamUrl]
-  );
-  const splitStreamUrl = useMemo(() => {
-    const raw = (splitChannel?.streamUrl || splitChannel?.url || '').trim();
-    return isSafeHttpUrl(raw) ? raw : '';
-  }, [splitChannel]);
-  const isSplitActive = Boolean(splitChannel && splitStreamUrl && !isLowRam);
-
   // Resolve canonical channelId (supports both new and legacy links)
   const resolvedChannelId = useMemo(() => {
     if (searchChannelId) return searchChannelId;
@@ -644,6 +634,43 @@ function LivePlayerComponent() {
     );
     return match?.channelId || streamUrl || title;
   }, [searchChannelId, allChannels, streamUrl, title]);
+
+  // Regional backup mirrors for seamless auto-failover if primary feed stalls/drops
+  const backupMirrors = useMemo(
+    () => getBackupStreamsForChannel(resolvedChannelId || streamUrl),
+    [resolvedChannelId, streamUrl, allChannels]
+  );
+
+  const [activeStreamUrl, setActiveStreamUrl] = useState<string>(() => streamUrl);
+  const [activeStreamId, setActiveStreamId] = useState<string>(
+    () => searchChannelId || streamUrl || title
+  );
+  const [activeMirrorLabel, setActiveMirrorLabel] = useState<string | null>(null);
+  const [reliabilityScore, setReliabilityScore] = useState<number>(() =>
+    getChannelReliabilityScore(searchChannelId || streamUrl || title)
+  );
+  const triedMirrorUrlsRef = useRef<Set<string>>(new Set([streamUrl]));
+  const backupMirrorsRef = useRef<LiveChannel[]>(backupMirrors);
+  backupMirrorsRef.current = backupMirrors;
+
+  // Reset active mirror cleanly when route switches to a different channel
+  useEffect(() => {
+    setActiveStreamUrl(streamUrl);
+    setActiveStreamId(resolvedChannelId);
+    setActiveMirrorLabel(null);
+    triedMirrorUrlsRef.current = new Set([streamUrl]);
+    setReliabilityScore(getChannelReliabilityScore(resolvedChannelId));
+  }, [streamUrl, resolvedChannelId]);
+
+  const safePrimaryUrl = useMemo(
+    () => (isSafeHttpUrl(activeStreamUrl) ? activeStreamUrl : ''),
+    [activeStreamUrl]
+  );
+  const splitStreamUrl = useMemo(() => {
+    const raw = (splitChannel?.streamUrl || splitChannel?.url || '').trim();
+    return isSafeHttpUrl(raw) ? raw : '';
+  }, [splitChannel]);
+  const isSplitActive = Boolean(splitChannel && splitStreamUrl && !isLowRam);
 
   const [isPinned, setIsPinned] = useState<boolean>(() =>
     isFavoriteChannel(searchChannelId || streamUrl || title)
@@ -904,6 +931,72 @@ function LivePlayerComponent() {
       // Ignore PiP errors on unsupported TV WebViews
     }
   }, []);
+
+  const showTempBanner = useCallback((msg: string) => {
+    setPinFeedback(msg);
+    window.setTimeout(() => setPinFeedback(null), 3400);
+  }, []);
+
+  const attemptMirrorFailover = useCallback(
+    (failedId: string, failedUrl: string, reason: string): boolean => {
+      const report = reportChannelPlaybackFailure(failedId);
+      setReliabilityScore(getChannelReliabilityScore(failedId));
+      triedMirrorUrlsRef.current.add(failedUrl);
+
+      const nextMirror = backupMirrorsRef.current.find(
+        (m) =>
+          m.url &&
+          isSafeHttpUrl(m.url) &&
+          !triedMirrorUrlsRef.current.has(m.url)
+      );
+
+      if (nextMirror) {
+        triedMirrorUrlsRef.current.add(nextMirror.url);
+        setActiveStreamUrl(nextMirror.url);
+        setActiveStreamId(nextMirror.channelId);
+        setActiveMirrorLabel(nextMirror.groupTitle || nextMirror.name);
+        setReliabilityScore(getChannelReliabilityScore(nextMirror.channelId));
+        showTempBanner(
+          `⚡ ${reason} — auto-switched to ${nextMirror.groupTitle || 'Backup'} mirror`
+        );
+        return true;
+      }
+
+      if (report.quarantined) {
+        showTempBanner(
+          '⚠️ Stream failed 3× — temporarily quarantined for 6h so it won’t slow your guide.'
+        );
+      }
+      return false;
+    },
+    [showTempBanner]
+  );
+
+  const handleSelectManualMirror = useCallback(
+    (mirrorUrl: string, mirrorId: string, mirrorLabel: string | null) => {
+      triedMirrorUrlsRef.current.add(mirrorUrl);
+      setActiveStreamUrl(mirrorUrl);
+      setActiveStreamId(mirrorId);
+      setActiveMirrorLabel(mirrorLabel);
+      setReliabilityScore(getChannelReliabilityScore(mirrorId));
+      showTempBanner(
+        mirrorLabel
+          ? `📡 Switched to ${mirrorLabel} mirror`
+          : '📡 Switched back to Primary feed'
+      );
+    },
+    [showTempBanner]
+  );
+
+  const handleHideCurrentChannel = useCallback(() => {
+    hideLiveChannel(resolvedChannelId);
+    showTempBanner(`🚫 Hid "${title}" from your Live TV guide.`);
+    if (nextChannel) {
+      window.setTimeout(() => surfToChannel(nextChannel), 650);
+    } else {
+      navigate({ to: '/live-tv' });
+    }
+  }, [resolvedChannelId, title, nextChannel, surfToChannel, navigate, showTempBanner]);
 
   const handleTogglePin = () => {
     const result = toggleFavoriteChannel(resolvedChannelId);
@@ -1171,6 +1264,12 @@ function LivePlayerComponent() {
     let cancelled = false;
     let timeoutId: number | null = null;
     let mediaRecoveryAttempts = 0;
+    let networkRecoveryAttempts = 0;
+    let reportedSuccess = false;
+    let handledFailure = false;
+    const loadStartedAt = Date.now();
+    const currentUrl = safePrimaryUrl;
+    const currentId = activeStreamId;
 
     setStreamStatus('checking');
     setQualityLevels([]);
@@ -1180,10 +1279,33 @@ function LivePlayerComponent() {
     video.removeAttribute('src');
     video.load();
 
+    const markSuccessOnce = () => {
+      if (cancelled || reportedSuccess) return;
+      reportedSuccess = true;
+      const elapsed = Math.max(1, Date.now() - loadStartedAt);
+      reportChannelPlaybackSuccess(currentId, elapsed);
+      setReliabilityScore(getChannelReliabilityScore(currentId));
+    };
+
+    const handleFatalStreamFailure = (reason: string) => {
+      if (cancelled || handledFailure) return;
+      handledFailure = true;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      destroyHls();
+      const switched = attemptMirrorFailover(currentId, currentUrl, reason);
+      if (!switched) {
+        setStreamStatus('offline');
+      }
+    };
+
     const onPlaying = () => {
       if (!cancelled) {
         setStreamStatus('live');
         setIsPlaying(true);
+        markSuccessOnce();
       }
     };
     const onPause = () => {
@@ -1191,7 +1313,7 @@ function LivePlayerComponent() {
     };
     const onError = () => {
       if (!cancelled && !hlsRef.current) {
-        setStreamStatus('offline');
+        handleFatalStreamFailure('Stream failed to load');
       }
     };
     const onStalled = () => {
@@ -1199,7 +1321,7 @@ function LivePlayerComponent() {
         video.networkState === HTMLVideoElement.NETWORK_NO_SOURCE &&
         !cancelled
       ) {
-        setStreamStatus('offline');
+        handleFatalStreamFailure('Feed stalled');
       }
     };
 
@@ -1210,9 +1332,9 @@ function LivePlayerComponent() {
 
     timeoutId = window.setTimeout(() => {
       if (!cancelled && video.paused && video.readyState < 2) {
-        setStreamStatus('offline');
+        handleFatalStreamFailure('Feed timed out');
       }
-    }, 10000);
+    }, 9500);
 
     const startPlayback = () => {
       if (cancelled) return;
@@ -1220,7 +1342,7 @@ function LivePlayerComponent() {
       const HlsClass = (window as any).Hls;
       const limits = getHardwareLimits();
 
-      if (HlsClass && HlsClass.isSupported() && streamUrl.includes('.m3u8')) {
+      if (HlsClass && HlsClass.isSupported() && currentUrl.includes('.m3u8')) {
         const hlsInstance = new HlsClass({
           enableWorker: true,
           lowLatencyMode: false,
@@ -1235,7 +1357,7 @@ function LivePlayerComponent() {
         });
 
         hlsRef.current = hlsInstance;
-        hlsInstance.loadSource(streamUrl);
+        hlsInstance.loadSource(currentUrl);
         hlsInstance.attachMedia(video);
 
         hlsInstance.on(HlsClass.Events.MANIFEST_PARSED, () => {
@@ -1276,6 +1398,7 @@ function LivePlayerComponent() {
               if (!cancelled) {
                 setStreamStatus('live');
                 setIsPlaying(true);
+                markSuccessOnce();
               }
             })
             .catch(() => {
@@ -1289,7 +1412,11 @@ function LivePlayerComponent() {
         hlsInstance.on(HlsClass.Events.ERROR, (_event: any, data: any) => {
           if (!data.fatal || cancelled) return;
 
-          if (data.type === HlsClass.ErrorTypes.NETWORK_ERROR) {
+          if (
+            data.type === HlsClass.ErrorTypes.NETWORK_ERROR &&
+            networkRecoveryAttempts < 1
+          ) {
+            networkRecoveryAttempts++;
             hlsInstance.startLoad();
           } else if (
             data.type === HlsClass.ErrorTypes.MEDIA_ERROR &&
@@ -1298,31 +1425,31 @@ function LivePlayerComponent() {
             mediaRecoveryAttempts++;
             hlsInstance.recoverMediaError();
           } else {
-            setStreamStatus('offline');
-            destroyHls();
+            handleFatalStreamFailure('Broadcast feed error');
           }
         });
         return;
       }
 
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = streamUrl;
+        video.src = currentUrl;
         video
           .play()
           .then(() => {
             if (!cancelled) {
               setStreamStatus('live');
               setIsPlaying(true);
+              markSuccessOnce();
             }
           })
-          .catch(() => !cancelled && setStreamStatus('offline'));
+          .catch(() => handleFatalStreamFailure('Stream unavailable'));
         return;
       }
 
-      setStreamStatus('offline');
+      handleFatalStreamFailure('Unsupported stream format');
     };
 
-    if (streamUrl.includes('.m3u8')) {
+    if (currentUrl.includes('.m3u8')) {
       if ((window as any).Hls) {
         startPlayback();
       } else {
@@ -1342,21 +1469,22 @@ function LivePlayerComponent() {
           script.async = true;
           script.dataset.hlsJs = 'true';
           script.onload = startPlayback;
-          script.onerror = () => !cancelled && setStreamStatus('offline');
+          script.onerror = () => handleFatalStreamFailure('Player library failed');
           document.head.appendChild(script);
         }
       }
     } else {
-      video.src = streamUrl;
+      video.src = currentUrl;
       video
         .play()
         .then(() => {
           if (!cancelled) {
             setStreamStatus('live');
             setIsPlaying(true);
+            markSuccessOnce();
           }
         })
-        .catch(() => !cancelled && setStreamStatus('offline'));
+        .catch(() => handleFatalStreamFailure('Stream failed'));
     }
 
     return () => {
@@ -1371,7 +1499,14 @@ function LivePlayerComponent() {
       video.removeAttribute('src');
       video.load();
     };
-  }, [streamUrl, retryNonce, destroyHls, pickPreferredQualityIndex]);
+  }, [
+    safePrimaryUrl,
+    activeStreamId,
+    retryNonce,
+    destroyHls,
+    pickPreferredQualityIndex,
+    attemptMirrorFailover,
+  ]);
 
   const handleQualityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const levelIndex = Number(e.target.value);
@@ -1382,6 +1517,7 @@ function LivePlayerComponent() {
   };
 
   const handleResyncStream = () => {
+    triedMirrorUrlsRef.current = new Set([activeStreamUrl]);
     setRetryNonce((n) => n + 1);
   };
 
@@ -1893,6 +2029,28 @@ function LivePlayerComponent() {
               </svg>
             </button>
 
+            <button
+              type="button"
+              onClick={handleHideCurrentChannel}
+              className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg border transition cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
+              title="Hide this channel from your Live TV guide"
+              aria-label="Hide Channel"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-3.5 h-3.5"
+              >
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            </button>
+
             {/* Minimal Signal Indicator */}
             <div
               className={`inline-flex items-center gap-1.5 rounded-lg border px-2 sm:px-2.5 h-8 sm:h-9 text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap shrink-0 ${themeStyles.subtleBadge}`}
@@ -2192,17 +2350,44 @@ function LivePlayerComponent() {
                     onClick={handleResyncStream}
                     className={`rounded-lg px-4 py-2 text-xs font-bold transition cursor-pointer ${themeStyles.primaryBtn}`}
                   >
-                    Retry Stream
+                    ↻ Retry Stream
                   </button>
+                  {backupMirrors.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const alt =
+                          backupMirrors.find((m) => m.url !== activeStreamUrl) ||
+                          backupMirrors[0];
+                        if (alt) {
+                          handleSelectManualMirror(
+                            alt.url,
+                            alt.channelId,
+                            alt.groupTitle || alt.name
+                          );
+                        }
+                      }}
+                      className={`rounded-lg border px-4 py-2 text-xs font-bold transition cursor-pointer ${themeStyles.btnSecondary}`}
+                    >
+                      📡 Try Backup Mirror
+                    </button>
+                  )}
                   {nextChannel && (
                     <button
                       type="button"
                       onClick={() => surfToChannel(nextChannel)}
                       className={`rounded-lg border px-4 py-2 text-xs font-bold transition cursor-pointer ${themeStyles.btnSecondary}`}
                     >
-                      Next Channel
+                      Next Channel ▶
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={handleHideCurrentChannel}
+                    className="rounded-lg bg-red-950/80 hover:bg-red-700 border border-red-500/45 px-3.5 py-2 text-xs font-bold text-red-200 hover:text-white transition cursor-pointer"
+                  >
+                    🚫 Hide Channel
+                  </button>
                 </div>
               </div>
             )}
@@ -2238,16 +2423,73 @@ function LivePlayerComponent() {
             )}
           </div>
 
-          <div className="flex-1 min-w-0 space-y-0.5 text-left">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base sm:text-xl font-black tracking-tight text-white truncate">
-                {title || 'Live Channel'}
-              </h1>
-              <span className={`text-[11px] font-bold ${themeStyles.subMutedText}`}>
-                {streamStatus === 'offline'
-                  ? 'Off-Air'
-                  : `${qualityLabel} • ${isLowRam ? 'Lite' : 'HD Buffer'}`}
-              </span>
+          <div className="flex-1 min-w-0 space-y-1 text-left">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <h1 className="text-base sm:text-xl font-black tracking-tight text-white truncate">
+                  {title || 'Live Channel'}
+                </h1>
+                <span className={`text-[11px] font-bold ${themeStyles.subMutedText}`}>
+                  {streamStatus === 'offline'
+                    ? 'Off-Air'
+                    : `${qualityLabel} • ${isLowRam ? 'Lite' : 'HD Buffer'}`}
+                </span>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[10px] font-extrabold whitespace-nowrap ${
+                    reliabilityScore >= 75
+                      ? 'bg-emerald-950/75 border-emerald-500/35 text-emerald-300'
+                      : reliabilityScore >= 45
+                        ? 'bg-amber-950/75 border-amber-500/35 text-amber-300'
+                        : 'bg-red-950/75 border-red-500/35 text-red-300'
+                  }`}
+                  title="Stream reliability score based on live health & playback history"
+                >
+                  ⚡ {reliabilityScore}%
+                </span>
+                {activeMirrorLabel && (
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[10px] font-extrabold whitespace-nowrap ${themeStyles.badge}`}
+                  >
+                    Mirror: {activeMirrorLabel}
+                  </span>
+                )}
+              </div>
+
+              {backupMirrors.length > 0 && (
+                <select
+                  aria-label="Select regional backup mirror"
+                  value={activeStreamUrl}
+                  onChange={(e) => {
+                    const nextUrl = e.target.value;
+                    if (nextUrl === streamUrl) {
+                      handleSelectManualMirror(streamUrl, resolvedChannelId, null);
+                    } else {
+                      const found = backupMirrors.find((m) => m.url === nextUrl);
+                      if (found) {
+                        handleSelectManualMirror(
+                          found.url,
+                          found.channelId,
+                          found.groupTitle || found.name
+                        );
+                      }
+                    }
+                  }}
+                  className={`h-7 sm:h-8 rounded-lg border px-2 text-[10px] sm:text-[11px] font-bold text-white cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.hudSelectBox} ${themeStyles.focusRing}`}
+                >
+                  <option value={streamUrl} className={themeStyles.optionBg}>
+                    Mirror: Primary Feed
+                  </option>
+                  {backupMirrors.map((m) => (
+                    <option
+                      key={m.channelId}
+                      value={m.url}
+                      className={themeStyles.optionBg}
+                    >
+                      Mirror: {m.groupTitle} ({m.reliabilityScore ?? 60}%)
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <p className={`text-xs leading-relaxed line-clamp-2 ${themeStyles.mutedText}`}>
               {channelDescription}
