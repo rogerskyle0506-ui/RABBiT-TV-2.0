@@ -124,19 +124,79 @@ export const REAL_SURPRISE_ME_BTN_URL =
  * landscape phones, tablets, TVs, and projectors.
  */
 const VIEWPORT_HEADER_STYLES = `
+  /* Global Theme-Adaptive Artwork Tint Tokens (Inherited by All Pages & Wrappers) */
+  :root,
+  html[data-theme="violet"] {
+    --rabtv-art-tint: #a855f7;
+    --rabtv-art-soft: rgba(139, 92, 246, 0.14);
+    --rabtv-art-glow: rgba(139, 92, 246, 0.34);
+    --rabtv-art-tint-opacity: 0.22;
+    --rabtv-btn-tint-opacity: 0.16;
+  }
+
+  html[data-theme="red"] {
+    --rabtv-art-tint: #ef4444;
+    --rabtv-art-soft: rgba(220, 38, 38, 0.18);
+    --rabtv-art-glow: rgba(239, 68, 68, 0.42);
+    --rabtv-art-tint-opacity: 0.56;
+    --rabtv-btn-tint-opacity: 0.42;
+  }
+
+  html[data-theme="midnight"] {
+    --rabtv-art-tint: #38bdf8;
+    --rabtv-art-soft: rgba(37, 99, 235, 0.18);
+    --rabtv-art-glow: rgba(56, 189, 248, 0.42);
+    --rabtv-art-tint-opacity: 0.54;
+    --rabtv-btn-tint-opacity: 0.40;
+  }
+
+  html[data-theme="emerald"] {
+    --rabtv-art-tint: #10b981;
+    --rabtv-art-soft: rgba(16, 185, 129, 0.18);
+    --rabtv-art-glow: rgba(16, 185, 129, 0.40);
+    --rabtv-art-tint-opacity: 0.54;
+    --rabtv-btn-tint-opacity: 0.40;
+  }
+
+  html[data-theme="amber"] {
+    --rabtv-art-tint: #f59e0b;
+    --rabtv-art-soft: rgba(217, 119, 6, 0.18);
+    --rabtv-art-glow: rgba(245, 158, 11, 0.42);
+    --rabtv-art-tint-opacity: 0.54;
+    --rabtv-btn-tint-opacity: 0.40;
+  }
+
+  html[data-theme="cyan"] {
+    --rabtv-art-tint: #06b6d4;
+    --rabtv-art-soft: rgba(6, 182, 212, 0.18);
+    --rabtv-art-glow: rgba(34, 211, 238, 0.42);
+    --rabtv-art-tint-opacity: 0.54;
+    --rabtv-btn-tint-opacity: 0.40;
+  }
+
   /* Base: Portrait Phones (< 640px) — Strict 2-Row Viewport-Locked Grid */
   .rabtv-hdr-bar {
-    --hdr-u: clamp(34px, 9.6vw, 48px);
-    min-height: clamp(114px, 31vw, 152px);
+    --hdr-u: clamp(36px, 10vw, 52px);
+    min-height: clamp(124px, 34vw, 166px);
+  }
+
+  .rabtv-hdr-wall-tint {
+    background: radial-gradient(
+      ellipse at center,
+      var(--rabtv-art-tint) 0%,
+      transparent 95%
+    );
+    mix-blend-mode: color;
+    opacity: calc(var(--rabtv-art-tint-opacity) * 0.72);
   }
 
   .rabtv-hdr-inner {
     width: 100%;
     max-width: 1440px;
     margin-inline: auto;
-    padding: clamp(8px, 2.2vw, 14px) clamp(8px, 2.4vw, 24px);
+    padding: clamp(8px, 2.2vw, 14px) clamp(8px, 2.2vw, 24px);
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
     grid-template-areas:
       "profile logo"
       "search  search";
@@ -146,37 +206,55 @@ const VIEWPORT_HEADER_STYLES = `
     box-sizing: border-box;
   }
 
-  /* LEFT: Menu / Profile Pill */
+  /* LEFT: Full-Sized Menu / Profile Pill (width: 100% prevents Grid shrink-to-fit squishing!) */
   .rabtv-hdr-profile-wrap {
     grid-area: profile;
-    justify-self: start;
+    width: 100%;
     min-width: 0;
-    max-width: 100%;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: clamp(4px, 0.8vw, 10px);
   }
 
   .rabtv-hdr-profile-btn {
     position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
-    height: clamp(46px, 13vw, 62px);
-    width: min(100%, clamp(150px, 44.5vw, 212px));
-    padding-left: 41.5%;
+    width: 100%;
+    max-width: 232px;
+    height: clamp(54px, 15.6vw, 72px);
+    padding-left: 39.5%;
     padding-right: 17.5%;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     box-sizing: border-box;
     overflow: hidden;
+    filter: drop-shadow(0 3px 9px rgba(0, 0, 0, 0.85))
+      drop-shadow(0 0 8px var(--rabtv-art-glow));
   }
 
-  /* Calibrated directly onto the glowing purple avatar ring of sidebar.png */
+  /* Subtle theme tint over sidebar.png neon frame (avatar & text sit above at z-index: 12) */
+  .rabtv-hdr-profile-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--rabtv-art-tint);
+    mix-blend-mode: color;
+    opacity: var(--rabtv-art-tint-opacity);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Calibrated directly onto the glowing avatar ring of sidebar.png */
   .rabtv-hdr-profile-avatar {
     position: absolute;
-    left: 20.6%;
+    z-index: 12;
+    left: 20.4%;
     top: 50%;
     transform: translate(-50%, -50%);
-    height: 68%;
+    height: 66%;
     aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
@@ -187,6 +265,8 @@ const VIEWPORT_HEADER_STYLES = `
   }
 
   .rabtv-hdr-profile-label {
+    position: relative;
+    z-index: 12;
     display: block;
     width: 100%;
     min-width: 0;
@@ -195,15 +275,14 @@ const VIEWPORT_HEADER_STYLES = `
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.15;
-    font-size: clamp(10px, 2.9vw, 13.5px);
+    font-size: clamp(11px, 3.2vw, 14.5px);
   }
 
-  /* RIGHT: RABBiT TV Home Logo */
+  /* RIGHT: Big, Crisp RABBiT TV Home Logo (width: 100% prevents Grid collapse!) */
   .rabtv-hdr-logo-wrap {
     grid-area: logo;
-    justify-self: end;
+    width: 100%;
     min-width: 0;
-    max-width: 100%;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -212,14 +291,30 @@ const VIEWPORT_HEADER_STYLES = `
 
   .rabtv-hdr-logo {
     position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    height: clamp(50px, 14.2vw, 68px);
-    width: min(100%, clamp(154px, 45.5vw, 224px));
+    width: 100%;
+    max-width: 242px;
+    height: clamp(58px, 16.8vw, 78px);
     flex: 0 1 auto;
     box-sizing: border-box;
     overflow: visible;
+    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.9))
+      drop-shadow(0 0 8px var(--rabtv-art-glow));
+  }
+
+  .rabtv-hdr-logo::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 9999px;
+    background: var(--rabtv-art-tint);
+    mix-blend-mode: color;
+    opacity: calc(var(--rabtv-btn-tint-opacity) * 0.72);
+    pointer-events: none;
+    z-index: 2;
   }
 
   .rabtv-hdr-logo-img {
@@ -227,12 +322,11 @@ const VIEWPORT_HEADER_STYLES = `
     height: 100%;
     object-fit: contain;
     object-position: right center;
-    transform: scale(1.16);
+    transform: scale(1.22);
     transform-origin: right center;
-    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.92));
   }
 
-  /* ROW 2 (Portrait) / CENTER (Landscape, Tablet, PC, TV): Unclipped Search Bar */
+  /* ROW 2 (Portrait) / CENTER (Landscape, Tablet, PC, TV): Unclipped Theme-Tinted Search Bar */
   .rabtv-hdr-search-form {
     grid-area: search;
     width: 100%;
@@ -245,13 +339,29 @@ const VIEWPORT_HEADER_STYLES = `
 
   .rabtv-hdr-search-shell {
     position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
-    height: clamp(48px, 13.6vw, 62px);
+    height: clamp(46px, 13vw, 60px);
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    overflow: visible;
+    overflow: hidden;
+    border-radius: 9999px;
+    filter: drop-shadow(0 3px 9px rgba(0, 0, 0, 0.85))
+      drop-shadow(0 0 8px var(--rabtv-art-glow));
+  }
+
+  .rabtv-hdr-search-shell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--rabtv-art-tint);
+    mix-blend-mode: color;
+    opacity: var(--rabtv-art-tint-opacity);
+    pointer-events: none;
+    z-index: 2;
   }
 
   .rabtv-hdr-search-input {
@@ -297,8 +407,8 @@ const VIEWPORT_HEADER_STYLES = `
   /* Landscape Phones, Tablets, PCs, Google TV, Fire Sticks & Projectors (>= 640px) */
   @media (min-width: 640px) {
     .rabtv-hdr-bar {
-      --hdr-u: clamp(34px, 4.8vw, 56px);
-      min-height: clamp(72px, 9.2vw, 124px);
+      --hdr-u: clamp(36px, 5vw, 58px);
+      min-height: clamp(78px, 9.8vw, 128px);
     }
 
     .rabtv-hdr-inner {
@@ -309,27 +419,33 @@ const VIEWPORT_HEADER_STYLES = `
       row-gap: 0;
     }
 
+    .rabtv-hdr-profile-wrap,
+    .rabtv-hdr-logo-wrap {
+      width: auto;
+    }
+
     .rabtv-hdr-profile-btn {
-      height: clamp(46px, 5.8vw, 66px);
-      width: clamp(156px, 20vw, 232px);
-      padding-left: 41.5%;
+      width: clamp(192px, 22vw, 260px);
+      max-width: none;
+      height: clamp(56px, 6.6vw, 76px);
+      padding-left: 39.5%;
       padding-right: 17.5%;
     }
 
     .rabtv-hdr-profile-label {
-      font-size: clamp(10.5px, 1.3vw, 14px);
+      font-size: clamp(11px, 1.35vw, 14.5px);
     }
 
     .rabtv-hdr-search-form {
       justify-self: center;
       width: 100%;
-      max-width: min(100%, 620px);
+      max-width: min(100%, 600px);
     }
 
     .rabtv-hdr-search-shell {
-      height: clamp(44px, 5.5vw, 64px);
+      height: clamp(46px, 5.6vw, 64px);
       width: 100%;
-      max-width: 620px;
+      max-width: 600px;
     }
 
     .rabtv-hdr-search-input {
@@ -339,12 +455,13 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-logo {
-      height: clamp(50px, 6.4vw, 76px);
-      width: clamp(156px, 20vw, 250px);
+      width: clamp(194px, 22.5vw, 276px);
+      max-width: none;
+      height: clamp(60px, 7vw, 84px);
     }
 
     .rabtv-hdr-logo-img {
-      transform: scale(1.14);
+      transform: scale(1.18);
       transform-origin: right center;
     }
   }
@@ -352,7 +469,7 @@ const VIEWPORT_HEADER_STYLES = `
   /* Short Phone Landscape Guard (e.g. Android phone rotated sideways, max-height <= 500px) */
   @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-hdr-bar {
-      min-height: clamp(58px, 15dvh, 76px);
+      min-height: clamp(62px, 16dvh, 80px);
     }
 
     .rabtv-hdr-inner {
@@ -361,25 +478,25 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-profile-btn {
-      height: clamp(40px, 10.5dvh, 52px);
-      width: clamp(138px, 21vw, 184px);
+      width: clamp(168px, 23.5vw, 218px);
+      height: clamp(46px, 12.2dvh, 58px);
     }
 
     .rabtv-hdr-search-shell {
-      height: clamp(38px, 10dvh, 50px);
+      height: clamp(40px, 10.5dvh, 50px);
     }
 
     .rabtv-hdr-logo {
-      height: clamp(42px, 11dvh, 56px);
-      width: clamp(138px, 21vw, 188px);
+      width: clamp(166px, 23vw, 220px);
+      height: clamp(48px, 12.8dvh, 62px);
     }
   }
 
   /* Desktop / PC (1024px - 1279px) */
   @media (min-width: 1024px) {
     .rabtv-hdr-profile-btn {
-      height: clamp(54px, 4.8vw, 66px);
-      width: clamp(190px, 18vw, 236px);
+      width: clamp(218px, 19.5vw, 266px);
+      height: clamp(62px, 5.4vw, 76px);
     }
 
     .rabtv-hdr-search-shell {
@@ -387,30 +504,30 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-logo {
-      height: clamp(60px, 5.4vw, 76px);
-      width: clamp(196px, 18.5vw, 256px);
+      width: clamp(224px, 20vw, 286px);
+      height: clamp(68px, 5.8vw, 86px);
     }
   }
 
   /* Google TV, Fire TV Stick, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
     .rabtv-hdr-bar {
-      min-height: clamp(92px, 7.2vw, 126px);
+      min-height: clamp(98px, 7.6vw, 134px);
     }
 
     .rabtv-hdr-profile-btn {
-      height: clamp(58px, 4.2vw, 70px);
-      width: clamp(210px, 16vw, 252px);
+      width: clamp(238px, 18.5vw, 290px);
+      height: clamp(68px, 5vw, 84px);
     }
 
     .rabtv-hdr-search-shell {
       height: clamp(56px, 4.2vw, 68px);
-      max-width: 660px;
+      max-width: 640px;
     }
 
     .rabtv-hdr-logo {
-      height: clamp(66px, 4.8vw, 82px);
-      width: clamp(220px, 17vw, 276px);
+      width: clamp(248px, 19vw, 310px);
+      height: clamp(74px, 5.5vw, 92px);
     }
   }
 `;
@@ -1341,7 +1458,7 @@ function RootComponent() {
               isPlayerRoute ? "rabtv-header-player-route" : ""
             } ${tokens.headerBg} ${tokens.headerBorder} ${tokens.glowClass}`}
           >
-            {/* Brightened Header Wallpaper */}
+            {/* Theme-Blended Header Wallpaper */}
             <div className="absolute inset-0 pointer-events-none opacity-50">
               <img
                 src={RABBITHEADERWALL}
@@ -1349,7 +1466,8 @@ function RootComponent() {
                 className="w-full h-full object-cover object-center brightness-110 contrast-105"
               />
             </div>
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/40 pointer-events-none" />
+            <div className="rabtv-hdr-wall-tint absolute inset-0 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/20 to-black/55 pointer-events-none" />
 
             <div className="relative z-10 rabtv-hdr-inner">
               {/* LEFT: Viewport-Locked Sidebar Menu / Profile Pill + Optional TV Badges */}
