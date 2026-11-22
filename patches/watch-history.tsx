@@ -64,7 +64,7 @@ const BACK_TO_HOME_BTN_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const WATCH_HISTORY_VIEWPORT_STYLES = `
-  /* Self-contained compact punk-neon wrappers & section ribbons synced with __root.tsx */
+  /* Self-contained blended punk-neon wrappers & section ribbons — 1:1 synced with __root.tsx */
   .rabtv-wh-top-bar {
     width: 100%;
     display: flex;
@@ -76,14 +76,14 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
 
   .rabtv-wh-dual-wrap {
     position: relative;
-    width: min(92%, 312px);
-    height: clamp(38px, 10vw, 46px);
-    padding: 4px clamp(19px, 5.4vw, 26px);
+    width: min(95%, 352px);
+    height: clamp(46px, 12.6vw, 56px);
+    padding: 0 11.2%;
     margin-inline: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: clamp(8px, 2.5vw, 18px);
+    gap: clamp(6px, 2vw, 14px);
     box-sizing: border-box;
     border-radius: 9999px;
     overflow: hidden;
@@ -96,7 +96,20 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
+    opacity: 0.78;
     filter: var(--rabtv-wrap-filter, hue-rotate(-14deg) saturate(1.06));
+    -webkit-mask-image: radial-gradient(
+      ellipse 51% 54% at 50% 50%,
+      rgba(0, 0, 0, 1) 68%,
+      rgba(0, 0, 0, 0.76) 86%,
+      rgba(0, 0, 0, 0.24) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 51% 54% at 50% 50%,
+      rgba(0, 0, 0, 1) 68%,
+      rgba(0, 0, 0, 0.76) 86%,
+      rgba(0, 0, 0, 0.24) 100%
+    );
     pointer-events: none;
     z-index: 0;
   }
@@ -106,10 +119,10 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     z-index: 6;
     display: inline-flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     flex: 0 0 auto;
-    width: 41%;
-    height: 74%;
+    width: 47%;
+    height: 45%;
     background: transparent;
     border: 0;
     padding: 0;
@@ -123,9 +136,9 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     width: 100%;
     height: 100%;
     object-fit: contain;
-    object-position: left center;
-    transform-origin: left center;
-    transform: scale(1.28);
+    object-position: center center;
+    transform-origin: center center;
+    transform: scale(1.92);
     display: block;
   }
 
@@ -137,13 +150,14 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     justify-content: center;
     gap: 4px;
     flex: 0 0 auto;
-    width: 41%;
-    height: 68%;
-    padding: 0 clamp(6px, 2vw, 12px);
+    width: 46.5%;
+    height: 41%;
+    padding: 0 clamp(6px, 1.8vw, 11px);
     border-radius: 9999px;
     font-size: clamp(9.5px, 2.5vw, 12px);
     line-height: 1;
     white-space: nowrap;
+    overflow: hidden;
     box-sizing: border-box;
     transition: transform 150ms ease;
   }
@@ -151,8 +165,8 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
   .rabtv-wh-section-ribbon {
     position: relative;
     width: 100%;
-    height: clamp(38px, 10vw, 48px);
-    padding: 0 clamp(22px, 5.5vw, 44px);
+    height: clamp(42px, 11vw, 52px);
+    padding: 0 clamp(26px, 11.5%, 56px);
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -173,25 +187,25 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
 
   @media (min-width: 640px) {
     .rabtv-wh-dual-wrap {
-      width: min(76%, clamp(326px, 40vw, 424px));
-      height: clamp(42px, 4.4vw, 52px);
-      padding: 5px clamp(22px, 2.8vw, 34px);
+      width: min(82%, clamp(356px, 44vw, 460px));
+      height: clamp(50px, 5.2vw, 62px);
+      padding: 0 11.2%;
     }
 
     .rabtv-wh-home-btn {
-      width: 40%;
-      height: 74%;
+      width: 47%;
+      height: 45%;
     }
 
     .rabtv-wh-mylist-pill {
-      width: 40%;
-      height: 68%;
+      width: 46.5%;
+      height: 41%;
       font-size: clamp(10.5px, 1.15vw, 13px);
     }
 
     .rabtv-wh-section-ribbon {
-      height: clamp(44px, 4.4vw, 56px);
-      padding: 0 clamp(32px, 4vw, 56px);
+      height: clamp(48px, 4.8vw, 60px);
+      padding: 0 clamp(38px, 11.5%, 72px);
     }
 
     .rabtv-wh-section-title {
@@ -201,9 +215,9 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
 
   @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-wh-dual-wrap {
-      width: min(72%, 296px);
-      height: 36px;
-      padding: 3px 18px;
+      width: min(76%, 324px);
+      height: 42px;
+      padding: 0 11.2%;
     }
 
     .rabtv-wh-mylist-pill {
@@ -211,20 +225,20 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     }
 
     .rabtv-wh-section-ribbon {
-      height: 38px;
-      padding: 0 28px;
+      height: 40px;
+      padding: 0 11.5%;
     }
   }
 
   @media (min-width: 1280px) {
     .rabtv-wh-dual-wrap {
-      width: 432px;
-      height: 54px;
-      padding: 6px 34px;
+      width: 472px;
+      height: 64px;
+      padding: 0 11.2%;
     }
 
     .rabtv-wh-section-ribbon {
-      height: clamp(50px, 3.8vw, 60px);
+      height: clamp(54px, 4vw, 64px);
     }
   }
 `;
