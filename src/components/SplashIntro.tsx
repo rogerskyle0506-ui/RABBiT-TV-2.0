@@ -210,23 +210,27 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
       <style>{`
         .rabtv-splash-root {
           position: fixed;
-          inset: 0;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
           width: 100vw;
           height: 100vh;
           height: 100dvh;
           min-height: 100dvh;
           margin: 0;
           padding: 0;
+          overflow: hidden;
         }
         .rabtv-splash-video {
           position: absolute;
-          inset: 0;
+          top: 0;
+          left: 0;
           width: 100% !important;
           height: 100% !important;
-          min-width: 100%;
-          min-height: 100%;
-          object-fit: cover;
-          object-position: center center;
+          max-width: none !important;
+          max-height: none !important;
+          object-fit: fill !important;
           display: block;
         }
         .rabtv-splash-video::-webkit-media-controls,
@@ -244,7 +248,7 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
         }}
       />
 
-      {/* Full-Viewport 100% Width x 100% Height Edge-to-Edge Intro Video (No 16:9 Letterboxing) */}
+      {/* Exact 100% Width x 100% Height Viewport Fill — Zero Cropping & Zero 16:9 Letterboxing */}
       <video
         ref={videoRef}
         key={SPLASH_VIDEO_SOURCES[sourceIndex]}
@@ -257,6 +261,11 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
         onPlaying={() => setIsPlaying(true)}
         onEnded={completeSplash}
         onError={handleVideoError}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "fill",
+        }}
         className="rabtv-splash-video z-10 bg-black"
       />
 
