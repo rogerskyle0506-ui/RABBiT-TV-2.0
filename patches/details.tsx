@@ -63,161 +63,7 @@ const BACK_TO_HOME_BTN_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const DETAILS_VIEWPORT_STYLES = `
-  /* Base: Portrait Phones (< 640px) — Full-width button wrappers matching dividers & hero */
-  .rabtv-det-top-bar {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: clamp(8px, 2vw, 14px);
-    box-sizing: border-box;
-  }
-
-  /* Full-width studded buttonwrapper.png holding Back to Home + IMDb cleanly */
-  .rabtv-det-back-wrap {
-    position: relative;
-    width: 100%;
-    height: clamp(64px, 16.6vw, 86px);
-    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
-    gap: clamp(10px, 2.6vw, 24px);
-    box-sizing: border-box;
-    border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    overflow: hidden;
-  }
-
-  .rabtv-det-art-btn {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1 1 0;
-    min-width: 0;
-    max-width: 48%;
-    height: 100%;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    overflow: hidden;
-    border-radius: 9999px;
-    transition: transform 160ms ease, filter 160ms ease;
-  }
-
-  .rabtv-det-art-btn img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-    transform: scale(1.44);
-    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
-  }
-
-  .rabtv-det-imdb-pill {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex: 0.9 1 0;
-    min-width: 0;
-    max-width: 44%;
-    height: 76%;
-    padding: 0 clamp(10px, 2.6vw, 18px);
-    border-radius: 9999px;
-    font-size: clamp(11px, 3vw, 14px);
-    white-space: nowrap;
-    box-sizing: border-box;
-  }
-
-  /* Full-width centered section header banner backed by buttonwrapper.png */
-  .rabtv-det-section-banner {
-    position: relative;
-    width: 100%;
-    height: clamp(54px, 13.8vw, 72px);
-    padding: 0 clamp(24px, 6vw, 48px);
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(8px, 2vw, 16px);
-    box-sizing: border-box;
-    border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    overflow: hidden;
-  }
-
-  .rabtv-det-section-title {
-    font-size: clamp(13.5px, 3.8vw, 20px);
-    line-height: 1.1;
-    text-align: center;
-  }
-
-  /* Landscape Phones, Tablets, PCs, Google TV & Fire Sticks (>= 640px) */
-  @media (min-width: 640px) {
-    .rabtv-det-back-wrap {
-      width: 100%;
-      height: clamp(70px, 7.2vw, 94px);
-      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
-      gap: clamp(16px, 2.4vw, 36px);
-    }
-
-    .rabtv-det-art-btn {
-      max-width: 44%;
-    }
-
-    .rabtv-det-imdb-pill {
-      max-width: 38%;
-      height: 72%;
-      font-size: clamp(12px, 1.25vw, 15px);
-    }
-
-    .rabtv-det-section-banner {
-      height: clamp(58px, 5.8vw, 76px);
-      padding: 0 clamp(36px, 4.5vw, 60px);
-    }
-
-    .rabtv-det-section-title {
-      font-size: clamp(17px, 1.8vw, 23px);
-    }
-  }
-
-  /* Short Phone Landscape Guard (max-height <= 500px) */
-  @media (min-width: 640px) and (max-height: 500px) {
-    .rabtv-det-back-wrap {
-      height: clamp(52px, 13dvh, 64px);
-      padding: 7px clamp(24px, 4vw, 44px);
-    }
-
-    .rabtv-det-imdb-pill {
-      height: 76%;
-      font-size: 11px;
-    }
-
-    .rabtv-det-section-banner {
-      height: clamp(48px, 12dvh, 58px);
-      padding: 0 32px;
-    }
-  }
-
-  /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
-  @media (min-width: 1280px) {
-    .rabtv-det-back-wrap {
-      height: clamp(82px, 6vw, 98px);
-      padding: 12px 68px;
-    }
-
-    .rabtv-det-section-banner {
-      height: clamp(68px, 4.8vw, 82px);
-    }
-  }
+  /* Uses shared global .rabtv-dual-wrapper & .rabtv-section-banner from __root.tsx */
 `;
 
 export const Route = createFileRoute("/details")({
@@ -1761,20 +1607,22 @@ export function DetailsPage() {
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none z-0" />
 
       <div className="relative z-10 max-w-5xl mx-auto min-w-0">
-        {/* Top Utility Bar: Full-Width Studded Button Wrapper Holding Back to Home + IMDb */}
-        <div className="rabtv-det-top-bar mb-4">
-          <div
-            className="rabtv-det-back-wrap"
-            style={{
-              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-            }}
-          >
+        {/* Top Utility Bar: Compact Theme-Tuned Wrapper — Back to Home Left, IMDb Right */}
+        <div className="rabtv-page-top-bar mb-4">
+          <div className="rabtv-dual-wrapper">
+            <div
+              className="rabtv-art-bg"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            />
             <Link
               to="/"
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-det-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${activeTheme.ring}`}
+              className={`rabtv-wrap-art-btn rabtv-wrap-art-btn--left rabtv-wrap-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${activeTheme.ring}`}
             >
               <img
                 src={BACK_TO_HOME_BTN_URL}
@@ -1788,7 +1636,7 @@ export function DetailsPage() {
               target="_blank"
               rel="noopener noreferrer"
               data-tour="imdb-link"
-              className={`rabtv-det-imdb-pill border font-extrabold backdrop-blur-md transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
+              className={`rabtv-wrap-pill-btn border font-extrabold backdrop-blur-md transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
               title="View Official IMDb Listing"
             >
               <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
@@ -1958,7 +1806,7 @@ export function DetailsPage() {
           <div
             data-tour="details-metadata"
             className={`flex flex-col items-start text-left gap-4 w-full rounded-3xl border p-4 sm:p-7 md:p-8 ${
-              isLowRam ? "" : "backdrop-blur-2xl"
+              isLowRam ? "" : "backdrop-blur-md"
             } transition-colors duration-300 ${activeTheme.surfacePanel}`}
           >
             {/* Genre Capsule + Optional New Episode Radar Pill */}
@@ -2408,7 +2256,7 @@ export function DetailsPage() {
             <section
               data-tour="franchise-collection"
               className={`mt-4 w-full rounded-3xl border p-4 sm:p-6 space-y-4 ${
-                isLowRam ? "" : "backdrop-blur-2xl"
+                isLowRam ? "" : "backdrop-blur-md"
               } ${activeTheme.surfacePanel}`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -2537,13 +2385,15 @@ export function DetailsPage() {
             <div
               className={`mt-5 pt-5 border-t space-y-4 w-full ${activeTheme.dividerBorder}`}
             >
-              <div
-                className="rabtv-det-section-banner mb-3"
-                style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                }}
-              >
-                <h3 className="rabtv-det-section-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+              <div className="rabtv-section-banner mb-3">
+                <div
+                  className="rabtv-art-bg"
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  }}
+                />
+                <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                   ✨ Similar Recommended Titles
                 </h3>
               </div>
