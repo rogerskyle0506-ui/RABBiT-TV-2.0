@@ -29,6 +29,7 @@ import {
   isTitleDisliked,
 } from "@/lib/watch-history";
 import { AppWallpaper } from "@/components/AppWallpaper";
+import { TitleCommunitySection } from "@/components/TitleCommunitySection";
 import { bgAudio } from "@/lib/background-audio";
 import {
   getCustomShelves,
@@ -2379,6 +2380,16 @@ export function DetailsPage() {
               </div>
             </section>
           )}
+
+          {/* RABBiT TV Community Ratings, Moderated Reviews & Watch Buddies */}
+          <TitleCommunitySection
+            mediaId={mediaId}
+            mediaType={inferredMediaType}
+            title={title}
+            posterPath={mediaDetails?.poster_path || null}
+            appTheme={appTheme}
+            isLowRam={isLowRam}
+          />
 
           {/* Similar Recommended Titles */}
           {mappedRecommendations.length > 0 && (
