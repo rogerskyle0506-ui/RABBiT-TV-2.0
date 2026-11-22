@@ -50,51 +50,33 @@ const SEARCH_BUTTON_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const SEARCH_VIEWPORT_STYLES = `
+  /* Base: Portrait Phones (< 640px) — Full-width button wrappers matching dividers & cards */
   .rabtv-srch-top-bar {
     width: 100%;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: clamp(8px, 2vw, 14px);
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(8px, 2vw, 12px);
     box-sizing: border-box;
   }
 
+  /* Full-width studded buttonwrapper.png bay (1 button or 2 buttons side-by-side) */
+  .rabtv-srch-dual-wrap,
   .rabtv-srch-back-wrap {
     position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: clamp(56px, 14.5vw, 74px);
-    width: clamp(204px, 54vw, 276px);
-    max-width: 100%;
-    padding: clamp(7px, 1.8vw, 10px) clamp(18px, 4.8vw, 30px);
-    box-sizing: border-box;
-    border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    overflow: hidden;
-    flex: 0 0 auto;
-  }
-
-  /* Single wide buttonwrapper.png bay holding BOTH Back to Home + Surprise Me */
-  .rabtv-srch-dual-wrap {
-    position: relative;
-    width: min(100%, clamp(312px, 94vw, 520px));
-    height: clamp(62px, 16.2vw, 84px);
-    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 36px);
+    width: 100%;
+    height: clamp(64px, 16.6vw, 86px);
+    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: clamp(8px, 2.2vw, 18px);
+    justify-content: space-evenly;
+    gap: clamp(10px, 2.6vw, 24px);
     box-sizing: border-box;
     border-radius: 9999px;
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
-    flex: 0 1 auto;
   }
 
   .rabtv-srch-art-btn {
@@ -120,7 +102,7 @@ const SEARCH_VIEWPORT_STYLES = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    width: min(100%, 260px);
     height: 100%;
     background: transparent;
     border: 0;
@@ -137,8 +119,17 @@ const SEARCH_VIEWPORT_STYLES = `
     height: 100%;
     object-fit: contain;
     display: block;
-    transform: scale(1.44);
     filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
+  }
+
+  /* Calibrated 1:1 visual height match between Back to Home & Surprise Me */
+  .rabtv-srch-art-btn--home img,
+  .rabtv-srch-art-btn-single img {
+    transform: scale(1.44);
+  }
+
+  .rabtv-srch-art-btn--surprise img {
+    transform: scale(1.56);
   }
 
   .rabtv-srch-submit-art {
@@ -168,16 +159,16 @@ const SEARCH_VIEWPORT_STYLES = `
     filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.85));
   }
 
-  /* Viewport-locked single-row section header banner backed by full-height buttonwrapper.png */
+  /* Full-width centered section header banner backed by buttonwrapper.png */
   .rabtv-srch-section-banner {
     position: relative;
     width: 100%;
     height: clamp(54px, 13.8vw, 72px);
-    padding: 0 clamp(22px, 5.8vw, 44px);
+    padding: 0 clamp(24px, 6vw, 48px);
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
@@ -188,28 +179,33 @@ const SEARCH_VIEWPORT_STYLES = `
   }
 
   .rabtv-srch-section-title {
-    font-size: clamp(13px, 3.5vw, 19px);
+    font-size: clamp(13.5px, 3.8vw, 20px);
     line-height: 1.1;
+    text-align: center;
   }
 
-  .rabtv-srch-section-meta {
-    font-size: clamp(10px, 2.7vw, 12px);
+  .rabtv-srch-section-action {
+    position: absolute;
+    right: clamp(22px, 5.5vw, 44px);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: clamp(10px, 2.7vw, 13px);
     line-height: 1.1;
     white-space: nowrap;
   }
 
+  /* Landscape Phones, Tablets, PCs, Google TV & Fire Sticks (>= 640px) */
   @media (min-width: 640px) {
+    .rabtv-srch-dual-wrap,
     .rabtv-srch-back-wrap {
-      height: clamp(60px, 6.2vw, 78px);
-      width: clamp(224px, 24vw, 300px);
-      padding: clamp(8px, 0.9vw, 11px) clamp(22px, 2.6vw, 34px);
+      width: 100%;
+      height: clamp(70px, 7.2vw, 94px);
+      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
+      gap: clamp(16px, 2.4vw, 36px);
     }
 
-    .rabtv-srch-dual-wrap {
-      width: min(100%, clamp(390px, 46vw, 530px));
-      height: clamp(68px, 7vw, 88px);
-      padding: clamp(9px, 1vw, 13px) clamp(26px, 3.2vw, 44px);
-      gap: clamp(12px, 1.5vw, 20px);
+    .rabtv-srch-art-btn {
+      max-width: 44%;
     }
 
     .rabtv-srch-submit-art {
@@ -218,48 +214,44 @@ const SEARCH_VIEWPORT_STYLES = `
     }
 
     .rabtv-srch-section-banner {
-      height: clamp(60px, 6vw, 76px);
-      padding: 0 clamp(32px, 4vw, 52px);
+      height: clamp(58px, 5.8vw, 76px);
+      padding: 0 clamp(36px, 4.5vw, 60px);
     }
 
     .rabtv-srch-section-title {
-      font-size: clamp(16px, 1.7vw, 21px);
+      font-size: clamp(17px, 1.8vw, 23px);
     }
 
-    .rabtv-srch-section-meta {
-      font-size: clamp(11px, 1.1vw, 13px);
+    .rabtv-srch-section-action {
+      right: clamp(32px, 4vw, 54px);
+      font-size: clamp(11px, 1.15vw, 13.5px);
     }
   }
 
-  @media (min-width: 640px) and (max-height: 480px) {
+  /* Short Phone Landscape Guard (max-height <= 500px) */
+  @media (min-width: 640px) and (max-height: 500px) {
+    .rabtv-srch-dual-wrap,
     .rabtv-srch-back-wrap {
-      height: 48px;
-      width: 196px;
-      padding: 6px 18px;
-    }
-
-    .rabtv-srch-dual-wrap {
-      width: min(100%, 370px);
-      height: 54px;
-      padding: 7px 22px;
-      gap: 10px;
+      height: clamp(52px, 13dvh, 64px);
+      padding: 7px clamp(24px, 4vw, 44px);
     }
 
     .rabtv-srch-section-banner {
-      height: 52px;
-      padding: 0 28px;
+      height: clamp(48px, 12dvh, 58px);
+      padding: 0 32px;
     }
   }
 
+  /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
+    .rabtv-srch-dual-wrap,
     .rabtv-srch-back-wrap {
-      height: 76px;
-      width: 296px;
+      height: clamp(82px, 6vw, 98px);
+      padding: 12px 68px;
     }
 
-    .rabtv-srch-dual-wrap {
-      width: 520px;
-      height: 86px;
+    .rabtv-srch-section-banner {
+      height: clamp(68px, 4.8vw, 82px);
     }
   }
 `;
@@ -1520,72 +1512,73 @@ function SearchPage() {
       )}
 
       <div className="mx-auto max-w-7xl w-full space-y-5 sm:space-y-6 relative z-10 min-w-0">
-        {/* Top Utility Row: Single Button Wrapper Holding Back to Home + Real Surprise Me */}
+        {/* Top Utility Row: Full-Width Studded Button Wrapper Holding Back to Home + Real Surprise Me */}
         <div className="rabtv-srch-top-bar">
-          <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
-            <div
-              className={
+          <div
+            className={
+              filteredResults.length > 0
+                ? "rabtv-srch-dual-wrap"
+                : "rabtv-srch-back-wrap"
+            }
+            style={{
+              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+            }}
+          >
+            <Link
+              to="/"
+              data-tour="back-to-home"
+              aria-label="Back to Home"
+              title="Back to Home"
+              className={`${
                 filteredResults.length > 0
-                  ? "rabtv-srch-dual-wrap"
-                  : "rabtv-srch-back-wrap"
-              }
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
+                  ? "rabtv-srch-art-btn rabtv-srch-art-btn--home"
+                  : "rabtv-srch-art-btn-single"
+              } rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${
+                themeTokens.focusRing
+              }`}
             >
-              <Link
-                to="/"
-                data-tour="back-to-home"
-                aria-label="Back to Home"
-                title="Back to Home"
-                className={`${
-                  filteredResults.length > 0
-                    ? "rabtv-srch-art-btn"
-                    : "rabtv-srch-art-btn-single"
-                } rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${
-                  themeTokens.focusRing
-                }`}
+              <img
+                src={BACK_TO_HOME_BTN_URL}
+                alt="Back to Home"
+                decoding="async"
+              />
+            </Link>
+
+            {filteredResults.length > 0 && (
+              <button
+                type="button"
+                onClick={handleSurpriseMe}
+                aria-label="Surprise Me"
+                title="Pick a random title from these results"
+                className={`rabtv-srch-art-btn rabtv-srch-art-btn--surprise rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
               >
                 <img
-                  src={BACK_TO_HOME_BTN_URL}
-                  alt="Back to Home"
+                  src={REAL_SURPRISE_ME_BTN_URL}
+                  alt="Surprise Me"
                   decoding="async"
                 />
-              </Link>
-
-              {filteredResults.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleSurpriseMe}
-                  aria-label="Surprise Me"
-                  title="Pick a random title from these results"
-                  className={`rabtv-srch-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
-                >
-                  <img
-                    src={REAL_SURPRISE_ME_BTN_URL}
-                    alt="Surprise Me"
-                    decoding="async"
-                  />
-                </button>
-              )}
-            </div>
-
-            {/* Semantic Kids Safe indicator */}
-            {kidsLocked && (
-              <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0 backdrop-blur-sm">
-                🧒 Kids Safe Mode
-              </span>
+              </button>
             )}
           </div>
 
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={resetAllFilters}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold shadow backdrop-blur-md transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
-            >
-              <span>✕ Reset All Filters</span>
-            </button>
+          {(kidsLocked || hasActiveFilters) && (
+            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full">
+              {kidsLocked && (
+                <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0 backdrop-blur-sm">
+                  🧒 Kids Safe Mode
+                </span>
+              )}
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold shadow backdrop-blur-md transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+                >
+                  <span>✕ Reset All Filters</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -1889,19 +1882,14 @@ function SearchPage() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             >
-              <div className="flex items-center gap-2 min-w-0 relative z-10">
-                <span
-                  className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeTokens.accentBar}`}
-                />
-                <h3 className="rabtv-srch-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-                  📡 Matching Live TV
-                </h3>
-              </div>
+              <h3 className="rabtv-srch-section-title relative z-10 font-black tracking-tight text-white truncate px-16 sm:px-24 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                📡 Matching Live TV
+              </h3>
               <Link
                 to="/live-tv"
-                className={`rabtv-srch-section-meta relative z-10 font-extrabold hover:underline shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
+                className={`rabtv-srch-section-action z-10 font-extrabold hover:underline drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
               >
-                Live Guide →
+                Guide →
               </Link>
             </div>
 
@@ -1971,19 +1959,9 @@ function SearchPage() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             >
-              <div className="flex items-center gap-2 min-w-0 relative z-10">
-                <span
-                  className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeTokens.accentBar}`}
-                />
-                <h3 className="rabtv-srch-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-                  🎭 Matching Cast & Crew
-                </h3>
-              </div>
-              <span
-                className={`rabtv-srch-section-meta relative z-10 font-bold shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
-              >
-                Tap for credits
-              </span>
+              <h3 className="rabtv-srch-section-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                🎭 Matching Cast & Crew
+              </h3>
             </div>
 
             <div className="flex gap-4 overflow-x-auto pb-2 px-1 scrollbar-none">
@@ -2034,26 +2012,15 @@ function SearchPage() {
             backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
           }}
         >
-          <div className="flex items-center gap-2 min-w-0 relative z-10">
-            <span
-              className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeTokens.accentBar}`}
-            />
-            <h2 className="rabtv-srch-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-              {selectedPerson
-                ? `${selectedPerson.name} — Credits`
-                : activeUrlQuery
-                  ? `Results: "${activeUrlQuery}"`
-                  : hiddenGemsMode
-                    ? "💎 Hidden Gems"
-                    : "Filtered Catalog"}
-            </h2>
-          </div>
-          <span
-            className={`rabtv-srch-section-meta relative z-10 font-bold px-2.5 py-1 rounded-full shrink-0 ${themeTokens.accentBadge}`}
-          >
-            {filteredResults.length} titles
-            {totalPages > 1 ? ` • ${page}/${totalPages}` : ""}
-          </span>
+          <h2 className="rabtv-srch-section-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+            {selectedPerson
+              ? `${selectedPerson.name} — Credits`
+              : activeUrlQuery
+                ? `Results: "${activeUrlQuery}"`
+                : hiddenGemsMode
+                  ? "💎 Hidden Gems"
+                  : "Filtered Catalog"}
+          </h2>
         </div>
 
         {/* RESULTS GRID */}
