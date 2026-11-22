@@ -36,6 +36,7 @@ function getCommunityTokens(theme: AppTheme) {
       return {
         panel: "bg-zinc-950/70 border-red-500/30",
         sub: "bg-black/70 border-red-500/20",
+        divider: "border-red-500/20",
         accent: "text-red-400",
         badge: "bg-red-950/75 border-red-500/35 text-red-200",
         btnPrimary:
@@ -52,6 +53,7 @@ function getCommunityTokens(theme: AppTheme) {
       return {
         panel: "bg-slate-950/70 border-blue-500/30",
         sub: "bg-black/70 border-blue-500/20",
+        divider: "border-blue-500/20",
         accent: "text-sky-300",
         badge: "bg-blue-950/75 border-blue-500/35 text-sky-200",
         btnPrimary:
@@ -68,6 +70,7 @@ function getCommunityTokens(theme: AppTheme) {
       return {
         panel: "bg-neutral-950/70 border-emerald-500/30",
         sub: "bg-black/70 border-emerald-500/20",
+        divider: "border-emerald-500/20",
         accent: "text-emerald-300",
         badge: "bg-emerald-950/75 border-emerald-500/35 text-emerald-200",
         btnPrimary:
@@ -84,6 +87,7 @@ function getCommunityTokens(theme: AppTheme) {
       return {
         panel: "bg-stone-950/70 border-amber-500/30",
         sub: "bg-black/70 border-amber-500/20",
+        divider: "border-amber-500/20",
         accent: "text-amber-300",
         badge: "bg-amber-950/75 border-amber-500/35 text-amber-200",
         btnPrimary:
@@ -100,6 +104,7 @@ function getCommunityTokens(theme: AppTheme) {
       return {
         panel: "bg-slate-950/70 border-cyan-500/30",
         sub: "bg-black/70 border-cyan-500/20",
+        divider: "border-cyan-500/20",
         accent: "text-cyan-300",
         badge: "bg-cyan-950/75 border-cyan-500/35 text-cyan-200",
         btnPrimary:
@@ -117,6 +122,7 @@ function getCommunityTokens(theme: AppTheme) {
       return {
         panel: "bg-slate-950/70 border-violet-500/30",
         sub: "bg-black/70 border-violet-500/20",
+        divider: "border-violet-500/20",
         accent: "text-violet-300",
         badge: "bg-purple-950/75 border-violet-500/35 text-violet-200",
         btnPrimary:
@@ -403,7 +409,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
       </div>
 
       {expanded && (
-        <div className="space-y-4 pt-2 border-t border-white/10">
+        <div className={`space-y-4 pt-2 border-t ${tokens.divider}`}>
           {feedback && (
             <div
               className={`rounded-xl border px-3 py-2 text-xs font-bold text-center ${
@@ -595,7 +601,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
                           mascot={rev.authorMascot}
                           size="sm"
                           rounded="full"
-                          className="h-8 w-8 shrink-0"
+                          className="h-8 w-8 shrink-0 overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
                           alt={rev.authorHandle}
                         />
                         <div className="min-w-0 text-left">
@@ -667,7 +673,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
                         <button
                           type="button"
                           onClick={() => void handleReportReview(rev.reviewId)}
-                          className="rounded-lg border border-white/15 bg-black/50 hover:bg-red-950/70 px-2 py-1 text-[10px] font-bold text-white/70 hover:text-red-200 cursor-pointer"
+                          className={`rounded-lg border px-2 py-1 text-[10px] font-bold cursor-pointer transition ${tokens.btnSecondary}`}
                           title="Report offensive content"
                         >
                           🚩
@@ -681,7 +687,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
                               text: `🚫 Blocked ${rev.authorHandle}.`,
                             });
                           }}
-                          className="rounded-lg border border-white/15 bg-black/50 hover:bg-red-950/70 px-2 py-1 text-[10px] font-bold text-white/70 hover:text-red-200 cursor-pointer"
+                          className={`rounded-lg border px-2 py-1 text-[10px] font-bold cursor-pointer transition ${tokens.btnSecondary}`}
                           title="Block this user"
                         >
                           🚫
@@ -712,7 +718,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
                   mascot={inspectProfile.full?.mascot || inspectProfile.mascot}
                   size="lg"
                   rounded="full"
-                  className="h-14 w-14 shrink-0"
+                  className="h-14 w-14 shrink-0 overflow-hidden [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
                   alt={inspectProfile.handle}
                 />
                 <div className="min-w-0">
