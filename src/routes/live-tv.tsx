@@ -60,161 +60,7 @@ const BACK_TO_HOME_BTN_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const LIVETV_VIEWPORT_STYLES = `
-  /* Base: Portrait Phones (< 640px) — Full-width button wrappers matching console & dividers */
-  .rabtv-ltv-top-bar {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: clamp(8px, 2vw, 12px);
-    box-sizing: border-box;
-  }
-
-  /* Full-width studded buttonwrapper.png bay holding Back to Home + Channel Surf */
-  .rabtv-ltv-back-wrap {
-    position: relative;
-    width: 100%;
-    height: clamp(64px, 16.6vw, 86px);
-    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
-    gap: clamp(10px, 2.6vw, 24px);
-    box-sizing: border-box;
-    border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    overflow: hidden;
-  }
-
-  .rabtv-ltv-art-btn {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1 1 0;
-    min-width: 0;
-    max-width: 48%;
-    height: 100%;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    overflow: hidden;
-    border-radius: 9999px;
-    transition: transform 160ms ease, filter 160ms ease;
-  }
-
-  .rabtv-ltv-art-btn img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-    transform: scale(1.44);
-    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
-  }
-
-  .rabtv-ltv-surf-pill {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex: 0.95 1 0;
-    min-width: 0;
-    max-width: 46%;
-    height: 76%;
-    padding: 0 clamp(10px, 2.6vw, 18px);
-    border-radius: 9999px;
-    font-size: clamp(10.5px, 2.9vw, 13.5px);
-    white-space: nowrap;
-    box-sizing: border-box;
-  }
-
-  /* Full-width centered section header banner backed by buttonwrapper.png */
-  .rabtv-ltv-section-banner {
-    position: relative;
-    width: 100%;
-    height: clamp(54px, 13.8vw, 72px);
-    padding: 0 clamp(24px, 6vw, 48px);
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(8px, 2vw, 16px);
-    box-sizing: border-box;
-    border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    overflow: hidden;
-  }
-
-  .rabtv-ltv-section-title {
-    font-size: clamp(13.5px, 3.8vw, 20px);
-    line-height: 1.1;
-    text-align: center;
-  }
-
-  /* Landscape Phones, Tablets, PCs, Google TV & Fire Sticks (>= 640px) */
-  @media (min-width: 640px) {
-    .rabtv-ltv-back-wrap {
-      width: 100%;
-      height: clamp(70px, 7.2vw, 94px);
-      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
-      gap: clamp(16px, 2.4vw, 36px);
-    }
-
-    .rabtv-ltv-art-btn {
-      max-width: 44%;
-    }
-
-    .rabtv-ltv-surf-pill {
-      max-width: 40%;
-      height: 72%;
-      font-size: clamp(11.5px, 1.25vw, 14.5px);
-    }
-
-    .rabtv-ltv-section-banner {
-      height: clamp(58px, 5.8vw, 76px);
-      padding: 0 clamp(36px, 4.5vw, 60px);
-    }
-
-    .rabtv-ltv-section-title {
-      font-size: clamp(17px, 1.8vw, 23px);
-    }
-  }
-
-  /* Short Phone Landscape Guard (max-height <= 500px) */
-  @media (min-width: 640px) and (max-height: 500px) {
-    .rabtv-ltv-back-wrap {
-      height: clamp(52px, 13dvh, 64px);
-      padding: 7px clamp(24px, 4vw, 44px);
-    }
-
-    .rabtv-ltv-surf-pill {
-      height: 76%;
-      font-size: 10.5px;
-    }
-
-    .rabtv-ltv-section-banner {
-      height: clamp(48px, 12dvh, 58px);
-      padding: 0 32px;
-    }
-  }
-
-  /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
-  @media (min-width: 1280px) {
-    .rabtv-ltv-back-wrap {
-      height: clamp(82px, 6vw, 98px);
-      padding: 12px 68px;
-    }
-
-    .rabtv-ltv-section-banner {
-      height: clamp(68px, 4.8vw, 82px);
-    }
-  }
+  /* Uses shared global .rabtv-dual-wrapper & .rabtv-section-banner from __root.tsx */
 `;
 
 export const Route = createFileRoute('/live-tv')({
@@ -841,7 +687,7 @@ const ChannelCard = memo(function ChannelCard({
   return (
     <div
       className={`group relative flex flex-col justify-between w-full min-w-0 box-border ${radiusClass} ${
-        isLowRam ? '' : 'backdrop-blur-xl'
+        isLowRam ? '' : 'backdrop-blur-sm'
       } border ${
         isPinned
           ? tokens.surfaceCardPinned
@@ -1569,7 +1415,7 @@ function LiveTvComponent() {
           completed++;
 
           const now = Date.now();
-          if (now - lastFlushTime >= 450 || completed === pending.length) {
+          if (now - lastFlushTime >= 1200 || completed === pending.length) {
             lastFlushTime = now;
             setHealthMap({ ...workingMap });
             setProbeProgress({ done: completed, total: pending.length });
@@ -1936,20 +1782,22 @@ function LiveTvComponent() {
       )}
 
       <header className="py-3.5 sm:py-5 max-w-7xl mx-auto space-y-3.5 sm:space-y-4 box-border relative z-10">
-        {/* Top Row: Full-Width Studded Button Wrapper Holding Back to Home + Channel Surf */}
-        <div className="rabtv-ltv-top-bar">
-          <div
-            className="rabtv-ltv-back-wrap"
-            style={{
-              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-            }}
-          >
+        {/* Top Row: Compact Theme-Tuned Wrapper — Back to Home Left, Channel Surf Right */}
+        <div className="rabtv-page-top-bar">
+          <div className={finalFilteredChannels.length > 0 ? "rabtv-dual-wrapper" : "rabtv-single-wrapper"}>
+            <div
+              className="rabtv-art-bg"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            />
             <Link
               to="/"
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-ltv-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${tokens.focusRing}`}
+              className={`rabtv-wrap-art-btn ${finalFilteredChannels.length > 0 ? "rabtv-wrap-art-btn--left" : ""} rabtv-wrap-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${tokens.focusRing}`}
             >
               <img
                 src={BACK_TO_HOME_BTN_URL}
@@ -1962,7 +1810,7 @@ function LiveTvComponent() {
               <button
                 type="button"
                 onClick={handleSurpriseChannel}
-                className={`rabtv-ltv-surf-pill border font-extrabold backdrop-blur-md shadow transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnSecondary} ${tokens.focusRing}`}
+                className={`rabtv-wrap-pill-btn border font-extrabold backdrop-blur-md shadow transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnSecondary} ${tokens.focusRing}`}
                 title="Jump into a random live broadcast"
               >
                 <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
@@ -2014,7 +1862,7 @@ function LiveTvComponent() {
         {/* Theme-Matched Translucent Broadcast Console Control Deck */}
         <div
           className={`w-full max-w-full box-border overflow-hidden rounded-3xl border ${
-            isLowRam ? '' : 'backdrop-blur-2xl'
+            isLowRam ? '' : 'backdrop-blur-md'
           } p-3.5 sm:p-6 space-y-4 sm:space-y-5 ${tokens.surfacePanel}`}
         >
           {/* Console Header + Responsive Search / Sort / Density / Refresh */}
@@ -2071,7 +1919,7 @@ function LiveTvComponent() {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as LiveSortOption)}
                   aria-label="Sort Live Channels"
-                  className={`flex-1 sm:flex-initial h-10 rounded-xl border px-2.5 text-xs font-bold focus:outline-none cursor-pointer min-w-0 ${tokens.inputClass}`}
+                  className={`w-full sm:w-auto sm:min-w-[146px] h-10 rounded-xl border px-2.5 text-xs font-bold focus:outline-none cursor-pointer ${tokens.inputClass}`}
                 >
                   <option value="status" className={tokens.optionBg}>
                     Sort: Live First
@@ -2306,14 +2154,16 @@ function LiveTvComponent() {
         {/* DEDICATED PINNED FAVORITE CHANNELS SHELF (100% Theme-Matched) */}
         {pinnedChannels.length > 0 && !pinnedOnly && !searchQuery.trim() && (
           <section className="space-y-3">
-            <div
-              className="rabtv-ltv-section-banner"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
-            >
+            <div className="rabtv-section-banner">
+              <div
+                className="rabtv-art-bg"
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                }}
+              />
               <h2
-                className={`rabtv-ltv-section-title relative z-10 font-black tracking-tight truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)] ${tokens.accentText}`}
+                className={`rabtv-section-banner-title font-black tracking-tight truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)] ${tokens.accentText}`}
               >
                 ★ Pinned Favorites
               </h2>
@@ -2346,13 +2196,15 @@ function LiveTvComponent() {
         {/* MAIN CHANNELS GRID SECTION */}
         <section className="space-y-3.5 sm:space-y-4">
           <div className="space-y-2.5">
-            <div
-              className="rabtv-ltv-section-banner"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
-            >
-              <h3 className="rabtv-ltv-section-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+            <div className="rabtv-section-banner">
+              <div
+                className="rabtv-art-bg"
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                }}
+              />
+              <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 {pinnedOnly
                   ? '★ My Pinned Channels'
                   : selectedGenre !== 'All Genres'
@@ -2387,7 +2239,7 @@ function LiveTvComponent() {
           {loading ? (
             <div
               className={`rounded-3xl border ${
-                isLowRam ? '' : 'backdrop-blur-xl'
+                isLowRam ? '' : 'backdrop-blur-sm'
               } p-10 sm:p-12 flex flex-col justify-center items-center gap-3 text-center ${
                 tokens.surfacePanel
               }`}
@@ -2427,7 +2279,7 @@ function LiveTvComponent() {
               {totalPages > 1 && (
                 <div
                   className={`mt-6 flex flex-wrap items-center justify-center gap-3 rounded-2xl border ${
-                    isLowRam ? '' : 'backdrop-blur-xl'
+                    isLowRam ? '' : 'backdrop-blur-sm'
                   } p-3 mx-auto w-full max-w-md shadow-2xl ${tokens.surfacePanel}`}
                 >
                   <button
@@ -2477,7 +2329,7 @@ function LiveTvComponent() {
           ) : (
             <div
               className={`rounded-3xl border ${
-                isLowRam ? '' : 'backdrop-blur-xl'
+                isLowRam ? '' : 'backdrop-blur-sm'
               } p-8 sm:p-10 text-center space-y-3 shadow-2xl ${tokens.surfacePanel}`}
             >
               <p className="text-base font-black text-white">
