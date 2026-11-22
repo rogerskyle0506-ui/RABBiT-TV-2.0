@@ -45,6 +45,81 @@ import { bgAudio } from "@/lib/background-audio";
 import { initAdBlockerGlobalInterceptors } from "@/lib/adblocker";
 
 const FETCH_TIMEOUT_MS = 8000;
+const PLAYER_SERVER_STORAGE_KEY = "rabtv_preferred_player_server_v1";
+
+type PlayerServerId =
+  | "vidlink"
+  | "vidsrc_cc"
+  | "videasy"
+  | "vidsrc_icu"
+  | "vidsrc_to";
+
+interface PlayerServerOption {
+  id: PlayerServerId;
+  label: string;
+  shortLabel: string;
+  badge: string;
+}
+
+const PLAYER_SERVERS: PlayerServerOption[] = [
+  { id: "vidlink", label: "⚡ VidLink HD", shortLabel: "VidLink", badge: "Fast • No Gate" },
+  { id: "vidsrc_cc", label: "🎬 Vidsrc.cc", shortLabel: "Vidsrc.cc", badge: "HD Backup" },
+  { id: "videasy", label: "💎 Videasy 4K", shortLabel: "Videasy", badge: "Multi-Source" },
+  { id: "vidsrc_icu", label: "📡 Vidsrc.icu", shortLabel: "Vidsrc.icu", badge: "Mirror" },
+  { id: "vidsrc_to", label: "🌐 Vidsrc.to", shortLabel: "Vidsrc.to", badge: "Classic" },
+];
+
+const THEME_HEX_ACCENT: Record<AppTheme, string> = {
+  red: "ef4444",
+  midnight: "38bdf8",
+  emerald: "10b981",
+  amber: "f59e0b",
+  cyan: "06b6d4",
+  violet: "8b5cf6",
+};
+
+function getSavedPlayerServer(): PlayerServerId {
+  if (typeof window === "undefined") return "vidlink";
+  const saved = localStorage.getItem(PLAYER_SERVER_STORAGE_KEY) as PlayerServerId | null;
+  if (saved && PLAYER_SERVERS.some((s) => s.id === saved)) {
+    return saved;
+  }
+  return "vidlink";
+}
+
+function buildEmbedUrl(
+  serverId: PlayerServerId,
+  mediaType: "movie" | "tv",
+  mediaId: string,
+  season: number,
+  episode: number,
+  appTheme: AppTheme
+): string {
+  const accentHex = THEME_HEX_ACCENT[appTheme] || "8b5cf6";
+  switch (serverId) {
+    case "vidlink":
+      return mediaType === "tv"
+        ? `https://vidlink.pro/tv/${mediaId}/${season}/${episode}?primaryColor=${accentHex}&autoplay=true&nextbutton=true`
+        : `https://vidlink.pro/movie/${mediaId}?primaryColor=${accentHex}&autoplay=true`;
+    case "vidsrc_cc":
+      return mediaType === "tv"
+        ? `https://vidsrc.cc/v2/embed/tv/${mediaId}/${season}/${episode}`
+        : `https://vidsrc.cc/v2/embed/movie/${mediaId}`;
+    case "videasy":
+      return mediaType === "tv"
+        ? `https://player.videasy.net/tv/${mediaId}/${season}/${episode}?color=${accentHex}`
+        : `https://player.videasy.net/movie/${mediaId}?color=${accentHex}`;
+    case "vidsrc_icu":
+      return mediaType === "tv"
+        ? `https://vidsrc.icu/embed/tv/${mediaId}/${season}/${episode}`
+        : `https://vidsrc.icu/embed/movie/${mediaId}`;
+    case "vidsrc_to":
+    default:
+      return mediaType === "tv"
+        ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
+        : `https://vidsrc.to/embed/movie/${mediaId}`;
+  }
+}
 
 const BUTTON_WRAPPER_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
@@ -725,6 +800,10 @@ export function PlayerPage() {
 
   // Interactive Cinema UI States
   const [cinemaDimMode, setCinemaDimMode] = useState<boolean>(false);
+  const [activeServer, setActiveServer] = useState<PlayerServerId>(() =>
+    getSavedPlayerServer()
+  );
+  const [playerReloadNonce, setPlayerReloadNonce] = useState<number>(0);
   const [inMyList, setInMyList] = useState<boolean>(() =>
     isInMyList(`${urlType}-${mediaId}`)
   );
@@ -1265,11 +1344,27 @@ export function PlayerPage() {
     ? `https://www.imdb.com/title/${imdbId}/`
     : `https://www.imdb.com/find?q=${encodeURIComponent(title)}`;
 
-  // 100% Untouched vidsrc embedUrl formula
-  const embedUrl =
-    inferredMediaType === "tv"
-      ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
-      : `https://vidsrc.to/embed/movie/${mediaId}`;
+  const embedUrl = buildEmbedUrl(
+    activeServer,
+    inferredMediaType,
+    mediaId,
+    season,
+    episode,
+    appTheme
+  );
+
+  const handleSelectServer = (nextServer: PlayerServerId) => {
+    setActiveServer(nextServer);
+    try {
+      localStorage.setItem(PLAYER_SERVER_STORAGE_KEY, nextServer);
+    } catch {
+      // ignore storage errors
+    }
+    const chosen = PLAYER_SERVERS.find((s) => s.id === nextServer);
+    if (chosen) {
+      showToast(`Switched stream server to ${chosen.label}`);
+    }
+  };
 
   const handleReturnToDetails = () => {
     navigate({
@@ -1738,7 +1833,59 @@ export function PlayerPage() {
           </div>
         )}
 
-        {/* Theater-Grade Video Player Container (100% Untouched vidsrc Iframe) */}
+        {/* Stream Server Switcher Bar (Instant 1-Tap Switch if Any Server Gates or Buffers) */}
+        <div
+          data-tour="server-switcher"
+          className={`w-full rounded-2xl border px-3 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+            isLowRam ? "" : "backdrop-blur-xl"
+          } ${themeTokens.surfacePanel}`}
+        >
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5 sm:pb-0 min-w-0">
+            <span
+              className={`text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 ${themeTokens.subMutedText}`}
+            >
+              Server:
+            </span>
+            {PLAYER_SERVERS.map((srv) => {
+              const isSelected = activeServer === srv.id;
+              return (
+                <button
+                  key={srv.id}
+                  type="button"
+                  onClick={() => handleSelectServer(srv.id)}
+                  className={`shrink-0 rounded-xl border ${
+                    largeButtons ? "px-3.5 py-2 text-xs" : "px-2.5 py-1.5 text-[11px]"
+                  } font-extrabold whitespace-nowrap transition cursor-pointer focus:outline-none focus:ring-2 ${
+                    themeTokens.ring
+                  } ${
+                    isSelected
+                      ? `${themeTokens.nextBtn} border-white/35`
+                      : themeTokens.btnSecondary
+                  }`}
+                  title={`${srv.label} (${srv.badge})`}
+                >
+                  {srv.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPlayerReloadNonce((n) => n + 1);
+              showToast("↻ Reloading video stream...");
+            }}
+            className={`shrink-0 self-end sm:self-auto rounded-xl border ${
+              largeButtons ? "px-3.5 py-2 text-xs" : "px-2.5 py-1.5 text-[11px]"
+            } font-bold whitespace-nowrap transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
+            title="Reload current video player"
+          >
+            ↻ Reload
+          </button>
+        </div>
+
+        {/* Theater-Grade Video Player Container */}
         <div
           data-tour="video-player"
           className={`video-player-container relative w-full mx-auto aspect-video max-h-[75dvh] overflow-hidden rounded-2xl sm:rounded-3xl bg-black border ${
@@ -1748,8 +1895,9 @@ export function PlayerPage() {
           }`}
         >
           <iframe
-            key={`stable-player-${mediaId}-${season}-${episode}`}
+            key={`stable-player-${activeServer}-${mediaId}-${season}-${episode}-${playerReloadNonce}`}
             src={embedUrl}
+            referrerPolicy="origin"
             className="h-full w-full border-0"
             allowFullScreen
             allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
