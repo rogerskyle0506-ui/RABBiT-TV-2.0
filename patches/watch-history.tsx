@@ -64,159 +64,167 @@ const BACK_TO_HOME_BTN_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const WATCH_HISTORY_VIEWPORT_STYLES = `
-  /* Base: Portrait Phones (< 640px) — Full-width button wrappers matching dashboard & dividers */
+  /* Self-contained compact punk-neon wrappers & section ribbons synced with __root.tsx */
   .rabtv-wh-top-bar {
     width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     gap: clamp(8px, 2vw, 12px);
     box-sizing: border-box;
   }
 
-  /* Full-width studded buttonwrapper.png bay holding Back to Home + My List cleanly */
-  .rabtv-wh-back-wrap {
+  .rabtv-wh-dual-wrap {
     position: relative;
-    width: 100%;
-    height: clamp(64px, 16.6vw, 86px);
-    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
+    width: min(92%, 312px);
+    height: clamp(38px, 10vw, 46px);
+    padding: 4px clamp(19px, 5.4vw, 26px);
+    margin-inline: auto;
     display: flex;
     align-items: center;
-    justify-content: space-evenly;
-    gap: clamp(10px, 2.6vw, 24px);
+    justify-content: space-between;
+    gap: clamp(8px, 2.5vw, 18px);
     box-sizing: border-box;
     border-radius: 9999px;
+    overflow: hidden;
+    contain: layout paint;
+  }
+
+  .rabtv-wh-art-bg {
+    position: absolute;
+    inset: 0;
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
-    overflow: hidden;
+    filter: var(--rabtv-wrap-filter, hue-rotate(-14deg) saturate(1.06));
+    pointer-events: none;
+    z-index: 0;
   }
 
-  .rabtv-wh-art-btn {
+  .rabtv-wh-home-btn {
     position: relative;
+    z-index: 6;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    flex: 1 1 0;
-    min-width: 0;
-    max-width: 48%;
-    height: 100%;
+    justify-content: flex-start;
+    flex: 0 0 auto;
+    width: 41%;
+    height: 74%;
     background: transparent;
     border: 0;
     padding: 0;
     cursor: pointer;
     overflow: hidden;
     border-radius: 9999px;
-    transition: transform 160ms ease, filter 160ms ease;
+    transition: transform 150ms ease;
   }
 
-  .rabtv-wh-art-btn img {
+  .rabtv-wh-home-btn img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    object-position: left center;
+    transform-origin: left center;
+    transform: scale(1.28);
     display: block;
-    transform: scale(1.44);
-    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
   }
 
-  .rabtv-wh-action-pill {
+  .rabtv-wh-mylist-pill {
     position: relative;
+    z-index: 6;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    flex: 0.9 1 0;
-    min-width: 0;
-    max-width: 44%;
-    height: 76%;
-    padding: 0 clamp(10px, 2.6vw, 18px);
+    gap: 4px;
+    flex: 0 0 auto;
+    width: 41%;
+    height: 68%;
+    padding: 0 clamp(6px, 2vw, 12px);
     border-radius: 9999px;
-    font-size: clamp(10.5px, 2.9vw, 13.5px);
+    font-size: clamp(9.5px, 2.5vw, 12px);
+    line-height: 1;
     white-space: nowrap;
     box-sizing: border-box;
+    transition: transform 150ms ease;
   }
 
-  /* Full-width centered section header banner backed by buttonwrapper.png */
-  .rabtv-wh-section-banner {
+  .rabtv-wh-section-ribbon {
     position: relative;
     width: 100%;
-    height: clamp(54px, 13.8vw, 72px);
-    padding: 0 clamp(24px, 6vw, 48px);
+    height: clamp(38px, 10vw, 48px);
+    padding: 0 clamp(22px, 5.5vw, 44px);
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     justify-content: center;
-    gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
     overflow: hidden;
+    contain: layout paint;
   }
 
   .rabtv-wh-section-title {
-    font-size: clamp(13.5px, 3.8vw, 20px);
+    position: relative;
+    z-index: 6;
+    font-size: clamp(12.5px, 3.4vw, 18.5px);
     line-height: 1.1;
     text-align: center;
   }
 
-  /* Landscape Phones, Tablets, PCs, Google TV & Fire Sticks (>= 640px) */
   @media (min-width: 640px) {
-    .rabtv-wh-back-wrap {
-      width: 100%;
-      height: clamp(70px, 7.2vw, 94px);
-      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
-      gap: clamp(16px, 2.4vw, 36px);
+    .rabtv-wh-dual-wrap {
+      width: min(76%, clamp(326px, 40vw, 424px));
+      height: clamp(42px, 4.4vw, 52px);
+      padding: 5px clamp(22px, 2.8vw, 34px);
     }
 
-    .rabtv-wh-art-btn {
-      max-width: 44%;
+    .rabtv-wh-home-btn {
+      width: 40%;
+      height: 74%;
     }
 
-    .rabtv-wh-action-pill {
-      max-width: 40%;
-      height: 72%;
-      font-size: clamp(11.5px, 1.25vw, 14.5px);
+    .rabtv-wh-mylist-pill {
+      width: 40%;
+      height: 68%;
+      font-size: clamp(10.5px, 1.15vw, 13px);
     }
 
-    .rabtv-wh-section-banner {
-      height: clamp(58px, 5.8vw, 76px);
-      padding: 0 clamp(36px, 4.5vw, 60px);
+    .rabtv-wh-section-ribbon {
+      height: clamp(44px, 4.4vw, 56px);
+      padding: 0 clamp(32px, 4vw, 56px);
     }
 
     .rabtv-wh-section-title {
-      font-size: clamp(17px, 1.8vw, 23px);
+      font-size: clamp(15px, 1.6vw, 20.5px);
     }
   }
 
-  /* Short Phone Landscape Guard (max-height <= 500px) */
   @media (min-width: 640px) and (max-height: 500px) {
-    .rabtv-wh-back-wrap {
-      height: clamp(52px, 13dvh, 64px);
-      padding: 7px clamp(24px, 4vw, 44px);
+    .rabtv-wh-dual-wrap {
+      width: min(72%, 296px);
+      height: 36px;
+      padding: 3px 18px;
     }
 
-    .rabtv-wh-action-pill {
-      height: 76%;
-      font-size: 10.5px;
+    .rabtv-wh-mylist-pill {
+      font-size: 9.5px;
     }
 
-    .rabtv-wh-section-banner {
-      height: clamp(48px, 12dvh, 58px);
-      padding: 0 32px;
+    .rabtv-wh-section-ribbon {
+      height: 38px;
+      padding: 0 28px;
     }
   }
 
-  /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
-    .rabtv-wh-back-wrap {
-      height: clamp(82px, 6vw, 98px);
-      padding: 12px 68px;
+    .rabtv-wh-dual-wrap {
+      width: 432px;
+      height: 54px;
+      padding: 6px 34px;
     }
 
-    .rabtv-wh-section-banner {
-      height: clamp(68px, 4.8vw, 82px);
+    .rabtv-wh-section-ribbon {
+      height: clamp(50px, 3.8vw, 60px);
     }
   }
 `;
@@ -1108,20 +1116,22 @@ function WatchHistoryComponent() {
       )}
 
       <div className="relative z-10 max-w-7xl mx-auto space-y-5 sm:space-y-6 min-w-0">
-        {/* Top Utility Row: Full-Width Studded Button Wrapper Holding Back to Home + My List */}
+        {/* Top Utility Row: Compact Theme-Tuned Wrapper — Back to Home Left, My List Right */}
         <div className="rabtv-wh-top-bar">
-          <div
-            className="rabtv-wh-back-wrap"
-            style={{
-              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-            }}
-          >
+          <div className="rabtv-wh-dual-wrap">
+            <div
+              className="rabtv-wh-art-bg"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            />
             <Link
               to="/"
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-wh-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
+              className={`rabtv-wh-home-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
             >
               <img
                 src={BACK_TO_HOME_BTN_URL}
@@ -1133,7 +1143,7 @@ function WatchHistoryComponent() {
             <Link
               to="/"
               search={{ tab: "My List" }}
-              className={`rabtv-wh-action-pill border font-extrabold backdrop-blur-md transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+              className={`rabtv-wh-mylist-pill border font-extrabold backdrop-blur-md transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
             >
               <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                 🔖 My List
@@ -1141,10 +1151,10 @@ function WatchHistoryComponent() {
             </Link>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 w-full">
             <Link
               to="/live-tv"
-              className={`inline-flex items-center gap-1.5 rounded-full border backdrop-blur-md px-3.5 py-2 text-xs font-bold transition shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border backdrop-blur-sm px-3 py-1.5 text-[11px] sm:text-xs font-bold transition shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
             >
               <span>📡 Live TV</span>
             </Link>
@@ -1153,9 +1163,9 @@ function WatchHistoryComponent() {
               type="button"
               data-tour="history-export"
               onClick={handleExportActivity}
-              className={`inline-flex items-center gap-1.5 rounded-full border backdrop-blur-md px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border backdrop-blur-sm px-3 py-1.5 text-[11px] sm:text-xs font-extrabold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
             >
-              <span>💾 Export History JSON</span>
+              <span>💾 Export JSON</span>
             </button>
           </div>
         </div>
@@ -1172,7 +1182,7 @@ function WatchHistoryComponent() {
         {/* Executive Watch Activity Dashboard & Filter Control Deck */}
         <div
           className={`rounded-3xl border ${
-            isLowRam ? "" : "backdrop-blur-2xl"
+            isLowRam ? "" : "backdrop-blur-md"
           } p-3.5 sm:p-6 space-y-4 sm:space-y-5 ${themeTokens.surfacePanel}`}
         >
           {/* Header + Search & Sort Controls */}
@@ -1185,18 +1195,18 @@ function WatchHistoryComponent() {
               >
                 🕒
               </div>
-              <div className="min-w-0">
-                <h1 className="text-lg sm:text-2xl font-black tracking-tight text-white truncate">
-                  Watch History & Activity Hub
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base sm:text-2xl font-black tracking-tight text-white leading-tight">
+                  Watch History & Activity
                 </h1>
                 <p
-                  className={`text-xs font-medium leading-snug ${themeTokens.subMutedText}`}
+                  className={`text-[11px] sm:text-xs font-medium leading-snug mt-0.5 ${themeTokens.subMutedText}`}
                 >
-                  Resume shows, track episodes, pin live channels & manage hidden titles
+                  Resume shows, track episodes & manage hidden titles
                   {stats.topGenreName && (
                     <>
                       {" "}
-                      • Top Vibe:{" "}
+                      • Vibe:{" "}
                       <strong className={themeTokens.accentText}>
                         {stats.topGenreName}
                       </strong>
@@ -1232,38 +1242,39 @@ function WatchHistoryComponent() {
             </div>
           </div>
 
-          {/* 4-Card KPI Activity Telemetry Strip */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {/* Compact 4-Card KPI Activity Telemetry Strip (No Awkward Line Wraps) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             <div
-              className={`rounded-2xl border p-3 space-y-1 ${themeTokens.subPanel}`}
+              className={`rounded-2xl border p-2.5 sm:p-3 flex flex-col justify-between gap-0.5 min-w-0 ${themeTokens.subPanel}`}
             >
               <span
-                className={`text-[10px] font-extrabold uppercase tracking-wider ${themeTokens.subMutedText}`}
+                className={`text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap truncate ${themeTokens.subMutedText}`}
               >
                 ⏳ In Progress
               </span>
-              <p className={`text-lg sm:text-xl font-black ${themeTokens.accentText}`}>
+              <p className={`text-lg sm:text-xl font-black leading-tight ${themeTokens.accentText}`}>
                 {stats.inProgressMovies + stats.inProgressShows}
               </p>
-              <span className={`text-[10px] ${themeTokens.subMutedText}`}>
-                {stats.inProgressMovies} movies • {stats.inProgressShows} shows
+              <span className={`text-[10px] truncate ${themeTokens.subMutedText}`}>
+                {stats.inProgressMovies} {stats.inProgressMovies === 1 ? "movie" : "movies"} •{" "}
+                {stats.inProgressShows} {stats.inProgressShows === 1 ? "show" : "shows"}
               </span>
             </div>
 
             <div
-              className={`rounded-2xl border p-3 space-y-1 ${themeTokens.subPanel}`}
+              className={`rounded-2xl border p-2.5 sm:p-3 flex flex-col justify-between gap-1 min-w-0 ${themeTokens.subPanel}`}
             >
-              <div className="flex items-center justify-between gap-1">
+              <div className="flex items-center justify-between gap-1 min-w-0">
                 <span
-                  className={`text-[10px] font-extrabold uppercase tracking-wider ${themeTokens.subMutedText}`}
+                  className={`text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap truncate ${themeTokens.subMutedText}`}
                 >
                   ✓ Completed
                 </span>
-                <span className="text-[10px] font-black text-emerald-400">
+                <span className="text-[10px] font-black text-emerald-400 shrink-0">
                   {stats.completionRatePct}%
                 </span>
               </div>
-              <p className="text-lg sm:text-xl font-black text-emerald-300">
+              <p className="text-lg sm:text-xl font-black leading-tight text-emerald-300">
                 {stats.totalCompleted}
               </p>
               <div
@@ -1277,34 +1288,34 @@ function WatchHistoryComponent() {
             </div>
 
             <div
-              className={`rounded-2xl border p-3 space-y-1 ${themeTokens.subPanel}`}
+              className={`rounded-2xl border p-2.5 sm:p-3 flex flex-col justify-between gap-0.5 min-w-0 ${themeTokens.subPanel}`}
             >
               <span
-                className={`text-[10px] font-extrabold uppercase tracking-wider ${themeTokens.subMutedText}`}
+                className={`text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap truncate ${themeTokens.subMutedText}`}
               >
-                📡 Recent Live TV
+                📡 Live TV
               </span>
-              <p className={`text-lg sm:text-xl font-black ${themeTokens.accentText}`}>
+              <p className={`text-lg sm:text-xl font-black leading-tight ${themeTokens.accentText}`}>
                 {stats.recentLiveCount}
               </p>
-              <span className={`text-[10px] ${themeTokens.subMutedText}`}>
-                Quick-resume channels
+              <span className={`text-[10px] truncate ${themeTokens.subMutedText}`}>
+                Recent channels
               </span>
             </div>
 
             <div
-              className={`rounded-2xl border p-3 space-y-1 ${themeTokens.subPanel}`}
+              className={`rounded-2xl border p-2.5 sm:p-3 flex flex-col justify-between gap-0.5 min-w-0 ${themeTokens.subPanel}`}
             >
               <span
-                className={`text-[10px] font-extrabold uppercase tracking-wider ${themeTokens.subMutedText}`}
+                className={`text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap truncate ${themeTokens.subMutedText}`}
               >
-                👎 Hidden / Disliked
+                👎 Hidden
               </span>
-              <p className="text-lg sm:text-xl font-black text-white">
+              <p className="text-lg sm:text-xl font-black leading-tight text-white">
                 {stats.dislikedCount}
               </p>
-              <span className={`text-[10px] ${themeTokens.subMutedText}`}>
-                Excluded from catalogs
+              <span className={`text-[10px] truncate ${themeTokens.subMutedText}`}>
+                Skipped titles
               </span>
             </div>
           </div>
@@ -1451,7 +1462,7 @@ function WatchHistoryComponent() {
           <section
             data-tour="episode-radar-banner"
             className={`rounded-3xl border p-3.5 sm:p-5 space-y-3 ${
-              isLowRam ? "" : "backdrop-blur-2xl"
+              isLowRam ? "" : "backdrop-blur-md"
             } ${themeTokens.surfacePanel}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1516,7 +1527,7 @@ function WatchHistoryComponent() {
         {/* MAIN ACTIVITY CONTENT */}
         {!hasVisibleContent ? (
           <div
-            className={`rounded-3xl border p-10 sm:p-12 text-center backdrop-blur-xl shadow-2xl space-y-2.5 ${themeTokens.surfacePanel}`}
+            className={`rounded-3xl border p-10 sm:p-12 text-center backdrop-blur-sm shadow-2xl space-y-2.5 ${themeTokens.surfacePanel}`}
           >
             <div className="text-3xl mb-1">🎬</div>
             <p className="text-base font-bold text-white">
@@ -1536,13 +1547,15 @@ function WatchHistoryComponent() {
             {/* 1. RECENTLY WATCHED LIVE TV */}
             {showLiveSection && (
               <section className="space-y-4">
-                <div
-                  className="rabtv-wh-section-banner"
-                  style={{
-                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                  }}
-                >
-                  <h2 className="rabtv-wh-section-title relative z-10 font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                <div className="rabtv-wh-section-ribbon">
+                  <div
+                    className="rabtv-wh-art-bg"
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                    }}
+                  />
+                  <h2 className="rabtv-wh-section-title font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                     📡 Recent Live TV
                   </h2>
                 </div>
@@ -1559,7 +1572,7 @@ function WatchHistoryComponent() {
                             ? themeTokens.liveCardPinned
                             : themeTokens.liveCard
                         } ${
-                          isLowRam ? "" : "backdrop-blur-xl"
+                          isLowRam ? "" : "backdrop-blur-sm"
                         } p-3 shadow-xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center justify-between overflow-hidden`}
                       >
                         <div className="w-full flex items-center justify-between gap-1 mb-2 z-10">
@@ -1652,13 +1665,15 @@ function WatchHistoryComponent() {
             {/* 2. MOVIES - IN PROGRESS */}
             {showInProgressMovies && (
               <section className="space-y-4">
-                <div
-                  className="rabtv-wh-section-banner"
-                  style={{
-                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                  }}
-                >
-                  <h2 className="rabtv-wh-section-title relative z-10 font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                <div className="rabtv-wh-section-ribbon">
+                  <div
+                    className="rabtv-wh-art-bg"
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                    }}
+                  />
+                  <h2 className="rabtv-wh-section-title font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                     🎬 Movies — In Progress
                   </h2>
                 </div>
@@ -1690,13 +1705,15 @@ function WatchHistoryComponent() {
             {/* 3. TV SHOWS - IN PROGRESS */}
             {showInProgressShows && (
               <section className="space-y-4">
-                <div
-                  className="rabtv-wh-section-banner"
-                  style={{
-                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                  }}
-                >
-                  <h2 className="rabtv-wh-section-title relative z-10 font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                <div className="rabtv-wh-section-ribbon">
+                  <div
+                    className="rabtv-wh-art-bg"
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                    }}
+                  />
+                  <h2 className="rabtv-wh-section-title font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                     📺 TV Shows — In Progress
                   </h2>
                 </div>
@@ -1741,13 +1758,15 @@ function WatchHistoryComponent() {
             {/* 4. COMPLETED */}
             {showCompletedSection && (
               <section className="space-y-4">
-                <div
-                  className="rabtv-wh-section-banner"
-                  style={{
-                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                  }}
-                >
-                  <h2 className="rabtv-wh-section-title relative z-10 font-black tracking-tight text-emerald-300 uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                <div className="rabtv-wh-section-ribbon">
+                  <div
+                    className="rabtv-wh-art-bg"
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                    }}
+                  />
+                  <h2 className="rabtv-wh-section-title font-black tracking-tight text-emerald-300 uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                     ✓ Completed
                   </h2>
                 </div>
@@ -1810,13 +1829,15 @@ function WatchHistoryComponent() {
             {/* 5. DISLIKED / REMOVED */}
             {showDislikedSection && (
               <section className="space-y-4">
-                <div
-                  className="rabtv-wh-section-banner"
-                  style={{
-                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                  }}
-                >
-                  <h2 className="rabtv-wh-section-title relative z-10 font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                <div className="rabtv-wh-section-ribbon">
+                  <div
+                    className="rabtv-wh-art-bg"
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                    }}
+                  />
+                  <h2 className="rabtv-wh-section-title font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                     👎 Disliked / Hidden
                   </h2>
                 </div>
@@ -1828,7 +1849,7 @@ function WatchHistoryComponent() {
                     <div
                       key={item.id}
                       className={`group relative ${posterAppearance.radiusClass} border ${
-                        isLowRam ? "" : "backdrop-blur-xl"
+                        isLowRam ? "" : "backdrop-blur-sm"
                       } overflow-hidden shadow-lg flex flex-col justify-between p-3.5 transition ${
                         themeTokens.surfacePanel
                       }`}
