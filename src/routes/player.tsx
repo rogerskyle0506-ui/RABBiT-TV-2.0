@@ -154,7 +154,64 @@ const TV_DETAILS_BTN_URL =
  * and recommended catalog header across portrait, landscape, tablet, desktop & TV.
  */
 const PLAYER_VIEWPORT_STYLES = `
-  /* Uses shared global .rabtv-dual-wrapper & .rabtv-section-banner from __root.tsx */
+  /* Self-contained, adblocker-safe (no "banner" keyword) heading ribbon for /player */
+  .rabtv-plr-heading-ribbon {
+    position: relative;
+    width: 100%;
+    height: clamp(38px, 10vw, 48px);
+    padding: 0 clamp(22px, 5.5vw, 44px);
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border-radius: 9999px;
+    overflow: hidden;
+    contain: layout paint;
+  }
+
+  .rabtv-plr-heading-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 110% 188%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    filter: var(--rabtv-wrap-filter, hue-rotate(-14deg) saturate(1.06));
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-plr-heading-title {
+    position: relative;
+    z-index: 6;
+    font-size: clamp(12.5px, 3.4vw, 18.5px);
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-plr-heading-ribbon {
+      height: clamp(44px, 4.4vw, 56px);
+      padding: 0 clamp(32px, 4vw, 56px);
+    }
+
+    .rabtv-plr-heading-title {
+      font-size: clamp(15px, 1.6vw, 20.5px);
+    }
+  }
+
+  @media (min-width: 640px) and (max-height: 500px) {
+    .rabtv-plr-heading-ribbon {
+      height: 38px;
+      padding: 0 28px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .rabtv-plr-heading-ribbon {
+      height: clamp(50px, 3.8vw, 60px);
+    }
+  }
 `;
 
 export const Route = createFileRoute("/player")({
@@ -1413,8 +1470,8 @@ export function PlayerPage() {
 
       <div className="relative z-10 max-w-6xl mx-auto flex flex-col gap-4 sm:gap-5 min-w-0">
         {/* Top Navigation Row: Compact Theme-Tuned Wrapper — Back to Home Left, Details Right */}
-        <div className="rabtv-page-top-bar">
-          <div className="rabtv-dual-wrapper">
+        <div className="rabtv-vidsrc-protected rabtv-page-top-bar">
+          <div className="rabtv-vidsrc-protected rabtv-dual-wrapper">
             <div
               className="rabtv-art-bg"
               aria-hidden="true"
@@ -2094,17 +2151,17 @@ export function PlayerPage() {
         {/* Similar Recommended Titles */}
         {mappedRecommendations.length > 0 && (
           <div
-            className={`w-full mt-2 pt-6 border-t space-y-4 ${themeTokens.dividerBorder}`}
+            className={`rabtv-vidsrc-protected w-full mt-2 pt-6 border-t space-y-4 ${themeTokens.dividerBorder}`}
           >
-            <div className="rabtv-section-banner mb-3">
+            <div className="rabtv-vidsrc-protected rabtv-plr-heading-ribbon mb-3">
               <div
-                className="rabtv-art-bg"
+                className="rabtv-vidsrc-protected rabtv-plr-heading-bg"
                 aria-hidden="true"
                 style={{
                   backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
                 }}
               />
-              <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+              <h2 className="rabtv-vidsrc-protected rabtv-plr-heading-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 ✨ Similar Recommended Titles
               </h2>
             </div>
