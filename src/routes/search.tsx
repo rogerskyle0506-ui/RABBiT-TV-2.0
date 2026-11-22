@@ -65,31 +65,35 @@ const SEARCH_VIEWPORT_STYLES = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: clamp(50px, 12.6vw, 68px);
-    width: clamp(188px, 48vw, 260px);
+    height: clamp(56px, 14.5vw, 74px);
+    width: clamp(204px, 54vw, 276px);
     max-width: 100%;
-    padding: clamp(7px, 1.8vw, 10px) clamp(16px, 4.2vw, 28px);
+    padding: clamp(7px, 1.8vw, 10px) clamp(18px, 4.8vw, 30px);
     box-sizing: border-box;
-    background-size: 100% 100%;
+    border-radius: 9999px;
+    background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
+    overflow: hidden;
     flex: 0 0 auto;
   }
 
-  /* Single wide buttonwrapper.png holding BOTH Back to Home + Surprise Me */
+  /* Single wide buttonwrapper.png bay holding BOTH Back to Home + Surprise Me */
   .rabtv-srch-dual-wrap {
     position: relative;
-    width: min(100%, clamp(304px, 94vw, 500px));
-    min-height: clamp(54px, 14vw, 76px);
-    padding: clamp(7px, 1.9vw, 11px) clamp(16px, 4.4vw, 34px);
+    width: min(100%, clamp(312px, 94vw, 520px));
+    height: clamp(62px, 16.2vw, 84px);
+    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 36px);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: clamp(8px, 2vw, 16px);
+    gap: clamp(8px, 2.2vw, 18px);
     box-sizing: border-box;
-    background-size: 100% 100%;
+    border-radius: 9999px;
+    background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
+    overflow: hidden;
     flex: 0 1 auto;
   }
 
@@ -101,11 +105,13 @@ const SEARCH_VIEWPORT_STYLES = `
     flex: 1 1 0;
     min-width: 0;
     max-width: 48%;
-    height: clamp(36px, 9.6vw, 50px);
+    height: 100%;
     background: transparent;
     border: 0;
     padding: 0;
     cursor: pointer;
+    overflow: hidden;
+    border-radius: 9999px;
     transition: transform 160ms ease, filter 160ms ease;
   }
 
@@ -120,6 +126,8 @@ const SEARCH_VIEWPORT_STYLES = `
     border: 0;
     padding: 0;
     cursor: pointer;
+    overflow: hidden;
+    border-radius: 9999px;
     transition: transform 160ms ease, filter 160ms ease;
   }
 
@@ -129,6 +137,7 @@ const SEARCH_VIEWPORT_STYLES = `
     height: 100%;
     object-fit: contain;
     display: block;
+    transform: scale(1.44);
     filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
   }
 
@@ -137,13 +146,15 @@ const SEARCH_VIEWPORT_STYLES = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: clamp(44px, 11vw, 52px);
-    width: clamp(136px, 38vw, 176px);
+    height: clamp(46px, 11.8vw, 54px);
+    width: clamp(146px, 40vw, 184px);
     max-width: 100%;
     background: transparent;
     border: 0;
     padding: 0;
     cursor: pointer;
+    overflow: hidden;
+    border-radius: 9999px;
     flex: 0 0 auto;
     transition: transform 160ms ease, filter 160ms ease;
   }
@@ -153,88 +164,102 @@ const SEARCH_VIEWPORT_STYLES = `
     height: 100%;
     object-fit: contain;
     display: block;
+    transform: scale(1.16);
     filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.85));
   }
 
+  /* Viewport-locked single-row section header banner backed by full-height buttonwrapper.png */
   .rabtv-srch-section-banner {
     position: relative;
     width: 100%;
-    min-height: clamp(54px, 12vw, 72px);
-    padding: clamp(10px, 2.2vw, 14px) clamp(20px, 5vw, 40px);
+    height: clamp(54px, 13.8vw, 72px);
+    padding: 0 clamp(22px, 5.8vw, 44px);
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
-    gap: clamp(6px, 1.5vw, 12px);
+    gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
-    background-size: 100% 100%;
+    background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
   }
 
+  .rabtv-srch-section-title {
+    font-size: clamp(13px, 3.5vw, 19px);
+    line-height: 1.1;
+  }
+
+  .rabtv-srch-section-meta {
+    font-size: clamp(10px, 2.7vw, 12px);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
   @media (min-width: 640px) {
     .rabtv-srch-back-wrap {
-      height: clamp(54px, 5.6vw, 72px);
-      width: clamp(210px, 22vw, 284px);
-      padding: clamp(8px, 0.9vw, 11px) clamp(20px, 2.4vw, 32px);
+      height: clamp(60px, 6.2vw, 78px);
+      width: clamp(224px, 24vw, 300px);
+      padding: clamp(8px, 0.9vw, 11px) clamp(22px, 2.6vw, 34px);
     }
 
     .rabtv-srch-dual-wrap {
-      width: min(100%, clamp(380px, 46vw, 520px));
-      min-height: clamp(60px, 6.2vw, 78px);
-      padding: clamp(8px, 0.9vw, 12px) clamp(22px, 2.6vw, 36px);
-      gap: clamp(10px, 1.3vw, 18px);
-    }
-
-    .rabtv-srch-art-btn {
-      height: clamp(40px, 4.2vw, 52px);
+      width: min(100%, clamp(390px, 46vw, 530px));
+      height: clamp(68px, 7vw, 88px);
+      padding: clamp(9px, 1vw, 13px) clamp(26px, 3.2vw, 44px);
+      gap: clamp(12px, 1.5vw, 20px);
     }
 
     .rabtv-srch-submit-art {
-      height: clamp(46px, 4.6vw, 54px);
-      width: clamp(142px, 14vw, 178px);
+      height: clamp(46px, 4.8vw, 56px);
+      width: clamp(148px, 15vw, 186px);
     }
 
     .rabtv-srch-section-banner {
-      min-height: clamp(58px, 5.8vw, 76px);
-      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.8vw, 48px);
+      height: clamp(60px, 6vw, 76px);
+      padding: 0 clamp(32px, 4vw, 52px);
+    }
+
+    .rabtv-srch-section-title {
+      font-size: clamp(16px, 1.7vw, 21px);
+    }
+
+    .rabtv-srch-section-meta {
+      font-size: clamp(11px, 1.1vw, 13px);
     }
   }
 
   @media (min-width: 640px) and (max-height: 480px) {
     .rabtv-srch-back-wrap {
-      height: 46px;
-      width: 186px;
-      padding: 6px 16px;
+      height: 48px;
+      width: 196px;
+      padding: 6px 18px;
     }
 
     .rabtv-srch-dual-wrap {
-      width: min(100%, 360px);
-      min-height: 48px;
-      padding: 6px 18px;
-      gap: 8px;
-    }
-
-    .rabtv-srch-art-btn {
-      height: 34px;
+      width: min(100%, 370px);
+      height: 54px;
+      padding: 7px 22px;
+      gap: 10px;
     }
 
     .rabtv-srch-section-banner {
-      min-height: 50px;
-      padding: 8px 24px;
+      height: 52px;
+      padding: 0 28px;
     }
   }
 
   @media (min-width: 1280px) {
-    .rabtv-srch-dual-wrap {
-      width: 510px;
-      min-height: 76px;
+    .rabtv-srch-back-wrap {
+      height: 76px;
+      width: 296px;
     }
 
-    .rabtv-srch-art-btn {
-      height: 50px;
+    .rabtv-srch-dual-wrap {
+      width: 520px;
+      height: 86px;
     }
   }
 `;
@@ -756,7 +781,7 @@ const SearchInputForm = memo(function SearchInputForm({
             const nextHas = Boolean((e.target as HTMLInputElement).value);
             setHasValue((prev) => (prev === nextHas ? prev : nextHas));
           }}
-          placeholder="Search movies, TV shows, actors, or live channels..."
+          placeholder="Search movies, TV, actors, live..."
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
           className={`w-full rounded-2xl border pl-10 pr-10 py-3.5 text-sm font-bold focus:outline-none shadow-inner transition ${tokens.inputClass}`}
         />
@@ -1864,19 +1889,19 @@ function SearchPage() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             >
-              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+              <div className="flex items-center gap-2 min-w-0 relative z-10">
                 <span
-                  className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                  className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeTokens.accentBar}`}
                 />
-                <h3 className="text-sm sm:text-lg font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-                  📡 Matching Live TV Channels
+                <h3 className="rabtv-srch-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                  📡 Matching Live TV
                 </h3>
               </div>
               <Link
                 to="/live-tv"
-                className={`relative z-10 text-xs font-extrabold hover:underline shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
+                className={`rabtv-srch-section-meta relative z-10 font-extrabold hover:underline shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
               >
-                Open Live TV Guide →
+                Live Guide →
               </Link>
             </div>
 
@@ -1946,18 +1971,18 @@ function SearchPage() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             >
-              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+              <div className="flex items-center gap-2 min-w-0 relative z-10">
                 <span
-                  className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                  className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeTokens.accentBar}`}
                 />
-                <h3 className="text-sm sm:text-lg font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-                  🎭 Matching Actors & Creators
+                <h3 className="rabtv-srch-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                  🎭 Matching Cast & Crew
                 </h3>
               </div>
               <span
-                className={`relative z-10 text-[11px] font-bold shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
+                className={`rabtv-srch-section-meta relative z-10 font-bold shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
               >
-                Tap for Filmography
+                Tap for credits
               </span>
             </div>
 
@@ -2009,25 +2034,25 @@ function SearchPage() {
             backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
           }}
         >
-          <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+          <div className="flex items-center gap-2 min-w-0 relative z-10">
             <span
-              className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+              className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeTokens.accentBar}`}
             />
-            <h2 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+            <h2 className="rabtv-srch-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
               {selectedPerson
                 ? `${selectedPerson.name} — Credits`
                 : activeUrlQuery
-                  ? `Search Results for "${activeUrlQuery}"`
+                  ? `Results: "${activeUrlQuery}"`
                   : hiddenGemsMode
-                    ? "💎 Hidden Gems Discovery"
-                    : "Filtered Catalog Results"}
+                    ? "💎 Hidden Gems"
+                    : "Filtered Catalog"}
             </h2>
           </div>
           <span
-            className={`relative z-10 text-[11px] sm:text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeTokens.accentBadge}`}
+            className={`rabtv-srch-section-meta relative z-10 font-bold px-2.5 py-1 rounded-full shrink-0 ${themeTokens.accentBadge}`}
           >
-            {filteredResults.length} titles{" "}
-            {totalPages > 1 ? `• Page ${page}/${totalPages}` : ""}
+            {filteredResults.length} titles
+            {totalPages > 1 ? ` • ${page}/${totalPages}` : ""}
           </span>
         </div>
 
