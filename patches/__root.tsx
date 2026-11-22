@@ -265,7 +265,7 @@ const VIEWPORT_HEADER_STYLES = `
     font-size: clamp(11px, 3.1vw, 14px);
   }
 
-  /* RIGHT: Pure, Crisp RABBiT TV Home Logo (ZERO color overlay!) */
+  /* RIGHT: Pure, Crisp RABBiT TV Home Logo — Stretched Cleanly to Fill Full Container */
   .rabtv-hdr-logo-wrap {
     grid-area: logo;
     width: 100%;
@@ -286,7 +286,9 @@ const VIEWPORT_HEADER_STYLES = `
     height: clamp(58px, 16.8vw, 78px);
     flex: 0 1 auto;
     box-sizing: border-box;
-    overflow: visible;
+    overflow: hidden;
+    border-radius: 9999px;
+    contain: layout paint;
   }
 
   .rabtv-hdr-logo-img {
@@ -294,8 +296,9 @@ const VIEWPORT_HEADER_STYLES = `
     height: 100%;
     object-fit: contain;
     object-position: right center;
-    transform: scale(1.24);
-    transform-origin: right center;
+    transform: scale(1.48, 1.66);
+    transform-origin: 96% 50%;
+    display: block;
   }
 
   /* ROW 2 (Portrait) / CENTER (Landscape+): Alpha-Clean Theme-Matched Search Bar */
@@ -328,6 +331,7 @@ const VIEWPORT_HEADER_STYLES = `
     background-size: 100% 100%;
     background-repeat: no-repeat;
     background-position: center center;
+    opacity: 0.90;
     filter: var(--rabtv-search-filter);
     pointer-events: none;
     z-index: 0;
@@ -373,8 +377,11 @@ const VIEWPORT_HEADER_STYLES = `
 
   /* =========================================================================
      GLOBAL SHARED PUNK-NEON BUTTON WRAPPERS & SECTION BANNERS (ALL PAGES)
-     - Compact shrunk studded wrapper with buttons pushed to far LEFT & RIGHT
-       inside the dark interior bay so every page looks 100% consistent
+     - Softly blended into background (opacity 0.78 + gentle edge feather)
+       while keeping studded chain & theme-shifted neon rim sharp
+     - Safe dark inner bay = middle 47.2% height & 77.6% width (padding: 0 11.2%)
+     - Both artwork buttons (45% h) & font-created pills (41% h) are locked
+       strictly inside the dark bay so NOTHING ever touches/exceeds the neon rim
      ========================================================================= */
   .rabtv-art-bg {
     position: absolute;
@@ -382,7 +389,20 @@ const VIEWPORT_HEADER_STYLES = `
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
+    opacity: 0.78;
     filter: var(--rabtv-wrap-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 51% 54% at 50% 50%,
+      rgba(0, 0, 0, 1) 68%,
+      rgba(0, 0, 0, 0.76) 86%,
+      rgba(0, 0, 0, 0.24) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 51% 54% at 50% 50%,
+      rgba(0, 0, 0, 1) 68%,
+      rgba(0, 0, 0, 0.76) 86%,
+      rgba(0, 0, 0, 0.24) 100%
+    );
     pointer-events: none;
     z-index: 0;
   }
@@ -396,17 +416,17 @@ const VIEWPORT_HEADER_STYLES = `
     box-sizing: border-box;
   }
 
-  /* Compact Dual-Button Studded Wrapper — Buttons Pushed to Far Left & Right */
+  /* Precision Dual-Button Studded Wrapper — Bigger Buttons Locked Inside Dark Bay */
   .rabtv-dual-wrapper {
     position: relative;
-    width: min(92%, 312px);
-    height: clamp(38px, 10vw, 46px);
-    padding: 4px clamp(19px, 5.4vw, 26px);
+    width: min(95%, 352px);
+    height: clamp(46px, 12.6vw, 56px);
+    padding: 0 11.2%;
     margin-inline: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: clamp(8px, 2.5vw, 18px);
+    gap: clamp(6px, 2vw, 14px);
     box-sizing: border-box;
     border-radius: 9999px;
     overflow: hidden;
@@ -416,9 +436,9 @@ const VIEWPORT_HEADER_STYLES = `
   /* Compact Single-Button Studded Wrapper (e.g. Search with 0 results) */
   .rabtv-single-wrapper {
     position: relative;
-    width: min(68%, 218px);
-    height: clamp(38px, 10vw, 46px);
-    padding: 4px clamp(18px, 5vw, 24px);
+    width: min(70%, 232px);
+    height: clamp(46px, 12.6vw, 56px);
+    padding: 0 13%;
     margin-inline: auto;
     display: flex;
     align-items: center;
@@ -429,7 +449,7 @@ const VIEWPORT_HEADER_STYLES = `
     contain: layout paint;
   }
 
-  /* Artwork Button Inside Wrapper (Extra-Trimmed to Sit Cleanly Inside Dark Bay) */
+  /* Artwork Button Locked Strictly Inside the 47.2% Dark Middle Bay */
   .rabtv-wrap-art-btn {
     position: relative;
     z-index: 6;
@@ -437,8 +457,8 @@ const VIEWPORT_HEADER_STYLES = `
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 41%;
-    height: 74%;
+    width: 47%;
+    height: 45%;
     background: transparent;
     border: 0;
     padding: 0;
@@ -449,44 +469,36 @@ const VIEWPORT_HEADER_STYLES = `
   }
 
   .rabtv-single-wrapper .rabtv-wrap-art-btn {
-    width: 78%;
+    width: 86%;
   }
 
   .rabtv-wrap-art-btn img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    object-position: center center;
+    transform-origin: center center;
     display: block;
   }
 
-  .rabtv-wrap-art-btn--left img {
-    object-position: left center;
-    transform-origin: left center;
-  }
-
-  .rabtv-wrap-art-btn--right img {
-    object-position: right center;
-    transform-origin: right center;
-  }
-
-  /* Calibrated 1:1 Compact Asset Scales */
+  /* Center-cropped calibrated scales so each PNG fills ~88% of the dark bay cleanly */
   .rabtv-wrap-art-btn--movie img {
-    transform: scale(1.02);
+    transform: scale(2.00);
   }
 
   .rabtv-wrap-art-btn--surprise img {
-    transform: scale(1.34);
+    transform: scale(2.65);
   }
 
   .rabtv-wrap-art-btn--home img {
-    transform: scale(1.28);
+    transform: scale(1.92);
   }
 
   .rabtv-wrap-art-btn--tvdetails img {
-    transform: scale(1.26);
+    transform: scale(1.90);
   }
 
-  /* Compact Pill Button Inside Wrapper (IMDb, Channel Surf, My List, Live TV, Movie Details) */
+  /* Font-Created Pill Button Strictly Constrained Inside the Dark Bay (NEVER overflows neon rim!) */
   .rabtv-wrap-pill-btn {
     position: relative;
     z-index: 6;
@@ -495,23 +507,24 @@ const VIEWPORT_HEADER_STYLES = `
     justify-content: center;
     gap: 4px;
     flex: 0 0 auto;
-    width: 41%;
-    height: 68%;
-    padding: 0 clamp(6px, 2vw, 12px);
+    width: 46.5%;
+    height: 41%;
+    padding: 0 clamp(6px, 1.8vw, 11px);
     border-radius: 9999px;
     font-size: clamp(9.5px, 2.5vw, 12px);
     line-height: 1;
     white-space: nowrap;
+    overflow: hidden;
     box-sizing: border-box;
     transition: transform 150ms ease;
   }
 
-  /* Global Compact Theme-Tuned Centered Section Banner */
+  /* Global Blended Theme-Tuned Centered Section Banner */
   .rabtv-section-banner {
     position: relative;
     width: 100%;
-    height: clamp(38px, 10vw, 48px);
-    padding: 0 clamp(22px, 5.5vw, 44px);
+    height: clamp(42px, 11vw, 52px);
+    padding: 0 clamp(26px, 11.5%, 56px);
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -533,7 +546,7 @@ const VIEWPORT_HEADER_STYLES = `
   .rabtv-section-banner-action {
     position: absolute;
     z-index: 8;
-    right: clamp(18px, 4.8vw, 38px);
+    right: clamp(32px, 12.8%, 62px);
     top: 50%;
     transform: translateY(-50%);
     font-size: clamp(9.5px, 2.5vw, 12.5px);
@@ -600,35 +613,36 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-logo-img {
-      transform: scale(1.20);
-      transform-origin: right center;
+      transform: scale(1.40, 1.58);
+      transform-origin: 96% 50%;
     }
 
     .rabtv-dual-wrapper {
-      width: min(76%, clamp(326px, 40vw, 424px));
-      height: clamp(42px, 4.4vw, 52px);
-      padding: 5px clamp(22px, 2.8vw, 34px);
+      width: min(82%, clamp(356px, 44vw, 460px));
+      height: clamp(50px, 5.2vw, 62px);
+      padding: 0 11.2%;
     }
 
     .rabtv-single-wrapper {
-      width: clamp(200px, 24vw, 250px);
-      height: clamp(42px, 4.4vw, 52px);
+      width: clamp(216px, 26vw, 272px);
+      height: clamp(50px, 5.2vw, 62px);
+      padding: 0 13%;
     }
 
     .rabtv-wrap-art-btn {
-      width: 40%;
-      height: 74%;
+      width: 47%;
+      height: 45%;
     }
 
     .rabtv-wrap-pill-btn {
-      width: 40%;
-      height: 68%;
+      width: 46.5%;
+      height: 41%;
       font-size: clamp(10.5px, 1.15vw, 13px);
     }
 
     .rabtv-section-banner {
-      height: clamp(44px, 4.4vw, 56px);
-      padding: 0 clamp(32px, 4vw, 56px);
+      height: clamp(48px, 4.8vw, 60px);
+      padding: 0 clamp(38px, 11.5%, 72px);
     }
 
     .rabtv-section-banner-title {
@@ -636,7 +650,7 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-section-banner-action {
-      right: clamp(28px, 3.6vw, 48px);
+      right: clamp(42px, 12.2%, 78px);
       font-size: clamp(10.5px, 1.1vw, 13px);
     }
   }
@@ -667,14 +681,14 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-dual-wrapper {
-      width: min(72%, 296px);
-      height: 36px;
-      padding: 3px 18px;
+      width: min(76%, 324px);
+      height: 42px;
+      padding: 0 11.2%;
     }
 
     .rabtv-single-wrapper {
-      width: 190px;
-      height: 36px;
+      width: 204px;
+      height: 42px;
     }
 
     .rabtv-wrap-pill-btn {
@@ -682,8 +696,8 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-section-banner {
-      height: 38px;
-      padding: 0 28px;
+      height: 40px;
+      padding: 0 11.5%;
     }
   }
 
@@ -726,13 +740,13 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-dual-wrapper {
-      width: 432px;
-      height: 54px;
-      padding: 6px 34px;
+      width: 472px;
+      height: 64px;
+      padding: 0 11.2%;
     }
 
     .rabtv-section-banner {
-      height: clamp(50px, 3.8vw, 60px);
+      height: clamp(54px, 4vw, 64px);
     }
   }
 `;
