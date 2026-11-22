@@ -707,7 +707,7 @@ const ChannelCard = memo(function ChannelCard({
             </span>
           )}
           <span
-            className={`rounded-full border px-1.5 sm:px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider truncate min-w-0 ${tokens.subtleBadge}`}
+            className={`hidden sm:inline-block rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider truncate min-w-0 ${tokens.subtleBadge}`}
           >
             {displayRegion}
           </span>
