@@ -126,20 +126,20 @@ export const REAL_SURPRISE_ME_BTN_URL =
 const VIEWPORT_HEADER_STYLES = `
   .rabtv-hdr-bar {
     --hdr-u: clamp(36px, 10.6vw, 52px);
-    min-height: calc(var(--hdr-u) * 3.15);
+    min-height: calc(var(--hdr-u) * 3.2);
   }
 
   .rabtv-hdr-inner {
     width: 100%;
     max-width: 1440px;
     margin-inline: auto;
-    padding: clamp(8px, 2.2vw, 15px) clamp(8px, 2.2vw, 24px);
+    padding: clamp(8px, 2.2vw, 14px) clamp(8px, 2.2vw, 24px);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     row-gap: clamp(8px, 2vw, 12px);
-    column-gap: clamp(6px, 1.4vw, 16px);
+    column-gap: clamp(4px, 1.2vw, 16px);
     box-sizing: border-box;
   }
 
@@ -150,19 +150,31 @@ const VIEWPORT_HEADER_STYLES = `
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    max-width: calc(100% - (var(--hdr-u) * 3.85) - clamp(6px, 1.4vw, 12px));
+    max-width: calc(100% - (var(--hdr-u) * 3.85) - 6px);
+    overflow: visible;
   }
 
   .rabtv-hdr-logo {
     position: relative;
     display: flex;
     align-items: center;
-    justify-content: center;
-    height: calc(var(--hdr-u) * 1.66);
-    width: calc(var(--hdr-u) * 4.9);
+    justify-content: flex-start;
+    height: calc(var(--hdr-u) * 1.82);
+    width: calc(var(--hdr-u) * 5.25);
     max-width: 100%;
     flex: 0 1 auto;
     box-sizing: border-box;
+    overflow: visible;
+  }
+
+  .rabtv-hdr-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: left center;
+    transform: scale(1.24);
+    transform-origin: left center;
+    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.92));
   }
 
   .rabtv-hdr-profile-wrap {
@@ -177,20 +189,20 @@ const VIEWPORT_HEADER_STYLES = `
     position: relative;
     display: flex;
     align-items: center;
-    height: calc(var(--hdr-u) * 1.24);
-    width: calc(var(--hdr-u) * 1.24 * 3.18);
-    padding-left: 39%;
-    padding-right: 20.5%;
+    height: calc(var(--hdr-u) * 1.26);
+    width: calc(var(--hdr-u) * 1.26 * 3.16);
+    padding-left: 37%;
+    padding-right: 19%;
     flex: 0 0 auto;
     box-sizing: border-box;
   }
 
   .rabtv-hdr-profile-avatar {
     position: absolute;
-    left: 23.4%;
+    left: 23.2%;
     top: 50%;
     transform: translate(-50%, -50%);
-    height: 76%;
+    height: 75%;
     aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
@@ -209,7 +221,7 @@ const VIEWPORT_HEADER_STYLES = `
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.15;
-    font-size: clamp(10px, calc(var(--hdr-u) * 0.26), 14px);
+    font-size: clamp(10px, calc(var(--hdr-u) * 0.255), 14px);
   }
 
   .rabtv-hdr-search-form {
@@ -226,25 +238,26 @@ const VIEWPORT_HEADER_STYLES = `
     position: relative;
     display: flex;
     align-items: center;
-    height: calc(var(--hdr-u) * 1.06);
-    width: min(100%, calc(var(--hdr-u) * 8.6));
+    height: calc(var(--hdr-u) * 1.08);
+    width: min(100%, calc(var(--hdr-u) * 8.8));
     max-width: 100%;
     flex: 1 1 auto;
     box-sizing: border-box;
   }
 
+  /* Generous left padding clears the magnifying glass icon cleanly on all devices */
   .rabtv-hdr-search-input {
     position: relative;
     z-index: 10;
     width: 100%;
     height: 100%;
     min-width: 0;
-    padding-left: 14.5%;
-    padding-right: 26.5%;
+    padding-left: 18.2%;
+    padding-right: 26.8%;
     padding-top: 0;
     padding-bottom: 0;
     line-height: 1;
-    font-size: clamp(11px, calc(var(--hdr-u) * 0.3), 16px);
+    font-size: clamp(11px, calc(var(--hdr-u) * 0.285), 15px);
     box-sizing: border-box;
   }
 
@@ -276,14 +289,14 @@ const VIEWPORT_HEADER_STYLES = `
   /* Landscape phones, tablets, desktops, TVs & projectors */
   @media (min-width: 640px) {
     .rabtv-hdr-bar {
-      --hdr-u: clamp(34px, 5vw, 56px);
-      min-height: clamp(76px, 9.6vw, 130px);
+      --hdr-u: clamp(34px, 4.9vw, 56px);
+      min-height: clamp(78px, 9.8vw, 132px);
     }
 
     .rabtv-hdr-inner {
       flex-wrap: nowrap;
       padding: clamp(7px, 1.15vw, 18px) clamp(10px, 2vw, 28px);
-      column-gap: clamp(8px, 1.4vw, 20px);
+      column-gap: clamp(10px, 1.5vw, 22px);
     }
 
     .rabtv-hdr-logo-wrap {
@@ -292,8 +305,14 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-logo {
-      height: calc(var(--hdr-u) * 1.54);
-      width: calc(var(--hdr-u) * 4.55);
+      height: calc(var(--hdr-u) * 1.66);
+      width: calc(var(--hdr-u) * 4.85);
+    }
+
+    .rabtv-hdr-logo-img {
+      transform: scale(1.22);
+      transform-origin: center center;
+      object-position: center center;
     }
 
     .rabtv-hdr-search-form {
@@ -305,8 +324,14 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-search-shell {
-      height: calc(var(--hdr-u) * 1.04);
-      width: min(100%, calc(var(--hdr-u) * 7.8));
+      height: calc(var(--hdr-u) * 1.06);
+      width: min(100%, calc(var(--hdr-u) * 8.0));
+    }
+
+    .rabtv-hdr-search-input {
+      padding-left: 16.8%;
+      padding-right: 26.2%;
+      font-size: clamp(11px, calc(var(--hdr-u) * 0.275), 15px);
     }
 
     .rabtv-hdr-profile-wrap {
@@ -314,12 +339,12 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-profile-btn {
-      height: calc(var(--hdr-u) * 1.18);
-      width: calc(var(--hdr-u) * 1.18 * 3.24);
+      height: calc(var(--hdr-u) * 1.2);
+      width: calc(var(--hdr-u) * 1.2 * 3.24);
     }
 
     .rabtv-hdr-profile-label {
-      font-size: clamp(10px, calc(var(--hdr-u) * 0.25), 14px);
+      font-size: clamp(10px, calc(var(--hdr-u) * 0.245), 14px);
     }
   }
 
@@ -327,7 +352,7 @@ const VIEWPORT_HEADER_STYLES = `
   @media (min-width: 640px) and (max-height: 480px) {
     .rabtv-hdr-bar {
       --hdr-u: clamp(30px, 7.6dvh, 40px);
-      min-height: clamp(58px, 15dvh, 78px);
+      min-height: clamp(60px, 15.5dvh, 80px);
     }
 
     .rabtv-hdr-inner {
@@ -1293,7 +1318,7 @@ function RootComponent() {
                     src={RABBIT_LOGO_URL}
                     alt="Rabbit TV Home"
                     decoding="async"
-                    className="w-full h-full object-contain scale-[1.46] drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]"
+                    className="rabtv-hdr-logo-img"
                   />
                 </Link>
               </div>
