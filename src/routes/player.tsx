@@ -45,28 +45,29 @@ import { bgAudio } from "@/lib/background-audio";
 import { initAdBlockerGlobalInterceptors } from "@/lib/adblocker";
 
 const FETCH_TIMEOUT_MS = 8000;
-const PLAYER_SERVER_STORAGE_KEY = "rabtv_preferred_player_server_v1";
+const PLAYER_SERVER_STORAGE_KEY = "rabtv_preferred_player_server_v2";
+const FAILOVER_PROBE_TIMEOUT_MS = 6000;
+const FAILOVER_IFRAME_TIMEOUT_MS = 9500;
 
 type PlayerServerId =
-  | "vidlink"
-  | "vidsrc_cc"
-  | "videasy"
-  | "vidsrc_icu"
-  | "vidsrc_to";
+  | "rabbittv.pro"
+  | "rabbittv.cc"
+  | "rabbittv.net"
+  | "rabbittv.icu"
+  | "rabbittv.to";
 
 interface PlayerServerOption {
   id: PlayerServerId;
   label: string;
-  shortLabel: string;
-  badge: string;
+  tag: string;
 }
 
 const PLAYER_SERVERS: PlayerServerOption[] = [
-  { id: "vidlink", label: "⚡ VidLink HD", shortLabel: "VidLink", badge: "Fast • No Gate" },
-  { id: "vidsrc_cc", label: "🎬 Vidsrc.cc", shortLabel: "Vidsrc.cc", badge: "HD Backup" },
-  { id: "videasy", label: "💎 Videasy 4K", shortLabel: "Videasy", badge: "Multi-Source" },
-  { id: "vidsrc_icu", label: "📡 Vidsrc.icu", shortLabel: "Vidsrc.icu", badge: "Mirror" },
-  { id: "vidsrc_to", label: "🌐 Vidsrc.to", shortLabel: "Vidsrc.to", badge: "Classic" },
+  { id: "rabbittv.pro", label: "rabbittv.pro", tag: "Primary HD" },
+  { id: "rabbittv.cc", label: "rabbittv.cc", tag: "Mirror 2" },
+  { id: "rabbittv.net", label: "rabbittv.net", tag: "Mirror 3" },
+  { id: "rabbittv.icu", label: "rabbittv.icu", tag: "Mirror 4" },
+  { id: "rabbittv.to", label: "rabbittv.to", tag: "Mirror 5" },
 ];
 
 const THEME_HEX_ACCENT: Record<AppTheme, string> = {
@@ -79,12 +80,29 @@ const THEME_HEX_ACCENT: Record<AppTheme, string> = {
 };
 
 function getSavedPlayerServer(): PlayerServerId {
-  if (typeof window === "undefined") return "vidlink";
-  const saved = localStorage.getItem(PLAYER_SERVER_STORAGE_KEY) as PlayerServerId | null;
+  if (typeof window === "undefined") return "rabbittv.pro";
+  const saved = localStorage.getItem(
+    PLAYER_SERVER_STORAGE_KEY
+  ) as PlayerServerId | null;
   if (saved && PLAYER_SERVERS.some((s) => s.id === saved)) {
     return saved;
   }
-  return "vidlink";
+  return "rabbittv.pro";
+}
+
+function getNextFailoverServer(
+  current: PlayerServerId,
+  tried: Set<PlayerServerId>
+): PlayerServerId | null {
+  const startIdx = PLAYER_SERVERS.findIndex((s) => s.id === current);
+  const total = PLAYER_SERVERS.length;
+  for (let offset = 1; offset < total; offset++) {
+    const candidate = PLAYER_SERVERS[(Math.max(0, startIdx) + offset) % total];
+    if (candidate && !tried.has(candidate.id)) {
+      return candidate.id;
+    }
+  }
+  return null;
 }
 
 function buildEmbedUrl(
@@ -97,23 +115,23 @@ function buildEmbedUrl(
 ): string {
   const accentHex = THEME_HEX_ACCENT[appTheme] || "8b5cf6";
   switch (serverId) {
-    case "vidlink":
+    case "rabbittv.pro":
       return mediaType === "tv"
         ? `https://vidlink.pro/tv/${mediaId}/${season}/${episode}?primaryColor=${accentHex}&autoplay=true&nextbutton=true`
         : `https://vidlink.pro/movie/${mediaId}?primaryColor=${accentHex}&autoplay=true`;
-    case "vidsrc_cc":
+    case "rabbittv.cc":
       return mediaType === "tv"
         ? `https://vidsrc.cc/v2/embed/tv/${mediaId}/${season}/${episode}`
         : `https://vidsrc.cc/v2/embed/movie/${mediaId}`;
-    case "videasy":
+    case "rabbittv.net":
       return mediaType === "tv"
         ? `https://player.videasy.net/tv/${mediaId}/${season}/${episode}?color=${accentHex}`
         : `https://player.videasy.net/movie/${mediaId}?color=${accentHex}`;
-    case "vidsrc_icu":
+    case "rabbittv.icu":
       return mediaType === "tv"
         ? `https://vidsrc.icu/embed/tv/${mediaId}/${season}/${episode}`
         : `https://vidsrc.icu/embed/movie/${mediaId}`;
-    case "vidsrc_to":
+    case "rabbittv.to":
     default:
       return mediaType === "tv"
         ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
@@ -136,33 +154,32 @@ const TV_DETAILS_BTN_URL =
  * and recommended catalog header across portrait, landscape, tablet, desktop & TV.
  */
 const PLAYER_VIEWPORT_STYLES = `
+  /* Base: Portrait Phones (< 640px) — Full-width wrappers matching player & dividers */
   .rabtv-plr-top-bar {
     width: 100%;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: clamp(8px, 2vw, 14px);
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(8px, 2vw, 12px);
     box-sizing: border-box;
   }
 
-  /* Single wide buttonwrapper.png bay holding BOTH Back to Home + TV/Movie Details */
+  /* Full-width studded buttonwrapper.png bay holding Back to Home + TV/Movie Details */
   .rabtv-plr-dual-nav-wrap {
     position: relative;
-    width: min(100%, clamp(312px, 94vw, 520px));
-    height: clamp(62px, 16.2vw, 84px);
-    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 36px);
+    width: 100%;
+    height: clamp(64px, 16.6vw, 86px);
+    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: clamp(8px, 2.2vw, 18px);
+    justify-content: space-evenly;
+    gap: clamp(10px, 2.6vw, 24px);
     box-sizing: border-box;
     border-radius: 9999px;
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
-    flex: 0 1 auto;
   }
 
   .rabtv-plr-nav-art-btn {
@@ -210,23 +227,23 @@ const PLAYER_VIEWPORT_STYLES = `
     min-width: 0;
     max-width: 46%;
     height: 76%;
-    padding: 0 clamp(8px, 2vw, 14px);
+    padding: 0 clamp(8px, 2vw, 16px);
     border-radius: 9999px;
-    font-size: clamp(10px, 2.7vw, 13px);
+    font-size: clamp(10.5px, 2.8vw, 13.5px);
     white-space: nowrap;
     box-sizing: border-box;
   }
 
-  /* Viewport-locked single-row section header banner backed by full-height buttonwrapper.png */
+  /* Full-width centered section header banner backed by buttonwrapper.png */
   .rabtv-plr-section-banner {
     position: relative;
     width: 100%;
     height: clamp(54px, 13.8vw, 72px);
-    padding: 0 clamp(22px, 5.8vw, 44px);
+    padding: 0 clamp(24px, 6vw, 48px);
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
@@ -237,66 +254,67 @@ const PLAYER_VIEWPORT_STYLES = `
   }
 
   .rabtv-plr-section-title {
-    font-size: clamp(13px, 3.5vw, 19px);
+    font-size: clamp(13.5px, 3.8vw, 20px);
     line-height: 1.1;
+    text-align: center;
   }
 
-  .rabtv-plr-section-meta {
-    font-size: clamp(10px, 2.7vw, 12px);
-    line-height: 1.1;
-    white-space: nowrap;
-  }
-
+  /* Landscape Phones, Tablets, PCs, Google TV & Fire Sticks (>= 640px) */
   @media (min-width: 640px) {
     .rabtv-plr-dual-nav-wrap {
-      width: min(100%, clamp(390px, 46vw, 530px));
-      height: clamp(68px, 7vw, 88px);
-      padding: clamp(9px, 1vw, 13px) clamp(26px, 3.2vw, 44px);
-      gap: clamp(12px, 1.5vw, 20px);
+      width: 100%;
+      height: clamp(70px, 7.2vw, 94px);
+      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
+      gap: clamp(16px, 2.4vw, 36px);
+    }
+
+    .rabtv-plr-nav-art-btn {
+      max-width: 44%;
     }
 
     .rabtv-plr-movie-details-pill {
-      height: 74%;
-      font-size: clamp(11px, 1.15vw, 13px);
+      max-width: 42%;
+      height: 72%;
+      font-size: clamp(11.5px, 1.2vw, 14px);
     }
 
     .rabtv-plr-section-banner {
-      height: clamp(60px, 6vw, 76px);
-      padding: 0 clamp(32px, 4vw, 52px);
+      height: clamp(58px, 5.8vw, 76px);
+      padding: 0 clamp(36px, 4.5vw, 60px);
     }
 
     .rabtv-plr-section-title {
-      font-size: clamp(16px, 1.7vw, 21px);
-    }
-
-    .rabtv-plr-section-meta {
-      font-size: clamp(11px, 1.1vw, 13px);
+      font-size: clamp(17px, 1.8vw, 23px);
     }
   }
 
-  @media (min-width: 640px) and (max-height: 480px) {
+  /* Short Phone Landscape Guard (max-height <= 500px) */
+  @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-plr-dual-nav-wrap {
-      width: min(100%, 370px);
-      height: 54px;
-      padding: 7px 22px;
-      gap: 10px;
+      height: clamp(52px, 13dvh, 64px);
+      padding: 7px clamp(24px, 4vw, 44px);
     }
 
     .rabtv-plr-movie-details-pill {
       height: 76%;
-      font-size: 10px;
+      font-size: 10.5px;
     }
 
     .rabtv-plr-section-banner {
-      height: 52px;
-      padding: 0 28px;
+      height: clamp(48px, 12dvh, 58px);
+      padding: 0 32px;
     }
   }
 
+  /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
     .rabtv-plr-dual-nav-wrap {
-      width: 520px;
-      height: 86px;
+      height: clamp(82px, 6vw, 98px);
+      padding: 12px 68px;
+    }
+
+    .rabtv-plr-section-banner {
+      height: clamp(68px, 4.8vw, 82px);
     }
   }
 `;
@@ -803,7 +821,14 @@ export function PlayerPage() {
   const [activeServer, setActiveServer] = useState<PlayerServerId>(() =>
     getSavedPlayerServer()
   );
+  const [serverStatus, setServerStatus] = useState<
+    "connecting" | "ready" | "switching"
+  >("connecting");
   const [playerReloadNonce, setPlayerReloadNonce] = useState<number>(0);
+  const [isServerMenuOpen, setIsServerMenuOpen] = useState<boolean>(false);
+  const triedServersRef = useRef<Set<PlayerServerId>>(new Set());
+  const iframeLoadedRef = useRef<boolean>(false);
+  const serverMenuRef = useRef<HTMLDivElement>(null);
   const [inMyList, setInMyList] = useState<boolean>(() =>
     isInMyList(`${urlType}-${mediaId}`)
   );
@@ -847,10 +872,13 @@ export function PlayerPage() {
     setPlayerLoadTime(Date.now());
   }, [mediaId, urlType, search.season, search.episode]);
 
-  // Reset finish-time anchor whenever episode switches
+  // Reset finish-time anchor & failover history whenever media/episode switches
   useEffect(() => {
     setPlayerLoadTime(Date.now());
-  }, [season, episode]);
+    triedServersRef.current = new Set([activeServer]);
+    iframeLoadedRef.current = false;
+    setServerStatus("connecting");
+  }, [mediaId, season, episode]);
 
   // Close dropdowns on outside click & support TV/Keyboard shortcuts (Escape, L for Lights-Out)
   useEffect(() => {
@@ -867,6 +895,12 @@ export function PlayerPage() {
       ) {
         setIsEpisodeOpen(false);
       }
+      if (
+        serverMenuRef.current &&
+        !serverMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsServerMenuOpen(false);
+      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -875,6 +909,7 @@ export function PlayerPage() {
       if (e.key === "Escape") {
         setIsSeasonOpen(false);
         setIsEpisodeOpen(false);
+        setIsServerMenuOpen(false);
         setCinemaDimMode(false);
       } else if (e.key === "l" || e.key === "L") {
         setCinemaDimMode((prev) => !prev);
@@ -1353,17 +1388,81 @@ export function PlayerPage() {
     appTheme
   );
 
+  const triggerBackgroundFailover = useCallback(
+    (reason: string) => {
+      triedServersRef.current.add(activeServer);
+      const nextId = getNextFailoverServer(activeServer, triedServersRef.current);
+      if (!nextId) {
+        setServerStatus("ready");
+        return;
+      }
+      triedServersRef.current.add(nextId);
+      iframeLoadedRef.current = false;
+      setServerStatus("switching");
+      setActiveServer(nextId);
+      showToast(`⚡ ${reason} — auto-switched to ${nextId}`);
+    },
+    [activeServer, showToast]
+  );
+
+  // Silent background failover watchdog: verifies mirror reachability + iframe load
+  useEffect(() => {
+    if (!mediaId || loading) return;
+    let cancelled = false;
+    iframeLoadedRef.current = false;
+    setServerStatus("connecting");
+    triedServersRef.current.add(activeServer);
+
+    const probeController = new AbortController();
+    const probeTimer = window.setTimeout(
+      () => probeController.abort(),
+      FAILOVER_PROBE_TIMEOUT_MS
+    );
+
+    // 1. Background reachability ping (no-cors opaque succeeds when host answers, rejects on DNS/refused/timeout)
+    void fetch(embedUrl, {
+      method: "GET",
+      mode: "no-cors",
+      cache: "no-store",
+      signal: probeController.signal,
+    })
+      .then(() => {
+        window.clearTimeout(probeTimer);
+      })
+      .catch(() => {
+        window.clearTimeout(probeTimer);
+        if (!cancelled && !iframeLoadedRef.current) {
+          triggerBackgroundFailover(`${activeServer} unreachable`);
+        }
+      });
+
+    // 2. Fallback iframe load watchdog in case host hangs silently
+    const iframeWatchdog = window.setTimeout(() => {
+      if (!cancelled && !iframeLoadedRef.current) {
+        triggerBackgroundFailover(`${activeServer} timed out`);
+      }
+    }, FAILOVER_IFRAME_TIMEOUT_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(probeTimer);
+      window.clearTimeout(iframeWatchdog);
+      probeController.abort();
+    };
+  }, [embedUrl, activeServer, mediaId, loading, playerReloadNonce, triggerBackgroundFailover]);
+
   const handleSelectServer = (nextServer: PlayerServerId) => {
+    triedServersRef.current = new Set([nextServer]);
+    iframeLoadedRef.current = false;
+    setServerStatus("connecting");
     setActiveServer(nextServer);
+    setIsServerMenuOpen(false);
     try {
       localStorage.setItem(PLAYER_SERVER_STORAGE_KEY, nextServer);
     } catch {
       // ignore storage errors
     }
-    const chosen = PLAYER_SERVERS.find((s) => s.id === nextServer);
-    if (chosen) {
-      showToast(`Switched stream server to ${chosen.label}`);
-    }
+    showToast(`Switched stream to ${nextServer}`);
   };
 
   const handleReturnToDetails = () => {
@@ -1531,7 +1630,7 @@ export function PlayerPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full">
             {sleepTimerMin > 0 && (
               <span
                 className={`rounded-full border px-3 py-1.5 text-[11px] font-extrabold backdrop-blur-md ${themeTokens.badge}`}
@@ -1833,53 +1932,94 @@ export function PlayerPage() {
           </div>
         )}
 
-        {/* Stream Server Switcher Bar (Instant 1-Tap Switch if Any Server Gates or Buffers) */}
+        {/* Background Auto-Failover Stream Mirror Bar + Manual Dropdown Menu */}
         <div
           data-tour="server-switcher"
-          className={`w-full rounded-2xl border px-3 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+          className={`relative z-30 w-full rounded-2xl border px-3 py-2 flex flex-wrap items-center justify-between gap-2 ${
             isLowRam ? "" : "backdrop-blur-xl"
           } ${themeTokens.surfacePanel}`}
         >
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5 sm:pb-0 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <span
-              className={`text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 ${themeTokens.subMutedText}`}
+              className={`h-2 w-2 rounded-full shrink-0 ${
+                serverStatus === "ready"
+                  ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                  : "bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.9)]"
+              }`}
+              aria-hidden="true"
+            />
+            <span
+              className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider shrink-0 ${themeTokens.subMutedText}`}
             >
-              Server:
+              Auto-Mirror:
             </span>
-            {PLAYER_SERVERS.map((srv) => {
-              const isSelected = activeServer === srv.id;
-              return (
-                <button
-                  key={srv.id}
-                  type="button"
-                  onClick={() => handleSelectServer(srv.id)}
-                  className={`shrink-0 rounded-xl border ${
-                    largeButtons ? "px-3.5 py-2 text-xs" : "px-2.5 py-1.5 text-[11px]"
-                  } font-extrabold whitespace-nowrap transition cursor-pointer focus:outline-none focus:ring-2 ${
-                    themeTokens.ring
-                  } ${
-                    isSelected
-                      ? `${themeTokens.nextBtn} border-white/35`
-                      : themeTokens.btnSecondary
-                  }`}
-                  title={`${srv.label} (${srv.badge})`}
+
+            {/* Manual Server Dropdown Menu (RABBiT TV Branded Mirrors Only) */}
+            <div ref={serverMenuRef} className="relative min-w-0 flex-1 sm:flex-initial sm:w-52">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsServerMenuOpen((open) => !open);
+                  setIsSeasonOpen(false);
+                  setIsEpisodeOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 rounded-xl border px-3 ${
+                  largeButtons ? "py-2.5 text-xs" : "py-1.5 text-[11px] sm:text-xs"
+                } font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.selectBtn} ${themeTokens.ring}`}
+                aria-haspopup="listbox"
+                aria-expanded={isServerMenuOpen}
+                title="Switch RABBiT TV Stream Mirror"
+              >
+                <span className="truncate font-mono text-white">
+                  {activeServer}
+                </span>
+                <span className="shrink-0 opacity-80">▾</span>
+              </button>
+
+              {isServerMenuOpen && (
+                <div
+                  role="listbox"
+                  className={`rabtv-vidsrc-protected absolute left-0 right-0 mt-1.5 z-[999] rounded-2xl border backdrop-blur-xl p-1.5 space-y-1 ${themeTokens.dropdownMenu}`}
                 >
-                  {srv.label}
-                </button>
-              );
-            })}
+                  {PLAYER_SERVERS.map((srv) => {
+                    const isSelected = activeServer === srv.id;
+                    return (
+                      <button
+                        key={srv.id}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={() => handleSelectServer(srv.id)}
+                        className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold transition cursor-pointer ${
+                          isSelected
+                            ? `${themeTokens.bg} text-white font-black`
+                            : `${themeTokens.mutedText} hover:bg-white/10 hover:text-white`
+                        }`}
+                      >
+                        <span className="font-mono truncate">{srv.label}</span>
+                        <span className="text-[10px] opacity-80 shrink-0">
+                          {isSelected ? "✓ Active" : srv.tag}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           <button
             type="button"
             onClick={() => {
+              iframeLoadedRef.current = false;
+              setServerStatus("connecting");
               setPlayerReloadNonce((n) => n + 1);
-              showToast("↻ Reloading video stream...");
+              showToast(`↻ Reloading ${activeServer}...`);
             }}
-            className={`shrink-0 self-end sm:self-auto rounded-xl border ${
-              largeButtons ? "px-3.5 py-2 text-xs" : "px-2.5 py-1.5 text-[11px]"
+            className={`shrink-0 rounded-xl border ${
+              largeButtons ? "px-3.5 py-2 text-xs" : "px-3 py-1.5 text-[11px]"
             } font-bold whitespace-nowrap transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
-            title="Reload current video player"
+            title="Reload current stream"
           >
             ↻ Reload
           </button>
@@ -1898,6 +2038,15 @@ export function PlayerPage() {
             key={`stable-player-${activeServer}-${mediaId}-${season}-${episode}-${playerReloadNonce}`}
             src={embedUrl}
             referrerPolicy="origin"
+            onLoad={() => {
+              iframeLoadedRef.current = true;
+              setServerStatus("ready");
+            }}
+            onError={() => {
+              if (!iframeLoadedRef.current) {
+                triggerBackgroundFailover(`${activeServer} failed`);
+              }
+            }}
             className="h-full w-full border-0"
             allowFullScreen
             allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
@@ -2118,19 +2267,9 @@ export function PlayerPage() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             >
-              <div className="flex items-center gap-2 min-w-0 relative z-10">
-                <span
-                  className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeTokens.accentBar}`}
-                />
-                <h2 className="rabtv-plr-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-                  ✨ Similar Recommended Titles
-                </h2>
-              </div>
-              <span
-                className={`rabtv-plr-section-meta relative z-10 font-bold px-2.5 py-1 rounded-full shrink-0 ${themeTokens.badge}`}
-              >
-                {mappedRecommendations.length} matches
-              </span>
+              <h2 className="rabtv-plr-section-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                ✨ Similar Recommended Titles
+              </h2>
             </div>
 
             <div className={gridColsClass}>
