@@ -63,32 +63,32 @@ const BACK_TO_HOME_BTN_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const DETAILS_VIEWPORT_STYLES = `
+  /* Base: Portrait Phones (< 640px) — Full-width button wrappers matching dividers & hero */
   .rabtv-det-top-bar {
     width: 100%;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
     gap: clamp(8px, 2vw, 14px);
     box-sizing: border-box;
   }
 
+  /* Full-width studded buttonwrapper.png holding Back to Home + IMDb cleanly */
   .rabtv-det-back-wrap {
     position: relative;
-    display: inline-flex;
+    width: 100%;
+    height: clamp(64px, 16.6vw, 86px);
+    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
+    display: flex;
     align-items: center;
-    justify-content: center;
-    height: clamp(56px, 14.5vw, 74px);
-    width: clamp(204px, 54vw, 276px);
-    max-width: 100%;
-    padding: clamp(7px, 1.8vw, 10px) clamp(18px, 4.8vw, 30px);
+    justify-content: space-evenly;
+    gap: clamp(10px, 2.6vw, 24px);
     box-sizing: border-box;
     border-radius: 9999px;
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
-    flex: 0 0 auto;
   }
 
   .rabtv-det-art-btn {
@@ -96,7 +96,9 @@ const DETAILS_VIEWPORT_STYLES = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 48%;
     height: 100%;
     background: transparent;
     border: 0;
@@ -116,16 +118,33 @@ const DETAILS_VIEWPORT_STYLES = `
     filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
   }
 
-  /* Viewport-locked single-row section header banner backed by full-height buttonwrapper.png */
+  .rabtv-det-imdb-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 0.9 1 0;
+    min-width: 0;
+    max-width: 44%;
+    height: 76%;
+    padding: 0 clamp(10px, 2.6vw, 18px);
+    border-radius: 9999px;
+    font-size: clamp(11px, 3vw, 14px);
+    white-space: nowrap;
+    box-sizing: border-box;
+  }
+
+  /* Full-width centered section header banner backed by buttonwrapper.png */
   .rabtv-det-section-banner {
     position: relative;
     width: 100%;
     height: clamp(54px, 13.8vw, 72px);
-    padding: 0 clamp(22px, 5.8vw, 44px);
+    padding: 0 clamp(24px, 6vw, 48px);
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
@@ -136,54 +155,67 @@ const DETAILS_VIEWPORT_STYLES = `
   }
 
   .rabtv-det-section-title {
-    font-size: clamp(13px, 3.5vw, 19px);
+    font-size: clamp(13.5px, 3.8vw, 20px);
     line-height: 1.1;
+    text-align: center;
   }
 
-  .rabtv-det-section-meta {
-    font-size: clamp(10px, 2.7vw, 12px);
-    line-height: 1.1;
-    white-space: nowrap;
-  }
-
+  /* Landscape Phones, Tablets, PCs, Google TV & Fire Sticks (>= 640px) */
   @media (min-width: 640px) {
     .rabtv-det-back-wrap {
-      height: clamp(60px, 6.2vw, 78px);
-      width: clamp(224px, 24vw, 300px);
-      padding: clamp(8px, 0.9vw, 11px) clamp(22px, 2.6vw, 34px);
+      width: 100%;
+      height: clamp(70px, 7.2vw, 94px);
+      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
+      gap: clamp(16px, 2.4vw, 36px);
+    }
+
+    .rabtv-det-art-btn {
+      max-width: 44%;
+    }
+
+    .rabtv-det-imdb-pill {
+      max-width: 38%;
+      height: 72%;
+      font-size: clamp(12px, 1.25vw, 15px);
     }
 
     .rabtv-det-section-banner {
-      height: clamp(60px, 6vw, 76px);
-      padding: 0 clamp(32px, 4vw, 52px);
+      height: clamp(58px, 5.8vw, 76px);
+      padding: 0 clamp(36px, 4.5vw, 60px);
     }
 
     .rabtv-det-section-title {
-      font-size: clamp(16px, 1.7vw, 21px);
-    }
-
-    .rabtv-det-section-meta {
-      font-size: clamp(11px, 1.1vw, 13px);
+      font-size: clamp(17px, 1.8vw, 23px);
     }
   }
 
-  @media (min-width: 640px) and (max-height: 480px) {
+  /* Short Phone Landscape Guard (max-height <= 500px) */
+  @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-det-back-wrap {
-      height: 48px;
-      width: 196px;
-      padding: 6px 18px;
+      height: clamp(52px, 13dvh, 64px);
+      padding: 7px clamp(24px, 4vw, 44px);
+    }
+
+    .rabtv-det-imdb-pill {
+      height: 76%;
+      font-size: 11px;
     }
 
     .rabtv-det-section-banner {
-      height: 52px;
-      padding: 0 28px;
+      height: clamp(48px, 12dvh, 58px);
+      padding: 0 32px;
     }
   }
 
+  /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
     .rabtv-det-back-wrap {
-      height: 76px;
-      width: 296px;
+      height: clamp(82px, 6vw, 98px);
+      padding: 12px 68px;
+    }
+
+    .rabtv-det-section-banner {
+      height: clamp(68px, 4.8vw, 82px);
     }
   }
 `;
@@ -1729,7 +1761,7 @@ export function DetailsPage() {
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none z-0" />
 
       <div className="relative z-10 max-w-5xl mx-auto min-w-0">
-        {/* Top Utility Bar: Backtohome.png inside Viewport-Locked Button Wrapper + IMDb Link */}
+        {/* Top Utility Bar: Full-Width Studded Button Wrapper Holding Back to Home + IMDb */}
         <div className="rabtv-det-top-bar mb-4">
           <div
             className="rabtv-det-back-wrap"
@@ -1750,18 +1782,20 @@ export function DetailsPage() {
                 decoding="async"
               />
             </Link>
-          </div>
 
-          <a
-            href={imdbLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-tour="imdb-link"
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-extrabold backdrop-blur-md transition hover:scale-105 focus:outline-none focus:ring-2 shrink-0 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
-            title="View Official IMDb Listing"
-          >
-            <span>⭐ IMDb ↗</span>
-          </a>
+            <a
+              href={imdbLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-tour="imdb-link"
+              className={`rabtv-det-imdb-pill border font-extrabold backdrop-blur-md transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${activeTheme.btnSecondary} ${activeTheme.ring}`}
+              title="View Official IMDb Listing"
+            >
+              <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                ⭐ IMDb ↗
+              </span>
+            </a>
+          </div>
         </div>
 
         <div className="mx-auto flex flex-col items-center gap-5 sm:gap-6">
@@ -2509,19 +2543,9 @@ export function DetailsPage() {
                   backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
                 }}
               >
-                <div className="flex items-center gap-2 min-w-0 relative z-10">
-                  <span
-                    className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${activeTheme.accentBar}`}
-                  />
-                  <h3 className="rabtv-det-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-                    ✨ Similar Recommended Titles
-                  </h3>
-                </div>
-                <span
-                  className={`rabtv-det-section-meta relative z-10 font-bold px-2.5 py-1 rounded-full shrink-0 ${activeTheme.badge}`}
-                >
-                  {mappedRecommendations.length} matches
-                </span>
+                <h3 className="rabtv-det-section-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                  ✨ Similar Recommended Titles
+                </h3>
               </div>
               <div className={gridColsClass}>
                 {mappedRecommendations.slice(0, 10).map((item) => (
