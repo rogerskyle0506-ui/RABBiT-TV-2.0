@@ -124,89 +124,91 @@ export const REAL_SURPRISE_ME_BTN_URL =
  * landscape phones, tablets, TVs, and projectors.
  */
 const VIEWPORT_HEADER_STYLES = `
-  /* Global Theme-Adaptive Artwork Tint Tokens (Inherited by All Pages & Wrappers) */
+  /* Global Alpha-Safe Punk Neon Theme Tokens (Inherited by All Pages & Wrappers)
+     Uses pixel-only hue-rotate + contour drop-shadow so transparent PNG edges
+     stay 100% invisible — ZERO rectangular or pill color slabs anywhere! */
   :root,
   html[data-theme="violet"] {
-    --rabtv-art-tint: #a855f7;
-    --rabtv-art-soft: rgba(139, 92, 246, 0.14);
-    --rabtv-art-glow: rgba(139, 92, 246, 0.34);
-    --rabtv-art-tint-opacity: 0.22;
-    --rabtv-btn-tint-opacity: 0.16;
+    --rabtv-neon-accent: #a855f7;
+    --rabtv-neon-glow: rgba(168, 85, 247, 0.34);
+    --rabtv-neon-line: linear-gradient(90deg, transparent 0%, rgba(168, 85, 247, 0.72) 50%, transparent 100%);
+    --rabtv-search-filter: saturate(1.06) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(168, 85, 247, 0.28));
+    --rabtv-wrap-filter: hue-rotate(-14deg) saturate(1.06) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(168, 85, 247, 0.26));
   }
 
   html[data-theme="red"] {
-    --rabtv-art-tint: #ef4444;
-    --rabtv-art-soft: rgba(220, 38, 38, 0.18);
-    --rabtv-art-glow: rgba(239, 68, 68, 0.42);
-    --rabtv-art-tint-opacity: 0.56;
-    --rabtv-btn-tint-opacity: 0.42;
+    --rabtv-neon-accent: #ef4444;
+    --rabtv-neon-glow: rgba(239, 68, 68, 0.38);
+    --rabtv-neon-line: linear-gradient(90deg, transparent 0%, rgba(239, 68, 68, 0.78) 50%, transparent 100%);
+    --rabtv-search-filter: hue-rotate(84deg) saturate(1.18) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(239, 68, 68, 0.32));
+    --rabtv-wrap-filter: hue-rotate(50deg) saturate(1.15) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(239, 68, 68, 0.30));
   }
 
   html[data-theme="midnight"] {
-    --rabtv-art-tint: #38bdf8;
-    --rabtv-art-soft: rgba(37, 99, 235, 0.18);
-    --rabtv-art-glow: rgba(56, 189, 248, 0.42);
-    --rabtv-art-tint-opacity: 0.54;
-    --rabtv-btn-tint-opacity: 0.40;
+    --rabtv-neon-accent: #38bdf8;
+    --rabtv-neon-glow: rgba(56, 189, 248, 0.38);
+    --rabtv-neon-line: linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.78) 50%, transparent 100%);
+    --rabtv-search-filter: hue-rotate(-56deg) saturate(1.12) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(56, 189, 248, 0.32));
+    --rabtv-wrap-filter: hue-rotate(-92deg) saturate(1.14) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(56, 189, 248, 0.30));
   }
 
   html[data-theme="emerald"] {
-    --rabtv-art-tint: #10b981;
-    --rabtv-art-soft: rgba(16, 185, 129, 0.18);
-    --rabtv-art-glow: rgba(16, 185, 129, 0.40);
-    --rabtv-art-tint-opacity: 0.54;
-    --rabtv-btn-tint-opacity: 0.40;
+    --rabtv-neon-accent: #10b981;
+    --rabtv-neon-glow: rgba(16, 185, 129, 0.38);
+    --rabtv-neon-line: linear-gradient(90deg, transparent 0%, rgba(16, 185, 129, 0.78) 50%, transparent 100%);
+    --rabtv-search-filter: hue-rotate(-122deg) saturate(1.14) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(16, 185, 129, 0.30));
+    --rabtv-wrap-filter: hue-rotate(-155deg) saturate(1.16) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(16, 185, 129, 0.28));
   }
 
   html[data-theme="amber"] {
-    --rabtv-art-tint: #f59e0b;
-    --rabtv-art-soft: rgba(217, 119, 6, 0.18);
-    --rabtv-art-glow: rgba(245, 158, 11, 0.42);
-    --rabtv-art-tint-opacity: 0.54;
-    --rabtv-btn-tint-opacity: 0.40;
+    --rabtv-neon-accent: #f59e0b;
+    --rabtv-neon-glow: rgba(245, 158, 11, 0.38);
+    --rabtv-neon-line: linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.78) 50%, transparent 100%);
+    --rabtv-search-filter: hue-rotate(122deg) saturate(1.18) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(245, 158, 11, 0.32));
+    --rabtv-wrap-filter: hue-rotate(92deg) saturate(1.18) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(245, 158, 11, 0.30));
   }
 
   html[data-theme="cyan"] {
-    --rabtv-art-tint: #06b6d4;
-    --rabtv-art-soft: rgba(6, 182, 212, 0.18);
-    --rabtv-art-glow: rgba(34, 211, 238, 0.42);
-    --rabtv-art-tint-opacity: 0.54;
-    --rabtv-btn-tint-opacity: 0.40;
+    --rabtv-neon-accent: #06b6d4;
+    --rabtv-neon-glow: rgba(34, 211, 238, 0.38);
+    --rabtv-neon-line: linear-gradient(90deg, transparent 0%, rgba(34, 211, 238, 0.78) 50%, transparent 100%);
+    --rabtv-search-filter: hue-rotate(-84deg) saturate(1.15) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(34, 211, 238, 0.32));
+    --rabtv-wrap-filter: hue-rotate(-118deg) saturate(1.15) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 6px rgba(34, 211, 238, 0.30));
   }
 
   /* Base: Portrait Phones (< 640px) — Strict 2-Row Viewport-Locked Grid */
   .rabtv-hdr-bar {
     --hdr-u: clamp(36px, 10vw, 52px);
-    min-height: clamp(124px, 34vw, 166px);
+    min-height: clamp(122px, 33vw, 162px);
   }
 
-  .rabtv-hdr-wall-tint {
-    background: radial-gradient(
-      ellipse at center,
-      var(--rabtv-art-tint) 0%,
-      transparent 95%
-    );
-    mix-blend-mode: color;
-    opacity: calc(var(--rabtv-art-tint-opacity) * 0.72);
+  .rabtv-hdr-laser {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 1.5px;
+    background: var(--rabtv-neon-line);
+    pointer-events: none;
+    z-index: 20;
   }
 
   .rabtv-hdr-inner {
     width: 100%;
     max-width: 1440px;
     margin-inline: auto;
-    padding: clamp(8px, 2.2vw, 14px) clamp(8px, 2.2vw, 24px);
+    padding: clamp(7px, 2vw, 13px) clamp(8px, 2.2vw, 24px);
     display: grid;
     grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
     grid-template-areas:
       "profile logo"
       "search  search";
     align-items: center;
-    row-gap: clamp(8px, 2.2vw, 12px);
+    row-gap: clamp(6px, 1.8vw, 11px);
     column-gap: clamp(6px, 1.8vw, 14px);
     box-sizing: border-box;
   }
 
-  /* LEFT: Full-Sized Menu / Profile Pill (width: 100% prevents Grid shrink-to-fit squishing!) */
+  /* LEFT: Pure, Clean Full-Sized Menu / Profile Pill (ZERO color overlay!) */
   .rabtv-hdr-profile-wrap {
     grid-area: profile;
     width: 100%;
@@ -219,7 +221,6 @@ const VIEWPORT_HEADER_STYLES = `
 
   .rabtv-hdr-profile-btn {
     position: relative;
-    isolation: isolate;
     display: flex;
     align-items: center;
     width: 100%;
@@ -230,27 +231,13 @@ const VIEWPORT_HEADER_STYLES = `
     flex: 0 1 auto;
     box-sizing: border-box;
     overflow: hidden;
-    filter: drop-shadow(0 3px 9px rgba(0, 0, 0, 0.85))
-      drop-shadow(0 0 8px var(--rabtv-art-glow));
-  }
-
-  /* Subtle theme tint over sidebar.png neon frame (avatar & text sit above at z-index: 12) */
-  .rabtv-hdr-profile-btn::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 9999px;
-    background: var(--rabtv-art-tint);
-    mix-blend-mode: color;
-    opacity: var(--rabtv-art-tint-opacity);
-    pointer-events: none;
-    z-index: 2;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.88));
   }
 
   /* Calibrated directly onto the glowing avatar ring of sidebar.png */
   .rabtv-hdr-profile-avatar {
     position: absolute;
-    z-index: 12;
+    z-index: 10;
     left: 20.4%;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -266,7 +253,7 @@ const VIEWPORT_HEADER_STYLES = `
 
   .rabtv-hdr-profile-label {
     position: relative;
-    z-index: 12;
+    z-index: 10;
     display: block;
     width: 100%;
     min-width: 0;
@@ -278,7 +265,7 @@ const VIEWPORT_HEADER_STYLES = `
     font-size: clamp(11px, 3.2vw, 14.5px);
   }
 
-  /* RIGHT: Big, Crisp RABBiT TV Home Logo (width: 100% prevents Grid collapse!) */
+  /* RIGHT: Pure, Crisp RABBiT TV Home Logo (ZERO color overlay!) */
   .rabtv-hdr-logo-wrap {
     grid-area: logo;
     width: 100%;
@@ -291,30 +278,15 @@ const VIEWPORT_HEADER_STYLES = `
 
   .rabtv-hdr-logo {
     position: relative;
-    isolation: isolate;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     width: 100%;
-    max-width: 242px;
+    max-width: 244px;
     height: clamp(58px, 16.8vw, 78px);
     flex: 0 1 auto;
     box-sizing: border-box;
     overflow: visible;
-    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.9))
-      drop-shadow(0 0 8px var(--rabtv-art-glow));
-  }
-
-  .rabtv-hdr-logo::after {
-    content: "";
-    position: absolute;
-    inset: 2px;
-    border-radius: 9999px;
-    background: var(--rabtv-art-tint);
-    mix-blend-mode: color;
-    opacity: calc(var(--rabtv-btn-tint-opacity) * 0.72);
-    pointer-events: none;
-    z-index: 2;
   }
 
   .rabtv-hdr-logo-img {
@@ -322,11 +294,12 @@ const VIEWPORT_HEADER_STYLES = `
     height: 100%;
     object-fit: contain;
     object-position: right center;
-    transform: scale(1.22);
+    transform: scale(1.24);
     transform-origin: right center;
+    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.92));
   }
 
-  /* ROW 2 (Portrait) / CENTER (Landscape, Tablet, PC, TV): Unclipped Theme-Tinted Search Bar */
+  /* ROW 2 (Portrait) / CENTER (Landscape, Tablet, PC, TV): Alpha-Clean Theme-Matched Search Bar */
   .rabtv-hdr-search-form {
     grid-area: search;
     width: 100%;
@@ -339,29 +312,25 @@ const VIEWPORT_HEADER_STYLES = `
 
   .rabtv-hdr-search-shell {
     position: relative;
-    isolation: isolate;
     display: flex;
     align-items: center;
-    height: clamp(46px, 13vw, 60px);
+    height: clamp(46px, 13vw, 58px);
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    overflow: hidden;
-    border-radius: 9999px;
-    filter: drop-shadow(0 3px 9px rgba(0, 0, 0, 0.85))
-      drop-shadow(0 0 8px var(--rabtv-art-glow));
+    overflow: visible;
   }
 
-  .rabtv-hdr-search-shell::after {
-    content: "";
+  /* Dedicated PNG art layer so theme hue-rotate ONLY tints the neon lines (zero box, crisp white text!) */
+  .rabtv-hdr-search-bg {
     position: absolute;
     inset: 0;
-    border-radius: 9999px;
-    background: var(--rabtv-art-tint);
-    mix-blend-mode: color;
-    opacity: var(--rabtv-art-tint-opacity);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    filter: var(--rabtv-search-filter);
     pointer-events: none;
-    z-index: 2;
+    z-index: 0;
   }
 
   .rabtv-hdr-search-input {
@@ -391,12 +360,11 @@ const VIEWPORT_HEADER_STYLES = `
     background: transparent;
     border-radius: 9999px;
     cursor: pointer;
-    transition: background-color 150ms ease, transform 120ms ease, box-shadow 150ms ease;
+    transition: background-color 150ms ease, transform 120ms ease;
   }
 
   .rabtv-hdr-search-pill-hit:hover {
     background-color: rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.16);
   }
 
   .rabtv-hdr-search-pill-hit:active {
@@ -408,13 +376,13 @@ const VIEWPORT_HEADER_STYLES = `
   @media (min-width: 640px) {
     .rabtv-hdr-bar {
       --hdr-u: clamp(36px, 5vw, 58px);
-      min-height: clamp(78px, 9.8vw, 128px);
+      min-height: clamp(76px, 9.6vw, 124px);
     }
 
     .rabtv-hdr-inner {
       grid-template-columns: auto minmax(0, 1fr) auto;
       grid-template-areas: "profile search logo";
-      padding: clamp(7px, 1.1vw, 16px) clamp(10px, 2vw, 28px);
+      padding: clamp(7px, 1.1vw, 15px) clamp(10px, 2vw, 28px);
       column-gap: clamp(10px, 1.6vw, 22px);
       row-gap: 0;
     }
@@ -443,7 +411,7 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-search-shell {
-      height: clamp(46px, 5.6vw, 64px);
+      height: clamp(46px, 5.5vw, 62px);
       width: 100%;
       max-width: 600px;
     }
@@ -461,7 +429,7 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-logo-img {
-      transform: scale(1.18);
+      transform: scale(1.20);
       transform-origin: right center;
     }
   }
@@ -469,7 +437,7 @@ const VIEWPORT_HEADER_STYLES = `
   /* Short Phone Landscape Guard (e.g. Android phone rotated sideways, max-height <= 500px) */
   @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-hdr-bar {
-      min-height: clamp(62px, 16dvh, 80px);
+      min-height: clamp(60px, 15.5dvh, 78px);
     }
 
     .rabtv-hdr-inner {
@@ -500,7 +468,7 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-search-shell {
-      height: clamp(52px, 4.6vw, 64px);
+      height: clamp(52px, 4.6vw, 62px);
     }
 
     .rabtv-hdr-logo {
@@ -512,7 +480,7 @@ const VIEWPORT_HEADER_STYLES = `
   /* Google TV, Fire TV Stick, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
     .rabtv-hdr-bar {
-      min-height: clamp(98px, 7.6vw, 134px);
+      min-height: clamp(96px, 7.4vw, 130px);
     }
 
     .rabtv-hdr-profile-btn {
@@ -521,7 +489,7 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-hdr-search-shell {
-      height: clamp(56px, 4.2vw, 68px);
+      height: clamp(54px, 4.1vw, 66px);
       max-width: 640px;
     }
 
@@ -838,15 +806,14 @@ const HeaderSearchBar = memo(function HeaderSearchBar({
       data-tour="header-search"
       className="rabtv-hdr-search-form"
     >
-      <div
-        className="rabtv-hdr-search-shell bg-transparent border-0 opacity-95 hover:opacity-100 focus-within:opacity-100 transition-opacity"
-        style={{
-          backgroundImage: `url(${SEARCHWRAPPER})`,
-          backgroundSize: "100% 100%",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center center",
-        }}
-      >
+      <div className="rabtv-hdr-search-shell bg-transparent border-0 opacity-95 hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <div
+          className="rabtv-hdr-search-bg"
+          aria-hidden="true"
+          style={{
+            backgroundImage: `url(${SEARCHWRAPPER})`,
+          }}
+        />
         <input
           ref={inputRef}
           type="search"
@@ -1454,20 +1421,20 @@ function RootComponent() {
           {/* Viewport-Proportional Theme-Matched Glass Header */}
           <header
             data-tour="app-header"
-            className={`rabtv-vidsrc-protected rabtv-hdr-bar sticky top-0 z-40 border-b transition-colors duration-300 relative overflow-hidden flex items-center ${
+            className={`rabtv-vidsrc-protected rabtv-hdr-bar sticky top-0 z-40 border-b border-white/5 transition-colors duration-300 relative overflow-hidden flex items-center bg-black/70 backdrop-blur-xl shadow-[0_10px_32px_rgba(0,0,0,0.72)] ${
               isPlayerRoute ? "rabtv-header-player-route" : ""
-            } ${tokens.headerBg} ${tokens.headerBorder} ${tokens.glowClass}`}
+            }`}
           >
-            {/* Theme-Blended Header Wallpaper */}
-            <div className="absolute inset-0 pointer-events-none opacity-50">
+            {/* Clean Punk Neon Header Wallpaper with Smooth Bottom Fade */}
+            <div className="absolute inset-0 pointer-events-none opacity-48">
               <img
                 src={RABBITHEADERWALL}
                 alt=""
-                className="w-full h-full object-cover object-center brightness-110 contrast-105"
+                className="w-full h-full object-cover object-center brightness-105 contrast-105"
               />
             </div>
-            <div className="rabtv-hdr-wall-tint absolute inset-0 pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/20 to-black/55 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/25 to-black/75 pointer-events-none" />
+            <div className="rabtv-hdr-laser" aria-hidden="true" />
 
             <div className="relative z-10 rabtv-hdr-inner">
               {/* LEFT: Viewport-Locked Sidebar Menu / Profile Pill + Optional TV Badges */}
