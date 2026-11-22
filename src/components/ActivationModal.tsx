@@ -1,5 +1,5 @@
 // src/components/ActivationModal.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   CardSize,
   StreamQuality,
@@ -15,18 +15,45 @@ import {
   saveAgeLockPinSecure,
   isValidAgeLockPin,
   applyAllSettingsToDocument,
+  getOrCreateDeviceId,
+  getLargeButtons,
+  setLargeButtons,
+  getAutoPlayNext,
+  setAutoPlayNext,
 } from "@/lib/settings";
 import { sendPermanentActivationAlert } from "@/lib/report";
+import { bgAudio } from "@/lib/background-audio";
+import { getDefaultHeartbeatStationUrl } from "@/components/sidebar";
 
-// ——— Private GitHub Gist Key Verification & Fleet Policy Management ———
+// ——— Private GitHub Gist Key Verification, Trial Registry & Admin Alerts ———
 const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
 const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
+const ADMIN_PASSCODE_ENV =
+  ((import.meta as any).env?.VITE_ADMIN_CODE as string) || "";
 const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
 
 const ADMIN_NAME = "Rabbit";
 const ADMIN_BIRTH_YEAR = 1988;
 const TRIAL_CODE = "9654";
-const AUTH_LOCKOUT_KEY = "rabtv_activation_lockout_until";
+const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+const GIST_TIMEOUT_MS = 9000;
+const REQUEST_COOLDOWN_MS = 5 * 60 * 1000; // 5-minute anti-spam cooldown
+
+const SUPPORT_PHONE_RAW = "17058093865";
+const SUPPORT_PHONE_DISPLAY = "(705) 809-3865";
+
+// Multi-layer persistence keys (localStorage + sessionStorage + IndexedDB)
+const AUTH_LOCKOUT_KEY = "rabtv_activation_lockout_until_v2";
+const AUTH_STRIKES_KEY = "rabtv_activation_strikes_v2";
+const AUTH_LAST_TICK_KEY = "rabtv_monotonic_clock_guard_v1";
+const TRIAL_USED_LOCAL_KEY = "rabtv_trial_used_flag";
+const TRIAL_FP_LOCAL_KEY = "rabtv_trial_hw_fp_v1";
+const ACCESS_SIG_KEY = "rabtv_access_integrity_sig_v1";
+const REQUEST_COOLDOWN_KEY = "rabtv_admin_req_cooldown_v1";
+const ADMIN_SEEN_REQS_KEY = "rabtv_admin_seen_req_ids_v1";
+
+const IDB_VAULT_NAME = "rabtv_secure_vault_v1";
+const IDB_STORE_NAME = "kv";
 
 const BANNER_IMAGE_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/HeaderFamily.jpg";
@@ -35,91 +62,623 @@ const RABBIT_HEADER_PILL =
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
-function getExpectedAdminAge(): number {
-  return new Date().getFullYear() - ADMIN_BIRTH_YEAR;
+interface RadioPreset {
+  id: string;
+  label: string;
+  vibe: string;
+  url: string;
 }
 
-function isAdminCredentials(name: string, age: number): boolean {
+interface ActivationRequestRecord {
+  id: string;
+  priority: "HIGH";
+  name: string;
+  age: number;
+  deviceId: string;
+  hwFingerprint: string;
+  note: string;
+  requestedAt: string;
+  seenByAdmin?: boolean;
+}
+
+interface TrialRegistryEntry {
+  hwFingerprint: string;
+  deviceId: string;
+  profileHash: string;
+  name: string;
+  age: number;
+  startedAt: number;
+  expiresAt: number;
+  claimedIso: string;
+}
+
+interface ModalThemeTokens {
+  frameBorder: string;
+  frameShadow: string;
+  laserTop: string;
+  laserBottom: string;
+  avatarBorder: string;
+  sectionBorder: string;
+  inputClass: string;
+  labelAccent: string;
+  badgeClass: string;
+  secondaryBtn: string;
+  toggleOn: string;
+  focusRing: string;
+  alertToastBg: string;
+}
+
+function getModalThemeTokens(theme: AppTheme): ModalThemeTokens {
+  switch (theme) {
+    case "red":
+      return {
+        frameBorder: "border-red-500/45",
+        frameShadow:
+          "shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_38px_rgba(239,68,68,0.28)]",
+        laserTop: "from-red-500 via-rose-400 to-orange-500",
+        laserBottom: "from-orange-500 via-rose-400 to-red-500",
+        avatarBorder: "border-red-400/60 shadow-[0_0_24px_rgba(239,68,68,0.4)]",
+        sectionBorder: "border-red-500/20",
+        inputClass:
+          "border-red-500/35 bg-black/80 text-white placeholder-zinc-400 focus:border-red-400 focus:ring-2 focus:ring-red-500/60",
+        labelAccent: "text-red-300",
+        badgeClass: "bg-red-950/75 border-red-500/40 text-red-200",
+        secondaryBtn:
+          "bg-red-950/55 hover:bg-red-900/80 border-red-500/35 text-red-100 hover:text-white",
+        toggleOn: "bg-red-600",
+        focusRing: "focus:ring-red-400",
+        alertToastBg:
+          "bg-zinc-950/96 border-red-400/80 shadow-[0_18px_50px_rgba(239,68,68,0.45)]",
+      };
+    case "midnight":
+      return {
+        frameBorder: "border-sky-400/45",
+        frameShadow:
+          "shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_38px_rgba(56,189,248,0.28)]",
+        laserTop: "from-blue-500 via-sky-400 to-cyan-400",
+        laserBottom: "from-cyan-400 via-sky-400 to-blue-500",
+        avatarBorder:
+          "border-sky-400/60 shadow-[0_0_24px_rgba(56,189,248,0.4)]",
+        sectionBorder: "border-blue-500/20",
+        inputClass:
+          "border-blue-500/35 bg-black/80 text-white placeholder-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/60",
+        labelAccent: "text-sky-300",
+        badgeClass: "bg-blue-950/75 border-blue-500/40 text-sky-200",
+        secondaryBtn:
+          "bg-blue-950/55 hover:bg-blue-900/80 border-blue-500/35 text-sky-100 hover:text-white",
+        toggleOn: "bg-blue-600",
+        focusRing: "focus:ring-sky-400",
+        alertToastBg:
+          "bg-slate-950/96 border-sky-400/80 shadow-[0_18px_50px_rgba(56,189,248,0.45)]",
+      };
+    case "emerald":
+      return {
+        frameBorder: "border-emerald-400/45",
+        frameShadow:
+          "shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_38px_rgba(16,185,129,0.28)]",
+        laserTop: "from-emerald-400 via-teal-400 to-green-500",
+        laserBottom: "from-green-500 via-teal-400 to-emerald-400",
+        avatarBorder:
+          "border-emerald-400/60 shadow-[0_0_24px_rgba(16,185,129,0.4)]",
+        sectionBorder: "border-emerald-500/20",
+        inputClass:
+          "border-emerald-500/35 bg-black/80 text-white placeholder-neutral-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/60",
+        labelAccent: "text-emerald-300",
+        badgeClass: "bg-emerald-950/75 border-emerald-500/40 text-emerald-200",
+        secondaryBtn:
+          "bg-emerald-950/55 hover:bg-emerald-900/80 border-emerald-500/35 text-emerald-100 hover:text-white",
+        toggleOn: "bg-emerald-600",
+        focusRing: "focus:ring-emerald-400",
+        alertToastBg:
+          "bg-neutral-950/96 border-emerald-400/80 shadow-[0_18px_50px_rgba(16,185,129,0.45)]",
+      };
+    case "amber":
+      return {
+        frameBorder: "border-amber-400/45",
+        frameShadow:
+          "shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_38px_rgba(245,158,11,0.28)]",
+        laserTop: "from-amber-400 via-yellow-400 to-orange-500",
+        laserBottom: "from-orange-500 via-yellow-400 to-amber-400",
+        avatarBorder:
+          "border-amber-400/60 shadow-[0_0_24px_rgba(245,158,11,0.4)]",
+        sectionBorder: "border-amber-500/20",
+        inputClass:
+          "border-amber-500/35 bg-black/80 text-white placeholder-stone-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/60",
+        labelAccent: "text-amber-300",
+        badgeClass: "bg-amber-950/75 border-amber-500/40 text-amber-200",
+        secondaryBtn:
+          "bg-amber-950/55 hover:bg-amber-900/80 border-amber-500/35 text-amber-100 hover:text-white",
+        toggleOn: "bg-amber-600",
+        focusRing: "focus:ring-amber-400",
+        alertToastBg:
+          "bg-stone-950/96 border-amber-400/80 shadow-[0_18px_50px_rgba(245,158,11,0.45)]",
+      };
+    case "cyan":
+      return {
+        frameBorder: "border-cyan-400/45",
+        frameShadow:
+          "shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_38px_rgba(6,182,212,0.28)]",
+        laserTop: "from-cyan-400 via-teal-400 to-sky-500",
+        laserBottom: "from-sky-500 via-teal-400 to-cyan-400",
+        avatarBorder:
+          "border-cyan-400/60 shadow-[0_0_24px_rgba(6,182,212,0.4)]",
+        sectionBorder: "border-cyan-500/20",
+        inputClass:
+          "border-cyan-500/35 bg-black/80 text-white placeholder-slate-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/60",
+        labelAccent: "text-cyan-300",
+        badgeClass: "bg-cyan-950/75 border-cyan-500/40 text-cyan-200",
+        secondaryBtn:
+          "bg-cyan-950/55 hover:bg-cyan-900/80 border-cyan-500/35 text-cyan-100 hover:text-white",
+        toggleOn: "bg-cyan-600",
+        focusRing: "focus:ring-cyan-400",
+        alertToastBg:
+          "bg-slate-950/96 border-cyan-400/80 shadow-[0_18px_50px_rgba(6,182,212,0.45)]",
+      };
+    case "violet":
+    default:
+      return {
+        frameBorder: "border-violet-400/45",
+        frameShadow:
+          "shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_38px_rgba(139,92,246,0.28)]",
+        laserTop: "from-violet-500 via-purple-400 to-indigo-400",
+        laserBottom: "from-indigo-400 via-purple-400 to-violet-500",
+        avatarBorder:
+          "border-violet-400/60 shadow-[0_0_24px_rgba(139,92,246,0.4)]",
+        sectionBorder: "border-violet-500/20",
+        inputClass:
+          "border-violet-500/35 bg-black/80 text-white placeholder-slate-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/60",
+        labelAccent: "text-violet-300",
+        badgeClass: "bg-purple-950/75 border-violet-500/40 text-violet-200",
+        secondaryBtn:
+          "bg-purple-950/55 hover:bg-purple-900/80 border-violet-500/35 text-purple-100 hover:text-white",
+        toggleOn: "bg-violet-600",
+        focusRing: "focus:ring-violet-400",
+        alertToastBg:
+          "bg-slate-950/96 border-violet-400/80 shadow-[0_18px_50px_rgba(139,92,246,0.45)]",
+      };
+  }
+}
+
+// ——— Security & Crypto Utilities ———
+
+function sanitizeText(raw: string, maxLen = 40): string {
+  return String(raw || "")
+    .replace(/[\u200B-\u200D\uFEFF\x00-\x1F\x7F<>]/g, "")
+    .trim()
+    .slice(0, maxLen);
+}
+
+/** Constant-time string comparison to prevent timing side-channels */
+function safeEqual(a: string, b: string): boolean {
+  const s1 = String(a || "");
+  const s2 = String(b || "");
+  let diff = s1.length ^ s2.length;
+  const max = Math.max(s1.length, s2.length);
+  for (let i = 0; i < max; i++) {
+    diff |= (s1.charCodeAt(i) || 0) ^ (s2.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  try {
+    if (typeof crypto !== "undefined" && crypto.subtle) {
+      const data = new TextEncoder().encode(input);
+      const buf = await crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    }
+  } catch {
+    // fallback below for legacy Android WebViews without subtle crypto
+  }
+  let h1 = 0xdeadbeef ^ input.length;
+  let h2 = 0x41c6ce57 ^ input.length;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 =
+    Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^
+    Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 =
+    Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^
+    Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   return (
-    name.trim().toLowerCase() === ADMIN_NAME.toLowerCase() &&
-    age === getExpectedAdminAge()
+    (h2 >>> 0).toString(16).padStart(8, "0") +
+    (h1 >>> 0).toString(16).padStart(8, "0")
   );
 }
 
 /**
- * Checks remote `admin_config.json` on Gist to see if 7-day trials are currently allowed.
+ * Deterministic hardware/GPU/display fingerprint that survives localStorage clears
+ * and APK reinstalls on the same phone, tablet, Fire Stick, TV, or projector.
  */
-async function checkRemoteTrialAllowed(): Promise<{
-  allowed: boolean;
-  reason?: string;
-}> {
-  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return { allowed: true };
+async function computeHardwareFingerprint(): Promise<string> {
+  if (typeof window === "undefined") return "ssr-device";
+  let gpuInfo = "no-webgl";
   try {
-    const res = await fetch(GIST_API_URL, {
+    const canvas = document.createElement("canvas");
+    const gl =
+      (canvas.getContext("webgl") as WebGLRenderingContext | null) ||
+      (canvas.getContext("experimental-webgl") as WebGLRenderingContext | null);
+    if (gl) {
+      const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+      if (dbg) {
+        const vendor = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) || "";
+        const renderer = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "";
+        gpuInfo = `${vendor}|${renderer}`;
+      }
+    }
+  } catch {
+    // ignore WebGL restrictions
+  }
+
+  const nav = navigator as any;
+  const tz =
+    typeof Intl !== "undefined"
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone || ""
+      : "";
+  const screenDims = [
+    Math.min(window.screen?.width || 0, window.screen?.height || 0),
+    Math.max(window.screen?.width || 0, window.screen?.height || 0),
+    window.screen?.colorDepth || 0,
+    Math.round((window.devicePixelRatio || 1) * 100),
+  ].join("x");
+
+  // Extract stable Android/device model signature from UA while ignoring mutable app/chrome build numbers
+  const ua = (navigator.userAgent || "").replace(/Chrome\/[\d.]+/g, "Chrome");
+  const modelMatch = ua.match(/\(([^)]+)\)/);
+  const stablePlatform = modelMatch ? modelMatch[1] : navigator.platform || "";
+
+  const rawSignals = [
+    stablePlatform,
+    screenDims,
+    String(navigator.hardwareConcurrency || 0),
+    String(nav.deviceMemory || 0),
+    tz,
+    navigator.language || "",
+    gpuInfo,
+  ].join("::");
+
+  const digest = await sha256Hex(`rabtv-hw-v2::${rawSignals}`);
+  return digest.slice(0, 32);
+}
+
+// ——— IndexedDB Secondary Vault (Survives casual localStorage wipes) ———
+
+function idbOpen(): Promise<IDBDatabase | null> {
+  if (typeof window === "undefined" || !("indexedDB" in window)) {
+    return Promise.resolve(null);
+  }
+  return new Promise((resolve) => {
+    try {
+      const req = window.indexedDB.open(IDB_VAULT_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE_NAME)) {
+          db.createObjectStore(IDB_STORE_NAME);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function idbGet(key: string): Promise<string | null> {
+  const db = await idbOpen();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE_NAME, "readonly");
+      const req = tx.objectStore(IDB_STORE_NAME).get(key);
+      req.onsuccess = () => resolve(req.result != null ? String(req.result) : null);
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function idbSet(key: string, value: string): Promise<void> {
+  const db = await idbOpen();
+  if (!db) return;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE_NAME, "readwrite");
+      tx.objectStore(IDB_STORE_NAME).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
+function readPersistentNumber(key: string): number {
+  if (typeof window === "undefined") return 0;
+  const s = Number(sessionStorage.getItem(key) || 0);
+  const l = Number(localStorage.getItem(key) || 0);
+  return Math.max(isNaN(s) ? 0 : s, isNaN(l) ? 0 : l);
+}
+
+function writePersistentNumber(key: string, val: number): void {
+  if (typeof window === "undefined") return;
+  const str = String(val);
+  try {
+    sessionStorage.setItem(key, str);
+  } catch {
+    // ignore
+  }
+  try {
+    localStorage.setItem(key, str);
+  } catch {
+    // ignore
+  }
+  void idbSet(key, str);
+}
+
+function getExpectedAdminAge(): number {
+  return new Date().getFullYear() - ADMIN_BIRTH_YEAR;
+}
+
+function isAdminIdentity(name: string, age: number): boolean {
+  return (
+    safeEqual(name.trim().toLowerCase(), ADMIN_NAME.toLowerCase()) &&
+    age === getExpectedAdminAge()
+  );
+}
+
+function verifyAdminPasscode(enteredCode: string): boolean {
+  const clean = sanitizeText(enteredCode, 32);
+  if (!clean) return false;
+  const expected = ADMIN_PASSCODE_ENV.trim() || String(ADMIN_BIRTH_YEAR);
+  return safeEqual(clean, expected);
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs = GIST_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+async function fetchGistBundle(): Promise<{
+  ok: boolean;
+  files?: Record<string, { content?: string }>;
+  serverTimeMs: number;
+}> {
+  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
+    return { ok: false, serverTimeMs: Date.now() };
+  }
+  const res = await fetchWithTimeout(GIST_API_URL, {
+    headers: {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "User-Agent": "RabbitTV-App",
+    },
+    cache: "no-store",
+  });
+  const dateHeader = res.headers.get("date");
+  const parsedServerMs = dateHeader ? Date.parse(dateHeader) : NaN;
+  const serverTimeMs = !isNaN(parsedServerMs) ? parsedServerMs : Date.now();
+  if (!res.ok) return { ok: false, serverTimeMs };
+  const data = await res.json();
+  return { ok: true, files: data?.files || {}, serverTimeMs };
+}
+
+async function patchGistFiles(
+  files: Record<string, { content: string }>
+): Promise<boolean> {
+  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return false;
+  try {
+    const res = await fetchWithTimeout(GIST_API_URL, {
+      method: "PATCH",
       headers: {
         Authorization: `Bearer ${GITHUB_TOKEN}`,
         Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
         "User-Agent": "RabbitTV-App",
       },
-      cache: "no-store",
+      body: JSON.stringify({ files }),
     });
-    if (!res.ok) return { allowed: true };
-    const gistData = await res.json();
-    const rawConfig = gistData.files?.["admin_config.json"]?.content;
-    if (!rawConfig) return { allowed: true };
-
-    const parsed = JSON.parse(rawConfig);
-    if (parsed && parsed.allowTrials === false) {
-      return {
-        allowed: false,
-        reason:
-          "⚠️ 7-Day Free Trials are currently paused by the administrator. Please request a full activation code below.",
-      };
-    }
-    return { allowed: true };
+    return res.ok;
   } catch {
-    return { allowed: true };
+    return false;
   }
 }
 
 /**
- * Verifies and consumes a single-use unlock key from `keys.json` on Gist.
+ * Fail-closed hardened 7-Day Trial validator & remote registry writer.
+ * Blocks reinstall / clear-data / clock-rollback / multi-account-same-device bypasses.
+ */
+async function verifyAndClaimHardenedTrial(
+  name: string,
+  age: number,
+  deviceId: string,
+  hwFingerprint: string
+): Promise<{
+  allowed: boolean;
+  serverNowMs?: number;
+  errorMsg?: string;
+}> {
+  // 1. Check all local vaults (localStorage + IndexedDB)
+  const localUsed =
+    localStorage.getItem(TRIAL_USED_LOCAL_KEY) === "true" ||
+    localStorage.getItem(TRIAL_FP_LOCAL_KEY) === hwFingerprint;
+  const idbUsed = (await idbGet(TRIAL_USED_LOCAL_KEY)) === "true";
+  if (localUsed || idbUsed) {
+    return {
+      allowed: false,
+      errorMsg:
+        "⚠️ A 7-day free trial has already been used on this device and cannot be reset or reclaimed.",
+    };
+  }
+
+  // 2. Require online verification (fail-closed — Airplane Mode cannot bypass trial checks)
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return {
+      allowed: false,
+      errorMsg:
+        "📡 An active internet connection is required to verify and start your 7-day trial.",
+    };
+  }
+
+  try {
+    const bundle = await fetchGistBundle();
+    if (!bundle.ok || !bundle.files) {
+      return {
+        allowed: false,
+        errorMsg:
+          "⚠️ Could not reach the activation server to verify trial eligibility. Please check your connection and try again.",
+      };
+    }
+
+    // 3. Anti-clock-tampering check (> 15 min drift from GitHub server clock blocks bypass)
+    const clockDriftMs = Math.abs(Date.now() - bundle.serverTimeMs);
+    if (clockDriftMs > 15 * 60 * 1000) {
+      return {
+        allowed: false,
+        errorMsg:
+          "🕒 Your device date/time appears out of sync. Enable Automatic Date & Time in device settings to start a trial.",
+      };
+    }
+
+    // 4. Remote admin pause switch (`admin_config.json`)
+    const rawConfig = bundle.files["admin_config.json"]?.content;
+    if (rawConfig) {
+      try {
+        const cfg = JSON.parse(rawConfig);
+        if (cfg && cfg.allowTrials === false) {
+          return {
+            allowed: false,
+            errorMsg:
+              "⚠️ 7-Day Free Trials are currently paused by the administrator. Tap 'Message Admin for Code' below to request full access.",
+          };
+        }
+      } catch {
+        // ignore malformed config
+      }
+    }
+
+    // 5. Remote device & identity trial registry (`trial_devices.json`)
+    const profileHash = (
+      await sha256Hex(`${name.trim().toLowerCase()}::${age}`)
+    ).slice(0, 24);
+
+    let registry: TrialRegistryEntry[] = [];
+    const rawRegistry = bundle.files["trial_devices.json"]?.content;
+    if (rawRegistry) {
+      try {
+        const parsed = JSON.parse(rawRegistry);
+        if (Array.isArray(parsed)) registry = parsed;
+      } catch {
+        registry = [];
+      }
+    }
+
+    const existing = registry.find(
+      (entry) =>
+        entry &&
+        (entry.hwFingerprint === hwFingerprint ||
+          entry.deviceId === deviceId ||
+          entry.profileHash === profileHash)
+    );
+
+    if (existing) {
+      // Mirror lock locally so repeated attempts fail instantly
+      localStorage.setItem(TRIAL_USED_LOCAL_KEY, "true");
+      localStorage.setItem(TRIAL_FP_LOCAL_KEY, hwFingerprint);
+      void idbSet(TRIAL_USED_LOCAL_KEY, "true");
+      void idbSet(TRIAL_FP_LOCAL_KEY, hwFingerprint);
+
+      return {
+        allowed: false,
+        errorMsg:
+          "⚠️ This device or profile already redeemed its one-time 7-day trial. Reinstalling does not reset trials — request a lifetime key below.",
+      };
+    }
+
+    // 6. Register device remotely BEFORE unlocking locally (must confirm PATCH succeeded)
+    const entry: TrialRegistryEntry = {
+      hwFingerprint,
+      deviceId,
+      profileHash,
+      name,
+      age,
+      startedAt: bundle.serverTimeMs,
+      expiresAt: bundle.serverTimeMs + TRIAL_DURATION_MS,
+      claimedIso: new Date(bundle.serverTimeMs).toISOString(),
+    };
+    const nextRegistry = [entry, ...registry].slice(0, 1500);
+    const saved = await patchGistFiles({
+      "trial_devices.json": {
+        content: JSON.stringify(nextRegistry, null, 2),
+      },
+    });
+
+    if (!saved) {
+      return {
+        allowed: false,
+        errorMsg:
+          "⚠️ Could not register your device trial on the server. Please retry in a moment.",
+      };
+    }
+
+    return { allowed: true, serverNowMs: bundle.serverTimeMs };
+  } catch (err) {
+    console.error("Hardened trial check failed:", err);
+    return {
+      allowed: false,
+      errorMsg:
+        "⚠️ Network timeout while verifying trial eligibility. Please check your connection.",
+    };
+  }
+}
+
+/**
+ * Verifies and atomically consumes a single-use unlock key from `keys.json` on Gist.
+ * Requires PATCH confirmation so keys cannot be reused by dropping connection mid-flight.
  */
 async function verifyUnlockCodeWithGitHub(
   name: string,
   age: number,
-  securityKey: string
+  securityKey: string,
+  deviceId: string,
+  hwFingerprint: string
 ): Promise<{ valid: boolean; errorMsg?: string }> {
+  const cleanKey = sanitizeText(securityKey, 32);
+  if (!cleanKey) {
+    return { valid: false, errorMsg: "⚠️ Please enter an unlock code." };
+  }
   if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
     return {
       valid: false,
       errorMsg: "⚠️ Verification service unavailable. Check connection.",
     };
   }
-  const cleanKey = String(securityKey || "").trim();
-  if (!cleanKey) {
-    return { valid: false, errorMsg: "⚠️ Please enter an unlock code." };
-  }
 
   try {
-    const res = await fetch(GIST_API_URL, {
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": "RabbitTV-App",
-      },
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
+    const bundle = await fetchGistBundle();
+    if (!bundle.ok || !bundle.files) {
       return {
         valid: false,
         errorMsg: "⚠️ Could not reach verification server. Try again.",
       };
     }
 
-    const gistData = await res.json();
-    const rawContent = gistData.files?.["keys.json"]?.content;
+    const rawContent = bundle.files["keys.json"]?.content;
     if (!rawContent) {
       return { valid: false, errorMsg: "⚠️ Invalid Passcode." };
     }
@@ -131,9 +690,9 @@ async function verifyUnlockCodeWithGitHub(
 
     const matchedIndex = keysList.findIndex((item: any) => {
       if (typeof item === "object" && item !== null) {
-        return String(item.key).trim() === cleanKey && item.active === true;
+        return safeEqual(String(item.key).trim(), cleanKey) && item.active === true;
       }
-      return String(item).trim() === cleanKey;
+      return safeEqual(String(item).trim(), cleanKey);
     });
 
     if (matchedIndex === -1) {
@@ -141,7 +700,7 @@ async function verifyUnlockCodeWithGitHub(
         (item: any) =>
           typeof item === "object" &&
           item !== null &&
-          String(item.key).trim() === cleanKey &&
+          safeEqual(String(item.key).trim(), cleanKey) &&
           item.active === false
       );
       if (alreadyUsed) {
@@ -159,7 +718,7 @@ async function verifyUnlockCodeWithGitHub(
 
     const matchedItem = keysList[matchedIndex];
 
-    // Validate owner name & age binding if key was generated for a specific user
+    // Strict owner Name & Age binding check
     if (
       typeof matchedItem === "object" &&
       matchedItem !== null &&
@@ -189,42 +748,40 @@ async function verifyUnlockCodeWithGitHub(
             return {
               valid: false,
               errorMsg:
-                "⚠️ This key is registered to a different Name or Age. Please enter the exact Name and Age given to Rabbit.",
+                "⚠️ This key is registered to a different Name or Age. Enter the exact Name and Age given to Rabbit.",
             };
           }
         }
       }
     }
 
-    // Single-use enforcement
+    // Consume key atomically & bind device fingerprint
     if (typeof matchedItem === "object" && matchedItem !== null) {
       keysList[matchedIndex] = {
         ...matchedItem,
         active: false,
         usedBy: `${name} (Age: ${age})`,
-        claimedAt: new Date().toISOString(),
+        deviceId,
+        hwFingerprint,
+        claimedAt: new Date(bundle.serverTimeMs).toISOString(),
       };
     } else {
       keysList.splice(matchedIndex, 1);
     }
 
-    const updatedContent = JSON.stringify(keysList, null, 2);
-    await fetch(GIST_API_URL, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "Content-Type": "application/json",
-        "User-Agent": "RabbitTV-App",
+    const patchOk = await patchGistFiles({
+      "keys.json": {
+        content: JSON.stringify(keysList, null, 2),
       },
-      body: JSON.stringify({
-        files: {
-          "keys.json": {
-            content: updatedContent,
-          },
-        },
-      }),
     });
+
+    if (!patchOk) {
+      return {
+        valid: false,
+        errorMsg:
+          "⚠️ Could not finalize key redemption on server. Please try again with a stable connection.",
+      };
+    }
 
     return { valid: true };
   } catch (error) {
@@ -236,8 +793,365 @@ async function verifyUnlockCodeWithGitHub(
   }
 }
 
+/**
+ * Posts a HIGH-PRIORITY activation request to `activation_requests.json` on the
+ * private Gist so Admin devices pop a live high-alert toast notification.
+ */
+async function sendHighAlertAdminRequest(
+  name: string,
+  age: number,
+  note: string,
+  deviceId: string,
+  hwFingerprint: string
+): Promise<{ ok: boolean; errorMsg?: string }> {
+  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
+    return {
+      ok: false,
+      errorMsg:
+        "⚠️ Direct admin alert service is offline. Please use WhatsApp or Text below.",
+    };
+  }
+
+  try {
+    const bundle = await fetchGistBundle();
+    if (!bundle.ok || !bundle.files) {
+      return {
+        ok: false,
+        errorMsg:
+          "⚠️ Could not reach admin alert server. Please try WhatsApp or Text below.",
+      };
+    }
+
+    let existing: ActivationRequestRecord[] = [];
+    const raw = bundle.files["activation_requests.json"]?.content;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) existing = parsed;
+      } catch {
+        existing = [];
+      }
+    }
+
+    const newReq: ActivationRequestRecord = {
+      id: `req-${bundle.serverTimeMs}-${Math.random().toString(36).slice(2, 7)}`,
+      priority: "HIGH",
+      name,
+      age,
+      deviceId,
+      hwFingerprint: hwFingerprint.slice(0, 12),
+      note: sanitizeText(note, 140),
+      requestedAt: new Date(bundle.serverTimeMs).toISOString(),
+      seenByAdmin: false,
+    };
+
+    const updated = [newReq, ...existing].slice(0, 60);
+    const saved = await patchGistFiles({
+      "activation_requests.json": {
+        content: JSON.stringify(updated, null, 2),
+      },
+    });
+
+    if (!saved) {
+      return {
+        ok: false,
+        errorMsg:
+          "⚠️ Failed to deliver admin alert. Try again or use WhatsApp/Text.",
+      };
+    }
+
+    // Also fire existing alert webhook/report bridge non-blockingly
+    try {
+      sendPermanentActivationAlert(
+        `HIGH ALERT REQUEST: ${name} (Age ${age})${newReq.note ? ` - ${newReq.note}` : ""}`
+      );
+    } catch {
+      // ignore secondary bridge errors
+    }
+
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      errorMsg: "⚠️ Network error while notifying admin. Try WhatsApp/Text.",
+    };
+  }
+}
+
+/** Plays a crisp double-beep high-alert sound on Admin devices */
+function playAdminHighAlertChime(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx =
+      window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    [880, 1174.66].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now + idx * 0.16);
+      gain.gain.setValueAtTime(0.14, now + idx * 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.16 + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.16);
+      osc.stop(now + idx * 0.16 + 0.24);
+    });
+    window.setTimeout(() => {
+      void ctx.close().catch(() => {});
+    }, 800);
+  } catch {
+    // ignore if browser blocks autoplay audio
+  }
+}
+
+/**
+ * Reliable multi-platform launcher for WhatsApp and SMS that works across
+ * Android Capacitor WebViews, mobile browsers, tablets, desktops, and TVs.
+ */
+function launchDirectContact(
+  kind: "whatsapp" | "sms",
+  message: string,
+  fallbackOpenExternal: (url: string) => void
+): void {
+  if (typeof window === "undefined") return;
+  const encoded = encodeURIComponent(message);
+
+  if (kind === "sms") {
+    const isApple = /iphone|ipad|ipod|macintosh/i.test(
+      navigator.userAgent || ""
+    );
+    const smsUrl = isApple
+      ? `sms:+${SUPPORT_PHONE_RAW}&body=${encoded}`
+      : `sms:+${SUPPORT_PHONE_RAW}?body=${encoded}`;
+
+    // Direct anchor click hands sms: cleanly to Android OS Messaging (Browser.open rejects sms:)
+    const a = document.createElement("a");
+    a.href = smsUrl;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+
+  // Full E.164 WhatsApp URL with country code + phone number
+  const waWebUrl = `https://api.whatsapp.com/send?phone=${SUPPORT_PHONE_RAW}&text=${encoded}`;
+  const isAndroid = /android/i.test(navigator.userAgent || "");
+
+  if (isAndroid) {
+    // Direct intent-friendly link click opens installed WhatsApp app or falls back to browser
+    const a = document.createElement("a");
+    a.href = waWebUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+
+  fallbackOpenExternal(waWebUrl);
+}
+
+/**
+ * High-Alert Admin Activation Toast Listener:
+ * Automatically runs in the background ONLY on verified Admin sessions when
+ * the ActivationModal itself is closed, popping an urgent toast whenever a user
+ * sends an activation request from the modal.
+ */
+function AdminActivationAlertToast({ appTheme }: { appTheme: AppTheme }) {
+  const [activeAlerts, setActiveAlerts] = useState<ActivationRequestRecord[]>(
+    []
+  );
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const tokens = useMemo(() => getModalThemeTokens(appTheme), [appTheme]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem("rabtv_is_admin") !== "true") return;
+    if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return;
+
+    let cancelled = false;
+
+    const getSeenSet = (): Set<string> => {
+      try {
+        const raw = localStorage.getItem(ADMIN_SEEN_REQS_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return new Set(Array.isArray(arr) ? arr : []);
+      } catch {
+        return new Set();
+      }
+    };
+
+    const pollRequests = async () => {
+      if (cancelled || document.hidden) return;
+      if (localStorage.getItem("rabtv_is_admin") !== "true") return;
+      try {
+        const bundle = await fetchGistBundle();
+        if (cancelled || !bundle.ok || !bundle.files) return;
+        const raw = bundle.files["activation_requests.json"]?.content;
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return;
+
+        const seen = getSeenSet();
+        const fresh = (parsed as ActivationRequestRecord[]).filter(
+          (r) => r && r.id && !r.seenByAdmin && !seen.has(r.id)
+        );
+
+        if (fresh.length > 0 && !cancelled) {
+          setActiveAlerts((prev) => {
+            const prevIds = new Set(prev.map((p) => p.id));
+            const brandNew = fresh.filter((f) => !prevIds.has(f.id));
+            if (brandNew.length > 0) {
+              playAdminHighAlertChime();
+            }
+            return fresh.slice(0, 3);
+          });
+        }
+      } catch {
+        // silent background poll failure
+      }
+    };
+
+    const initialTimer = window.setTimeout(() => void pollRequests(), 4500);
+    const interval = window.setInterval(() => void pollRequests(), 45000);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(initialTimer);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const acknowledgeAlert = async (reqId: string) => {
+    setActiveAlerts((prev) => prev.filter((a) => a.id !== reqId));
+    try {
+      const raw = localStorage.getItem(ADMIN_SEEN_REQS_KEY);
+      const arr: string[] = raw ? JSON.parse(raw) : [];
+      const next = Array.from(new Set([reqId, ...arr])).slice(0, 120);
+      localStorage.setItem(ADMIN_SEEN_REQS_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+
+    // Mark seen remotely so other Admin devices stop alerting on this request
+    try {
+      const bundle = await fetchGistBundle();
+      const rawContent = bundle.files?.["activation_requests.json"]?.content;
+      if (bundle.ok && rawContent) {
+        const list = JSON.parse(rawContent);
+        if (Array.isArray(list)) {
+          const updated = list.map((item: any) =>
+            item && item.id === reqId ? { ...item, seenByAdmin: true } : item
+          );
+          await patchGistFiles({
+            "activation_requests.json": {
+              content: JSON.stringify(updated, null, 2),
+            },
+          });
+        }
+      }
+    } catch {
+      // ignore remote mark-seen error
+    }
+  };
+
+  const handleCopyUser = (req: ActivationRequestRecord) => {
+    const formatted = `${req.name} (${req.age})`;
+    try {
+      void navigator.clipboard?.writeText(formatted);
+    } catch {
+      // ignore
+    }
+    setCopiedId(req.id);
+    window.setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  if (activeAlerts.length === 0) return null;
+
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      className="rabtv-vidsrc-protected fixed top-4 right-3 sm:right-5 z-[9999] flex flex-col gap-2.5 w-[min(92vw,370px)] pointer-events-auto"
+    >
+      {activeAlerts.map((req) => (
+        <div
+          key={req.id}
+          className={`rounded-2xl border-2 p-3.5 text-white backdrop-blur-2xl space-y-2 animate-pulse ${tokens.alertToastBg}`}
+          style={{ animationIterationCount: 3 }}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 animate-ping shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-300">
+                  HIGH ALERT • ACTIVATION REQUEST
+                </span>
+              </div>
+              <p className="text-sm font-black text-white truncate mt-0.5">
+                {req.name}{" "}
+                <span className={`font-extrabold ${tokens.labelAccent}`}>
+                  (Age {req.age})
+                </span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void acknowledgeAlert(req.id)}
+              aria-label="Dismiss alert"
+              className="h-7 w-7 shrink-0 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          {req.note && (
+            <p className="rounded-xl bg-black/60 border border-white/10 px-2.5 py-1.5 text-[11px] text-slate-200 break-words">
+              “{req.note}”
+            </p>
+          )}
+
+          <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+            <span className="font-mono truncate">ID: {req.deviceId.slice(0, 12)}</span>
+            <span className="shrink-0">
+              {new Date(req.requestedAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={() => handleCopyUser(req)}
+              className={`rounded-xl border py-1.5 px-2 text-[11px] font-extrabold transition cursor-pointer ${tokens.secondaryBtn}`}
+            >
+              {copiedId === req.id ? "✓ Copied!" : "📋 Copy Name (Age)"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void acknowledgeAlert(req.id)}
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 py-1.5 px-2 text-[11px] font-extrabold text-white transition cursor-pointer"
+            >
+              ✓ Mark Handled
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 interface ActivationModalProps {
   isOpen: boolean;
+  splashActive?: boolean;
   onAuthorized: () => void;
   appTheme: AppTheme;
   cardSize: CardSize;
@@ -256,6 +1170,7 @@ interface ActivationModalProps {
 
 export function ActivationModal({
   isOpen,
+  splashActive = false,
   onAuthorized,
   appTheme,
   cardSize,
@@ -271,7 +1186,34 @@ export function ActivationModal({
   getPrimaryAccentColor,
   getPrimaryBgColor,
 }: ActivationModalProps) {
+  const modalRootRef = useRef<HTMLDivElement>(null);
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const verifyingRef = useRef<boolean>(false);
+
+  // Respect SplashIntro cleanly (never flash or hijack focus/audio during SplashIntro)
+  const [splashCleared, setSplashCleared] = useState<boolean>(false);
+  const effectiveOpen = isOpen && !splashActive && splashCleared;
+
+  useEffect(() => {
+    if (!isOpen || splashActive) {
+      setSplashCleared(false);
+      return;
+    }
+    // Brief smooth handoff frame after SplashIntro unmounts
+    const t = window.setTimeout(() => setSplashCleared(true), 140);
+    return () => window.clearTimeout(t);
+  }, [isOpen, splashActive]);
+
+  // Core Credential States
+  const [profileNameInput, setProfileNameInput] = useState("");
+  const [userAgeInput, setUserAgeInput] = useState("");
+  const [ageLockInput, setAgeLockInput] = useState("");
+  const [showPinDigits, setShowPinDigits] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState("");
+  const [showPasscode, setShowPasscode] = useState(false);
+
+  // Validation & Status States
   const [passcodeError, setPasscodeError] = useState(false);
   const [passcodeErrorMsg, setPasscodeErrorMsg] = useState(
     "⚠️ Invalid Passcode. Please try again."
@@ -279,28 +1221,137 @@ export function ActivationModal({
   const [nameErrorNotice, setNameErrorNotice] = useState(false);
   const [ageErrorNotice, setAgeErrorNotice] = useState(false);
   const [ageLockError, setAgeLockError] = useState(false);
-  const [ageLockInput, setAgeLockInput] = useState("");
-  const [showPinDigits, setShowPinDigits] = useState(false);
-  const [userAgeInput, setUserAgeInput] = useState("");
-  const [profileNameInput, setProfileNameInput] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Brute-force protection states
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lockoutUntil, setLockoutUntil] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      return Number(sessionStorage.getItem(AUTH_LOCKOUT_KEY) || 0);
-    }
-    return 0;
-  });
-  const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
+  // Message Admin for Activation Code States
+  const [showRequestAdminBox, setShowRequestAdminBox] = useState(false);
+  const [requestNote, setRequestNote] = useState("");
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [requestStatusMsg, setRequestStatusMsg] = useState<{
+    type: "ok" | "err";
+    text: string;
+  } | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  // Hardware RAM Mode optimization synced cleanly through settings.ts
+  // Extended Setup Features (Quality, Radio Station, Large Buttons, Autoplay, RAM Mode)
+  const [selectedQuality, setSelectedQuality] = useState<StreamQuality>(
+    () => streamQuality || "1080p"
+  );
   const [ramMode, setRamModeLocal] = useState<"low" | "high">(() => {
     const saved = getRamMode();
     return saved === "high" ? "high" : "low";
   });
+  const [largeButtonsLocal, setLargeButtonsLocal] = useState<boolean>(() =>
+    getLargeButtons()
+  );
+  const [autoPlayLocal, setAutoPlayLocal] = useState<boolean>(() =>
+    getAutoPlayNext()
+  );
 
+  // Curated Lobby Radio Station Presets
+  const radioPresets = useMemo<RadioPreset[]>(() => {
+    const defaultHeartbeat =
+      getDefaultHeartbeatStationUrl() ||
+      "https://stream.zeno.fm/0r0xa792kwzuv";
+    return [
+      {
+        id: "heartbeat",
+        label: "💓 Heartbeat 2000s",
+        vibe: "Default Lobby",
+        url: defaultHeartbeat,
+      },
+      {
+        id: "hiphop",
+        label: "🎤 Hip-Hop & R&B",
+        vibe: "Urban Beats",
+        url: "https://streams.ilovemusic.de/iloveradio3.mp3",
+      },
+      {
+        id: "edm",
+        label: "⚡ House & EDM",
+        vibe: "Club Energy",
+        url: "https://streams.ilovemusic.de/iloveradio2.mp3",
+      },
+      {
+        id: "rock",
+        label: "🎸 Classic Rock",
+        vibe: "Anthems",
+        url: "https://ice1.somafm.com/metal-128-mp3",
+      },
+      {
+        id: "lofi",
+        label: "🌙 Chill Lo-Fi",
+        vibe: "Late Night",
+        url: "https://ice1.somafm.com/groovesalad-128-mp3",
+      },
+      {
+        id: "off",
+        label: "🔇 Radio Off",
+        vibe: "Silent Lobby",
+        url: "",
+      },
+    ];
+  }, []);
+
+  const [selectedRadioId, setSelectedRadioId] = useState<string>(() => {
+    if (typeof window === "undefined") return "heartbeat";
+    const musicState = localStorage.getItem("rabtv_bg_music_state");
+    if (musicState === "paused") return "off";
+    return "heartbeat";
+  });
+  const [isPreviewingRadio, setIsPreviewingRadio] = useState(false);
+
+  // Hardware Fingerprint & Device ID (computed once asynchronously)
+  const [hwFingerprint, setHwFingerprint] = useState<string>("");
+  const [deviceId, setDeviceId] = useState<string>("");
+
+  // Hardened Brute-Force Lockout States (Exponential Backoff)
+  const [failedStrikes, setFailedStrikes] = useState<number>(() =>
+    readPersistentNumber(AUTH_STRIKES_KEY)
+  );
+  const [lockoutUntil, setLockoutUntil] = useState<number>(() =>
+    readPersistentNumber(AUTH_LOCKOUT_KEY)
+  );
+  const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
+
+  const tokens = useMemo(() => getModalThemeTokens(appTheme), [appTheme]);
+
+  // Precompute hardware fingerprint & hydrate IndexedDB lockout vault
+  useEffect(() => {
+    if (!effectiveOpen) return;
+    let active = true;
+
+    const initSecurityState = async () => {
+      const devId = getOrCreateDeviceId();
+      const fp = await computeHardwareFingerprint();
+      const idbLock = Number((await idbGet(AUTH_LOCKOUT_KEY)) || 0);
+      const idbStrikes = Number((await idbGet(AUTH_STRIKES_KEY)) || 0);
+
+      if (!active) return;
+      setDeviceId(devId);
+      setHwFingerprint(fp);
+
+      if (idbLock > lockoutUntil) setLockoutUntil(idbLock);
+      if (idbStrikes > failedStrikes) setFailedStrikes(idbStrikes);
+
+      // Update monotonic last-seen timestamp guard
+      const prevSeen = Number(localStorage.getItem(AUTH_LAST_TICK_KEY) || 0);
+      if (Date.now() > prevSeen) {
+        try {
+          localStorage.setItem(AUTH_LAST_TICK_KEY, String(Date.now()));
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    void initSecurityState();
+    return () => {
+      active = false;
+    };
+  }, [effectiveOpen]);
+
+  // Countdown tick for exponential security lockout
   useEffect(() => {
     if (!lockoutUntil || Date.now() >= lockoutUntil) {
       setLockoutSecondsLeft(0);
@@ -311,6 +1362,8 @@ export function ActivationModal({
       setLockoutSecondsLeft(rem);
       if (rem <= 0 && typeof window !== "undefined") {
         sessionStorage.removeItem(AUTH_LOCKOUT_KEY);
+        localStorage.removeItem(AUTH_LOCKOUT_KEY);
+        void idbSet(AUTH_LOCKOUT_KEY, "0");
       }
     };
     updateRemaining();
@@ -318,52 +1371,384 @@ export function ActivationModal({
     return () => window.clearInterval(interval);
   }, [lockoutUntil]);
 
-  if (!isOpen) return null;
+  // Stop radio preview if modal closes
+  useEffect(() => {
+    if (!effectiveOpen && isPreviewingRadio) {
+      bgAudio.pause();
+      setIsPreviewingRadio(false);
+    }
+  }, [effectiveOpen, isPreviewingRadio]);
+
+  /**
+   * BULLETPROOF TV REMOTE / D-PAD FOCUS TRAP & BACKGROUND SCROLL LOCK:
+   * 1) Locks documentElement & body scrolling so background never moves.
+   * 2) Sets `inert` on background app siblings so remote focus can NEVER leak behind the modal.
+   * 3) Snaps initial focus into the modal as soon as it opens after SplashIntro.
+   * 4) Spatial ArrowUp/ArrowDown/ArrowLeft/ArrowRight navigation moves focus cleanly
+   *    between every button & input inside the modal and auto-scrolls the focused item to center.
+   */
+  useEffect(() => {
+    if (!effectiveOpen || typeof document === "undefined") return;
+
+    const htmlEl = document.documentElement;
+    const bodyEl = document.body;
+    const prevHtmlOverflow = htmlEl.style.overflow;
+    const prevBodyOverflow = bodyEl.style.overflow;
+    const prevBodyOverscroll = bodyEl.style.overscrollBehavior;
+
+    htmlEl.style.overflow = "hidden";
+    bodyEl.style.overflow = "hidden";
+    bodyEl.style.overscrollBehavior = "none";
+
+    // Mark background siblings inert so Android TV / Fire TV D-pad stays strictly inside modal
+    const markedInert: HTMLElement[] = [];
+    const rootNode = modalRootRef.current;
+    if (rootNode) {
+      let current: HTMLElement | null = rootNode;
+      while (current && current.parentElement && current.parentElement !== htmlEl) {
+        const parent = current.parentElement;
+        Array.from(parent.children).forEach((child) => {
+          if (child !== current && child instanceof HTMLElement) {
+            if (!child.hasAttribute("inert")) {
+              child.setAttribute("inert", "");
+              child.setAttribute("aria-hidden", "true");
+              markedInert.push(child);
+            }
+          }
+        });
+        current = parent;
+      }
+    }
+
+    const getFocusableElements = (): HTMLElement[] => {
+      const container = modalRootRef.current;
+      if (!container) return [];
+      const selector =
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+      return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(
+        (el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        }
+      );
+    };
+
+    // Snap initial focus onto the Name field (or first focusable item) right after open
+    const focusTimer = window.setTimeout(() => {
+      const first = nameInputRef.current || getFocusableElements()[0];
+      if (first) {
+        first.focus({ preventScroll: true });
+        if (scrollBodyRef.current) {
+          scrollBodyRef.current.scrollTop = 0;
+        }
+      }
+    }, 60);
+
+    // Pull focus back immediately if anything tries to focus outside the modal
+    const handleFocusIn = (e: FocusEvent) => {
+      const container = modalRootRef.current;
+      if (!container) return;
+      const target = e.target as Node | null;
+      if (target && !container.contains(target)) {
+        const items = getFocusableElements();
+        if (items[0]) {
+          items[0].focus({ preventScroll: true });
+        }
+      }
+    };
+
+    const focusAndCenter = (el: HTMLElement) => {
+      el.focus({ preventScroll: true });
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const container = modalRootRef.current;
+      if (!container) return;
+
+      // Block Escape / Browser Back from dismissing the mandatory activation gate
+      if (e.key === "Escape" || e.key === "BrowserBack") {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      const items = getFocusableElements();
+      if (items.length === 0) return;
+
+      const active = document.activeElement as HTMLElement | null;
+      const activeIdx = active ? items.indexOf(active) : -1;
+
+      // Strict Tab focus trap
+      if (e.key === "Tab") {
+        e.preventDefault();
+        if (activeIdx === -1) {
+          focusAndCenter(items[0]);
+          return;
+        }
+        const nextIdx = e.shiftKey
+          ? (activeIdx - 1 + items.length) % items.length
+          : (activeIdx + 1) % items.length;
+        focusAndCenter(items[nextIdx]);
+        return;
+      }
+
+      const isArrow =
+        e.key === "ArrowDown" ||
+        e.key === "ArrowUp" ||
+        e.key === "ArrowLeft" ||
+        e.key === "ArrowRight";
+
+      if (!isArrow) return;
+
+      const isTextField =
+        active &&
+        (active.tagName === "INPUT" || active.tagName === "TEXTAREA") &&
+        (active as HTMLInputElement).type !== "checkbox" &&
+        (active as HTMLInputElement).type !== "radio";
+
+      // Allow Left/Right caret movement inside text inputs unless at edges
+      if (isTextField && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        const inp = active as HTMLInputElement;
+        const pos = inp.selectionStart;
+        const len = inp.value.length;
+        if (e.key === "ArrowLeft" && pos !== null && pos > 0) return;
+        if (e.key === "ArrowRight" && pos !== null && pos < len) return;
+      }
+
+      // Always prevent D-pad arrows from scrolling the background page
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!active || activeIdx === -1) {
+        focusAndCenter(items[0]);
+        return;
+      }
+
+      const curRect = active.getBoundingClientRect();
+      const curCx = curRect.left + curRect.width / 2;
+      const curCy = curRect.top + curRect.height / 2;
+
+      let bestEl: HTMLElement | null = null;
+      let bestScore = Infinity;
+
+      for (const candidate of items) {
+        if (candidate === active) continue;
+        const r = candidate.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const dx = cx - curCx;
+        const dy = cy - curCy;
+
+        if (e.key === "ArrowDown") {
+          if (dy <= 6) continue;
+          const score = dy * 2.2 + Math.abs(dx) * 0.85;
+          if (score < bestScore) {
+            bestScore = score;
+            bestEl = candidate;
+          }
+        } else if (e.key === "ArrowUp") {
+          if (dy >= -6) continue;
+          const score = Math.abs(dy) * 2.2 + Math.abs(dx) * 0.85;
+          if (score < bestScore) {
+            bestScore = score;
+            bestEl = candidate;
+          }
+        } else if (e.key === "ArrowRight") {
+          if (dx <= 6 || Math.abs(dy) > Math.max(curRect.height, r.height) * 0.85) {
+            continue;
+          }
+          const score = dx + Math.abs(dy) * 3;
+          if (score < bestScore) {
+            bestScore = score;
+            bestEl = candidate;
+          }
+        } else if (e.key === "ArrowLeft") {
+          if (dx >= -6 || Math.abs(dy) > Math.max(curRect.height, r.height) * 0.85) {
+            continue;
+          }
+          const score = Math.abs(dx) + Math.abs(dy) * 3;
+          if (score < bestScore) {
+            bestScore = score;
+            bestEl = candidate;
+          }
+        }
+      }
+
+      // Fallback sequential step if spatial check finds no neighbor in direction
+      if (!bestEl) {
+        if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+          bestEl = items[Math.min(items.length - 1, activeIdx + 1)];
+        } else {
+          bestEl = items[Math.max(0, activeIdx - 1)];
+        }
+      }
+
+      if (bestEl) {
+        focusAndCenter(bestEl);
+      }
+    };
+
+    document.addEventListener("focusin", handleFocusIn, true);
+    window.addEventListener("keydown", handleKeyDown, true);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("focusin", handleFocusIn, true);
+      window.removeEventListener("keydown", handleKeyDown, true);
+      htmlEl.style.overflow = prevHtmlOverflow;
+      bodyEl.style.overflow = prevBodyOverflow;
+      bodyEl.style.overscrollBehavior = prevBodyOverscroll;
+      markedInert.forEach((el) => {
+        el.removeAttribute("inert");
+        el.removeAttribute("aria-hidden");
+      });
+    };
+  }, [effectiveOpen]);
+
+  const handleRadioSelect = useCallback(
+    (preset: RadioPreset) => {
+      setSelectedRadioId(preset.id);
+      if (typeof window !== "undefined") {
+        if (!preset.url) {
+          localStorage.setItem("rabtv_bg_music_state", "paused");
+          bgAudio.pause();
+          setIsPreviewingRadio(false);
+        } else {
+          localStorage.setItem("rabtv_radio_url", preset.url);
+          localStorage.setItem("rabtv_bg_music_state", "playing");
+          bgAudio.setStation(preset.url);
+          if (isPreviewingRadio) {
+            bgAudio.play();
+          }
+        }
+      }
+    },
+    [isPreviewingRadio]
+  );
+
+  const handleToggleRadioPreview = () => {
+    const active = radioPresets.find((r) => r.id === selectedRadioId);
+    if (!active || !active.url) {
+      bgAudio.pause();
+      setIsPreviewingRadio(false);
+      return;
+    }
+    if (isPreviewingRadio) {
+      bgAudio.pause();
+      setIsPreviewingRadio(false);
+    } else {
+      bgAudio.setStation(active.url);
+      bgAudio.play();
+      setIsPreviewingRadio(true);
+    }
+  };
 
   const handleRamModeSelect = (mode: "low" | "high") => {
     setRamModeLocal(mode);
     setRamMode(mode);
   };
 
+  const handleLargeButtonsSelect = (enabled: boolean) => {
+    setLargeButtonsLocal(enabled);
+    setLargeButtons(enabled);
+  };
+
+  const handleAutoPlaySelect = (enabled: boolean) => {
+    setAutoPlayLocal(enabled);
+    setAutoPlayNext(enabled);
+  };
+
   const registerFailedAttempt = (msg: string) => {
-    const nextCount = failedAttempts + 1;
-    setFailedAttempts(nextCount);
+    const nextStrikes = failedStrikes + 1;
+    setFailedStrikes(nextStrikes);
+    writePersistentNumber(AUTH_STRIKES_KEY, nextStrikes);
+
     setPasscodeError(true);
     setAgeErrorNotice(false);
     setAgeLockError(false);
     setNameErrorNotice(false);
     setPasscodeInput("");
 
-    if (nextCount >= 4) {
-      const until = Date.now() + 30000;
+    // Exponential brute-force cooldown: 3 -> 30s, 5 -> 2m, 7 -> 10m, 10+ -> 30m
+    let cooldownSec = 0;
+    if (nextStrikes >= 10) cooldownSec = 1800;
+    else if (nextStrikes >= 7) cooldownSec = 600;
+    else if (nextStrikes >= 5) cooldownSec = 120;
+    else if (nextStrikes >= 3) cooldownSec = 30;
+
+    if (cooldownSec > 0) {
+      const until = Date.now() + cooldownSec * 1000;
       setLockoutUntil(until);
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem(AUTH_LOCKOUT_KEY, String(until));
-      }
+      writePersistentNumber(AUTH_LOCKOUT_KEY, until);
       setPasscodeErrorMsg(
-        "🚨 Too many failed attempts. Security cooldown active for 30 seconds."
+        `🚨 Too many failed attempts (${nextStrikes}). Security cooldown active for ${
+          cooldownSec >= 60 ? `${Math.round(cooldownSec / 60)} min` : `${cooldownSec}s`
+        }.`
       );
     } else {
       setPasscodeErrorMsg(msg);
     }
   };
 
-  const completePermanentLogin = async (
+  const applySelectedPreferences = async (
     finalName: string,
     parsedAge: number,
     ageLockCode: string,
+    accessStatus: "permanent" | "trial",
+    trialStartMs?: number,
     options?: { admin?: boolean; forceTheme?: AppTheme; forceSize?: CardSize }
   ) => {
+    const devId = deviceId || getOrCreateDeviceId();
+    const fp = hwFingerprint || (await computeHardwareFingerprint());
+
     localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
-    localStorage.setItem("rabtv_access_status", "permanent");
-    localStorage.removeItem("rabtv_trial_start_timestamp");
+    localStorage.setItem("rabtv_access_status", accessStatus);
+
+    if (accessStatus === "trial" && trialStartMs) {
+      localStorage.setItem("rabtv_trial_start_timestamp", String(trialStartMs));
+      localStorage.setItem(TRIAL_USED_LOCAL_KEY, "true");
+      localStorage.setItem(TRIAL_FP_LOCAL_KEY, fp);
+      void idbSet(TRIAL_USED_LOCAL_KEY, "true");
+      void idbSet(TRIAL_FP_LOCAL_KEY, fp);
+    } else {
+      localStorage.removeItem("rabtv_trial_start_timestamp");
+    }
+
+    // Write cryptographic integrity signature bound to device + hardware + status
+    const sig = await sha256Hex(
+      `rabtv-sig-v2::${devId}::${fp}::${finalName}::${accessStatus}::${trialStartMs || 0}`
+    );
+    localStorage.setItem(ACCESS_SIG_KEY, sig);
+    void idbSet(ACCESS_SIG_KEY, sig);
 
     sessionStorage.setItem("rabtv_session_verified", "true");
     sessionStorage.removeItem(AUTH_LOCKOUT_KEY);
+    localStorage.removeItem(AUTH_LOCKOUT_KEY);
+    localStorage.removeItem(AUTH_STRIKES_KEY);
+    void idbSet(AUTH_LOCKOUT_KEY, "0");
+    void idbSet(AUTH_STRIKES_KEY, "0");
 
-    // Save hashed PIN & RAM mode through settings.ts so memoryCache stays 100% synced
     await saveAgeLockPinSecure(ageLockCode);
     setRamMode(ramMode);
+    setLargeButtons(largeButtonsLocal);
+    setAutoPlayNext(autoPlayLocal);
+
+    const chosenRadio = radioPresets.find((r) => r.id === selectedRadioId);
+    if (chosenRadio) {
+      if (!chosenRadio.url) {
+        localStorage.setItem("rabtv_bg_music_state", "paused");
+        bgAudio.pause();
+      } else {
+        localStorage.setItem("rabtv_radio_url", chosenRadio.url);
+        localStorage.setItem("rabtv_bg_music_state", "playing");
+        bgAudio.setStation(chosenRadio.url);
+      }
+    }
 
     if (options?.admin) {
       localStorage.setItem("rabtv_is_admin", "true");
@@ -375,7 +1760,7 @@ export function ActivationModal({
     const sizeToUse = options?.forceSize ?? cardSize;
 
     saveCardSize(sizeToUse);
-    saveStreamQuality(streamQuality);
+    saveStreamQuality(selectedQuality);
     saveTheme(themeToUse);
     setHelpfulMouse(helpfulMouse);
 
@@ -383,20 +1768,19 @@ export function ActivationModal({
     localStorage.setItem("rabtv_profile_name", finalName);
     applyAllSettingsToDocument();
 
-    if (!options?.admin) {
-      sendPermanentActivationAlert(finalName);
-    }
-
     setPasscodeError(false);
     setAgeErrorNotice(false);
     setAgeLockError(false);
     setNameErrorNotice(false);
+    setIsPreviewingRadio(false);
+
     window.dispatchEvent(new Event("rabtv_settings_updated"));
     onAuthorized();
   };
 
   const handleFirstTimeAuthorize = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (verifyingRef.current) return;
 
     if (lockoutSecondsLeft > 0) {
       setPasscodeError(true);
@@ -406,7 +1790,7 @@ export function ActivationModal({
       return;
     }
 
-    const cleanName = profileNameInput.trim();
+    const cleanName = sanitizeText(profileNameInput, 25);
     if (!cleanName || cleanName.length < 2) {
       setNameErrorNotice(true);
       setAgeErrorNotice(false);
@@ -425,7 +1809,6 @@ export function ActivationModal({
       return;
     }
 
-    // 4 to 6 digit PIN check (Fire TV Stick compatible)
     const ageLock = ageLockInput.trim();
     if (!isValidAgeLockPin(ageLock)) {
       setAgeLockError(true);
@@ -435,61 +1818,66 @@ export function ActivationModal({
       return;
     }
 
-    const enteredCode = passcodeInput.trim();
+    const enteredCode = sanitizeText(passcodeInput, 32);
 
-    // 1. Admin Direct Authentication
-    if (isAdminCredentials(cleanName, parsedAge)) {
-      await completePermanentLogin(ADMIN_NAME, parsedAge, ageLock, {
-        admin: true,
-        forceTheme: "red",
-        forceSize: "small",
-      });
-      return;
-    }
-
+    verifyingRef.current = true;
     setIsVerifying(true);
     try {
-      // 2. 7-Day Free Trial Flow (9654)
-      if (enteredCode === TRIAL_CODE) {
-        const trialAlreadyUsed =
-          localStorage.getItem("rabtv_trial_used_flag") === "true";
-        if (trialAlreadyUsed) {
+      const devId = deviceId || getOrCreateDeviceId();
+      const fp = hwFingerprint || (await computeHardwareFingerprint());
+
+      // 1. Hardened Admin Authentication (Requires Admin Identity + Master Passcode)
+      if (isAdminIdentity(cleanName, parsedAge)) {
+        if (!verifyAdminPasscode(enteredCode)) {
           registerFailedAttempt(
-            "⚠️ Trial code has already been used on this device and cannot be redeemed again."
+            "⚠️ Admin login requires your Admin Passcode in the Unlock Key box."
+          );
+          return;
+        }
+        await applySelectedPreferences(
+          ADMIN_NAME,
+          parsedAge,
+          ageLock,
+          "permanent",
+          undefined,
+          {
+            admin: true,
+            forceTheme: "red",
+            forceSize: "small",
+          }
+        );
+        return;
+      }
+
+      if (!enteredCode) {
+        registerFailedAttempt(
+          "⚠️ Please enter your Lifetime Unlock Key or Trial Code (9654)."
+        );
+        return;
+      }
+
+      // 2. Hardened 7-Day Free Trial Flow (9654)
+      if (safeEqual(enteredCode, TRIAL_CODE)) {
+        const trialResult = await verifyAndClaimHardenedTrial(
+          cleanName,
+          parsedAge,
+          devId,
+          fp
+        );
+        if (!trialResult.allowed) {
+          registerFailedAttempt(
+            trialResult.errorMsg || "⚠️ Free trials are currently unavailable."
           );
           return;
         }
 
-        const remoteTrialCheck = await checkRemoteTrialAllowed();
-        if (!remoteTrialCheck.allowed) {
-          registerFailedAttempt(
-            remoteTrialCheck.reason ||
-              "⚠️ Free trials are currently unavailable."
-          );
-          return;
-        }
-
-        localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, "true");
-        localStorage.setItem("rabtv_access_status", "trial");
-        localStorage.setItem("rabtv_trial_start_timestamp", String(Date.now()));
-        localStorage.setItem("rabtv_trial_used_flag", "true");
-        localStorage.removeItem("rabtv_is_admin");
-
-        sessionStorage.setItem("rabtv_session_verified", "true");
-        sessionStorage.removeItem(AUTH_LOCKOUT_KEY);
-
-        await saveAgeLockPinSecure(ageLock);
-        setRamMode(ramMode);
-        saveCardSize(cardSize);
-        saveStreamQuality(streamQuality);
-        saveTheme(appTheme);
-        setHelpfulMouse(helpfulMouse);
-        saveUserAge(parsedAge);
-        localStorage.setItem("rabtv_profile_name", cleanName);
-        applyAllSettingsToDocument();
-
-        window.dispatchEvent(new Event("rabtv_settings_updated"));
-        onAuthorized();
+        await applySelectedPreferences(
+          cleanName,
+          parsedAge,
+          ageLock,
+          "trial",
+          trialResult.serverNowMs || Date.now()
+        );
         return;
       }
 
@@ -497,10 +1885,18 @@ export function ActivationModal({
       const verification = await verifyUnlockCodeWithGitHub(
         cleanName,
         parsedAge,
-        enteredCode
+        enteredCode,
+        devId,
+        fp
       );
       if (verification.valid) {
-        await completePermanentLogin(cleanName, parsedAge, ageLock);
+        sendPermanentActivationAlert(cleanName);
+        await applySelectedPreferences(
+          cleanName,
+          parsedAge,
+          ageLock,
+          "permanent"
+        );
         return;
       }
 
@@ -508,36 +1904,156 @@ export function ActivationModal({
         verification.errorMsg || "⚠️ Invalid Passcode for this name and age."
       );
     } finally {
+      verifyingRef.current = false;
       setIsVerifying(false);
     }
   };
 
+  // Auto-filled Message Admin for Activation Code (Triggers High-Alert Admin Toast)
+  const handleSendAdminActivationRequest = async () => {
+    const cleanName = sanitizeText(profileNameInput, 25);
+    const parsedAge = parseInt(userAgeInput.trim(), 10);
+
+    if (!cleanName || cleanName.length < 2) {
+      setNameErrorNotice(true);
+      setRequestStatusMsg({
+        type: "err",
+        text: "⚠️ Enter your Name above first so Rabbit knows who to issue the key to.",
+      });
+      nameInputRef.current?.focus();
+      return;
+    }
+
+    if (isNaN(parsedAge) || parsedAge < 1 || parsedAge > 120) {
+      setAgeErrorNotice(true);
+      setRequestStatusMsg({
+        type: "err",
+        text: "⚠️ Enter your Age (1–120) above first so your key binds properly.",
+      });
+      return;
+    }
+
+    const lastSent = Number(localStorage.getItem(REQUEST_COOLDOWN_KEY) || 0);
+    const waitMs = REQUEST_COOLDOWN_MS - (Date.now() - lastSent);
+    if (waitMs > 0) {
+      const waitSec = Math.ceil(waitMs / 1000);
+      setRequestStatusMsg({
+        type: "err",
+        text: `⏳ Request already sent! Please wait ${waitSec}s before sending another.`,
+      });
+      return;
+    }
+
+    setIsSendingRequest(true);
+    setRequestStatusMsg(null);
+    try {
+      const devId = deviceId || getOrCreateDeviceId();
+      const fp = hwFingerprint || (await computeHardwareFingerprint());
+      const res = await sendHighAlertAdminRequest(
+        cleanName,
+        parsedAge,
+        requestNote,
+        devId,
+        fp
+      );
+      if (res.ok) {
+        localStorage.setItem(REQUEST_COOLDOWN_KEY, String(Date.now()));
+        setRequestNote("");
+        setRequestStatusMsg({
+          type: "ok",
+          text: `🚨 High-priority activation request sent to Rabbit for ${cleanName} (Age ${parsedAge})!`,
+        });
+      } else {
+        setRequestStatusMsg({
+          type: "err",
+          text: res.errorMsg || "⚠️ Could not send request. Try WhatsApp or Text.",
+        });
+      }
+    } finally {
+      setIsSendingRequest(false);
+    }
+  };
+
+  const buildPreFilledContactMessage = () => {
+    const cleanName = sanitizeText(profileNameInput, 25) || "[My Name]";
+    const cleanAge = userAgeInput.trim() || "[My Age]";
+    const devSnippet = deviceId ? ` | Device: ${deviceId.slice(0, 10)}` : "";
+    return `Hi Rabbit, I'm requesting a RABBiT TV activation code. Name: ${cleanName}, Age: ${cleanAge}${devSnippet}`;
+  };
+
+  const handleCopySupportInfo = () => {
+    const info = `Rabbit Support: ${SUPPORT_PHONE_DISPLAY} — ${buildPreFilledContactMessage()}`;
+    try {
+      void navigator.clipboard?.writeText(info);
+      setCopyFeedback("✓ Copied number & request!");
+    } catch {
+      setCopyFeedback(`Text/WhatsApp: ${SUPPORT_PHONE_DISPLAY}`);
+    }
+    window.setTimeout(() => setCopyFeedback(null), 2600);
+  };
+
+  // When ActivationModal is closed, mount the zero-overhead Admin High-Alert Toast Watcher
+  if (!effectiveOpen) {
+    return !isOpen && !splashActive ? (
+      <AdminActivationAlertToast appTheme={appTheme} />
+    ) : null;
+  }
+
   return (
-    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-5 backdrop-blur-xl overflow-y-auto">
+    <div
+      ref={modalRootRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="RABBiT TV Activation & Setup"
+      className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/88 p-2.5 sm:p-5 backdrop-blur-xl overflow-hidden"
+    >
+      <style>{`
+        .rabtv-act-focus:focus,
+        .rabtv-act-focus:focus-visible {
+          outline: 2px solid rgba(255, 255, 255, 0.92);
+          outline-offset: 2px;
+          transform: scale(1.015);
+        }
+        @media (max-height: 500px) {
+          .rabtv-act-scroll {
+            padding: 12px 14px !important;
+          }
+        }
+      `}</style>
+
       <form
         onSubmit={handleFirstTimeAuthorize}
-        className={`relative w-full max-w-xl my-auto rounded-[28px] border-2 border-cyan-400/35 text-white shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_35px_rgba(56,189,248,0.2),0_0_25px_rgba(239,68,68,0.18)] ${getCardBackground(
+        className={`relative w-full max-w-2xl rounded-[28px] border-2 text-white ${tokens.frameBorder} ${tokens.frameShadow} ${getCardBackground(
           appTheme
         )} backdrop-blur-2xl max-h-[94dvh] overflow-hidden flex flex-col`}
       >
-        {/* Clean Top & Bottom Neon Laser Accents (Never Collides with Inner Elements) */}
-        <div className="absolute inset-x-10 top-0 h-[2px] bg-gradient-to-r from-cyan-400 via-violet-400 to-red-500 opacity-90 z-20 pointer-events-none" />
-        <div className="absolute inset-x-10 bottom-0 h-[2px] bg-gradient-to-r from-red-500 via-violet-400 to-cyan-400 opacity-90 z-20 pointer-events-none" />
+        {/* Theme-Matched Top & Bottom Laser Accents */}
+        <div
+          className={`absolute inset-x-10 top-0 h-[2px] bg-gradient-to-r ${tokens.laserTop} opacity-95 z-20 pointer-events-none`}
+        />
+        <div
+          className={`absolute inset-x-10 bottom-0 h-[2px] bg-gradient-to-r ${tokens.laserBottom} opacity-95 z-20 pointer-events-none`}
+        />
 
         {/* Subtle Splash Banner Background */}
         <div className="absolute inset-0 pointer-events-none z-0">
           <img
             src={BANNER_IMAGE_URL}
-            alt="Splash Banner"
-            className="w-full h-full object-cover opacity-20 filter blur-[2px] scale-105"
+            alt=""
+            className="w-full h-full object-cover opacity-18 filter blur-[2px] scale-105"
           />
-          <div className="absolute inset-0 bg-slate-950/85" />
+          <div className="absolute inset-0 bg-black/80" />
         </div>
 
-        <div className="relative z-10 p-4 sm:p-7 space-y-4 overflow-y-auto scrollbar-none max-h-[94dvh]">
+        <div
+          ref={scrollBodyRef}
+          className="rabtv-act-scroll relative z-10 p-4 sm:p-6 space-y-4 overflow-y-auto overflow-x-clip scrollbar-none max-h-[94dvh]"
+        >
           {/* Header Identity */}
-          <div className="text-center space-y-2.5">
-            <div className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden border-2 border-cyan-400/50 shadow-[0_0_25px_rgba(56,189,248,0.35)] bg-black">
+          <div className="text-center space-y-2">
+            <div
+              className={`mx-auto flex h-14 w-14 sm:h-18 sm:w-18 items-center justify-center rounded-2xl overflow-hidden border-2 bg-black ${tokens.avatarBorder}`}
+            >
               <img
                 src={headerIconUrl}
                 alt="RABBiT TV Logo"
@@ -564,43 +2080,57 @@ export function ActivationModal({
               </h2>
             </div>
 
-            <p className="text-xs sm:text-sm font-medium text-slate-200 max-w-md mx-auto leading-relaxed">
-              Top movies, trending series, and 280+ live TV channels—zero ads,
-              zero recurring subscriptions.
+            <p className="text-xs sm:text-sm font-medium text-slate-200 max-w-lg mx-auto leading-snug">
+              Movies, series, and 280+ live TV channels — zero ads, zero monthly
+              bills. Use your remote D-Pad (▲ ▼ ◀ ▶) or tap to set up your
+              profile.
             </p>
           </div>
 
-          {/* Trial Notice Banner */}
-          <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-500/15 via-black/65 to-amber-500/15 p-3 text-xs text-amber-200 shadow-inner text-center backdrop-blur-md">
+          {/* Hardened Trial Notice Banner */}
+          <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-500/15 via-black/70 to-amber-500/15 p-2.5 sm:p-3 text-xs text-amber-200 shadow-inner text-center backdrop-blur-md">
             <p>
-              <strong>⏳ Free 7-Day Trial:</strong> Enter{" "}
-              <strong className="text-white font-mono bg-black/65 px-1.5 py-0.5 rounded border border-amber-400/40">
+              <strong>⏳ One-Time 7-Day Trial:</strong> Enter{" "}
+              <strong className="text-white font-mono bg-black/70 px-1.5 py-0.5 rounded border border-amber-400/40">
                 9654
               </strong>{" "}
-              below for a one-time 7-day trial on this device, or enter your
-              lifetime unlock key.
+              below (device-locked & server-verified), or enter your lifetime
+              unlock key.
             </p>
           </div>
 
-          {/* 1. Name & Age Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-white/15 pt-3.5">
+          {/* SECTION 1: Name & Age */}
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-3 gap-3 border-t pt-3.5 ${tokens.sectionBorder}`}
+          >
             <div className="sm:col-span-2 space-y-1">
               <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
                 Your Name{" "}
-                <span className="text-cyan-300 font-normal lowercase">
-                  (For key verification)
+                <span className={`font-normal lowercase ${tokens.labelAccent}`}>
+                  (bound to your key)
                 </span>
               </label>
               <input
+                ref={nameInputRef}
                 type="text"
+                dir="ltr"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="words"
+                spellCheck={false}
                 maxLength={25}
                 value={profileNameInput}
                 onChange={(e) => {
                   setProfileNameInput(e.target.value);
                   if (nameErrorNotice) setNameErrorNotice(false);
                 }}
-                placeholder="Enter Name"
-                className="w-full rounded-xl border border-white/15 bg-black/75 px-3.5 py-2.5 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                placeholder="Enter Your Name"
+                style={{
+                  direction: "ltr",
+                  unicodeBidi: "plaintext",
+                  textAlign: "left",
+                }}
+                className={`rabtv-act-focus w-full rounded-xl border px-3.5 py-2.5 text-sm font-bold focus:outline-none transition ${tokens.inputClass}`}
               />
               {nameErrorNotice && (
                 <p className="text-[11px] font-bold text-red-400">
@@ -614,16 +2144,20 @@ export function ActivationModal({
                 Your Age <span className="text-red-400">*</span>
               </label>
               <input
-                type="number"
-                min={1}
-                max={120}
+                type="text"
+                inputMode="numeric"
+                dir="ltr"
+                autoComplete="off"
+                maxLength={3}
                 value={userAgeInput}
                 onChange={(e) => {
-                  setUserAgeInput(e.target.value);
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 3);
+                  setUserAgeInput(digits);
                   if (ageErrorNotice) setAgeErrorNotice(false);
                 }}
                 placeholder="Age"
-                className="w-full rounded-xl border border-white/15 bg-black/75 px-3.5 py-2.5 text-center text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                style={{ direction: "ltr", unicodeBidi: "plaintext" }}
+                className={`rabtv-act-focus w-full rounded-xl border px-3.5 py-2.5 text-center text-sm font-bold focus:outline-none transition ${tokens.inputClass}`}
               />
               {ageErrorNotice && (
                 <p className="text-[11px] font-bold text-red-400">
@@ -633,8 +2167,8 @@ export function ActivationModal({
             </div>
           </div>
 
-          {/* 2. Mandatory 4 to 6 Digit Age-Lock PIN (Fire TV Stick Ready) */}
-          <div className="space-y-1.5 border-t border-white/15 pt-3.5">
+          {/* SECTION 2: Mandatory 4–6 Digit Age-Lock PIN */}
+          <div className={`space-y-1.5 border-t pt-3.5 ${tokens.sectionBorder}`}>
             <div className="flex items-center justify-between gap-2">
               <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 truncate">
                 Age-Lock PIN (4–6 Digits){" "}
@@ -644,22 +2178,19 @@ export function ActivationModal({
                 className={`whitespace-nowrap shrink-0 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
                   isValidAgeLockPin(ageLockInput)
                     ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-300"
-                    : "bg-white/5 border-white/15 text-cyan-300"
+                    : tokens.badgeClass
                 }`}
               >
-                {ageLockInput.length}/6 • Fire TV OK
+                {ageLockInput.length}/6 • TV Remote OK
               </span>
             </div>
 
-            <p className="text-[11px] text-slate-300">
-              Choose a <strong>4, 5, or 6 digit PIN</strong> for parental age
-              locks and profile updates.
-            </p>
-
-            <div className="relative flex items-center">
+            <div className="relative flex items-center gap-2">
               <input
                 type={showPinDigits ? "text" : "password"}
                 inputMode="numeric"
+                dir="ltr"
+                autoComplete="new-password"
                 maxLength={6}
                 value={ageLockInput}
                 onChange={(e) => {
@@ -668,13 +2199,14 @@ export function ActivationModal({
                   );
                   if (ageLockError) setAgeLockError(false);
                 }}
-                placeholder="••••••"
-                className="w-full rounded-xl border border-white/15 bg-black/75 pl-14 pr-14 py-2.5 text-center text-lg font-black tracking-[0.3em] text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                placeholder="4–6 digit PIN"
+                style={{ direction: "ltr", unicodeBidi: "plaintext" }}
+                className={`rabtv-act-focus flex-1 min-w-0 rounded-xl border px-3.5 py-2.5 text-center text-base sm:text-lg font-black tracking-[0.28em] focus:outline-none transition ${tokens.inputClass}`}
               />
               <button
                 type="button"
                 onClick={() => setShowPinDigits((prev) => !prev)}
-                className="absolute right-2.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-bold text-slate-200 transition cursor-pointer"
+                className={`rabtv-act-focus h-11 px-3 rounded-xl border text-xs font-extrabold shrink-0 transition cursor-pointer ${tokens.secondaryBtn}`}
                 title={showPinDigits ? "Hide PIN" : "Show PIN"}
               >
                 {showPinDigits ? "Hide" : "Show"}
@@ -683,16 +2215,16 @@ export function ActivationModal({
 
             {ageLockError && (
               <p className="text-xs font-bold text-red-400 text-center">
-                ⚠️ Please enter a 4 to 6 digit numeric PIN code (numbers only).
+                ⚠️ Please enter a 4 to 6 digit numeric PIN (numbers only).
               </p>
             )}
           </div>
 
-          {/* 3. Startup Theme & Display Size */}
-          <div className="space-y-3 border-t border-white/15 pt-3.5">
+          {/* SECTION 3: Console Theme, Poster Grid & Stream Quality */}
+          <div className={`space-y-3 border-t pt-3.5 ${tokens.sectionBorder}`}>
             <div className="space-y-1.5">
               <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
-                Select Neon Console Theme:
+                🎨 Console Neon Theme:
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {allThemesList.map((t) => (
@@ -700,12 +2232,10 @@ export function ActivationModal({
                     key={t.id}
                     type="button"
                     onClick={() => onThemeChange(t.id)}
-                    className={`rounded-xl border py-2 px-2 text-xs font-bold whitespace-nowrap truncate transition-all cursor-pointer hover:scale-[1.03] focus:scale-[1.03] focus:outline-none ${
+                    className={`rabtv-act-focus rounded-xl border py-2 px-2 text-xs font-bold whitespace-nowrap truncate transition-all cursor-pointer ${
                       appTheme === t.id
-                        ? `border-white/40 ${getPrimaryBgColor(
-                            t.id
-                          )} text-white shadow-lg`
-                        : "border-white/10 bg-black/60 text-slate-300 hover:bg-white/10"
+                        ? `border-white/50 ${getPrimaryBgColor(t.id)} text-white shadow-lg`
+                        : "border-white/10 bg-black/65 text-slate-300 hover:bg-white/10"
                     }`}
                   >
                     {t.label}
@@ -714,59 +2244,138 @@ export function ActivationModal({
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
-                Select Poster Grid Size:
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(
-                  [
-                    { id: "small", title: "Small", sub: "TV Grid" },
-                    { id: "medium", title: "Medium", sub: "Balanced" },
-                    { id: "large", title: "Large", sub: "Cinema" },
-                  ] as { id: CardSize; title: string; sub: string }[]
-                ).map((size) => (
-                  <button
-                    key={size.id}
-                    type="button"
-                    onClick={() => onSizeChange(size.id)}
-                    className={`rounded-xl border py-2 px-1.5 text-center transition-all cursor-pointer hover:scale-[1.03] focus:scale-[1.03] focus:outline-none ${
-                      cardSize === size.id
-                        ? `border-white/40 ${getPrimaryBgColor(
-                            appTheme
-                          )} text-white shadow-lg`
-                        : "border-white/10 bg-black/60 text-slate-300 hover:bg-white/10"
-                    }`}
-                  >
-                    <span className="block text-xs font-extrabold">
-                      {size.title}
-                    </span>
-                    <span className="block text-[9px] opacity-85">
-                      {size.sub}
-                    </span>
-                  </button>
-                ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Poster Grid Size */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                  🖼️ Poster Grid Size:
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      { id: "small", title: "Small", sub: "TV Grid" },
+                      { id: "medium", title: "Medium", sub: "Balanced" },
+                      { id: "large", title: "Large", sub: "Cinema" },
+                    ] as { id: CardSize; title: string; sub: string }[]
+                  ).map((size) => (
+                    <button
+                      key={size.id}
+                      type="button"
+                      onClick={() => onSizeChange(size.id)}
+                      className={`rabtv-act-focus rounded-xl border py-2 px-1 text-center transition-all cursor-pointer ${
+                        cardSize === size.id
+                          ? `border-white/50 ${getPrimaryBgColor(appTheme)} text-white shadow-lg`
+                          : "border-white/10 bg-black/65 text-slate-300 hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="block text-xs font-extrabold">
+                        {size.title}
+                      </span>
+                      <span className="block text-[9px] opacity-85">
+                        {size.sub}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preferred Stream Quality */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                  📺 Preferred Quality:
+                </label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(
+                    [
+                      { id: "auto", label: "Auto" },
+                      { id: "480p", label: "480p" },
+                      { id: "720p", label: "720p" },
+                      { id: "1080p", label: "1080p" },
+                    ] as { id: StreamQuality; label: string }[]
+                  ).map((q) => (
+                    <button
+                      key={q.id}
+                      type="button"
+                      onClick={() => setSelectedQuality(q.id)}
+                      className={`rabtv-act-focus rounded-xl border py-2.5 px-1 text-xs font-extrabold text-center transition-all cursor-pointer ${
+                        selectedQuality === q.id
+                          ? `border-white/50 ${getPrimaryBgColor(appTheme)} text-white shadow-lg`
+                          : "border-white/10 bg-black/65 text-slate-300 hover:bg-white/10"
+                      }`}
+                    >
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* 4. Hardware Optimization & XL TV Mouse Pointer */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 border-t border-white/15 pt-3.5">
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/15 px-3 py-2.5">
+          {/* SECTION 4: Lobby Background Radio Station Picker */}
+          <div className={`space-y-2 border-t pt-3.5 ${tokens.sectionBorder}`}>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                📻 Lobby Background Radio Station:
+              </label>
+              {selectedRadioId !== "off" && (
+                <button
+                  type="button"
+                  onClick={handleToggleRadioPreview}
+                  className={`rabtv-act-focus rounded-full border px-2.5 py-0.5 text-[10px] font-extrabold transition cursor-pointer ${tokens.secondaryBtn}`}
+                >
+                  {isPreviewingRadio ? "⏹ Stop Preview" : "▶ Preview"}
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {radioPresets.map((station) => (
+                <button
+                  key={station.id}
+                  type="button"
+                  onClick={() => handleRadioSelect(station)}
+                  className={`rabtv-act-focus rounded-xl border py-2 px-2 text-left transition-all cursor-pointer ${
+                    selectedRadioId === station.id
+                      ? `border-white/50 ${getPrimaryBgColor(appTheme)} text-white shadow-lg`
+                      : "border-white/10 bg-black/65 text-slate-300 hover:bg-white/10"
+                  }`}
+                >
+                  <span className="block text-[11px] font-extrabold truncate">
+                    {station.label}
+                  </span>
+                  <span className="block text-[9px] opacity-80 truncate">
+                    {station.vibe}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* SECTION 5: Hardware, Remote & Playback Preferences */}
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 gap-2 border-t pt-3.5 ${tokens.sectionBorder}`}
+          >
+            {/* Low RAM Stick Mode */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={ramMode === "low"}
+              onClick={() =>
+                handleRamModeSelect(ramMode === "low" ? "high" : "low")
+              }
+              className="rabtv-act-focus flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/15 px-3 py-2.5 text-left cursor-pointer transition hover:border-white/30"
+            >
               <div className="min-w-0">
-                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-cyan-300">
+                <span
+                  className={`block text-[11px] font-extrabold uppercase tracking-wider ${tokens.labelAccent}`}
+                >
                   📟 Low RAM Stick Mode
                 </span>
                 <span className="block text-[10px] text-slate-300">
-                  Anti-crash buffer cap for 1–2GB sticks.
+                  Anti-crash cap for 1–2GB sticks
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  handleRamModeSelect(ramMode === "low" ? "high" : "low")
-                }
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+              <span
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
                   ramMode === "low" ? "bg-emerald-600" : "bg-slate-700"
                 }`}
               >
@@ -775,23 +2384,28 @@ export function ActivationModal({
                     ramMode === "low" ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
-              </button>
-            </div>
+              </span>
+            </button>
 
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/15 px-3 py-2.5">
+            {/* XL TV Mouse Pointer */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={helpfulMouse}
+              onClick={() => onMouseToggle(!helpfulMouse)}
+              className="rabtv-act-focus flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/15 px-3 py-2.5 text-left cursor-pointer transition hover:border-white/30"
+            >
               <div className="min-w-0">
-                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-100">
                   🖱️ XL Mouse Pointer
                 </span>
                 <span className="block text-[10px] text-slate-300">
-                  Enlarges cursor 3x for TVs/projectors.
+                  3× larger cursor for TVs/projectors
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => onMouseToggle(!helpfulMouse)}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                  helpfulMouse ? "bg-violet-600" : "bg-slate-700"
+              <span
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                  helpfulMouse ? tokens.toggleOn : "bg-slate-700"
                 }`}
               >
                 <span
@@ -799,97 +2413,117 @@ export function ActivationModal({
                     helpfulMouse ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
-              </button>
-            </div>
+              </span>
+            </button>
+
+            {/* Large Couch Buttons */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={largeButtonsLocal}
+              onClick={() => handleLargeButtonsSelect(!largeButtonsLocal)}
+              className="rabtv-act-focus flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/15 px-3 py-2.5 text-left cursor-pointer transition hover:border-white/30"
+            >
+              <div className="min-w-0">
+                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-100">
+                  🛋️ Large TV Buttons
+                </span>
+                <span className="block text-[10px] text-slate-300">
+                  Bigger touch & remote targets
+                </span>
+              </div>
+              <span
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                  largeButtonsLocal ? tokens.toggleOn : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    largeButtonsLocal ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </span>
+            </button>
+
+            {/* Auto-Play Next Episode */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoPlayLocal}
+              onClick={() => handleAutoPlaySelect(!autoPlayLocal)}
+              className="rabtv-act-focus flex items-center justify-between gap-2 rounded-xl bg-black/65 border border-white/15 px-3 py-2.5 text-left cursor-pointer transition hover:border-white/30"
+            >
+              <div className="min-w-0">
+                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-100">
+                  ⏭️ Auto-Play Next Ep
+                </span>
+                <span className="block text-[10px] text-slate-300">
+                  Binge series seamlessly
+                </span>
+              </div>
+              <span
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                  autoPlayLocal ? tokens.toggleOn : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    autoPlayLocal ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </span>
+            </button>
           </div>
 
-          {/* 5. Unlock Code or Trial (9654) */}
-          <div className="space-y-2.5 border-t border-white/15 pt-3.5">
-            <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
-              Lifetime Unlock Key or Trial Code (9654):
-            </label>
+          {/* SECTION 6: Unlock Key, High-Alert Admin Request & Fixed Contact Support */}
+          <div className={`space-y-2.5 border-t pt-3.5 ${tokens.sectionBorder}`}>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200">
+                🔑 Lifetime Unlock Key or Trial Code (9654):
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPasscode((p) => !p)}
+                className={`rabtv-act-focus rounded-lg border px-2 py-0.5 text-[10px] font-bold cursor-pointer ${tokens.secondaryBtn}`}
+              >
+                {showPasscode ? "Hide Key" : "Show Key"}
+              </button>
+            </div>
+
             <input
-              type="text"
-              maxLength={20}
+              type={showPasscode ? "text" : "password"}
+              dir="ltr"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              maxLength={32}
               disabled={isVerifying || lockoutSecondsLeft > 0}
               value={passcodeInput}
               onChange={(e) => {
                 setPasscodeInput(e.target.value);
                 if (passcodeError) setPasscodeError(false);
               }}
-              placeholder="Unlock key or 9654"
-              className="w-full rounded-xl border border-cyan-400/40 bg-black/80 px-3 py-3 text-center text-sm sm:text-base font-black tracking-wider text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50 transition"
+              placeholder="Enter unlock key or 9654"
+              style={{ direction: "ltr", unicodeBidi: "plaintext" }}
+              className={`rabtv-act-focus w-full rounded-xl border px-3 py-3 text-center text-sm sm:text-base font-black tracking-wider focus:outline-none disabled:opacity-50 transition ${tokens.inputClass}`}
             />
 
             {passcodeError && (
-              <div className="rounded-xl bg-red-950/70 border border-red-500/45 p-2.5 space-y-1 text-center">
-                <p className="text-xs font-bold text-red-300">
+              <div className="rounded-xl bg-red-950/80 border border-red-500/50 p-2.5 text-center">
+                <p className="text-xs font-bold text-red-200">
                   {passcodeErrorMsg}
-                </p>
-                <p className="text-[11px] text-slate-200">
-                  Need help? Message{" "}
-                  <button
-                    type="button"
-                    onClick={(e) =>
-                      handleOpenExternal(
-                        "https://wa.me/?text=Hi%20Rabbit,%20I%20need%20help%20with%20my%20passcode%20on%20RABBiT%20TV",
-                        e
-                      )
-                    }
-                    className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
-                  >
-                    WhatsApp (@RabbitProductions)
-                  </button>{" "}
-                  or text{" "}
-                  <button
-                    type="button"
-                    onClick={(e) => handleOpenExternal("sms:7058093865", e)}
-                    className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
-                  >
-                    (705) 809-3865
-                  </button>
-                  .
                 </p>
               </div>
             )}
 
-            {/* Direct Contact Support Card */}
-            <div className="rounded-xl border border-white/15 bg-black/60 p-2.5 text-center text-xs text-slate-300 space-y-1 backdrop-blur-md">
-              <p className="font-bold text-white">
-                Need an activation code or support?
-              </p>
-              <p className="text-[11px] text-slate-300">
-                Message me on WhatsApp (
-                <button
-                  type="button"
-                  onClick={(e) =>
-                    handleOpenExternal(
-                      "https://wa.me/?text=Hi%20Rabbit,%20I%20need%20an%20activation%20code%20for%20RABBiT%20TV",
-                      e
-                    )
-                  }
-                  className="text-emerald-400 font-bold underline hover:text-emerald-300 bg-transparent border-none cursor-pointer p-0 inline"
-                >
-                  @RabbitProductions
-                </button>
-                ) or text for a code at{" "}
-                <button
-                  type="button"
-                  onClick={(e) => handleOpenExternal("sms:7058093865", e)}
-                  className="text-amber-300 font-bold underline hover:text-amber-200 bg-transparent border-none cursor-pointer p-0 inline"
-                >
-                  (705) 809-3865
-                </button>
-                .
-              </p>
-            </div>
-
+            {/* Primary Authorize Submit Button */}
             <button
               type="submit"
               disabled={isVerifying || lockoutSecondsLeft > 0}
-              className={`w-full rounded-2xl ${getPrimaryBgColor(
+              className={`rabtv-act-focus w-full rounded-2xl ${getPrimaryBgColor(
                 appTheme
-              )} py-3.5 text-sm sm:text-base font-black tracking-wide text-white shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-cyan-400 cursor-pointer`}
+              )} py-3.5 text-sm sm:text-base font-black tracking-wide text-white shadow-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 cursor-pointer`}
             >
               {lockoutSecondsLeft > 0
                 ? `⏳ Security Cooldown (${lockoutSecondsLeft}s)`
@@ -897,6 +2531,123 @@ export function ActivationModal({
                   ? "⚡ Verifying Credentials..."
                   : "🚀 Enter RABBiT TV"}
             </button>
+
+            {/* Built-in Message Admin for Activation Code (Auto-Fills Name & Age -> High Alert Toast) */}
+            <div className="rounded-2xl border border-white/15 bg-black/65 p-3 space-y-2.5 backdrop-blur-md">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-extrabold text-white">
+                  Need an activation code?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowRequestAdminBox((v) => !v)}
+                  className={`rabtv-act-focus rounded-xl border px-3 py-1.5 text-[11px] font-extrabold transition cursor-pointer ${tokens.secondaryBtn}`}
+                >
+                  {showRequestAdminBox
+                    ? "✕ Close Request"
+                    : "📩 Message Admin for Code"}
+                </button>
+              </div>
+
+              {showRequestAdminBox && (
+                <div className="space-y-2 pt-1 border-t border-white/10">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-[11px]">
+                    <span className="text-slate-300">
+                      Auto-filled:{" "}
+                      <strong className="text-white">
+                        {profileNameInput.trim() || "Enter Name above"}
+                      </strong>{" "}
+                      • Age:{" "}
+                      <strong className={tokens.labelAccent}>
+                        {userAgeInput.trim() || "Enter Age above"}
+                      </strong>
+                    </span>
+                  </div>
+
+                  <input
+                    type="text"
+                    dir="ltr"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    maxLength={140}
+                    value={requestNote}
+                    onChange={(e) => setRequestNote(e.target.value)}
+                    placeholder="Optional note (e.g. e-Transfer sent, referred by...)"
+                    style={{
+                      direction: "ltr",
+                      unicodeBidi: "plaintext",
+                      textAlign: "left",
+                    }}
+                    className={`rabtv-act-focus w-full rounded-xl border px-3 py-2 text-xs font-bold focus:outline-none ${tokens.inputClass}`}
+                  />
+
+                  <button
+                    type="button"
+                    disabled={isSendingRequest}
+                    onClick={() => void handleSendAdminActivationRequest()}
+                    className={`rabtv-act-focus w-full rounded-xl py-2.5 px-3 text-xs font-black uppercase tracking-wider text-white transition cursor-pointer disabled:opacity-50 ${getPrimaryBgColor(
+                      appTheme
+                    )}`}
+                  >
+                    {isSendingRequest
+                      ? "📡 Sending High-Priority Alert..."
+                      : "🚨 Send Activation Request to Admin"}
+                  </button>
+
+                  {requestStatusMsg && (
+                    <p
+                      className={`text-[11px] font-bold text-center ${
+                        requestStatusMsg.type === "ok"
+                          ? "text-emerald-300"
+                          : "text-red-300"
+                      }`}
+                    >
+                      {requestStatusMsg.text}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Fixed Direct Contact Buttons (WhatsApp E.164 + Native SMS + Copy for TVs) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    launchDirectContact(
+                      "whatsapp",
+                      buildPreFilledContactMessage(),
+                      (u) => handleOpenExternal(u)
+                    )
+                  }
+                  className="rabtv-act-focus rounded-xl bg-emerald-950/70 hover:bg-emerald-900/90 border border-emerald-400/45 py-2 px-2.5 text-[11px] font-extrabold text-emerald-200 hover:text-white transition cursor-pointer"
+                >
+                  💬 WhatsApp Rabbit
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    launchDirectContact(
+                      "sms",
+                      buildPreFilledContactMessage(),
+                      (u) => handleOpenExternal(u)
+                    )
+                  }
+                  className="rabtv-act-focus rounded-xl bg-amber-950/70 hover:bg-amber-900/90 border border-amber-400/45 py-2 px-2.5 text-[11px] font-extrabold text-amber-200 hover:text-white transition cursor-pointer"
+                >
+                  📱 Text {SUPPORT_PHONE_DISPLAY}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopySupportInfo}
+                  className={`rabtv-act-focus rounded-xl border py-2 px-2.5 text-[11px] font-extrabold transition cursor-pointer ${tokens.secondaryBtn}`}
+                >
+                  {copyFeedback || "📋 Copy # (TVs)"}
+                </button>
+              </div>
+            </div>
 
             <div className="pt-1 text-center">
               <img
