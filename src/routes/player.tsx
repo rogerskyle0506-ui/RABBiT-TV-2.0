@@ -74,17 +74,19 @@ const PLAYER_VIEWPORT_STYLES = `
   /* Single wide buttonwrapper.png bay holding BOTH Back to Home + TV/Movie Details */
   .rabtv-plr-dual-nav-wrap {
     position: relative;
-    width: min(100%, clamp(304px, 94vw, 490px));
-    min-height: clamp(54px, 14vw, 76px);
-    padding: clamp(7px, 1.9vw, 11px) clamp(16px, 4.4vw, 34px);
+    width: min(100%, clamp(312px, 94vw, 520px));
+    height: clamp(62px, 16.2vw, 84px);
+    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 36px);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: clamp(8px, 2vw, 16px);
+    gap: clamp(8px, 2.2vw, 18px);
     box-sizing: border-box;
-    background-size: 100% 100%;
+    border-radius: 9999px;
+    background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
+    overflow: hidden;
     flex: 0 1 auto;
   }
 
@@ -96,11 +98,13 @@ const PLAYER_VIEWPORT_STYLES = `
     flex: 1 1 0;
     min-width: 0;
     max-width: 48%;
-    height: clamp(36px, 9.6vw, 50px);
+    height: 100%;
     background: transparent;
     border: 0;
     padding: 0;
     cursor: pointer;
+    overflow: hidden;
+    border-radius: 9999px;
     transition: transform 160ms ease, filter 160ms ease;
   }
 
@@ -112,90 +116,112 @@ const PLAYER_VIEWPORT_STYLES = `
     filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
   }
 
+  /* Calibrated zoom per asset transparent margin so Backtohome & TvDetails match 1:1 */
+  .rabtv-plr-nav-art-btn--home img {
+    transform: scale(1.44);
+  }
+
+  .rabtv-plr-nav-art-btn--tvdetails img {
+    transform: scale(1.42);
+  }
+
   .rabtv-plr-movie-details-pill {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 5px;
     flex: 1 1 0;
     min-width: 0;
-    max-width: 48%;
-    height: clamp(34px, 9vw, 46px);
+    max-width: 46%;
+    height: 76%;
     padding: 0 clamp(8px, 2vw, 14px);
     border-radius: 9999px;
-    font-size: clamp(11px, 2.8vw, 13px);
+    font-size: clamp(10px, 2.7vw, 13px);
     white-space: nowrap;
     box-sizing: border-box;
   }
 
+  /* Viewport-locked single-row section header banner backed by full-height buttonwrapper.png */
   .rabtv-plr-section-banner {
     position: relative;
     width: 100%;
-    min-height: clamp(54px, 12vw, 72px);
-    padding: clamp(10px, 2.2vw, 14px) clamp(20px, 5vw, 40px);
+    height: clamp(54px, 13.8vw, 72px);
+    padding: 0 clamp(22px, 5.8vw, 44px);
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
-    gap: clamp(6px, 1.5vw, 12px);
+    gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
-    background-size: 100% 100%;
+    background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
   }
 
+  .rabtv-plr-section-title {
+    font-size: clamp(13px, 3.5vw, 19px);
+    line-height: 1.1;
+  }
+
+  .rabtv-plr-section-meta {
+    font-size: clamp(10px, 2.7vw, 12px);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
   @media (min-width: 640px) {
     .rabtv-plr-dual-nav-wrap {
-      width: min(100%, clamp(380px, 44vw, 510px));
-      min-height: clamp(60px, 6.2vw, 78px);
-      padding: clamp(8px, 0.9vw, 12px) clamp(22px, 2.6vw, 36px);
-      gap: clamp(10px, 1.3vw, 18px);
-    }
-
-    .rabtv-plr-nav-art-btn {
-      height: clamp(40px, 4.2vw, 52px);
+      width: min(100%, clamp(390px, 46vw, 530px));
+      height: clamp(68px, 7vw, 88px);
+      padding: clamp(9px, 1vw, 13px) clamp(26px, 3.2vw, 44px);
+      gap: clamp(12px, 1.5vw, 20px);
     }
 
     .rabtv-plr-movie-details-pill {
-      height: clamp(38px, 4vw, 48px);
-      font-size: clamp(11px, 1.2vw, 14px);
+      height: 74%;
+      font-size: clamp(11px, 1.15vw, 13px);
     }
 
     .rabtv-plr-section-banner {
-      min-height: clamp(58px, 5.8vw, 76px);
-      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.8vw, 48px);
+      height: clamp(60px, 6vw, 76px);
+      padding: 0 clamp(32px, 4vw, 52px);
+    }
+
+    .rabtv-plr-section-title {
+      font-size: clamp(16px, 1.7vw, 21px);
+    }
+
+    .rabtv-plr-section-meta {
+      font-size: clamp(11px, 1.1vw, 13px);
     }
   }
 
   @media (min-width: 640px) and (max-height: 480px) {
     .rabtv-plr-dual-nav-wrap {
-      width: min(100%, 360px);
-      min-height: 48px;
-      padding: 6px 18px;
-      gap: 8px;
-    }
-
-    .rabtv-plr-nav-art-btn {
-      height: 34px;
+      width: min(100%, 370px);
+      height: 54px;
+      padding: 7px 22px;
+      gap: 10px;
     }
 
     .rabtv-plr-movie-details-pill {
-      height: 32px;
-      font-size: 11px;
+      height: 76%;
+      font-size: 10px;
+    }
+
+    .rabtv-plr-section-banner {
+      height: 52px;
+      padding: 0 28px;
     }
   }
 
   @media (min-width: 1280px) {
     .rabtv-plr-dual-nav-wrap {
-      width: 500px;
-      min-height: 76px;
-    }
-
-    .rabtv-plr-nav-art-btn {
-      height: 50px;
+      width: 520px;
+      height: 86px;
     }
   }
 `;
@@ -1367,7 +1393,7 @@ export function PlayerPage() {
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-plr-nav-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+              className={`rabtv-plr-nav-art-btn rabtv-plr-nav-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
             >
               <img
                 src={BACK_TO_HOME_BTN_URL}
@@ -1382,7 +1408,7 @@ export function PlayerPage() {
                 onClick={handleReturnToDetails}
                 aria-label="Back to TV Details"
                 title="Back to TV Details"
-                className={`rabtv-plr-nav-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+                className={`rabtv-plr-nav-art-btn rabtv-plr-nav-art-btn--tvdetails rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
               >
                 <img
                   src={TV_DETAILS_BTN_URL}
@@ -1944,16 +1970,16 @@ export function PlayerPage() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             >
-              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+              <div className="flex items-center gap-2 min-w-0 relative z-10">
                 <span
-                  className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                  className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeTokens.accentBar}`}
                 />
-                <h2 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                <h2 className="rabtv-plr-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                   ✨ Similar Recommended Titles
                 </h2>
               </div>
               <span
-                className={`relative z-10 text-[11px] sm:text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeTokens.badge}`}
+                className={`rabtv-plr-section-meta relative z-10 font-bold px-2.5 py-1 rounded-full shrink-0 ${themeTokens.badge}`}
               >
                 {mappedRecommendations.length} matches
               </span>
