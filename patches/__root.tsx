@@ -1191,9 +1191,13 @@ function RootComponent() {
   const isPlayerRoute =
     pathname.startsWith("/live-player") || pathname.startsWith("/player");
 
-  const [showSplashIntro, setShowSplashIntro] = useState(true);
+  const [showSplashIntro, setShowSplashIntro] = useState<boolean>(() =>
+    typeof window !== "undefined" ? verifyCurrentAccess() : false
+  );
   const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
-  const [showFirstStartModal, setShowFirstStartModal] = useState(false);
+  const [showFirstStartModal, setShowFirstStartModal] = useState<boolean>(() =>
+    typeof window !== "undefined" ? !verifyCurrentAccess() : false
+  );
   const [showBugModal, setShowBugModal] = useState(false);
   const [showBugFeedModal, setShowBugFeedModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -1288,9 +1292,10 @@ function RootComponent() {
     }
   }, []);
 
-  // Background lobby audio lifecycle synced with SplashIntro & TanStack Router pathname
+  // Background lobby audio lifecycle synced with ActivationModal, SplashIntro & route
   useEffect(() => {
     if (
+      showFirstStartModal ||
       showSplashIntro ||
       pathname.includes("details") ||
       pathname.includes("watch") ||
@@ -1300,10 +1305,10 @@ function RootComponent() {
     } else if (bgMusicState === "playing") {
       bgAudio.play();
     }
-  }, [showSplashIntro, pathname, bgMusicState]);
+  }, [showFirstStartModal, showSplashIntro, pathname, bgMusicState]);
 
   useEffect(() => {
-    if (showSplashIntro) return;
+    if (showFirstStartModal || showSplashIntro) return;
 
     const startAudio = () => {
       const path = window.location.pathname;
@@ -1327,7 +1332,7 @@ function RootComponent() {
       window.removeEventListener("click", startAudio);
       window.removeEventListener("keydown", startAudio);
     };
-  }, [showSplashIntro, bgMusicState]);
+  }, [showFirstStartModal, showSplashIntro, bgMusicState]);
 
   // Global soft remote click sound (single delegated listener, zero per-button cost)
   useEffect(() => {
@@ -1418,7 +1423,16 @@ function RootComponent() {
 
     const authorized = verifyCurrentAccess();
     if (!authorized) {
+      setShowSplashIntro(false);
       setShowFirstStartModal(true);
+      const capPlugins = (window as any).Capacitor?.Plugins;
+      if (capPlugins?.SplashScreen?.hide) {
+        try {
+          void capPlugins.SplashScreen.hide();
+        } catch {
+          // ignore if plugin is not configured
+        }
+      }
     } else {
       if (!hasAcceptedTos()) {
         setTosAccepted(false);
@@ -1628,8 +1642,8 @@ function RootComponent() {
       <body
         className={`min-h-screen max-w-full overflow-x-clip ${tokens.bodyBg} ${tokens.bodyText} antialiased transition-colors duration-300 relative`}
       >
-        {/* Full-Screen Animated Splash Intro (Plays Every App Launch) */}
-        {showSplashIntro && (
+        {/* Full-Screen Animated Splash Intro (Plays immediately if active, or right after Activation) */}
+        {showSplashIntro && !showFirstStartModal && (
           <SplashIntro
             appTheme={appTheme}
             onFinish={() => setShowSplashIntro(false)}
@@ -1904,11 +1918,14 @@ function RootComponent() {
             onClose={() => setShowBugFeedModal(false)}
           />
 
-          {/* FIRST-START ACTIVATION MODAL CALL */}
+          {/* FIRST-START ACTIVATION MODAL CALL (Runs BEFORE SplashIntro when activation is needed) */}
           <ActivationModal
-            isOpen={showFirstStartModal && !showSplashIntro}
+            isOpen={showFirstStartModal}
+            splashActive={showSplashIntro && !showFirstStartModal}
             onAuthorized={() => {
+              bgAudio.pause();
               setShowFirstStartModal(false);
+              setShowSplashIntro(true);
               if (!hasAcceptedTos()) {
                 setTosAccepted(false);
                 setTosRequireAccept(true);
