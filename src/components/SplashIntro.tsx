@@ -201,13 +201,34 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
 
   return (
     <div
-      className={`rabtv-vidsrc-protected fixed inset-0 z-[100000] w-screen h-[100dvh] bg-black flex items-center justify-center overflow-hidden select-none transition-opacity duration-400 ${
+      className={`rabtv-vidsrc-protected rabtv-splash-root fixed inset-0 z-[100000] bg-black overflow-hidden select-none transition-opacity duration-[420ms] ${
         isFadingOut ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       role="presentation"
       aria-label="RABBiT TV Intro Animation"
     >
       <style>{`
+        .rabtv-splash-root {
+          position: fixed;
+          inset: 0;
+          width: 100vw;
+          height: 100vh;
+          height: 100dvh;
+          min-height: 100dvh;
+          margin: 0;
+          padding: 0;
+        }
+        .rabtv-splash-video {
+          position: absolute;
+          inset: 0;
+          width: 100% !important;
+          height: 100% !important;
+          min-width: 100%;
+          min-height: 100%;
+          object-fit: cover;
+          object-position: center center;
+          display: block;
+        }
         .rabtv-splash-video::-webkit-media-controls,
         .rabtv-splash-video::-webkit-media-controls-start-playback-button {
           display: none !important;
@@ -215,7 +236,7 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
         }
       `}</style>
 
-      {/* Subtle theme-matched ambient glow behind letterbox bars on portrait phones */}
+      {/* Subtle theme-matched ambient backdrop while video buffer initializes */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -223,7 +244,7 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
         }}
       />
 
-      {/* Widescreen 16:9 Intro Video — object-contain keeps the CRT TV & tagline 100% uncropped on phones & TVs */}
+      {/* Full-Viewport 100% Width x 100% Height Edge-to-Edge Intro Video (No 16:9 Letterboxing) */}
       <video
         ref={videoRef}
         key={SPLASH_VIDEO_SOURCES[sourceIndex]}
@@ -236,17 +257,17 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
         onPlaying={() => setIsPlaying(true)}
         onEnded={completeSplash}
         onError={handleVideoError}
-        className="rabtv-splash-video relative z-10 w-100% h-100% object-contain bg-transparent"
+        className="rabtv-splash-video z-10 bg-black"
       />
 
-      {/* Bottom Controls Overlay: Optional Tap-for-Sound (only if WebView muted it) + Skip Intro */}
-      <div className="absolute bottom-5 inset-x-4 sm:inset-x-6 z-20 flex items-center justify-between gap-3 pointer-events-none">
+      {/* Bottom Controls Overlay: Optional Tap-for-Sound (only if WebView muted it) */}
+      <div className="absolute bottom-6 sm:bottom-8 inset-x-4 sm:inset-x-6 z-20 flex items-center justify-between gap-3 pointer-events-none">
         <div>
           {isMutedFallback && isPlaying && (
             <button
               type="button"
               onClick={handleUnmute}
-              className={`pointer-events-auto inline-flex items-center gap-1.5 rounded-full border backdrop-blur-xl px-3.5 py-2 text-xs font-extrabold shadow-xl transition active:scale-95 cursor-pointer ${theme.bg} ${theme.border} ${theme.text}`}
+              className={`pointer-events-auto inline-flex items-center gap-1.5 rounded-full border backdrop-blur-md px-3.5 py-2 text-xs font-extrabold shadow-xl transition active:scale-95 cursor-pointer ${theme.bg} ${theme.border} ${theme.text}`}
             >
               <span>🔇 Tap for Sound</span>
             </button>
