@@ -59,6 +59,7 @@ const navTabs = [
   "Movies",
   "In Theaters",
   "Live TV & Sports",
+  "Movie Club",
   "My List",
 ] as const;
 type NavTab = (typeof navTabs)[number];
@@ -847,6 +848,10 @@ function Home() {
   const handleTabSelect = (tab: NavTab) => {
     if (tab === "Live TV & Sports") {
       navigate({ to: "/live-tv" });
+      return;
+    }
+    if (tab === "Movie Club") {
+      navigate({ to: "/community" as any });
       return;
     }
     setActiveTab(tab);
