@@ -6,7 +6,22 @@ import {
   fetchChannelsByCategory,
   fetchAllChannels,
   refreshLiveHealth,
+  probeStreamWithLatency,
+  isSafeStreamUrl,
+  isChannelKidsSafe,
+  getHiddenLiveChannelIds,
+  hideLiveChannel,
+  clearHiddenLiveChannels,
+  getCustomLiveChannels,
+  addCustomLiveChannel,
+  removeCustomLiveChannel,
+  importM3uPlaylist,
+  exportChannelsAsM3u,
+  getChannelReliabilityScore,
+  isChannelQuarantined,
+  LIVE_CATALOG_UPDATED_EVENT,
   type LiveChannel,
+  type LiveFeedService,
 } from '../lib/live-feed-service';
 import {
   AppTheme,
@@ -208,7 +223,7 @@ export const Route = createFileRoute('/live-tv')({
 
 export type ExtendedHealthStatus = 'online' | 'timeout' | 'offline' | 'checking';
 export type HealthFilterOption = 'all' | 'online' | 'timeout' | 'offline';
-export type LiveSortOption = 'status' | 'channelNumber' | 'az';
+export type LiveSortOption = 'status' | 'reliability' | 'channelNumber' | 'az';
 export type LiveDensityOption = 'comfort' | 'compact';
 
 const FAST_HEALTH_CACHE_KEY = 'rabtv_fast_live_health_v2';
@@ -234,43 +249,8 @@ const reverseCategoryMapping: Record<string, string> = Object.fromEntries(
   Object.entries(categoryMapping).map(([orig, disp]) => [disp, orig])
 );
 
-// Keywords filtered out from Live TV when Kids Safe Mode Lock is actively engaged
-const MATURE_LIVE_KEYWORDS = [
-  'adult',
-  'crime',
-  'deadly',
-  'murder',
-  'cops',
-  '48 hours',
-  'csi',
-  'thriller',
-  'paranormal',
-  'haunt',
-  'ghost',
-  'botched',
-  'prisoner',
-  'hell',
-  'ridiculousness',
-  'embarrassing bodies',
-  'surveillance',
-  'emergency',
-  'a&e',
-  'warfare',
-];
-
-function isChannelKidsSafe(title: string): boolean {
-  const lower = (title || '').toLowerCase();
-  return !MATURE_LIVE_KEYWORDS.some((kw) => lower.includes(kw));
-}
-
 function isSafeHttpUrl(raw: string | undefined | null): boolean {
-  if (!raw) return false;
-  try {
-    const parsed = new URL(raw.trim());
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-  } catch {
-    return false;
-  }
+  return Boolean(raw && isSafeStreamUrl(raw, { allowLocalLan: true }));
 }
 
 interface CachedHealthMap {
@@ -328,80 +308,19 @@ function normalizeMatchText(text: string): string {
 }
 
 /**
- * Fast, lightweight stream probe with strict timeout & parent AbortSignal cancellation.
- * Distinguishes:
- *  - 'online': HTTP 200..299 with valid response
- *  - 'timeout': AbortError (slow stream) or CORS opaque fallback (may still play)
- *  - 'offline': Hard HTTP 4xx/5xx error or dead host
+ * Delegates to live-feed-service's hardened single-flight prober (includes
+ * #EXTM3U HTML error-page detection & AbortSignal support).
  */
 async function probeSingleChannelFast(
   url: string,
   parentSignal?: AbortSignal
 ): Promise<ExtendedHealthStatus> {
   if (!isSafeHttpUrl(url) || parentSignal?.aborted) return 'offline';
-
-  const controller = new AbortController();
-  let timedOut = false;
-  const onParentAbort = () => controller.abort();
-  parentSignal?.addEventListener('abort', onParentAbort, { once: true });
-
-  const timer = window.setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, PROBE_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: {
-        Range: 'bytes=0-512',
-      },
-    });
-    window.clearTimeout(timer);
-    parentSignal?.removeEventListener('abort', onParentAbort);
-
-    if (response.ok || response.status === 206) {
-      return 'online';
-    }
-    if (response.status === 401 || response.status === 403) {
-      return 'timeout';
-    }
-    return 'offline';
-  } catch (err: any) {
-    window.clearTimeout(timer);
-    parentSignal?.removeEventListener('abort', onParentAbort);
-
-    if (parentSignal?.aborted) return 'checking';
-    if (timedOut || err?.name === 'AbortError') {
-      return 'timeout';
-    }
-
-    const fallbackController = new AbortController();
-    const onParentAbort2 = () => fallbackController.abort();
-    parentSignal?.addEventListener('abort', onParentAbort2, { once: true });
-    const fallbackTimer = window.setTimeout(
-      () => fallbackController.abort(),
-      1800
-    );
-    try {
-      const opaqueRes = await fetch(url, {
-        method: 'HEAD',
-        mode: 'no-cors',
-        signal: fallbackController.signal,
-      });
-      window.clearTimeout(fallbackTimer);
-      parentSignal?.removeEventListener('abort', onParentAbort2);
-      if (opaqueRes.type === 'opaque') {
-        return 'timeout';
-      }
-      return opaqueRes.ok ? 'online' : 'offline';
-    } catch {
-      window.clearTimeout(fallbackTimer);
-      parentSignal?.removeEventListener('abort', onParentAbort2);
-      return 'offline';
-    }
-  }
+  const res = await probeStreamWithLatency(url, parentSignal);
+  if (parentSignal?.aborted || res.health === 'checking') return 'checking';
+  if (res.health === 'online') return 'online';
+  if (res.health === 'unknown') return 'timeout';
+  return 'offline';
 }
 
 interface LiveTvThemeTokens {
@@ -884,6 +803,7 @@ const ChannelCard = memo(function ChannelCard({
   status,
   isPinned,
   onTogglePin,
+  onHideChannel,
   tokens,
   radiusClass,
   largeButtons,
@@ -895,6 +815,7 @@ const ChannelCard = memo(function ChannelCard({
   status: ExtendedHealthStatus;
   isPinned: boolean;
   onTogglePin: (channelId: string, channelTitle: string) => void;
+  onHideChannel: (channelId: string, channelTitle: string) => void;
   tokens: LiveTvThemeTokens;
   radiusClass: string;
   largeButtons: boolean;
@@ -973,6 +894,30 @@ const ChannelCard = memo(function ChannelCard({
               className="w-3 h-3"
             >
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => onHideChannel(channelId, channel.title)}
+            aria-label={`Hide ${channel.title}`}
+            title="Hide channel from guide"
+            className={`flex ${
+              largeButtons ? 'h-8 w-8' : 'h-6 w-6'
+            } shrink-0 items-center justify-center rounded-full border transition cursor-pointer focus:outline-none focus:ring-2 ${
+              tokens.focusRing
+            } ${tokens.pinIdle}`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-2.5 h-2.5"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -1080,6 +1025,325 @@ const ChannelCard = memo(function ChannelCard({
   );
 });
 
+
+/**
+ * Isolated Custom Channels & M3U Playlist Manager Modal (uses uncontrolled refs
+ * so Android WebView never flips typed characters on phones, tablets, or TVs).
+ */
+const CustomChannelManagerModal = memo(function CustomChannelManagerModal({
+  isOpen,
+  tokens,
+  onClose,
+  onChanged,
+}: {
+  isOpen: boolean;
+  tokens: LiveTvThemeTokens;
+  onClose: () => void;
+  onChanged: (toastMsg: string) => void;
+}) {
+  const [tab, setTab] = useState<'single' | 'm3u'>('single');
+  const [customList, setCustomList] = useState<LiveFeedService[]>(() =>
+    getCustomLiveChannels()
+  );
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(
+    null
+  );
+
+  const nameRef = useRef<HTMLInputElement>(null);
+  const urlRef = useRef<HTMLInputElement>(null);
+  const groupRef = useRef<HTMLInputElement>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
+  const m3uTextRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setCustomList(getCustomLiveChannels());
+    setFeedback(null);
+
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const handleAddSingle = (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = addCustomLiveChannel({
+      name: nameRef.current?.value || '',
+      url: urlRef.current?.value || '',
+      groupTitle: groupRef.current?.value || 'Custom',
+      logo: logoRef.current?.value || undefined,
+    });
+    if (!res.ok) {
+      setFeedback({ ok: false, text: res.error || 'Could not add channel.' });
+      return;
+    }
+    if (nameRef.current) nameRef.current.value = '';
+    if (urlRef.current) urlRef.current.value = '';
+    if (groupRef.current) groupRef.current.value = '';
+    if (logoRef.current) logoRef.current.value = '';
+    setCustomList(getCustomLiveChannels());
+    setFeedback({ ok: true, text: `✓ Added "${res.channel?.name}" to Live TV!` });
+    onChanged(`✓ Added custom channel "${res.channel?.name}"`);
+  };
+
+  const handleImportM3uText = () => {
+    const raw = m3uTextRef.current?.value || '';
+    const res = importM3uPlaylist(raw);
+    if (!res.ok) {
+      setFeedback({ ok: false, text: res.error || 'Import failed.' });
+      return;
+    }
+    if (m3uTextRef.current) m3uTextRef.current.value = '';
+    setCustomList(getCustomLiveChannels());
+    const msg = `✓ Imported ${res.added} channel${res.added === 1 ? '' : 's'}${
+      res.skipped ? ` • ${res.skipped} skipped` : ''
+    }${res.blocked ? ` • ${res.blocked} unsafe blocked` : ''}`;
+    setFeedback({ ok: true, text: msg });
+    onChanged(msg);
+  };
+
+  const handleImportM3uFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const res = importM3uPlaylist(text);
+      if (!res.ok) {
+        setFeedback({ ok: false, text: res.error || 'Could not parse M3U file.' });
+        return;
+      }
+      setCustomList(getCustomLiveChannels());
+      const msg = `✓ Loaded ${res.added} from ${file.name}${
+        res.blocked ? ` (${res.blocked} unsafe blocked)` : ''
+      }`;
+      setFeedback({ ok: true, text: msg });
+      onChanged(msg);
+    } catch {
+      setFeedback({ ok: false, text: 'Could not read selected file.' });
+    }
+  };
+
+  const handleExportCustom = () => {
+    const m3u = exportChannelsAsM3u('custom');
+    const blob = new Blob([m3u], { type: 'audio/x-mpegurl' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rabbittv_custom_channels_${new Date().toISOString().slice(0, 10)}.m3u`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setFeedback({ ok: true, text: '💾 Exported custom channels M3U backup!' });
+  };
+
+  const handleDeleteCustom = (chId: string, chName: string) => {
+    if (removeCustomLiveChannel(chId)) {
+      setCustomList(getCustomLiveChannels());
+      onChanged(`Removed custom channel "${chName}"`);
+    }
+  };
+
+  return (
+    <div
+      className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/82 p-3 sm:p-5 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className={`w-full max-w-lg max-h-[88dvh] overflow-y-auto scrollbar-none rounded-3xl border p-4 sm:p-6 space-y-4 ${tokens.surfacePanel}`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="text-base sm:text-lg font-black text-white truncate">
+              📡 Custom Channels & M3U Manager
+            </h3>
+            <p className={`text-[11px] ${tokens.subMutedText}`}>
+              Add your own HLS streams or import a safe #EXTM3U playlist
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close Custom Channels Manager"
+            className={`h-8 w-8 shrink-0 rounded-full border text-xs font-bold flex items-center justify-center cursor-pointer ${tokens.btnSecondary}`}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Mode Switcher Tabs */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setTab('single')}
+            className={`rounded-xl border py-2 text-xs font-extrabold transition cursor-pointer ${
+              tab === 'single'
+                ? `${tokens.btnActive} border-transparent`
+                : tokens.btnIdle
+            }`}
+          >
+            + Add Single Stream
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('m3u')}
+            className={`rounded-xl border py-2 text-xs font-extrabold transition cursor-pointer ${
+              tab === 'm3u'
+                ? `${tokens.btnActive} border-transparent`
+                : tokens.btnIdle
+            }`}
+          >
+            📄 Import / Export M3U
+          </button>
+        </div>
+
+        {feedback && (
+          <div
+            className={`rounded-xl border px-3 py-2 text-xs font-bold text-center ${
+              feedback.ok
+                ? 'bg-emerald-950/80 border-emerald-400/45 text-emerald-200'
+                : 'bg-red-950/80 border-red-400/45 text-red-200'
+            }`}
+          >
+            {feedback.text}
+          </div>
+        )}
+
+        {tab === 'single' ? (
+          <form onSubmit={handleAddSingle} className="space-y-2.5">
+            <input
+              ref={nameRef}
+              type="text"
+              dir="ltr"
+              maxLength={50}
+              autoComplete="off"
+              placeholder="Channel Name (e.g. Local Sports HD)"
+              style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+              className={`w-full h-10 rounded-xl border px-3 text-xs font-bold focus:outline-none ${tokens.inputClass}`}
+            />
+            <input
+              ref={urlRef}
+              type="url"
+              dir="ltr"
+              autoComplete="off"
+              placeholder="Stream URL (https://.../stream.m3u8)"
+              style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+              className={`w-full h-10 rounded-xl border px-3 text-xs font-bold focus:outline-none ${tokens.inputClass}`}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                ref={groupRef}
+                type="text"
+                dir="ltr"
+                maxLength={25}
+                autoComplete="off"
+                placeholder="Region / Group (default: Custom)"
+                style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                className={`w-full h-10 rounded-xl border px-3 text-xs font-bold focus:outline-none ${tokens.inputClass}`}
+              />
+              <input
+                ref={logoRef}
+                type="url"
+                dir="ltr"
+                autoComplete="off"
+                placeholder="Optional Logo URL (https://...)"
+                style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                className={`w-full h-10 rounded-xl border px-3 text-xs font-bold focus:outline-none ${tokens.inputClass}`}
+              />
+            </div>
+            <button
+              type="submit"
+              className={`w-full h-10 rounded-xl text-xs font-extrabold uppercase tracking-wider cursor-pointer transition ${tokens.btnActive}`}
+            >
+              + Save Custom Channel
+            </button>
+          </form>
+        ) : (
+          <div className="space-y-2.5">
+            <textarea
+              ref={m3uTextRef}
+              dir="ltr"
+              rows={4}
+              placeholder={'#EXTM3U\n#EXTINF:-1 group-title="Custom",My Channel\nhttps://example.com/live.m3u8'}
+              style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+              className={`w-full rounded-xl border p-3 text-xs font-mono focus:outline-none ${tokens.inputClass}`}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleImportM3uText}
+                className={`h-10 rounded-xl text-xs font-extrabold cursor-pointer transition ${tokens.btnActive}`}
+              >
+                📥 Import Pasted M3U
+              </button>
+              <label
+                className={`h-10 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer transition ${tokens.btnSecondary}`}
+              >
+                <span>📂 Load .m3u File</span>
+                <input
+                  type="file"
+                  accept=".m3u,.m3u8,text/plain"
+                  onChange={(e) => void handleImportM3uFile(e)}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            {customList.length > 0 && (
+              <button
+                type="button"
+                onClick={handleExportCustom}
+                className={`w-full h-9 rounded-xl border text-[11px] font-bold cursor-pointer transition ${tokens.btnIdle}`}
+              >
+                💾 Export My Custom Channels ({customList.length}) as .m3u
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Saved Custom Channels List */}
+        {customList.length > 0 && (
+          <div className={`pt-3 border-t space-y-2 ${tokens.dividerBorder}`}>
+            <span
+              className={`block text-[10px] font-extrabold uppercase tracking-wider ${tokens.subMutedText}`}
+            >
+              Your Custom Channels ({customList.length}/50)
+            </span>
+            <div className="space-y-1.5 max-h-44 overflow-y-auto scrollbar-none pr-0.5">
+              {customList.map((ch) => (
+                <div
+                  key={ch.channelId}
+                  className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${tokens.surfaceCard}`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-extrabold text-white truncate">
+                      {ch.name}
+                    </p>
+                    <p className={`text-[10px] truncate ${tokens.subMutedText}`}>
+                      {ch.groupTitle} • {ch.url}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteCustom(ch.channelId, ch.name)}
+                    aria-label={`Delete ${ch.name}`}
+                    className="h-7 w-7 shrink-0 rounded-lg bg-red-950/75 hover:bg-red-700 border border-red-500/40 text-red-200 hover:text-white text-xs font-bold cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
 function LiveTvComponent() {
   const navigate = useNavigate();
 
@@ -1105,6 +1369,11 @@ function LiveTvComponent() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() =>
     getFavoriteChannelIds()
   );
+  const [hiddenCount, setHiddenCount] = useState<number>(
+    () => getHiddenLiveChannelIds().length
+  );
+  const [customModalOpen, setCustomModalOpen] = useState<boolean>(false);
+  const [catalogRevision, setCatalogRevision] = useState<number>(0);
   const [pinToast, setPinToast] = useState<string | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -1188,6 +1457,17 @@ function LiveTvComponent() {
     };
   }, []);
 
+  // Listen to catalog updates (custom channels, M3U imports, hide/unhide, OTA sync)
+  useEffect(() => {
+    const onCatalogChange = () => {
+      setHiddenCount(getHiddenLiveChannelIds().length);
+      setCatalogRevision((r) => r + 1);
+    };
+    window.addEventListener(LIVE_CATALOG_UPDATED_EVENT, onCatalogChange);
+    return () =>
+      window.removeEventListener(LIVE_CATALOG_UPDATED_EVENT, onCatalogChange);
+  }, []);
+
   // Deduplicate categories so "All" never appears twice
   useEffect(() => {
     let active = true;
@@ -1206,7 +1486,7 @@ function LiveTvComponent() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [catalogRevision]);
 
   /**
    * High-speed concurrent background health prober with full AbortController teardown.
@@ -1359,7 +1639,7 @@ function LiveTvComponent() {
       probeRunIdRef.current++;
       probeAbortRef.current?.abort();
     };
-  }, [loadChannelsInstantly]);
+  }, [loadChannelsInstantly, catalogRevision]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -1374,6 +1654,27 @@ function LiveTvComponent() {
     void refreshLiveHealth().catch(() => {});
     await loadChannelsInstantly({ forceProbe: true });
   };
+
+  const showLiveToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    setPinToast(msg);
+    toastTimerRef.current = window.setTimeout(() => setPinToast(null), 2800);
+  }, []);
+
+  const handleHideChannel = useCallback(
+    (channelId: string, channelTitle: string) => {
+      hideLiveChannel(channelId);
+      setHiddenCount(getHiddenLiveChannelIds().length);
+      showLiveToast(`🚫 Hid "${channelTitle}" — tap Restore Hidden anytime.`);
+    },
+    [showLiveToast]
+  );
+
+  const handleRestoreHidden = useCallback(() => {
+    clearHiddenLiveChannels();
+    setHiddenCount(0);
+    showLiveToast('↺ Restored all hidden Live TV channels.');
+  }, [showLiveToast]);
 
   const handleTogglePin = useCallback((channelId: string, channelTitle: string) => {
     const res = toggleFavoriteChannel(channelId);
@@ -1398,6 +1699,7 @@ function LiveTvComponent() {
   const resolveChannelStatus = useCallback(
     (channel: LiveChannel): ExtendedHealthStatus => {
       const key = getChannelKey(channel);
+      if (isChannelQuarantined(key)) return 'offline';
       const cached = healthMap[key];
       if (cached) return cached;
       if (channel.health === 'online') return 'online';
@@ -1497,6 +1799,12 @@ function LiveTvComponent() {
         const rA = rank[resolveChannelStatus(a)] || 3;
         const rB = rank[resolveChannelStatus(b)] || 3;
         if (rA !== rB) return rA - rB;
+        return a.title.localeCompare(b.title);
+      }
+      if (sortBy === 'reliability') {
+        const scoreA = getChannelReliabilityScore(getChannelKey(a));
+        const scoreB = getChannelReliabilityScore(getChannelKey(b));
+        if (scoreA !== scoreB) return scoreB - scoreA;
         return a.title.localeCompare(b.title);
       }
       if (sortBy === 'channelNumber') {
@@ -1671,6 +1979,17 @@ function LiveTvComponent() {
               🕒 {guideClock}
             </span>
 
+            {hiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={handleRestoreHidden}
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] sm:text-xs font-bold whitespace-nowrap shadow transition cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnSecondary} ${tokens.focusRing}`}
+                title="Restore all hidden channels back to the guide"
+              >
+                <span>↺ Restore Hidden ({hiddenCount})</span>
+              </button>
+            )}
+
             {hasActiveFilters && (
               <button
                 type="button"
@@ -1757,6 +2076,9 @@ function LiveTvComponent() {
                   <option value="status" className={tokens.optionBg}>
                     Sort: Live First
                   </option>
+                  <option value="reliability" className={tokens.optionBg}>
+                    Sort: Most Reliable
+                  </option>
                   <option value="channelNumber" className={tokens.optionBg}>
                     Sort: Channel #
                   </option>
@@ -1779,6 +2101,15 @@ function LiveTvComponent() {
                     {density === 'comfort' ? '▦ Compact' : '▢ Comfort'}
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => setCustomModalOpen(true)}
+                  className={`h-10 px-3 rounded-xl border text-xs font-extrabold whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnSecondary} ${tokens.focusRing}`}
+                  title="Add Custom Stream or Import/Export M3U Playlist"
+                >
+                  + Add / M3U
+                </button>
 
                 <button
                   type="button"
@@ -1998,6 +2329,7 @@ function LiveTvComponent() {
                     status={resolveChannelStatus(channel)}
                     isPinned={true}
                     onTogglePin={handleTogglePin}
+                    onHideChannel={handleHideChannel}
                     tokens={tokens}
                     radiusClass={cardRadiusClass}
                     largeButtons={largeButtons}
@@ -2079,6 +2411,7 @@ function LiveTvComponent() {
                       status={resolveChannelStatus(channel)}
                       isPinned={favoriteIdSet.has(key)}
                       onTogglePin={handleTogglePin}
+                      onHideChannel={handleHideChannel}
                       tokens={tokens}
                       radiusClass={cardRadiusClass}
                       largeButtons={largeButtons}
@@ -2170,6 +2503,13 @@ function LiveTvComponent() {
           )}
         </section>
       </div>
+
+      <CustomChannelManagerModal
+        isOpen={customModalOpen}
+        tokens={tokens}
+        onClose={() => setCustomModalOpen(false)}
+        onChanged={(msg) => showLiveToast(msg)}
+      />
     </main>
   );
 }
