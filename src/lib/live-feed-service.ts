@@ -1,16 +1,21 @@
 /**
  * ============================================================
- * LIVE FEED HEALTH LAYER, CATALOG & OVER-THE-AIR SERVICES
+ * LIVE FEED ENGINE — SECURITY, PERFORMANCE & SMART CATALOG
  * ============================================================
- * - Keeps all built-in channels intact with lower JS bundle footprint
- * - Hardware RAM-aware concurrent health probing & latency telemetry
- * - Optional OTA Gist channel overrides (`live_channels.json`)
- * - Sanitized custom channel & M3U playlist support
+ * - 215 verified built-in live channels (Network 10 scrubbed)
+ * - Hardened SSRF / LAN / ad-host URL security & M3U sanitizer
+ * - O(1) indexed memoized catalog & single-flight network deduplication
+ * - Smart HLS #EXTM3U content verification & AbortSignal cancellation
+ * - Dead-channel circuit breaker (auto-quarantine after repeated failures)
+ * - Automatic regional mirror/backup finder (e.g. Seven/Nine/ABC failovers)
+ * - Kids-safe filtering, hide/unhide channels, M3U import/export & zapping
  */
 
 import {
   getHardwareLimits,
   getFavoriteChannelIds,
+  getKidsModeLocked,
+  getSavedUserAge,
   purgeOldTmdbCaches,
 } from "./settings";
 import { getChannelCategory } from "./channel-categories";
@@ -41,6 +46,9 @@ export type LiveChannel = LiveFeedService & {
   category: string;
   isDrm: boolean;
   isFavorite: boolean;
+  isHidden?: boolean;
+  isQuarantined?: boolean;
+  reliabilityScore?: number;
   health?: ChannelHealth;
   healthCheckedAt?: number;
   latencyMs?: number;
@@ -52,6 +60,7 @@ export interface CatalogHealthStats {
   offline: number;
   unknown: number;
   checking: number;
+  quarantined?: number;
 }
 
 export interface LiveCatalogSummary {
@@ -59,19 +68,52 @@ export interface LiveCatalogSummary {
   builtInCount: number;
   customCount: number;
   remoteOverrideCount: number;
+  hiddenCount: number;
+  quarantinedCount: number;
   drmCount: number;
   regionCount: number;
   pinnedCount: number;
   cachedOnlineCount: number;
 }
 
-// ——— Tunables & Storage Keys ———
+export interface ChannelReliabilityRecord {
+  successes: number;
+  failures: number;
+  consecutiveFailures: number;
+  avgLatencyMs: number;
+  lastUpdatedAt: number;
+  quarantinedUntil?: number;
+}
+
+export interface M3uImportResult {
+  ok: boolean;
+  added: number;
+  skipped: number;
+  blocked: number;
+  totalCustom: number;
+  error?: string;
+}
+
+// ——— Events & Storage Keys ———
+export const LIVE_CATALOG_UPDATED_EVENT = "rabtv_live_catalog_updated";
+export const LIVE_HEALTH_UPDATED_EVENT = "rabtv_live_health_updated";
+
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const REMOTE_OVERRIDES_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const QUARANTINE_DURATION_MS = 6 * 60 * 60 * 1000; // 6-hour auto-cooldown
+const QUARANTINE_FAILURE_THRESHOLD = 3;
+
 const HEALTH_CACHE_KEY = "rabtv_cache_live_health_v4";
 const REMOTE_OVERRIDES_CACHE_KEY = "rabtv_cache_live_remote_v1";
 const CUSTOM_CHANNELS_KEY = "rabtv_custom_live_channels_v1";
+const HIDDEN_CHANNELS_KEY = "rabtv_hidden_live_channels_v1";
+const RELIABILITY_CACHE_KEY = "rabtv_live_reliability_v1";
+
 const MAX_CUSTOM_CHANNELS = 50;
+const MAX_REMOTE_OVERRIDES = 300;
+const MAX_M3U_BYTES = 512 * 1024; // 512 KB cap prevents freezing 1-2GB sticks
+const MAX_M3U_LINES = 5000;
+const MAX_URL_LENGTH = 2048;
 const HIDE_OFFLINE_BY_DEFAULT = true;
 
 const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
@@ -80,6 +122,45 @@ const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
 
 const DEFAULT_LIVE_UA =
   "otg/1.5.1 (AppleTv Apple TV 4; tvOS16.0; appletv.client) libcurl/7.58.0 OpenSSL/1.0.2o zlib/1.2.11 clib/1.8.56";
+
+// Known ad/tracker/redirect hosts blocked from custom M3U imports & OTA feeds
+const BLOCKED_STREAM_HOST_FRAGMENTS = [
+  "doubleclick.net",
+  "googlesyndication.com",
+  "popads.net",
+  "popcash.net",
+  "adsterra.com",
+  "propellerads.com",
+  "exoclick.com",
+  "clickadu.com",
+  "hilltopads.com",
+  "monetag.com",
+  "adcash.com",
+];
+
+// Mature keywords filtered out when Kids Safe Mode is active
+const MATURE_LIVE_KEYWORDS = [
+  "adult",
+  "crime",
+  "deadly",
+  "murder",
+  "cops",
+  "48 hours",
+  "csi",
+  "thriller",
+  "paranormal",
+  "haunt",
+  "ghost",
+  "botched",
+  "prisoner",
+  "hell",
+  "ridiculousness",
+  "embarrassing bodies",
+  "surveillance",
+  "emergency",
+  "a&e",
+  "warfare",
+];
 
 function defineChannel(
   channelId: string,
@@ -108,7 +189,7 @@ function defineChannel(
   return entry;
 }
 
-// ——— Built-In Live Channels Array ———
+// ——— Built-In Live Channels Array (215 Channels — Network 10 Scrubbed) ———
 export const liveFeedServices: LiveFeedService[] = [
   defineChannel("mjh-sky-popup2", "ThreeNow Sport 2", "Nz", "https://i.mjh.nz/.r/sky-popup2.m3u8", "https://contentful-images.digital.skyone.co.nz/v3/hf0kmuqe0d45/1jZRHmRhF6VFjZET4V2hFM/6d31709f4e877e133c3d16d28e1b58d2/Logo_Images_-_default.png"),
   defineChannel("mjh-sky-hgtv", "HGTV", "Nz", "https://i.mjh.nz/.r/sky-hgtv.m3u8", "https://contentful-images.digital.skyone.co.nz/v3/hf0kmuqe0d45/7ln9bxKLUYx7i79iVBSREP/3728559763d31ce1a9484fb68db96ddc/Logo_Images_-_default.png", 19),
@@ -326,12 +407,86 @@ export const liveFeedServices: LiveFeedService[] = [
   defineChannel("mjh-channel-news-asia", "Channel News Asia (CNA)", "World", "https://i.mjh.nz/.r/channel-news-asia.m3u8", "https://i.mjh.nz/.images/channel-news-asia.png"),
   defineChannel("mjh-dw-news", "DW English", "World", "https://i.mjh.nz/.r/dw-news.m3u8", "https://www.dw.com/images/icons/favicon-540x540.png"),
 ];
-// ——— Security: Safe Stream URL Validator ———
-export function isSafeStreamUrl(rawUrl: string): boolean {
+// ============================================================
+// 1. SECURITY & SANITIZATION UTILITIES
+// ============================================================
+
+/**
+ * Strips HTML tags, control chars, and zero-width spoofing characters.
+ */
+export function sanitizeChannelText(raw: string, maxLen = 60): string {
+  return String(raw || "")
+    .replace(/[\u200B-\u200D\uFEFF\x00-\x1F\x7F<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLen);
+}
+
+/**
+ * Detects private/loopback/link-local IPv4 & IPv6 hosts to prevent SSRF or
+ * accidental local-router probing from untrusted M3U playlists.
+ */
+function isPrivateOrLocalHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (
+    !host ||
+    host === "localhost" ||
+    host === "::1" ||
+    host === "0.0.0.0" ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    host.startsWith("fe80:") ||
+    host.startsWith("fc") ||
+    host.startsWith("fd")
+  ) {
+    return true;
+  }
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const a = Number(ipv4[1]);
+    const b = Number(ipv4[2]);
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 169 && b === 254) return true; // link-local / metadata
+    if (a === 192 && b === 168) return true; // LAN
+    if (a === 172 && b >= 16 && b <= 31) return true; // private RFC1918
+    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  }
+  return false;
+}
+
+/**
+ * Hardened stream URL validator:
+ * - Only allows http:// or https://
+ * - Rejects embedded username:password credentials, control chars, & oversized URLs
+ * - Blocks private LAN/loopback SSRF targets by default (opt-in via `allowLocalLan`)
+ * - Blocks known ad/popunder redirect domains
+ */
+export function isSafeStreamUrl(
+  rawUrl: string,
+  options?: { allowLocalLan?: boolean }
+): boolean {
   if (!rawUrl || typeof rawUrl !== "string") return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed || trimmed.length > MAX_URL_LENGTH) return false;
+  if (/[\x00-\x1F\x7F\s]/.test(trimmed)) return false;
+
   try {
-    const parsed = new URL(rawUrl.trim());
-    return parsed.protocol === "https:" || parsed.protocol === "http:";
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return false;
+    }
+    if (parsed.username || parsed.password) {
+      return false;
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (!host) return false;
+    if (!options?.allowLocalLan && isPrivateOrLocalHostname(host)) {
+      return false;
+    }
+    if (BLOCKED_STREAM_HOST_FRAGMENTS.some((bad) => host.includes(bad))) {
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -346,7 +501,29 @@ export function isDrmProtectedChannel(service: LiveFeedService): boolean {
   );
 }
 
-// ——— Safe LocalStorage Writer (Quota-Protected for 1-2GB Sticks) ———
+export function isChannelKidsSafe(channelName: string): boolean {
+  const lower = String(channelName || "").toLowerCase();
+  return !MATURE_LIVE_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function isKidsFilterActive(): boolean {
+  return getKidsModeLocked() || getSavedUserAge() < 13;
+}
+
+/** Normalizes a channel title for cross-region mirror matching & deduplication */
+function normalizeChannelBaseName(name: string): string {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "") // strip "(Gold Coast)", "(Newcastle)", etc.
+    .replace(/\b(regional|syd|mel|bri|per|ade|hob|nsw|vic|qld|wa|sa|tas|act|nt|cns|mky|ssc|rky|twb|tsv|wby|fast|24\/7|hd)\b/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+// ============================================================
+// 2. QUOTA-SAFE STORAGE & IN-MEMORY MEMOIZATION ENGINE
+// ============================================================
+
 function safeWriteStorage(key: string, payload: unknown): boolean {
   if (typeof window === "undefined") return false;
   const serialized = JSON.stringify(payload);
@@ -364,27 +541,178 @@ function safeWriteStorage(key: string, payload: unknown): boolean {
   }
 }
 
-// ——— Custom User Channels & M3U Playlist Support ———
+function dispatchLiveEvent(eventName: string): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(eventName));
+  }
+}
+
+// Memoized indexes so lookups & filtering run in O(1) with zero repeated JSON.parse
+let customChannelsMem: LiveFeedService[] | null = null;
+let hiddenIdsMem: Set<string> | null = null;
+let mergedServicesMem: LiveFeedService[] | null = null;
+let byIdIndexMem: Map<string, LiveFeedService> | null = null;
+let byUrlIndexMem: Map<string, LiveFeedService> | null = null;
+let byBaseNameIndexMem: Map<string, LiveFeedService[]> | null = null;
+let searchTokensMem: Map<string, string> | null = null;
+
+function invalidateCatalogCache(): void {
+  mergedServicesMem = null;
+  byIdIndexMem = null;
+  byUrlIndexMem = null;
+  byBaseNameIndexMem = null;
+  searchTokensMem = null;
+}
+
+function ensureCatalogIndexes(): void {
+  if (mergedServicesMem && byIdIndexMem && byUrlIndexMem && byBaseNameIndexMem) {
+    return;
+  }
+
+  const remote = loadCachedRemoteOverrides();
+  const custom = getCustomLiveChannels();
+
+  const map = new Map<string, LiveFeedService>();
+  for (const s of liveFeedServices) {
+    map.set(s.channelId, s);
+  }
+  for (const r of remote) {
+    if (r.disabled) {
+      map.delete(r.channelId);
+    } else {
+      const prev = map.get(r.channelId);
+      map.set(r.channelId, prev ? { ...prev, ...r } : r);
+    }
+  }
+  for (const c of custom) {
+    map.set(c.channelId, c);
+  }
+
+  const merged = Array.from(map.values());
+  const byId = new Map<string, LiveFeedService>();
+  const byUrl = new Map<string, LiveFeedService>();
+  const byBase = new Map<string, LiveFeedService[]>();
+  const tokens = new Map<string, string>();
+
+  for (const s of merged) {
+    byId.set(s.channelId, s);
+    byUrl.set(s.url, s);
+
+    const baseKey = normalizeChannelBaseName(s.name);
+    if (baseKey) {
+      const group = byBase.get(baseKey);
+      if (group) group.push(s);
+      else byBase.set(baseKey, [s]);
+    }
+
+    tokens.set(
+      s.channelId,
+      `${s.name} ${s.groupTitle} ${s.channelNumber ?? ""} ${getChannelCategory(s.name)}`.toLowerCase()
+    );
+  }
+
+  mergedServicesMem = merged;
+  byIdIndexMem = byId;
+  byUrlIndexMem = byUrl;
+  byBaseNameIndexMem = byBase;
+  searchTokensMem = tokens;
+}
+
+// ============================================================
+// 3. HIDDEN / BLOCKED CHANNELS MANAGEMENT
+// ============================================================
+
+export function getHiddenLiveChannelIds(): string[] {
+  if (hiddenIdsMem) return Array.from(hiddenIdsMem);
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HIDDEN_CHANNELS_KEY);
+    if (!raw) {
+      hiddenIdsMem = new Set();
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    hiddenIdsMem = new Set(
+      Array.isArray(parsed)
+        ? parsed.filter((x): x is string => typeof x === "string" && x.length > 0)
+        : []
+    );
+    return Array.from(hiddenIdsMem);
+  } catch {
+    hiddenIdsMem = new Set();
+    return [];
+  }
+}
+
+export function isLiveChannelHidden(channelId: string): boolean {
+  if (!hiddenIdsMem) getHiddenLiveChannelIds();
+  return hiddenIdsMem ? hiddenIdsMem.has(channelId) : false;
+}
+
+export function hideLiveChannel(channelId: string): void {
+  const cleanId = String(channelId || "").trim();
+  if (!cleanId) return;
+  if (!hiddenIdsMem) getHiddenLiveChannelIds();
+  hiddenIdsMem!.add(cleanId);
+  safeWriteStorage(HIDDEN_CHANNELS_KEY, Array.from(hiddenIdsMem!));
+  dispatchLiveEvent(LIVE_CATALOG_UPDATED_EVENT);
+}
+
+export function unhideLiveChannel(channelId: string): void {
+  const cleanId = String(channelId || "").trim();
+  if (!cleanId) return;
+  if (!hiddenIdsMem) getHiddenLiveChannelIds();
+  if (hiddenIdsMem!.delete(cleanId)) {
+    safeWriteStorage(HIDDEN_CHANNELS_KEY, Array.from(hiddenIdsMem!));
+    dispatchLiveEvent(LIVE_CATALOG_UPDATED_EVENT);
+  }
+}
+
+export function clearHiddenLiveChannels(): void {
+  hiddenIdsMem = new Set();
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(HIDDEN_CHANNELS_KEY);
+  }
+  dispatchLiveEvent(LIVE_CATALOG_UPDATED_EVENT);
+}
+
+// ============================================================
+// 4. CUSTOM USER CHANNELS & M3U PLAYLIST IMPORT / EXPORT
+// ============================================================
+
 export function getCustomLiveChannels(): LiveFeedService[] {
+  if (customChannelsMem) return customChannelsMem;
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(CUSTOM_CHANNELS_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      customChannelsMem = [];
+      return [];
+    }
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
+    if (!Array.isArray(parsed)) {
+      customChannelsMem = [];
+      return [];
+    }
+    customChannelsMem = parsed
       .filter(
         (item: any) =>
-          item && typeof item.name === "string" && isSafeStreamUrl(item.url)
+          item &&
+          typeof item.name === "string" &&
+          isSafeStreamUrl(item.url, { allowLocalLan: true })
       )
       .map((item: any) => ({
         ...item,
+        name: sanitizeChannelText(item.name, 50) || "Custom Channel",
+        groupTitle: sanitizeChannelText(item.groupTitle || "Custom", 25) || "Custom",
         isCustom: true,
         userAgent: item.userAgent || DEFAULT_LIVE_UA,
         referrer: item.referrer || "",
       }))
       .slice(0, MAX_CUSTOM_CHANNELS);
+    return customChannelsMem;
   } catch {
+    customChannelsMem = [];
     return [];
   }
 }
@@ -395,21 +723,25 @@ export function addCustomLiveChannel(input: {
   groupTitle?: string;
   logo?: string;
   channelNumber?: number;
+  allowLocalLan?: boolean;
 }): { ok: boolean; error?: string; channel?: LiveFeedService } {
-  const cleanName = String(input.name || "").trim().slice(0, 50);
+  const cleanName = sanitizeChannelText(input.name, 50);
   const cleanUrl = String(input.url || "").trim();
 
   if (cleanName.length < 2) {
     return { ok: false, error: "Channel name must be at least 2 characters." };
   }
-  if (!isSafeStreamUrl(cleanUrl)) {
+  if (!isSafeStreamUrl(cleanUrl, { allowLocalLan: input.allowLocalLan })) {
     return {
       ok: false,
-      error: "Stream URL must be a valid http:// or https:// link.",
+      error: "Stream URL must be a valid public http:// or https:// link.",
     };
   }
 
   const existing = getCustomLiveChannels();
+  if (existing.some((c) => c.url === cleanUrl)) {
+    return { ok: false, error: "This stream URL is already in your custom list." };
+  }
   if (existing.length >= MAX_CUSTOM_CHANNELS) {
     return {
       ok: false,
@@ -419,45 +751,114 @@ export function addCustomLiveChannel(input: {
 
   const safeLogo =
     input.logo && isSafeStreamUrl(input.logo) ? input.logo.trim() : undefined;
+  const cleanGroup = sanitizeChannelText(input.groupTitle || "Custom", 25) || "Custom";
 
   const newChannel: LiveFeedService = defineChannel(
     `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     cleanName,
-    (input.groupTitle || "Custom").trim().slice(0, 25),
+    cleanGroup,
     cleanUrl,
     safeLogo,
     input.channelNumber,
     { isCustom: true }
   );
 
-  safeWriteStorage(CUSTOM_CHANNELS_KEY, [newChannel, ...existing]);
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("rabtv_live_catalog_updated"));
-  }
+  const next = [newChannel, ...existing];
+  customChannelsMem = next;
+  safeWriteStorage(CUSTOM_CHANNELS_KEY, next);
+  invalidateCatalogCache();
+  dispatchLiveEvent(LIVE_CATALOG_UPDATED_EVENT);
   return { ok: true, channel: newChannel };
+}
+
+export function updateCustomLiveChannel(
+  channelId: string,
+  updates: Partial<Pick<LiveFeedService, "name" | "url" | "groupTitle" | "logo" | "channelNumber">>
+): { ok: boolean; error?: string } {
+  const existing = getCustomLiveChannels();
+  const idx = existing.findIndex((c) => c.channelId === channelId);
+  if (idx === -1) return { ok: false, error: "Custom channel not found." };
+
+  const current = existing[idx];
+  const nextName =
+    updates.name !== undefined
+      ? sanitizeChannelText(updates.name, 50)
+      : current.name;
+  const nextUrl =
+    updates.url !== undefined ? String(updates.url).trim() : current.url;
+
+  if (nextName.length < 2) {
+    return { ok: false, error: "Channel name must be at least 2 characters." };
+  }
+  if (!isSafeStreamUrl(nextUrl, { allowLocalLan: true })) {
+    return { ok: false, error: "Stream URL is not valid." };
+  }
+
+  const updated: LiveFeedService = {
+    ...current,
+    name: nextName,
+    url: nextUrl,
+    groupTitle:
+      updates.groupTitle !== undefined
+        ? sanitizeChannelText(updates.groupTitle, 25) || "Custom"
+        : current.groupTitle,
+    logo:
+      updates.logo !== undefined
+        ? isSafeStreamUrl(updates.logo)
+          ? updates.logo.trim()
+          : undefined
+        : current.logo,
+    channelNumber:
+      updates.channelNumber !== undefined
+        ? updates.channelNumber
+        : current.channelNumber,
+  };
+
+  const next = [...existing];
+  next[idx] = updated;
+  customChannelsMem = next;
+  safeWriteStorage(CUSTOM_CHANNELS_KEY, next);
+  invalidateCatalogCache();
+  dispatchLiveEvent(LIVE_CATALOG_UPDATED_EVENT);
+  return { ok: true };
 }
 
 export function removeCustomLiveChannel(channelId: string): boolean {
   const existing = getCustomLiveChannels();
   const next = existing.filter((c) => c.channelId !== channelId);
   if (next.length === existing.length) return false;
+  customChannelsMem = next;
   safeWriteStorage(CUSTOM_CHANNELS_KEY, next);
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("rabtv_live_catalog_updated"));
-  }
+  invalidateCatalogCache();
+  dispatchLiveEvent(LIVE_CATALOG_UPDATED_EVENT);
   return true;
 }
 
+export function clearCustomLiveChannels(): void {
+  customChannelsMem = [];
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(CUSTOM_CHANNELS_KEY);
+  }
+  invalidateCatalogCache();
+  dispatchLiveEvent(LIVE_CATALOG_UPDATED_EVENT);
+}
+
 /**
- * Lightweight M3U/M3U8 playlist parser for importing custom IPTV channels safely.
+ * Hardened M3U/M3U8 playlist parser with size & line caps to protect 1-2GB TVs.
  */
-export function parseM3uPlaylist(rawText: string): LiveFeedService[] {
-  const lines = String(rawText || "")
+export function parseM3uPlaylist(
+  rawText: string,
+  options?: { allowLocalLan?: boolean }
+): LiveFeedService[] {
+  const safeText = String(rawText || "").slice(0, MAX_M3U_BYTES);
+  const lines = safeText
     .split(/\r?\n/)
+    .slice(0, MAX_M3U_LINES)
     .map((l) => l.trim())
     .filter(Boolean);
 
   const parsed: LiveFeedService[] = [];
+  const seenUrls = new Set<string>();
   let pendingMeta: {
     name: string;
     logo?: string;
@@ -471,34 +872,41 @@ export function parseM3uPlaylist(rawText: string): LiveFeedService[] {
       const groupMatch = line.match(/group-title="([^"]+)"/i);
       const numMatch = line.match(/tvg-chno="(\d+)"/i);
       const commaIdx = line.lastIndexOf(",");
-      const title =
+      const rawTitle =
         commaIdx >= 0 ? line.slice(commaIdx + 1).trim() : "Custom Channel";
 
       pendingMeta = {
-        name: title.slice(0, 50) || "Custom Channel",
+        name: sanitizeChannelText(rawTitle, 50) || "Custom Channel",
         logo:
           logoMatch?.[1] && isSafeStreamUrl(logoMatch[1])
-            ? logoMatch[1]
+            ? logoMatch[1].trim()
             : undefined,
-        groupTitle: (groupMatch?.[1] || "Custom").slice(0, 25),
+        groupTitle:
+          sanitizeChannelText(groupMatch?.[1] || "Custom", 25) || "Custom",
         channelNumber: numMatch?.[1] ? parseInt(numMatch[1], 10) : undefined,
       };
-    } else if (!line.startsWith("#") && isSafeStreamUrl(line)) {
-      const meta = pendingMeta || {
-        name: `Channel ${parsed.length + 1}`,
-        groupTitle: "Custom",
-      };
-      parsed.push(
-        defineChannel(
-          `m3u-${parsed.length + 1}-${Date.now().toString(36)}`,
-          meta.name,
-          meta.groupTitle,
-          line,
-          meta.logo,
-          meta.channelNumber,
-          { isCustom: true }
-        )
-      );
+    } else if (!line.startsWith("#")) {
+      if (
+        !seenUrls.has(line) &&
+        isSafeStreamUrl(line, { allowLocalLan: options?.allowLocalLan })
+      ) {
+        seenUrls.add(line);
+        const meta = pendingMeta || {
+          name: `Channel ${parsed.length + 1}`,
+          groupTitle: "Custom",
+        };
+        parsed.push(
+          defineChannel(
+            `m3u-${parsed.length + 1}-${Date.now().toString(36)}`,
+            meta.name,
+            meta.groupTitle,
+            line,
+            meta.logo,
+            meta.channelNumber,
+            { isCustom: true }
+          )
+        );
+      }
       pendingMeta = null;
       if (parsed.length >= MAX_CUSTOM_CHANNELS) break;
     }
@@ -506,13 +914,105 @@ export function parseM3uPlaylist(rawText: string): LiveFeedService[] {
   return parsed;
 }
 
-// ——— Optional Over-the-Air Remote Gist Channel Overrides (`live_channels.json`) ———
+/**
+ * One-call M3U importer: parses, validates, deduplicates against existing custom
+ * channels, enforces capacity limits, and saves cleanly.
+ */
+export function importM3uPlaylist(
+  rawText: string,
+  options?: { allowLocalLan?: boolean }
+): M3uImportResult {
+  if (!rawText || typeof rawText !== "string" || !rawText.trim()) {
+    return {
+      ok: false,
+      added: 0,
+      skipped: 0,
+      blocked: 0,
+      totalCustom: getCustomLiveChannels().length,
+      error: "Playlist text is empty.",
+    };
+  }
+
+  const rawUrlsCount = rawText
+    .slice(0, MAX_M3U_BYTES)
+    .split(/\r?\n/)
+    .slice(0, MAX_M3U_LINES)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith("#")).length;
+
+  const parsed = parseM3uPlaylist(rawText, options);
+  const blocked = Math.max(0, rawUrlsCount - parsed.length);
+
+  const existing = getCustomLiveChannels();
+  const existingUrls = new Set(existing.map((c) => c.url));
+  const merged = [...existing];
+  let added = 0;
+  let skipped = 0;
+
+  for (const ch of parsed) {
+    if (merged.length >= MAX_CUSTOM_CHANNELS) {
+      skipped++;
+      continue;
+    }
+    if (existingUrls.has(ch.url)) {
+      skipped++;
+      continue;
+    }
+    existingUrls.add(ch.url);
+    merged.unshift(ch);
+    added++;
+  }
+
+  if (added > 0) {
+    customChannelsMem = merged;
+    safeWriteStorage(CUSTOM_CHANNELS_KEY, merged);
+    invalidateCatalogCache();
+    dispatchLiveEvent(LIVE_CATALOG_UPDATED_EVENT);
+  }
+
+  return {
+    ok: added > 0 || skipped > 0,
+    added,
+    skipped,
+    blocked,
+    totalCustom: merged.length,
+    error:
+      added === 0 && skipped === 0
+        ? "No valid public stream URLs were found in that playlist."
+        : undefined,
+  };
+}
+
+/**
+ * Exports either Custom Channels or the Full Catalog as a standard #EXTM3U string.
+ */
+export function exportChannelsAsM3u(scope: "custom" | "all" = "custom"): string {
+  const list =
+    scope === "all" ? getMergedLiveServices() : getCustomLiveChannels();
+  const out: string[] = ["#EXTM3U"];
+  for (const ch of list) {
+    const attrs: string[] = [];
+    if (ch.channelId) attrs.push(`tvg-id="${ch.channelId.replace(/"/g, "")}"`);
+    if (ch.channelNumber !== undefined) attrs.push(`tvg-chno="${ch.channelNumber}"`);
+    if (ch.logo) attrs.push(`tvg-logo="${ch.logo.replace(/"/g, "")}"`);
+    if (ch.groupTitle) attrs.push(`group-title="${ch.groupTitle.replace(/"/g, "")}"`);
+    out.push(`#EXTINF:-1 ${attrs.join(" ")},${ch.name}`);
+    out.push(ch.url);
+  }
+  return out.join("\n");
+}
+
+// ============================================================
+// 5. OVER-THE-AIR REMOTE GIST OVERRIDES (SINGLE-FLIGHT LOCKED)
+// ============================================================
+
 interface RemoteOverrideCache {
   fetchedAt: number;
   channels: LiveFeedService[];
 }
 
 let remoteOverridesMem: RemoteOverrideCache | null = null;
+let remoteSyncInFlight: Promise<LiveFeedService[]> | null = null;
 
 function loadCachedRemoteOverrides(): LiveFeedService[] {
   if (
@@ -543,6 +1043,7 @@ function loadCachedRemoteOverrides(): LiveFeedService[] {
 /**
  * Fetches optional `live_channels.json` from the admin Gist so broken feeds can be
  * patched or new live channels pushed over-the-air without rebuilding the APK.
+ * Deduplicated via single-flight lock so concurrent mounts only fire 1 request.
  */
 export async function syncRemoteChannelOverrides(
   force = false
@@ -552,102 +1053,270 @@ export async function syncRemoteChannelOverrides(
     if (cached.length > 0) return cached;
   }
   if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return [];
+  if (remoteSyncInFlight && !force) return remoteSyncInFlight;
 
-  const controller = new AbortController();
-  const timer =
-    typeof window !== "undefined"
-      ? window.setTimeout(() => controller.abort(), 5000)
-      : setTimeout(() => controller.abort(), 5000);
+  const task = (async () => {
+    const controller = new AbortController();
+    const timer =
+      typeof window !== "undefined"
+        ? window.setTimeout(() => controller.abort(), 5000)
+        : setTimeout(() => controller.abort(), 5000);
 
-  try {
-    const res = await fetch(`${GIST_API_URL}?t=${Date.now()}`, {
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": "RabbitTV-App",
-      },
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    if (!res.ok) return loadCachedRemoteOverrides();
+    try {
+      const res = await fetch(`${GIST_API_URL}?t=${Date.now()}`, {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "RabbitTV-App",
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+      if (!res.ok) return loadCachedRemoteOverrides();
 
-    const gistData = await res.json();
-    const rawContent = gistData.files?.["live_channels.json"]?.content;
-    if (!rawContent) return [];
+      const gistData = await res.json();
+      const rawContent = gistData.files?.["live_channels.json"]?.content;
+      if (!rawContent) return [];
 
-    const parsed = JSON.parse(rawContent);
-    if (!Array.isArray(parsed)) return [];
+      const parsed = JSON.parse(rawContent);
+      if (!Array.isArray(parsed)) return [];
 
-    const sanitized: LiveFeedService[] = parsed
-      .filter(
-        (item: any) =>
-          item &&
-          typeof item.channelId === "string" &&
-          (item.disabled === true || isSafeStreamUrl(item.url))
-      )
-      .map((item: any) => ({
-        channelId: String(item.channelId).trim(),
-        name: String(item.name || "Live Channel").trim(),
-        groupTitle: String(item.groupTitle || "World").trim(),
-        logo:
-          item.logo && isSafeStreamUrl(item.logo) ? String(item.logo) : undefined,
-        channelNumber:
-          typeof item.channelNumber === "number"
-            ? item.channelNumber
-            : undefined,
-        url: String(item.url || "").trim(),
-        userAgent: item.userAgent || DEFAULT_LIVE_UA,
-        referrer: item.referrer || "",
-        manifestType: item.manifestType,
-        licenseType: item.licenseType,
-        licenseKey: item.licenseKey,
-        disabled: Boolean(item.disabled),
-      }));
+      const sanitized: LiveFeedService[] = parsed
+        .slice(0, MAX_REMOTE_OVERRIDES)
+        .filter(
+          (item: any) =>
+            item &&
+            typeof item.channelId === "string" &&
+            (item.disabled === true || isSafeStreamUrl(item.url))
+        )
+        .map((item: any) => ({
+          channelId: sanitizeChannelText(item.channelId, 80),
+          name: sanitizeChannelText(item.name || "Live Channel", 50) || "Live Channel",
+          groupTitle: sanitizeChannelText(item.groupTitle || "World", 25) || "World",
+          logo:
+            item.logo && isSafeStreamUrl(item.logo) ? String(item.logo).trim() : undefined,
+          channelNumber:
+            typeof item.channelNumber === "number"
+              ? item.channelNumber
+              : undefined,
+          url: String(item.url || "").trim(),
+          userAgent: item.userAgent || DEFAULT_LIVE_UA,
+          referrer:
+            item.referrer && isSafeStreamUrl(item.referrer)
+              ? String(item.referrer).trim()
+              : "",
+          manifestType:
+            item.manifestType === "mpd" || item.manifestType === "hls"
+              ? item.manifestType
+              : undefined,
+          licenseType:
+            typeof item.licenseType === "string"
+              ? sanitizeChannelText(item.licenseType, 40)
+              : undefined,
+          licenseKey:
+            item.licenseKey && isSafeStreamUrl(item.licenseKey)
+              ? String(item.licenseKey).trim()
+              : undefined,
+          disabled: Boolean(item.disabled),
+        }))
+        .filter((item) => item.channelId.length > 0);
 
-    const entry: RemoteOverrideCache = {
-      fetchedAt: Date.now(),
-      channels: sanitized,
-    };
-    remoteOverridesMem = entry;
-    safeWriteStorage(REMOTE_OVERRIDES_CACHE_KEY, entry);
-    return sanitized;
-  } catch {
-    return loadCachedRemoteOverrides();
-  } finally {
-    if (typeof window !== "undefined") {
-      window.clearTimeout(timer as number);
-    } else {
-      clearTimeout(timer);
+      const entry: RemoteOverrideCache = {
+        fetchedAt: Date.now(),
+        channels: sanitized,
+      };
+      remoteOverridesMem = entry;
+      safeWriteStorage(REMOTE_OVERRIDES_CACHE_KEY, entry);
+      invalidateCatalogCache();
+      dispatchLiveEvent(LIVE_CATALOG_UPDATED_EVENT);
+      return sanitized;
+    } catch {
+      return loadCachedRemoteOverrides();
+    } finally {
+      if (typeof window !== "undefined") {
+        window.clearTimeout(timer as number);
+      } else {
+        clearTimeout(timer);
+      }
+      remoteSyncInFlight = null;
     }
-  }
+  })();
+
+  remoteSyncInFlight = task;
+  return task;
 }
 
 /**
  * Merges Built-In Channels + Remote Gist Overrides + Local Custom Channels.
+ * Backed by an in-memory cache for instant O(1) repeated calls.
  */
 export function getMergedLiveServices(): LiveFeedService[] {
-  const remote = loadCachedRemoteOverrides();
-  const custom = getCustomLiveChannels();
-
-  const map = new Map<string, LiveFeedService>();
-  for (const s of liveFeedServices) {
-    map.set(s.channelId, s);
-  }
-  for (const r of remote) {
-    if (r.disabled) {
-      map.delete(r.channelId);
-    } else {
-      const prev = map.get(r.channelId);
-      map.set(r.channelId, prev ? { ...prev, ...r } : r);
-    }
-  }
-  for (const c of custom) {
-    map.set(c.channelId, c);
-  }
-  return Array.from(map.values());
+  ensureCatalogIndexes();
+  return mergedServicesMem!;
 }
 
-// ——— In-Memory + LocalStorage Health Cache ———
+// ============================================================
+// 6. RELIABILITY TELEMETRY & DEAD-CHANNEL CIRCUIT BREAKER
+// ============================================================
+
+type ReliabilityMap = Record<string, ChannelReliabilityRecord>;
+
+function loadReliabilityMap(): ReliabilityMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(RELIABILITY_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as ReliabilityMap) : {};
+  } catch {
+    return {};
+  }
+}
+
+let reliabilityMap: ReliabilityMap = loadReliabilityMap();
+
+function persistReliabilityMap(): void {
+  // Keep storage lean on 1-2GB sticks (cap at 350 most recently updated channels)
+  const entries = Object.entries(reliabilityMap)
+    .sort((a, b) => (b[1]?.lastUpdatedAt || 0) - (a[1]?.lastUpdatedAt || 0))
+    .slice(0, 350);
+  reliabilityMap = Object.fromEntries(entries);
+  safeWriteStorage(RELIABILITY_CACHE_KEY, reliabilityMap);
+}
+
+export function isChannelQuarantined(channelId: string): boolean {
+  const rec = reliabilityMap[channelId];
+  if (!rec?.quarantinedUntil) return false;
+  if (Date.now() >= rec.quarantinedUntil) {
+    rec.quarantinedUntil = undefined;
+    rec.consecutiveFailures = 0;
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Call when a channel successfully starts playing or passes a live health probe.
+ * Clears any quarantine and updates rolling latency & reliability score.
+ */
+export function reportChannelPlaybackSuccess(
+  channelId: string,
+  latencyMs?: number
+): void {
+  const cleanId = String(channelId || "").trim();
+  if (!cleanId) return;
+  const prev = reliabilityMap[cleanId] || {
+    successes: 0,
+    failures: 0,
+    consecutiveFailures: 0,
+    avgLatencyMs: 0,
+    lastUpdatedAt: 0,
+  };
+  const nextSuccesses = prev.successes + 1;
+  const nextAvgLatency =
+    typeof latencyMs === "number" && latencyMs > 0
+      ? prev.avgLatencyMs > 0
+        ? Math.round(prev.avgLatencyMs * 0.7 + latencyMs * 0.3)
+        : Math.round(latencyMs)
+      : prev.avgLatencyMs;
+
+  reliabilityMap[cleanId] = {
+    successes: nextSuccesses,
+    failures: prev.failures,
+    consecutiveFailures: 0,
+    avgLatencyMs: nextAvgLatency,
+    lastUpdatedAt: Date.now(),
+    quarantinedUntil: undefined,
+  };
+  persistReliabilityMap();
+}
+
+/**
+ * Call when a channel fails to resolve, stalls out, or errors in the player.
+ * After 3 consecutive failures, the circuit breaker quarantines it for 6 hours.
+ */
+export function reportChannelPlaybackFailure(channelId: string): {
+  quarantined: boolean;
+  consecutiveFailures: number;
+} {
+  const cleanId = String(channelId || "").trim();
+  if (!cleanId) return { quarantined: false, consecutiveFailures: 0 };
+
+  const prev = reliabilityMap[cleanId] || {
+    successes: 0,
+    failures: 0,
+    consecutiveFailures: 0,
+    avgLatencyMs: 0,
+    lastUpdatedAt: 0,
+  };
+  const nextConsecutive = prev.consecutiveFailures + 1;
+  const shouldQuarantine = nextConsecutive >= QUARANTINE_FAILURE_THRESHOLD;
+
+  reliabilityMap[cleanId] = {
+    successes: prev.successes,
+    failures: prev.failures + 1,
+    consecutiveFailures: nextConsecutive,
+    avgLatencyMs: prev.avgLatencyMs,
+    lastUpdatedAt: Date.now(),
+    quarantinedUntil: shouldQuarantine
+      ? Date.now() + QUARANTINE_DURATION_MS
+      : prev.quarantinedUntil,
+  };
+  persistReliabilityMap();
+
+  if (shouldQuarantine) {
+    healthCache[cleanId] = {
+      health: "offline",
+      checkedAt: Date.now(),
+      latencyMs: prev.avgLatencyMs || 0,
+    };
+    saveHealthCache(healthCache);
+    dispatchLiveEvent(LIVE_HEALTH_UPDATED_EVENT);
+  }
+
+  return {
+    quarantined: shouldQuarantine,
+    consecutiveFailures: nextConsecutive,
+  };
+}
+
+/**
+ * Computes a 0–100 reliability score using probe health, playback history, & latency.
+ */
+export function getChannelReliabilityScore(channelId: string): number {
+  if (isChannelQuarantined(channelId)) return 5;
+  const rec = reliabilityMap[channelId];
+  const cached = healthCache[channelId];
+
+  let score = 60;
+  if (cached?.health === "online") score = 85;
+  else if (cached?.health === "offline") score = 15;
+  else if (cached?.health === "unknown") score = 55;
+
+  if (rec) {
+    const total = rec.successes + rec.failures;
+    if (total > 0) {
+      const rateScore = Math.round((rec.successes / total) * 100);
+      score = Math.round(score * 0.45 + rateScore * 0.55);
+    }
+    if (rec.consecutiveFailures > 0) {
+      score -= rec.consecutiveFailures * 15;
+    }
+  }
+
+  const latency = cached?.latencyMs || rec?.avgLatencyMs || 0;
+  if (latency > 0) {
+    if (latency < 600) score += 8;
+    else if (latency > 2500) score -= 10;
+  }
+
+  return Math.max(0, Math.min(100, score));
+}
+
+// ============================================================
+// 7. HARDWARE-AWARE HEALTH PROBING (SINGLE-FLIGHT + HLS CHECK)
+// ============================================================
+
 type HealthCacheEntry = {
   health: ChannelHealth;
   checkedAt: number;
@@ -679,77 +1348,124 @@ function saveHealthCache(cache: HealthCache) {
 }
 
 let healthCache: HealthCache = loadHealthCache();
+const inFlightProbes = new Map<
+  string,
+  Promise<{ health: ChannelHealth; latencyMs: number }>
+>();
 
 /**
- * Probe a single stream URL with hardware-aware timeout and latency measurement.
+ * Probe a single stream URL with hardware-aware timeout, HLS `#EXTM3U` content
+ * verification (catches soft-dead HTTP 200 HTML error pages), single-flight
+ * deduplication, and optional AbortSignal cancellation.
  */
 export async function probeStreamWithLatency(
-  url: string
+  url: string,
+  signal?: AbortSignal
 ): Promise<{ health: ChannelHealth; latencyMs: number }> {
-  if (!isSafeStreamUrl(url)) return { health: "offline", latencyMs: 0 };
-
-  const isLowRam = getHardwareLimits().effectiveMode === "low";
-  const timeoutMs = isLowRam ? 3500 : 4500;
-  const startedAt = Date.now();
-
-  const controller = new AbortController();
-  const timer =
-    typeof window !== "undefined"
-      ? window.setTimeout(() => controller.abort(), timeoutMs)
-      : setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      signal: controller.signal,
-      mode: "cors",
-      cache: "no-store",
-      credentials: "omit",
-      headers: { Range: "bytes=0-512" },
-    });
-
-    const latencyMs = Date.now() - startedAt;
-    if (res.ok || res.status === 206) {
-      return { health: "online", latencyMs };
-    }
-    if (res.status === 401 || res.status === 403) {
-      return { health: "unknown", latencyMs };
-    }
-    if (res.status >= 400) {
-      return { health: "offline", latencyMs };
-    }
-    return { health: "unknown", latencyMs };
-  } catch (err: any) {
-    const latencyMs = Date.now() - startedAt;
-    if (err?.name === "AbortError") return { health: "offline", latencyMs };
-    if (err?.name === "TypeError") return { health: "unknown", latencyMs };
-    return { health: "offline", latencyMs };
-  } finally {
-    if (typeof window !== "undefined") {
-      window.clearTimeout(timer as number);
-    } else {
-      clearTimeout(timer);
-    }
+  if (!isSafeStreamUrl(url, { allowLocalLan: true }) || signal?.aborted) {
+    return { health: "offline", latencyMs: 0 };
   }
+
+  const cleanUrl = url.trim();
+  const existingPromise = inFlightProbes.get(cleanUrl);
+  if (existingPromise) return existingPromise;
+
+  const task = (async (): Promise<{
+    health: ChannelHealth;
+    latencyMs: number;
+  }> => {
+    const isLowRam = getHardwareLimits().effectiveMode === "low";
+    const timeoutMs = isLowRam ? 3200 : 4500;
+    const startedAt = Date.now();
+
+    const controller = new AbortController();
+    const onParentAbort = () => controller.abort();
+    signal?.addEventListener("abort", onParentAbort, { once: true });
+
+    const timer =
+      typeof window !== "undefined"
+        ? window.setTimeout(() => controller.abort(), timeoutMs)
+        : setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(cleanUrl, {
+        method: "GET",
+        signal: controller.signal,
+        mode: "cors",
+        cache: "no-store",
+        credentials: "omit",
+        headers: { Range: "bytes=0-512" },
+      });
+
+      const latencyMs = Date.now() - startedAt;
+      if (res.ok || res.status === 206) {
+        // Verify HLS playlists aren't returning an HTML error/geo-block page
+        if (cleanUrl.toLowerCase().includes(".m3u8")) {
+          const contentType = (res.headers.get("content-type") || "").toLowerCase();
+          if (contentType.includes("text/html")) {
+            return { health: "offline", latencyMs };
+          }
+          try {
+            const snippet = (await res.text()).slice(0, 256).trim();
+            if (snippet && !snippet.startsWith("#EXTM3U") && /<!doctype|<html/i.test(snippet)) {
+              return { health: "offline", latencyMs };
+            }
+          } catch {
+            // If body can't be read, HTTP 200 is still good
+          }
+        }
+        return { health: "online", latencyMs };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return { health: "unknown", latencyMs };
+      }
+      if (res.status >= 400) {
+        return { health: "offline", latencyMs };
+      }
+      return { health: "unknown", latencyMs };
+    } catch (err: any) {
+      const latencyMs = Date.now() - startedAt;
+      if (signal?.aborted) return { health: "checking", latencyMs };
+      if (err?.name === "AbortError") return { health: "offline", latencyMs };
+      if (err?.name === "TypeError") return { health: "unknown", latencyMs };
+      return { health: "offline", latencyMs };
+    } finally {
+      signal?.removeEventListener("abort", onParentAbort);
+      if (typeof window !== "undefined") {
+        window.clearTimeout(timer as number);
+      } else {
+        clearTimeout(timer);
+      }
+      inFlightProbes.delete(cleanUrl);
+    }
+  })();
+
+  inFlightProbes.set(cleanUrl, task);
+  return task;
 }
 
 /** Backwards-compatible stream probe returning ChannelHealth */
-export async function probeStream(url: string): Promise<ChannelHealth> {
-  const res = await probeStreamWithLatency(url);
+export async function probeStream(
+  url: string,
+  signal?: AbortSignal
+): Promise<ChannelHealth> {
+  const res = await probeStreamWithLatency(url, signal);
   return res.health;
 }
 
-/** Run probes with a hardware-aware concurrency limit */
+/** Run probes with a hardware-aware concurrency limit & AbortSignal support */
 async function mapPool<T, R>(
   items: T[],
   limit: number,
-  worker: (item: T, index: number) => Promise<R>
+  worker: (item: T, index: number) => Promise<R>,
+  signal?: AbortSignal
 ): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let next = 0;
 
   async function run() {
     while (next < items.length) {
+      if (signal?.aborted) return;
       const i = next++;
       results[i] = await worker(items[i], i);
     }
@@ -765,10 +1481,15 @@ async function mapPool<T, R>(
 
 /**
  * Enrich channels with health status & latency using memory cache to avoid re-probing.
+ * Persists progress in batches of 15 so navigating away never loses scan progress.
  */
 export async function enrichChannelsWithHealth(
   channels: LiveChannel[],
-  options?: { force?: boolean }
+  options?: {
+    force?: boolean;
+    signal?: AbortSignal;
+    onProgress?: (done: number, total: number) => void;
+  }
 ): Promise<LiveChannel[]> {
   const now = Date.now();
   const force = options?.force === true;
@@ -776,41 +1497,67 @@ export async function enrichChannelsWithHealth(
 
   const needsProbe = channels.filter((ch) => {
     if (force) return true;
+    if (isChannelQuarantined(ch.channelId)) return false;
     const cached = healthCache[ch.channelId];
     return !cached || now - cached.checkedAt >= CACHE_TTL_MS;
   });
 
-  if (needsProbe.length > 0) {
-    await mapPool(needsProbe, concurrency, async (ch) => {
-      const res = await probeStreamWithLatency(ch.url || ch.streamUrl);
-      healthCache[ch.channelId] = {
-        health: res.health,
-        checkedAt: Date.now(),
-        latencyMs: res.latencyMs,
-      };
-      return res.health;
-    });
+  if (needsProbe.length > 0 && !options?.signal?.aborted) {
+    let completed = 0;
+    await mapPool(
+      needsProbe,
+      concurrency,
+      async (ch) => {
+        const res = await probeStreamWithLatency(
+          ch.url || ch.streamUrl,
+          options?.signal
+        );
+        if (!options?.signal?.aborted) {
+          healthCache[ch.channelId] = {
+            health: res.health,
+            checkedAt: Date.now(),
+            latencyMs: res.latencyMs,
+          };
+          if (res.health === "online") {
+            reportChannelPlaybackSuccess(ch.channelId, res.latencyMs);
+          }
+          completed++;
+          if (completed % 15 === 0) {
+            saveHealthCache(healthCache);
+          }
+          options?.onProgress?.(completed, needsProbe.length);
+        }
+        return res.health;
+      },
+      options?.signal
+    );
     saveHealthCache(healthCache);
+    dispatchLiveEvent(LIVE_HEALTH_UPDATED_EVENT);
   }
 
   return channels.map((ch) => {
     const entry = healthCache[ch.channelId];
+    const quarantined = isChannelQuarantined(ch.channelId);
     return {
       ...ch,
-      health: entry?.health ?? "unknown",
+      health: quarantined ? "offline" : entry?.health ?? "unknown",
       healthCheckedAt: entry?.checkedAt,
       latencyMs: entry?.latencyMs,
+      isQuarantined: quarantined,
+      reliabilityScore: getChannelReliabilityScore(ch.channelId),
     };
   });
 }
 
-/** Drop offline, unknown, or checking channels — only keep online (green) channels */
+/** Drop offline, quarantined, unknown, or checking channels — only keep online channels */
 export function filterHealthyChannels(
   channels: LiveChannel[],
   hideOffline = HIDE_OFFLINE_BY_DEFAULT
 ): LiveChannel[] {
   if (!hideOffline) return channels;
-  return channels.filter((ch) => ch.health === "online");
+  return channels.filter(
+    (ch) => ch.health === "online" && !ch.isQuarantined
+  );
 }
 
 export function getCatalogHealthStats(
@@ -822,8 +1569,10 @@ export function getCatalogHealthStats(
     offline: 0,
     unknown: 0,
     checking: 0,
+    quarantined: 0,
   };
   for (const ch of channels) {
+    if (ch.isQuarantined) stats.quarantined = (stats.quarantined || 0) + 1;
     switch (ch.health) {
       case "online":
         stats.online++;
@@ -841,7 +1590,9 @@ export function getCatalogHealthStats(
   return stats;
 }
 
-// ——— Catalog API Exports ———
+// ============================================================
+// 8. CATALOG API, REGIONAL BACKUPS & ZAPPING ENGINE
+// ============================================================
 
 function toLiveChannel(
   s: LiveFeedService,
@@ -849,6 +1600,7 @@ function toLiveChannel(
 ): LiveChannel {
   const cached = healthCache[s.channelId];
   const favSet = favoriteSet ?? new Set(getFavoriteChannelIds());
+  const quarantined = isChannelQuarantined(s.channelId);
   return {
     ...s,
     streamUrl: s.url,
@@ -856,7 +1608,10 @@ function toLiveChannel(
     category: getChannelCategory(s.name),
     isDrm: isDrmProtectedChannel(s),
     isFavorite: favSet.has(s.channelId),
-    health: cached?.health ?? "checking",
+    isHidden: isLiveChannelHidden(s.channelId),
+    isQuarantined: quarantined,
+    reliabilityScore: getChannelReliabilityScore(s.channelId),
+    health: quarantined ? "offline" : cached?.health ?? "checking",
     healthCheckedAt: cached?.checkedAt,
     latencyMs: cached?.latencyMs,
   };
@@ -865,33 +1620,44 @@ function toLiveChannel(
 export async function fetchLiveCategories(): Promise<string[]> {
   const categories = new Set<string>();
   for (const service of getMergedLiveServices()) {
-    if (service.groupTitle) categories.add(service.groupTitle);
+    if (service.groupTitle && !isLiveChannelHidden(service.channelId)) {
+      categories.add(service.groupTitle);
+    }
   }
   return ["All", ...Array.from(categories).sort((a, b) => a.localeCompare(b))];
 }
 
 export async function fetchChannelsByCategory(
   category: string,
-  options?: { probe?: boolean; hideOffline?: boolean; forceProbe?: boolean }
+  options?: {
+    probe?: boolean;
+    hideOffline?: boolean;
+    forceProbe?: boolean;
+    includeHidden?: boolean;
+    respectKidsMode?: boolean;
+    signal?: AbortSignal;
+  }
 ): Promise<LiveChannel[]> {
   const probe = options?.probe !== false;
   const hideOffline = options?.hideOffline ?? HIDE_OFFLINE_BY_DEFAULT;
+  const includeHidden = options?.includeHidden === true;
+  const kidsGuard = options?.respectKidsMode === true && isKidsFilterActive();
   const favSet = new Set(getFavoriteChannelIds());
 
   const merged = getMergedLiveServices();
-  const filtered =
-    !category || category === "All"
-      ? merged
-      : merged.filter(
-          (service) =>
-            service.groupTitle.toLowerCase() === category.toLowerCase()
-        );
+  const filtered = merged.filter((service) => {
+    if (!includeHidden && isLiveChannelHidden(service.channelId)) return false;
+    if (kidsGuard && !isChannelKidsSafe(service.name)) return false;
+    if (!category || category === "All") return true;
+    return service.groupTitle.toLowerCase() === category.toLowerCase();
+  });
 
   let channels = filtered.map((s) => toLiveChannel(s, favSet));
 
   if (probe) {
     channels = await enrichChannelsWithHealth(channels, {
       force: options?.forceProbe,
+      signal: options?.signal,
     });
     channels = filterHealthyChannels(channels, hideOffline);
   }
@@ -910,17 +1676,30 @@ export async function fetchAllChannels(options?: {
   probe?: boolean;
   hideOffline?: boolean;
   forceProbe?: boolean;
+  includeHidden?: boolean;
+  respectKidsMode?: boolean;
+  signal?: AbortSignal;
 }): Promise<LiveChannel[]> {
   const probe = options?.probe !== false;
   const hideOffline = options?.hideOffline ?? HIDE_OFFLINE_BY_DEFAULT;
+  const includeHidden = options?.includeHidden === true;
+  const kidsGuard = options?.respectKidsMode === true && isKidsFilterActive();
   const favSet = new Set(getFavoriteChannelIds());
 
   void syncRemoteChannelOverrides(false);
 
-  let channels = getMergedLiveServices().map((s) => toLiveChannel(s, favSet));
+  let channels = getMergedLiveServices()
+    .filter((s) => {
+      if (!includeHidden && isLiveChannelHidden(s.channelId)) return false;
+      if (kidsGuard && !isChannelKidsSafe(s.name)) return false;
+      return true;
+    })
+    .map((s) => toLiveChannel(s, favSet));
+
   if (probe) {
     channels = await enrichChannelsWithHealth(channels, {
       force: options?.forceProbe,
+      signal: options?.signal,
     });
     channels = filterHealthyChannels(channels, hideOffline);
   }
@@ -928,46 +1707,87 @@ export async function fetchAllChannels(options?: {
 }
 
 /**
- * Fast channel lookup by ID or Stream URL.
+ * O(1) channel lookup by ID or Stream URL.
  */
 export function getChannelById(idOrUrl: string): LiveChannel | null {
   const target = String(idOrUrl || "").trim();
   if (!target) return null;
-  const match = getMergedLiveServices().find(
-    (s) => s.channelId === target || s.url === target
-  );
+  ensureCatalogIndexes();
+  const match = byIdIndexMem!.get(target) || byUrlIndexMem!.get(target);
   return match ? toLiveChannel(match) : null;
 }
 
 /**
- * Returns the user's Pinned Favorite Live Channels in their saved order.
+ * Classic cable-box channel number lookup (e.g. 71 -> Seven, 91 -> Channel 9).
  */
-export function getFavoriteLiveChannels(): LiveChannel[] {
-  const favIds = getFavoriteChannelIds();
-  if (favIds.length === 0) return [];
-  const favSet = new Set(favIds);
-  const byId = new Map<string, LiveFeedService>();
-  for (const s of getMergedLiveServices()) {
-    byId.set(s.channelId, s);
+export function getChannelByNumber(
+  channelNumber: number,
+  preferredRegion?: string
+): LiveChannel | null {
+  if (!Number.isFinite(channelNumber)) return null;
+  const matches = getMergedLiveServices().filter(
+    (s) =>
+      s.channelNumber === channelNumber && !isLiveChannelHidden(s.channelId)
+  );
+  if (matches.length === 0) return null;
+  if (preferredRegion) {
+    const regional = matches.find(
+      (s) => s.groupTitle.toLowerCase() === preferredRegion.toLowerCase()
+    );
+    if (regional) return toLiveChannel(regional);
   }
-  return favIds
-    .map((id) => byId.get(id))
-    .filter((s): s is LiveFeedService => Boolean(s))
-    .map((s) => toLiveChannel(s, favSet));
+  const ranked = matches
+    .map((s) => toLiveChannel(s))
+    .sort((a, b) => (b.reliabilityScore || 0) - (a.reliabilityScore || 0));
+  return ranked[0] || null;
 }
 
 /**
- * Rich search across channel name, number, region, genre category, and description.
+ * Smart Automatic Backup Mirror Finder:
+ * If a regional feed fails (e.g. Seven Sydney, Channel 9 NSW, ABC TV, BBC News),
+ * returns alternate regional feeds of the exact same channel sorted by reliability
+ * and lowest latency so the player can seamlessly auto-failover!
  */
-export function searchLiveChannels(
-  query: string,
-  options?: { region?: string; genre?: string }
-): LiveChannel[] {
-  const q = String(query || "").trim().toLowerCase();
+export function getBackupStreamsForChannel(idOrUrl: string): LiveChannel[] {
+  const current = getChannelById(idOrUrl);
+  if (!current) return [];
+  ensureCatalogIndexes();
+  const baseKey = normalizeChannelBaseName(current.name);
+  if (!baseKey) return [];
+
+  const siblings = byBaseNameIndexMem!.get(baseKey) || [];
   const favSet = new Set(getFavoriteChannelIds());
 
-  return getMergedLiveServices()
+  return siblings
+    .filter(
+      (s) =>
+        s.channelId !== current.channelId &&
+        s.url !== current.url &&
+        !isLiveChannelHidden(s.channelId) &&
+        !isChannelQuarantined(s.channelId)
+    )
+    .map((s) => toLiveChannel(s, favSet))
+    .sort((a, b) => {
+      const scoreDiff = (b.reliabilityScore || 0) - (a.reliabilityScore || 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      return (a.latencyMs || 9999) - (b.latencyMs || 9999);
+    });
+}
+
+/**
+ * Instant CH+ / CH- Channel Zapping helper for TV remotes & live-player surfing.
+ */
+export function getAdjacentChannels(
+  currentIdOrUrl: string,
+  options?: { region?: string; genre?: string; onlineOnly?: boolean }
+): { prev: LiveChannel | null; next: LiveChannel | null } {
+  const kidsGuard = isKidsFilterActive();
+  const favSet = new Set(getFavoriteChannelIds());
+
+  const pool = getMergedLiveServices()
     .filter((s) => {
+      if (isLiveChannelHidden(s.channelId)) return false;
+      if (kidsGuard && !isChannelKidsSafe(s.name)) return false;
       if (
         options?.region &&
         options.region !== "All" &&
@@ -982,12 +1802,134 @@ export function searchLiveChannels(
       ) {
         return false;
       }
-      if (!q) return true;
-      return (
-        String(s.channelNumber || "").includes(q) ||
-        s.groupTitle.toLowerCase().includes(q) ||
-        matchesChannelSearch(s.name, q)
-      );
+      if (options?.onlineOnly && healthCache[s.channelId]?.health !== "online") {
+        return false;
+      }
+      return true;
+    })
+    .map((s) => toLiveChannel(s, favSet));
+
+  if (pool.length === 0) return { prev: null, next: null };
+
+  const idx = pool.findIndex(
+    (c) => c.channelId === currentIdOrUrl || c.url === currentIdOrUrl
+  );
+  if (idx === -1) {
+    return { prev: pool[pool.length - 1], next: pool[0] };
+  }
+  return {
+    prev: pool[(idx - 1 + pool.length) % pool.length],
+    next: pool[(idx + 1) % pool.length],
+  };
+}
+
+/**
+ * Smart "Channel Surf" picker: prefers verified online, non-quarantined channels
+ * and avoids picking the currently playing channel.
+ */
+export function getRandomHealthyChannel(
+  excludeIdOrUrl?: string
+): LiveChannel | null {
+  const kidsGuard = isKidsFilterActive();
+  const favSet = new Set(getFavoriteChannelIds());
+
+  const candidates = getMergedLiveServices()
+    .filter(
+      (s) =>
+        s.channelId !== excludeIdOrUrl &&
+        s.url !== excludeIdOrUrl &&
+        !isLiveChannelHidden(s.channelId) &&
+        !isChannelQuarantined(s.channelId) &&
+        (!kidsGuard || isChannelKidsSafe(s.name))
+    )
+    .map((s) => toLiveChannel(s, favSet));
+
+  if (candidates.length === 0) return null;
+
+  const online = candidates.filter((c) => c.health === "online");
+  const pool = online.length > 0 ? online : candidates;
+  return pool[Math.floor(Math.random() * pool.length)] || null;
+}
+
+/**
+ * Returns the fastest & most reliable online channels for "Quick Watch" shelves.
+ */
+export function getMostReliableChannels(limit = 12): LiveChannel[] {
+  const kidsGuard = isKidsFilterActive();
+  const favSet = new Set(getFavoriteChannelIds());
+
+  return getMergedLiveServices()
+    .filter(
+      (s) =>
+        !isLiveChannelHidden(s.channelId) &&
+        !isChannelQuarantined(s.channelId) &&
+        (!kidsGuard || isChannelKidsSafe(s.name))
+    )
+    .map((s) => toLiveChannel(s, favSet))
+    .sort((a, b) => {
+      const scoreDiff = (b.reliabilityScore || 0) - (a.reliabilityScore || 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      return (a.latencyMs || 9999) - (b.latencyMs || 9999);
+    })
+    .slice(0, Math.max(1, limit));
+}
+
+/**
+ * Returns the user's Pinned Favorite Live Channels in their saved order.
+ */
+export function getFavoriteLiveChannels(): LiveChannel[] {
+  const favIds = getFavoriteChannelIds();
+  if (favIds.length === 0) return [];
+  ensureCatalogIndexes();
+  const favSet = new Set(favIds);
+
+  return favIds
+    .map((id) => byIdIndexMem!.get(id))
+    .filter(
+      (s): s is LiveFeedService =>
+        Boolean(s) && !isLiveChannelHidden(s.channelId)
+    )
+    .map((s) => toLiveChannel(s, favSet));
+}
+
+/**
+ * Fast multi-token search across channel name, number, region, genre, and description.
+ */
+export function searchLiveChannels(
+  query: string,
+  options?: { region?: string; genre?: string; includeHidden?: boolean }
+): LiveChannel[] {
+  const q = String(query || "").trim().toLowerCase();
+  const queryWords = q ? q.split(/\s+/).filter(Boolean) : [];
+  const favSet = new Set(getFavoriteChannelIds());
+  const kidsGuard = isKidsFilterActive();
+  ensureCatalogIndexes();
+
+  return mergedServicesMem!
+    .filter((s) => {
+      if (!options?.includeHidden && isLiveChannelHidden(s.channelId)) {
+        return false;
+      }
+      if (kidsGuard && !isChannelKidsSafe(s.name)) return false;
+      if (
+        options?.region &&
+        options.region !== "All" &&
+        s.groupTitle.toLowerCase() !== options.region.toLowerCase()
+      ) {
+        return false;
+      }
+      if (
+        options?.genre &&
+        options.genre !== "All Genres" &&
+        getChannelCategory(s.name).toLowerCase() !== options.genre.toLowerCase()
+      ) {
+        return false;
+      }
+      if (queryWords.length === 0) return true;
+
+      const indexed = searchTokensMem!.get(s.channelId) || "";
+      if (queryWords.every((w) => indexed.includes(w))) return true;
+      return matchesChannelSearch(s.name, q);
     })
     .map((s) => toLiveChannel(s, favSet));
 }
@@ -1000,10 +1942,12 @@ export function getLiveCatalogSummary(): LiveCatalogSummary {
   const regions = new Set<string>();
   let drmCount = 0;
   let cachedOnlineCount = 0;
+  let quarantinedCount = 0;
 
   for (const s of merged) {
     if (s.groupTitle) regions.add(s.groupTitle);
     if (isDrmProtectedChannel(s)) drmCount++;
+    if (isChannelQuarantined(s.channelId)) quarantinedCount++;
     if (healthCache[s.channelId]?.health === "online") {
       cachedOnlineCount++;
     }
@@ -1014,6 +1958,8 @@ export function getLiveCatalogSummary(): LiveCatalogSummary {
     builtInCount: liveFeedServices.length,
     customCount: getCustomLiveChannels().length,
     remoteOverrideCount: loadCachedRemoteOverrides().length,
+    hiddenCount: getHiddenLiveChannelIds().length,
+    quarantinedCount,
     drmCount,
     regionCount: regions.size,
     pinnedCount: getFavoriteChannelIds().length,
@@ -1021,15 +1967,27 @@ export function getLiveCatalogSummary(): LiveCatalogSummary {
   };
 }
 
-export async function refreshLiveHealth(): Promise<
-  Record<string, "online" | "offline">
-> {
+export async function refreshLiveHealth(options?: {
+  signal?: AbortSignal;
+  onProgress?: (done: number, total: number) => void;
+}): Promise<Record<string, "online" | "offline">> {
+  // Clear temporary quarantines on explicit user refresh so recovered feeds can come back
+  for (const rec of Object.values(reliabilityMap)) {
+    rec.quarantinedUntil = undefined;
+    rec.consecutiveFailures = 0;
+  }
+  persistReliabilityMap();
+
   await syncRemoteChannelOverrides(true);
   const favSet = new Set(getFavoriteChannelIds());
-  const allChannels = getMergedLiveServices().map((s) =>
-    toLiveChannel(s, favSet)
-  );
-  const enriched = await enrichChannelsWithHealth(allChannels, { force: true });
+  const allChannels = getMergedLiveServices()
+    .filter((s) => !isLiveChannelHidden(s.channelId))
+    .map((s) => toLiveChannel(s, favSet));
+  const enriched = await enrichChannelsWithHealth(allChannels, {
+    force: true,
+    signal: options?.signal,
+    onProgress: options?.onProgress,
+  });
 
   const healthResults: Record<string, "online" | "offline"> = {};
   for (const ch of enriched) {
@@ -1041,8 +1999,12 @@ export async function refreshLiveHealth(): Promise<
 export function clearLiveHealthCache(): void {
   healthCache = {};
   remoteOverridesMem = null;
+  reliabilityMap = {};
+  invalidateCatalogCache();
   if (typeof window !== "undefined") {
     localStorage.removeItem(HEALTH_CACHE_KEY);
     localStorage.removeItem(REMOTE_OVERRIDES_CACHE_KEY);
+    localStorage.removeItem(RELIABILITY_CACHE_KEY);
   }
+  dispatchLiveEvent(LIVE_HEALTH_UPDATED_EVENT);
 }
