@@ -167,9 +167,10 @@ const PLAYER_VIEWPORT_STYLES = `
   /* Full-width studded buttonwrapper.png bay holding Back to Home + TV/Movie Details */
   .rabtv-plr-dual-nav-wrap {
     position: relative;
+    isolation: isolate;
     width: 100%;
-    height: clamp(64px, 16.6vw, 86px);
-    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
+    height: clamp(54px, 14vw, 72px);
+    padding: clamp(7px, 1.8vw, 10px) clamp(18px, 5vw, 44px);
     display: flex;
     align-items: center;
     justify-content: space-evenly;
@@ -180,17 +181,47 @@ const PLAYER_VIEWPORT_STYLES = `
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8))
+      drop-shadow(0 0 10px var(--rabtv-art-glow, rgba(139, 92, 246, 0.34)));
+  }
+
+  .rabtv-plr-dual-nav-wrap::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: radial-gradient(
+      ellipse at center,
+      var(--rabtv-art-soft, rgba(139, 92, 246, 0.14)) 0%,
+      transparent 82%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-plr-dual-nav-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--rabtv-art-tint, #a855f7);
+    mix-blend-mode: color;
+    opacity: var(--rabtv-art-tint-opacity, 0.22);
+    pointer-events: none;
+    z-index: 2;
   }
 
   .rabtv-plr-nav-art-btn {
     position: relative;
+    z-index: 6;
+    isolation: isolate;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: 1 1 0;
     min-width: 0;
-    max-width: 48%;
-    height: 100%;
+    max-width: 46%;
+    height: 88%;
     background: transparent;
     border: 0;
     padding: 0;
@@ -198,6 +229,18 @@ const PLAYER_VIEWPORT_STYLES = `
     overflow: hidden;
     border-radius: 9999px;
     transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .rabtv-plr-nav-art-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--rabtv-art-tint, #a855f7);
+    mix-blend-mode: color;
+    opacity: var(--rabtv-btn-tint-opacity, 0.16);
+    pointer-events: none;
+    z-index: 2;
   }
 
   .rabtv-plr-nav-art-btn img {
@@ -219,6 +262,7 @@ const PLAYER_VIEWPORT_STYLES = `
 
   .rabtv-plr-movie-details-pill {
     position: relative;
+    z-index: 6;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -237,8 +281,9 @@ const PLAYER_VIEWPORT_STYLES = `
   /* Full-width centered section header banner backed by buttonwrapper.png */
   .rabtv-plr-section-banner {
     position: relative;
+    isolation: isolate;
     width: 100%;
-    height: clamp(54px, 13.8vw, 72px);
+    height: clamp(46px, 12vw, 58px);
     padding: 0 clamp(24px, 6vw, 48px);
     display: flex;
     flex-wrap: nowrap;
@@ -251,6 +296,34 @@ const PLAYER_VIEWPORT_STYLES = `
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8))
+      drop-shadow(0 0 10px var(--rabtv-art-glow, rgba(139, 92, 246, 0.34)));
+  }
+
+  .rabtv-plr-section-banner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: radial-gradient(
+      ellipse at center,
+      var(--rabtv-art-soft, rgba(139, 92, 246, 0.14)) 0%,
+      transparent 82%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-plr-section-banner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--rabtv-art-tint, #a855f7);
+    mix-blend-mode: color;
+    opacity: var(--rabtv-art-tint-opacity, 0.22);
+    pointer-events: none;
+    z-index: 2;
   }
 
   .rabtv-plr-section-title {
@@ -1329,56 +1402,6 @@ export function PlayerPage() {
 
   const themeTokens = useMemo(() => getPlayerThemeTokens(appTheme), [appTheme]);
 
-  if (loading) {
-    return (
-      <div
-        className={`flex min-h-screen items-center justify-center ${themeTokens.pageBg} text-white relative rounded-3xl`}
-      >
-        <AppWallpaper />
-        <div className="relative z-10 flex flex-col items-center gap-3">
-          <div
-            className={`h-10 w-10 rounded-full border-2 border-t-transparent animate-spin ${themeTokens.text}`}
-          />
-          <p className={`text-lg font-extrabold ${themeTokens.text}`}>
-            Loading cinema player...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const title = mediaDetails?.title || mediaDetails?.name || "Sample Content";
-  const overview =
-    mediaDetails?.overview || "No description available for this title.";
-
-  const backdropWidth = isLowRam ? "w780" : "w1280";
-  const backdropUrl = mediaDetails?.backdrop_path
-    ? `https://image.tmdb.org/t/p/${backdropWidth}${mediaDetails.backdrop_path}`
-    : null;
-
-  const releaseYear = (
-    mediaDetails?.release_date ||
-    mediaDetails?.first_air_date ||
-    ""
-  ).split("-")[0];
-  const rating =
-    typeof mediaDetails?.vote_average === "number" &&
-    mediaDetails.vote_average > 0
-      ? mediaDetails.vote_average.toFixed(1)
-      : "N/A";
-  const genres =
-    mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
-  const runtimeMinutes =
-    inferredMediaType === "movie"
-      ? mediaDetails?.runtime || null
-      : currentEpisodeObj?.runtime || mediaDetails?.episode_run_time?.[0] || null;
-
-  const imdbId =
-    mediaDetails?.external_ids?.imdb_id || mediaDetails?.imdb_id || null;
-  const imdbLink = imdbId
-    ? `https://www.imdb.com/title/${imdbId}/`
-    : `https://www.imdb.com/find?q=${encodeURIComponent(title)}`;
-
   const embedUrl = buildEmbedUrl(
     activeServer,
     inferredMediaType,
@@ -1450,6 +1473,56 @@ export function PlayerPage() {
       probeController.abort();
     };
   }, [embedUrl, activeServer, mediaId, loading, playerReloadNonce, triggerBackgroundFailover]);
+
+  if (loading) {
+    return (
+      <div
+        className={`flex min-h-screen items-center justify-center ${themeTokens.pageBg} text-white relative rounded-3xl`}
+      >
+        <AppWallpaper />
+        <div className="relative z-10 flex flex-col items-center gap-3">
+          <div
+            className={`h-10 w-10 rounded-full border-2 border-t-transparent animate-spin ${themeTokens.text}`}
+          />
+          <p className={`text-lg font-extrabold ${themeTokens.text}`}>
+            Loading cinema player...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const title = mediaDetails?.title || mediaDetails?.name || "Sample Content";
+  const overview =
+    mediaDetails?.overview || "No description available for this title.";
+
+  const backdropWidth = isLowRam ? "w780" : "w1280";
+  const backdropUrl = mediaDetails?.backdrop_path
+    ? `https://image.tmdb.org/t/p/${backdropWidth}${mediaDetails.backdrop_path}`
+    : null;
+
+  const releaseYear = (
+    mediaDetails?.release_date ||
+    mediaDetails?.first_air_date ||
+    ""
+  ).split("-")[0];
+  const rating =
+    typeof mediaDetails?.vote_average === "number" &&
+    mediaDetails.vote_average > 0
+      ? mediaDetails.vote_average.toFixed(1)
+      : "N/A";
+  const genres =
+    mediaDetails?.genres?.map((g: any) => g.name).join(", ") || "Entertainment";
+  const runtimeMinutes =
+    inferredMediaType === "movie"
+      ? mediaDetails?.runtime || null
+      : currentEpisodeObj?.runtime || mediaDetails?.episode_run_time?.[0] || null;
+
+  const imdbId =
+    mediaDetails?.external_ids?.imdb_id || mediaDetails?.imdb_id || null;
+  const imdbLink = imdbId
+    ? `https://www.imdb.com/title/${imdbId}/`
+    : `https://www.imdb.com/find?q=${encodeURIComponent(title)}`;
 
   const handleSelectServer = (nextServer: PlayerServerId) => {
     triedServersRef.current = new Set([nextServer]);
