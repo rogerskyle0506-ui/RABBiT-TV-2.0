@@ -45,32 +45,32 @@ const BACK_TO_HOME_BTN_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const LIVETV_VIEWPORT_STYLES = `
+  /* Base: Portrait Phones (< 640px) — Full-width button wrappers matching console & dividers */
   .rabtv-ltv-top-bar {
     width: 100%;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: clamp(8px, 2vw, 14px);
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(8px, 2vw, 12px);
     box-sizing: border-box;
   }
 
+  /* Full-width studded buttonwrapper.png bay holding Back to Home + Channel Surf */
   .rabtv-ltv-back-wrap {
     position: relative;
-    display: inline-flex;
+    width: 100%;
+    height: clamp(64px, 16.6vw, 86px);
+    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
+    display: flex;
     align-items: center;
-    justify-content: center;
-    height: clamp(56px, 14.5vw, 74px);
-    width: clamp(204px, 54vw, 276px);
-    max-width: 100%;
-    padding: clamp(7px, 1.8vw, 10px) clamp(18px, 4.8vw, 30px);
+    justify-content: space-evenly;
+    gap: clamp(10px, 2.6vw, 24px);
     box-sizing: border-box;
     border-radius: 9999px;
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
-    flex: 0 0 auto;
   }
 
   .rabtv-ltv-art-btn {
@@ -78,7 +78,9 @@ const LIVETV_VIEWPORT_STYLES = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 48%;
     height: 100%;
     background: transparent;
     border: 0;
@@ -98,16 +100,33 @@ const LIVETV_VIEWPORT_STYLES = `
     filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
   }
 
-  /* Viewport-locked single-row section header banner backed by full-height buttonwrapper.png */
+  .rabtv-ltv-surf-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 0.95 1 0;
+    min-width: 0;
+    max-width: 46%;
+    height: 76%;
+    padding: 0 clamp(10px, 2.6vw, 18px);
+    border-radius: 9999px;
+    font-size: clamp(10.5px, 2.9vw, 13.5px);
+    white-space: nowrap;
+    box-sizing: border-box;
+  }
+
+  /* Full-width centered section header banner backed by buttonwrapper.png */
   .rabtv-ltv-section-banner {
     position: relative;
     width: 100%;
     height: clamp(54px, 13.8vw, 72px);
-    padding: 0 clamp(22px, 5.8vw, 44px);
+    padding: 0 clamp(24px, 6vw, 48px);
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
@@ -118,54 +137,67 @@ const LIVETV_VIEWPORT_STYLES = `
   }
 
   .rabtv-ltv-section-title {
-    font-size: clamp(13px, 3.5vw, 19px);
+    font-size: clamp(13.5px, 3.8vw, 20px);
     line-height: 1.1;
+    text-align: center;
   }
 
-  .rabtv-ltv-section-meta {
-    font-size: clamp(10px, 2.7vw, 12px);
-    line-height: 1.1;
-    white-space: nowrap;
-  }
-
+  /* Landscape Phones, Tablets, PCs, Google TV & Fire Sticks (>= 640px) */
   @media (min-width: 640px) {
     .rabtv-ltv-back-wrap {
-      height: clamp(60px, 6.2vw, 78px);
-      width: clamp(224px, 24vw, 300px);
-      padding: clamp(8px, 0.9vw, 11px) clamp(22px, 2.6vw, 34px);
+      width: 100%;
+      height: clamp(70px, 7.2vw, 94px);
+      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
+      gap: clamp(16px, 2.4vw, 36px);
+    }
+
+    .rabtv-ltv-art-btn {
+      max-width: 44%;
+    }
+
+    .rabtv-ltv-surf-pill {
+      max-width: 40%;
+      height: 72%;
+      font-size: clamp(11.5px, 1.25vw, 14.5px);
     }
 
     .rabtv-ltv-section-banner {
-      height: clamp(60px, 6vw, 76px);
-      padding: 0 clamp(32px, 4vw, 52px);
+      height: clamp(58px, 5.8vw, 76px);
+      padding: 0 clamp(36px, 4.5vw, 60px);
     }
 
     .rabtv-ltv-section-title {
-      font-size: clamp(16px, 1.7vw, 21px);
-    }
-
-    .rabtv-ltv-section-meta {
-      font-size: clamp(11px, 1.1vw, 13px);
+      font-size: clamp(17px, 1.8vw, 23px);
     }
   }
 
-  @media (min-width: 640px) and (max-height: 480px) {
+  /* Short Phone Landscape Guard (max-height <= 500px) */
+  @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-ltv-back-wrap {
-      height: 48px;
-      width: 196px;
-      padding: 6px 18px;
+      height: clamp(52px, 13dvh, 64px);
+      padding: 7px clamp(24px, 4vw, 44px);
+    }
+
+    .rabtv-ltv-surf-pill {
+      height: 76%;
+      font-size: 10.5px;
     }
 
     .rabtv-ltv-section-banner {
-      height: 52px;
-      padding: 0 28px;
+      height: clamp(48px, 12dvh, 58px);
+      padding: 0 32px;
     }
   }
 
+  /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
   @media (min-width: 1280px) {
     .rabtv-ltv-back-wrap {
-      height: 76px;
-      width: 296px;
+      height: clamp(82px, 6vw, 98px);
+      padding: 12px 68px;
+    }
+
+    .rabtv-ltv-section-banner {
+      height: clamp(68px, 4.8vw, 82px);
     }
   }
 `;
@@ -1596,7 +1628,7 @@ function LiveTvComponent() {
       )}
 
       <header className="py-3.5 sm:py-5 max-w-7xl mx-auto space-y-3.5 sm:space-y-4 box-border relative z-10">
-        {/* Top Row: Backtohome.png inside Viewport-Locked Button Wrapper + Clock + Channel Surf + Reset */}
+        {/* Top Row: Full-Width Studded Button Wrapper Holding Back to Home + Channel Surf */}
         <div className="rabtv-ltv-top-bar">
           <div
             className="rabtv-ltv-back-wrap"
@@ -1617,25 +1649,27 @@ function LiveTvComponent() {
                 decoding="async"
               />
             </Link>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <span
-              className={`rounded-full border px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-extrabold whitespace-nowrap ${tokens.subtleBadge}`}
-            >
-              🕒 {guideClock}
-            </span>
 
             {finalFilteredChannels.length > 0 && (
               <button
                 type="button"
                 onClick={handleSurpriseChannel}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold whitespace-nowrap shadow transition cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnSecondary} ${tokens.focusRing}`}
+                className={`rabtv-ltv-surf-pill border font-extrabold backdrop-blur-md shadow transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnSecondary} ${tokens.focusRing}`}
                 title="Jump into a random live broadcast"
               >
-                <span>🎲 Channel Surf</span>
+                <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                  🎲 Channel Surf
+                </span>
               </button>
             )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-1.5 sm:gap-2 w-full">
+            <span
+              className={`rounded-full border px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-extrabold whitespace-nowrap ${tokens.subtleBadge}`}
+            >
+              🕒 {guideClock}
+            </span>
 
             {hasActiveFilters && (
               <button
@@ -1947,21 +1981,11 @@ function LiveTvComponent() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             >
-              <div className="flex items-center gap-2 min-w-0 relative z-10">
-                <span
-                  className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${tokens.accentBar}`}
-                />
-                <h2
-                  className={`rabtv-ltv-section-title font-black tracking-tight truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)] ${tokens.accentText}`}
-                >
-                  ★ Pinned Favorites
-                </h2>
-              </div>
-              <span
-                className={`rabtv-ltv-section-meta relative z-10 font-bold px-2.5 py-1 rounded-full border shrink-0 ${tokens.badge}`}
+              <h2
+                className={`rabtv-ltv-section-title relative z-10 font-black tracking-tight truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)] ${tokens.accentText}`}
               >
-                {pinnedChannels.length} / {MAX_FAVORITE_CHANNELS}
-              </span>
+                ★ Pinned Favorites
+              </h2>
             </div>
 
             <div className={gridClass}>
@@ -1996,31 +2020,20 @@ function LiveTvComponent() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             >
-              <div className="flex items-center gap-2 min-w-0 relative z-10">
-                <span
-                  className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${tokens.accentBar}`}
-                />
-                <h3 className="rabtv-ltv-section-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-                  {pinnedOnly
-                    ? '★ My Pinned Channels'
-                    : selectedGenre !== 'All Genres'
-                      ? selectedGenre
-                      : selectedCategory}{' '}
-                  {statusFilter === 'online'
-                    ? '• Online'
-                    : statusFilter === 'timeout'
-                      ? '• Slow / ?'
-                      : statusFilter === 'offline'
-                        ? '• Offline'
-                        : '• All Feeds'}
-                </h3>
-              </div>
-
-              <span
-                className={`rabtv-ltv-section-meta relative z-10 font-bold px-2.5 py-1 rounded-full border shrink-0 ${tokens.badge}`}
-              >
-                {finalFilteredChannels.length} ch • {channelsPerPage}/pg
-              </span>
+              <h3 className="rabtv-ltv-section-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                {pinnedOnly
+                  ? '★ My Pinned Channels'
+                  : selectedGenre !== 'All Genres'
+                    ? selectedGenre
+                    : selectedCategory}{' '}
+                {statusFilter === 'online'
+                  ? '• Online'
+                  : statusFilter === 'timeout'
+                    ? '• Slow / ?'
+                    : statusFilter === 'offline'
+                      ? '• Offline'
+                      : '• All Feeds'}
+              </h3>
             </div>
 
             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1.5 sm:gap-2 px-1 text-[11px] sm:text-xs font-bold">
