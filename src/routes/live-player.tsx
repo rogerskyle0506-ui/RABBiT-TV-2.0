@@ -46,177 +46,7 @@ const BACK_TO_HOME_BTN_URL =
  * More Live Channels section banner across portrait, landscape, tablet & TV.
  */
 const LIVE_PLAYER_VIEWPORT_STYLES = `
-  /* Base: Portrait Phones (< 640px) — Full-width button wrappers matching video stage & dividers */
-  .rabtv-lp-top-bar {
-    width: 100%;
-    max-width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: clamp(8px, 2vw, 12px);
-    box-sizing: border-box;
-  }
-
-  /* Full-width studded buttonwrapper.png bay holding Backtohome.png + Live TV Guide cleanly */
-  .rabtv-lp-dual-nav-wrap {
-    position: relative;
-    width: 100%;
-    height: clamp(64px, 16.6vw, 86px);
-    padding: clamp(8px, 2vw, 12px) clamp(18px, 5vw, 44px);
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
-    gap: clamp(10px, 2.6vw, 24px);
-    box-sizing: border-box;
-    border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    overflow: hidden;
-  }
-
-  .rabtv-lp-art-btn {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1 1 0;
-    min-width: 0;
-    max-width: 48%;
-    height: 100%;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    overflow: hidden;
-    border-radius: 9999px;
-    transition: transform 160ms ease, filter 160ms ease;
-  }
-
-  .rabtv-lp-art-btn img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-    transform: scale(1.44);
-    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
-  }
-
-  .rabtv-lp-guide-pill {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    flex: 0.9 1 0;
-    min-width: 0;
-    max-width: 44%;
-    height: 76%;
-    padding: 0 clamp(10px, 2.6vw, 18px);
-    border-radius: 9999px;
-    font-size: clamp(10.5px, 2.8vw, 13.5px);
-    white-space: nowrap;
-    box-sizing: border-box;
-  }
-
-  /* Full-width centered section header banner backed by buttonwrapper.png */
-  .rabtv-lp-section-banner {
-    position: relative;
-    width: 100%;
-    height: clamp(54px, 13.8vw, 72px);
-    padding: 0 clamp(24px, 6vw, 48px);
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(8px, 2vw, 16px);
-    box-sizing: border-box;
-    border-radius: 9999px;
-    background-size: 110% 188%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    overflow: hidden;
-  }
-
-  .rabtv-lp-section-title {
-    font-size: clamp(13.5px, 3.8vw, 20px);
-    line-height: 1.1;
-    text-align: center;
-  }
-
-  .rabtv-lp-section-action {
-    position: absolute;
-    right: clamp(22px, 5.5vw, 44px);
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: clamp(10px, 2.7vw, 13px);
-    line-height: 1.1;
-    white-space: nowrap;
-  }
-
-  /* Landscape Phones, Tablets, PCs, Google TV & Fire Sticks (>= 640px) */
-  @media (min-width: 640px) {
-    .rabtv-lp-dual-nav-wrap {
-      width: 100%;
-      height: clamp(70px, 7.2vw, 94px);
-      padding: clamp(10px, 1.1vw, 14px) clamp(32px, 4.5vw, 64px);
-      gap: clamp(16px, 2.4vw, 36px);
-    }
-
-    .rabtv-lp-art-btn {
-      max-width: 44%;
-    }
-
-    .rabtv-lp-guide-pill {
-      max-width: 40%;
-      height: 72%;
-      font-size: clamp(11.5px, 1.2vw, 14px);
-    }
-
-    .rabtv-lp-section-banner {
-      height: clamp(58px, 5.8vw, 76px);
-      padding: 0 clamp(36px, 4.5vw, 60px);
-    }
-
-    .rabtv-lp-section-title {
-      font-size: clamp(17px, 1.8vw, 23px);
-    }
-
-    .rabtv-lp-section-action {
-      right: clamp(32px, 4vw, 54px);
-      font-size: clamp(11px, 1.15vw, 13.5px);
-    }
-  }
-
-  /* Short Phone Landscape Guard (max-height <= 500px) */
-  @media (min-width: 640px) and (max-height: 500px) {
-    .rabtv-lp-dual-nav-wrap {
-      height: clamp(52px, 13dvh, 64px);
-      padding: 7px clamp(24px, 4vw, 44px);
-    }
-
-    .rabtv-lp-guide-pill {
-      height: 76%;
-      font-size: 10.5px;
-    }
-
-    .rabtv-lp-section-banner {
-      height: clamp(48px, 12dvh, 58px);
-      padding: 0 32px;
-    }
-  }
-
-  /* Google TV, Fire TV, Projectors & 4K Displays (>= 1280px) */
-  @media (min-width: 1280px) {
-    .rabtv-lp-dual-nav-wrap {
-      height: clamp(82px, 6vw, 98px);
-      padding: 12px 68px;
-    }
-
-    .rabtv-lp-section-banner {
-      height: clamp(68px, 4.8vw, 82px);
-    }
-  }
+  /* Uses shared global .rabtv-dual-wrapper & .rabtv-section-banner from __root.tsx */
 `;
 
 function isSafeHttpUrl(raw: string): boolean {
@@ -1610,7 +1440,7 @@ function LivePlayerComponent() {
     <div
       data-tour="player-controls"
       className={`w-full max-w-full box-border overflow-hidden flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2 sm:px-3.5 py-2 ${
-        isLowRam ? '' : 'backdrop-blur-2xl'
+        isLowRam ? '' : 'backdrop-blur-md'
       } ${themeStyles.hudDock}`}
     >
       {/* Left: Transport Controls (Prev / Play-Pause / Next) */}
@@ -1888,20 +1718,22 @@ function LivePlayerComponent() {
       )}
 
       <div className="w-full max-w-6xl mx-auto space-y-3 sm:space-y-4 box-border relative z-10">
-        {/* Constrained Top Action Bar: Single Button Wrapper Holding Back to Home + Live TV Guide */}
-        <div className="rabtv-lp-top-bar min-w-0">
-          <div
-            className="rabtv-lp-dual-nav-wrap"
-            style={{
-              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-            }}
-          >
+        {/* Top Action Bar: Compact Theme-Tuned Wrapper — Back to Home Left, Live TV Right */}
+        <div className="rabtv-page-top-bar min-w-0">
+          <div className="rabtv-dual-wrapper">
+            <div
+              className="rabtv-art-bg"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            />
             <Link
               to="/"
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-lp-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
+              className={`rabtv-wrap-art-btn rabtv-wrap-art-btn--left rabtv-wrap-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
             >
               <img
                 src={BACK_TO_HOME_BTN_URL}
@@ -1914,7 +1746,7 @@ function LivePlayerComponent() {
               to="/live-tv"
               aria-label="Back to Live TV Guide"
               title="Back to Live TV Guide"
-              className={`rabtv-lp-guide-pill border backdrop-blur-md font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.backCapsule} ${themeStyles.focusRing}`}
+              className={`rabtv-wrap-pill-btn border backdrop-blur-md font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.backCapsule} ${themeStyles.focusRing}`}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -1923,7 +1755,7 @@ function LivePlayerComponent() {
                 strokeWidth="2.4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="w-3 h-3 shrink-0"
+                className="w-2.5 h-2.5 shrink-0"
               >
                 <path d="M15 18l-6-6 6-6" />
               </svg>
@@ -2404,7 +2236,7 @@ function LivePlayerComponent() {
         {/* Compact Horizontal Broadcast Info Bar (Strictly Constrained) */}
         <div
           className={`w-full max-w-full overflow-hidden box-border rounded-2xl border ${
-            isLowRam ? '' : 'backdrop-blur-xl'
+            isLowRam ? '' : 'backdrop-blur-sm'
           } p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ${themeStyles.surfacePanel}`}
         >
           <div
@@ -2499,20 +2331,22 @@ function LivePlayerComponent() {
 
         {/* Up Next / More Live Channels (Clean Minimal Cards) */}
         <div className="w-full pt-1 space-y-3">
-          <div
-            className="rabtv-lp-section-banner"
-            style={{
-              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-            }}
-          >
-            <h2 className="rabtv-lp-section-title relative z-10 font-black tracking-tight text-white truncate px-14 sm:px-24 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+          <div className="rabtv-section-banner">
+            <div
+              className="rabtv-art-bg"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            />
+            <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate px-10 sm:px-20 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
               📡 More Live Channels
             </h2>
 
             <button
               type="button"
               onClick={() => navigate({ to: '/live-tv' })}
-              className={`rabtv-lp-section-action z-10 font-extrabold hover:underline cursor-pointer drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
+              className={`rabtv-section-banner-action font-extrabold hover:underline cursor-pointer drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
             >
               All →
             </button>
