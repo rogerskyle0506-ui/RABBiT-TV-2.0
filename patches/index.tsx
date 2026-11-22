@@ -141,13 +141,12 @@ const REAL_SURPRISE_ME_BTN_URL =
  */
 const HOME_VIEWPORT_STYLES = `
   .rabtv-home-greet-card {
-    --greet-u: clamp(44px, 11.5vw, 62px);
     position: relative;
     width: 100%;
     max-width: 72rem;
-    min-height: clamp(164px, 34vw, 214px);
+    min-height: clamp(168px, 36vw, 220px);
     border-radius: 26px;
-    padding: clamp(16px, 3.6vw, 26px) clamp(12px, 3.4vw, 32px);
+    padding: clamp(16px, 3.6vw, 26px) clamp(10px, 3vw, 32px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -188,8 +187,8 @@ const HOME_VIEWPORT_STYLES = `
   }
 
   .rabtv-home-greet-mascot {
-    width: clamp(46px, 12vw, 68px) !important;
-    height: clamp(46px, 12vw, 68px) !important;
+    width: clamp(48px, 12.5vw, 70px) !important;
+    height: clamp(48px, 12.5vw, 70px) !important;
     flex-shrink: 0;
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.9));
   }
@@ -199,20 +198,22 @@ const HOME_VIEWPORT_STYLES = `
     line-height: 1.15;
   }
 
-  /* Single wide buttonwrapper.png bay holding BOTH Movie Night and Surprise Me side-by-side */
+  /* Single wide buttonwrapper.png bay holding BOTH Movie Night & Surprise Me cleanly */
   .rabtv-home-dual-wrap {
     position: relative;
-    width: min(100%, clamp(304px, 90vw, 560px));
-    min-height: clamp(62px, 16vw, 88px);
-    padding: clamp(9px, 2.2vw, 14px) clamp(18px, 5.2vw, 42px);
+    width: min(100%, clamp(316px, 94vw, 560px));
+    height: clamp(66px, 17.2vw, 90px);
+    padding: clamp(9px, 2.2vw, 13px) clamp(20px, 5.4vw, 40px);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: clamp(8px, 2.4vw, 20px);
+    gap: clamp(10px, 2.6vw, 20px);
     box-sizing: border-box;
-    background-size: 100% 100%;
+    border-radius: 9999px;
+    background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
+    overflow: hidden;
   }
 
   .rabtv-home-art-btn {
@@ -223,11 +224,13 @@ const HOME_VIEWPORT_STYLES = `
     flex: 1 1 0;
     min-width: 0;
     max-width: 48%;
-    height: clamp(40px, 10.6vw, 56px);
+    height: 100%;
     background: transparent;
     border: 0;
     padding: 0;
     cursor: pointer;
+    overflow: hidden;
+    border-radius: 9999px;
     transition: transform 160ms ease, filter 160ms ease;
   }
 
@@ -236,38 +239,58 @@ const HOME_VIEWPORT_STYLES = `
     height: 100%;
     object-fit: contain;
     display: block;
-    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.85));
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.85));
   }
 
-  /* Section header banner backed cleanly by buttonwrapper.png */
+  /* Calibrated zoom per asset transparent margin so Movie Night & Surprise Me match 1:1 */
+  .rabtv-home-art-btn--movie img {
+    transform: scale(1.16);
+  }
+
+  .rabtv-home-art-btn--surprise img {
+    transform: scale(1.44);
+  }
+
+  /* Viewport-locked single-row section header banner backed by full-height buttonwrapper.png */
   .rabtv-section-banner-wrap {
     position: relative;
     width: 100%;
-    min-height: clamp(54px, 12vw, 72px);
-    padding: clamp(10px, 2.2vw, 14px) clamp(20px, 5vw, 40px);
+    height: clamp(54px, 13.8vw, 72px);
+    padding: 0 clamp(22px, 5.8vw, 44px);
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
-    gap: clamp(6px, 1.5vw, 12px);
+    gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
-    background-size: 100% 100%;
+    background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
     overflow: hidden;
   }
 
+  .rabtv-section-banner-title {
+    font-size: clamp(13px, 3.6vw, 19px);
+    line-height: 1.1;
+  }
+
+  .rabtv-section-banner-meta {
+    font-size: clamp(10px, 2.7vw, 12px);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
   @media (min-width: 640px) {
     .rabtv-home-greet-card {
-      min-height: clamp(168px, 18vw, 224px);
+      min-height: clamp(172px, 18.5vw, 228px);
       padding: clamp(18px, 2.2vw, 28px) clamp(24px, 3vw, 40px);
       gap: clamp(12px, 1.6vw, 18px);
     }
 
     .rabtv-home-greet-mascot {
-      width: clamp(54px, 5.2vw, 74px) !important;
-      height: clamp(54px, 5.2vw, 74px) !important;
+      width: clamp(56px, 5.4vw, 74px) !important;
+      height: clamp(56px, 5.4vw, 74px) !important;
     }
 
     .rabtv-home-greet-title {
@@ -275,25 +298,29 @@ const HOME_VIEWPORT_STYLES = `
     }
 
     .rabtv-home-dual-wrap {
-      width: min(100%, clamp(440px, 56vw, 620px));
-      min-height: clamp(72px, 7.6vw, 94px);
-      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.6vw, 48px);
+      width: min(100%, clamp(450px, 56vw, 620px));
+      height: clamp(74px, 7.6vw, 96px);
+      padding: clamp(10px, 1.1vw, 14px) clamp(30px, 3.8vw, 48px);
       gap: clamp(14px, 2vw, 24px);
     }
 
-    .rabtv-home-art-btn {
-      height: clamp(46px, 4.9vw, 60px);
+    .rabtv-section-banner-wrap {
+      height: clamp(60px, 6vw, 76px);
+      padding: 0 clamp(32px, 4vw, 52px);
     }
 
-    .rabtv-section-banner-wrap {
-      min-height: clamp(58px, 5.8vw, 76px);
-      padding: clamp(10px, 1.2vw, 15px) clamp(28px, 3.8vw, 48px);
+    .rabtv-section-banner-title {
+      font-size: clamp(16px, 1.7vw, 21px);
+    }
+
+    .rabtv-section-banner-meta {
+      font-size: clamp(11px, 1.1vw, 13px);
     }
   }
 
   @media (min-width: 640px) and (max-height: 480px) {
     .rabtv-home-greet-card {
-      min-height: 138px;
+      min-height: 142px;
       padding: 12px 20px;
       gap: 8px;
     }
@@ -304,12 +331,13 @@ const HOME_VIEWPORT_STYLES = `
     }
 
     .rabtv-home-dual-wrap {
-      min-height: 60px;
+      height: 60px;
       padding: 8px 26px;
     }
 
-    .rabtv-home-art-btn {
-      height: 40px;
+    .rabtv-section-banner-wrap {
+      height: 52px;
+      padding: 0 28px;
     }
   }
 `;
@@ -2010,7 +2038,7 @@ function Home() {
                   onClick={() => setShowMatcherModal(true)}
                   aria-label="Movie Night"
                   title="Mood picks & 5-card couch vote"
-                  className={`rabtv-home-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
+                  className={`rabtv-home-art-btn rabtv-home-art-btn--movie rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
                 >
                   <img
                     src={MOVIE_NIGHT_BTN_URL}
@@ -2025,7 +2053,7 @@ function Home() {
                     onClick={handleSurpriseMe}
                     aria-label="Surprise Me"
                     title="Pick a random title for me"
-                    className={`rabtv-home-art-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
+                    className={`rabtv-home-art-btn rabtv-home-art-btn--surprise rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
                   >
                     <img
                       src={REAL_SURPRISE_ME_BTN_URL}
@@ -2224,17 +2252,17 @@ function Home() {
                   backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
                 }}
               >
-                <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+                <div className="flex items-center gap-2 min-w-0 relative z-10">
                   <span
-                    className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
+                    className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeStyles.accentBar}`}
                   />
-                  <h3 className="text-sm sm:text-lg font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                  <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                     ▶ Continue Watching
                   </h3>
                 </div>
                 <Link
                   to="/watch-history"
-                  className={`relative z-10 text-xs font-extrabold hover:underline shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
+                  className={`rabtv-section-banner-meta relative z-10 font-extrabold hover:underline shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
                 >
                   Full History →
                 </Link>
@@ -2594,20 +2622,20 @@ function Home() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             >
-              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+              <div className="flex items-center gap-2 min-w-0 relative z-10">
                 <span
-                  className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
+                  className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeStyles.accentBar}`}
                 />
-                <h3 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                   {activeTab === "My List"
                     ? "Saved Catalog"
                     : `${activeTab} Catalog`}
                 </h3>
               </div>
               <span
-                className={`relative z-10 text-[11px] sm:text-xs font-semibold px-3 py-1 rounded-full shrink-0 ${themeStyles.accentBadge}`}
+                className={`rabtv-section-banner-meta relative z-10 font-bold px-2.5 py-1 rounded-full shrink-0 ${themeStyles.accentBadge}`}
               >
-                {filteredItems.length} titles available
+                {filteredItems.length} titles
               </span>
             </div>
 
@@ -2682,18 +2710,18 @@ function Home() {
                   backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
                 }}
               >
-                <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+                <div className="flex items-center gap-2 min-w-0 relative z-10">
                   <span
-                    className={`w-1.5 h-5 sm:h-6 rounded-full shrink-0 ${themeStyles.accentBar}`}
+                    className={`w-1 h-4 sm:h-5 rounded-full shrink-0 ${themeStyles.accentBar}`}
                   />
-                  <h3 className="text-sm sm:text-lg md:text-xl font-black text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                  <h3 className="rabtv-section-banner-title font-black text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                     ✨ Suggested For You
                   </h3>
                 </div>
                 <span
-                  className={`relative z-10 text-[11px] sm:text-xs font-bold shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
+                  className={`rabtv-section-banner-meta relative z-10 font-bold shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
                 >
-                  Curated from your favorites & watch history
+                  {suggestedItems.length} picks
                 </span>
               </div>
               <div className={gridColsClass}>
