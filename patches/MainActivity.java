@@ -57,6 +57,17 @@ public class MainActivity extends BridgeActivity {
         "vidsrc.cc",
         "vidsrc.icu",
         "vidsrc.pro",
+        "vidsrc.su",
+        "vidsrcme.ru",
+        "vsembed.ru",
+        "cloudnestra.com",
+        "vidlink.pro",
+        "videasy.net",
+        "player.videasy.net",
+        "autoembed.cc",
+        "vidfast.pro",
+        "challenges.cloudflare.com",
+        "cloudflare.com",
         "themoviedb.org",
         "tmdb.org",
         "github.com",
@@ -270,19 +281,14 @@ public class MainActivity extends BridgeActivity {
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
-        // Ensure video CDNs can maintain HLS/MSE session cookies
-        try {
-            CookieManager cookieManager = CookieManager.getInstance();
-            cookieManager.setAcceptCookie(true);
-            cookieManager.setAcceptThirdPartyCookies(webView, true);
-        } catch (Exception ignored) {
-            // Ignore on restricted WebViews
-        }
+        // Ensure video CDNs & embed players (Vidsrc, VidLink, Videasy) can store third-party cookies
+        configureWebViewCookies(webView);
 
         // Hardened WebView settings tuned for streaming + low-RAM sticks
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setSupportZoom(false);
@@ -379,13 +385,21 @@ public class MainActivity extends BridgeActivity {
                     return true;
                 }
 
-                // Sub-frames (e.g. vidsrc internal mirror/player hops): allow non-ad frames so streams never break
+                // Sub-frames (e.g. vidsrc cookie gate & internal player mirror hops):
+                // Return false directly so Android WebView loads inside the iframe instead of
+                // letting Capacitor's BridgeWebViewClient hijack it as an external Intent!
                 if (!request.isForMainFrame()) {
-                    return super.shouldOverrideUrlLoading(view, request);
+                    return false;
                 }
 
                 // Main frame: block all unknown external escape redirects on TVs, boxes, and projectors
                 return true;
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                flushCookiesSafely();
             }
 
             @Override
@@ -588,6 +602,26 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            configureWebViewCookies(this.bridge.getWebView());
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        flushCookiesSafely();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        flushCookiesSafely();
+    }
+
+    @Override
     public void onDestroy() {
         cleanupCustomView();
         if (transparentPoster != null && !transparentPoster.isRecycled()) {
@@ -600,6 +634,28 @@ public class MainActivity extends BridgeActivity {
     // ──────────────────────────────────────────────────────────────
     // Helper Methods (Fast O(depth) Domain Matching & Safe Cleanup)
     // ──────────────────────────────────────────────────────────────
+
+    private void configureWebViewCookies(WebView webView) {
+        if (webView == null) return;
+        try {
+            CookieManager cookieManager = CookieManager.getInstance();
+            cookieManager.setAcceptCookie(true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                cookieManager.setAcceptThirdPartyCookies(webView, true);
+            }
+            cookieManager.flush();
+        } catch (Exception ignored) {
+            // Ignore on restricted WebViews
+        }
+    }
+
+    private void flushCookiesSafely() {
+        try {
+            CookieManager.getInstance().flush();
+        } catch (Exception ignored) {
+            // Ignore if CookieManager is unavailable
+        }
+    }
 
     private void releaseWebViewRamSafely() {
         if (this.bridge == null || this.bridge.getWebView() == null) return;
