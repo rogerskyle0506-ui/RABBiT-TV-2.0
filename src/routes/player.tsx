@@ -154,12 +154,12 @@ const TV_DETAILS_BTN_URL =
  * and recommended catalog header across portrait, landscape, tablet, desktop & TV.
  */
 const PLAYER_VIEWPORT_STYLES = `
-  /* Self-contained, adblocker-safe (no "banner" keyword) heading ribbon for /player */
+  /* Self-contained, adblocker-safe (no "banner" keyword) blended heading ribbon for /player */
   .rabtv-plr-heading-ribbon {
     position: relative;
     width: 100%;
-    height: clamp(38px, 10vw, 48px);
-    padding: 0 clamp(22px, 5.5vw, 44px);
+    height: clamp(42px, 11vw, 52px);
+    padding: 0 clamp(26px, 11.5%, 56px);
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -176,7 +176,20 @@ const PLAYER_VIEWPORT_STYLES = `
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
+    opacity: 0.78;
     filter: var(--rabtv-wrap-filter, hue-rotate(-14deg) saturate(1.06));
+    -webkit-mask-image: radial-gradient(
+      ellipse 51% 54% at 50% 50%,
+      rgba(0, 0, 0, 1) 68%,
+      rgba(0, 0, 0, 0.76) 86%,
+      rgba(0, 0, 0, 0.24) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 51% 54% at 50% 50%,
+      rgba(0, 0, 0, 1) 68%,
+      rgba(0, 0, 0, 0.76) 86%,
+      rgba(0, 0, 0, 0.24) 100%
+    );
     pointer-events: none;
     z-index: 0;
   }
@@ -191,8 +204,8 @@ const PLAYER_VIEWPORT_STYLES = `
 
   @media (min-width: 640px) {
     .rabtv-plr-heading-ribbon {
-      height: clamp(44px, 4.4vw, 56px);
-      padding: 0 clamp(32px, 4vw, 56px);
+      height: clamp(48px, 4.8vw, 60px);
+      padding: 0 clamp(38px, 11.5%, 72px);
     }
 
     .rabtv-plr-heading-title {
@@ -202,14 +215,14 @@ const PLAYER_VIEWPORT_STYLES = `
 
   @media (min-width: 640px) and (max-height: 500px) {
     .rabtv-plr-heading-ribbon {
-      height: 38px;
-      padding: 0 28px;
+      height: 40px;
+      padding: 0 11.5%;
     }
   }
 
   @media (min-width: 1280px) {
     .rabtv-plr-heading-ribbon {
-      height: clamp(50px, 3.8vw, 60px);
+      height: clamp(54px, 4vw, 64px);
     }
   }
 `;
@@ -1828,10 +1841,10 @@ export function PlayerPage() {
         <div
           data-tour="server-switcher"
           className={`relative z-30 w-full rounded-2xl border px-3 py-2 flex flex-wrap items-center justify-between gap-2 ${
-            isLowRam ? "" : "backdrop-blur-xl"
+            isLowRam ? "" : "backdrop-blur-md"
           } ${themeTokens.surfacePanel}`}
         >
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
             <span
               className={`h-2 w-2 rounded-full shrink-0 ${
                 serverStatus === "ready"
@@ -1843,11 +1856,12 @@ export function PlayerPage() {
             <span
               className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider shrink-0 ${themeTokens.subMutedText}`}
             >
-              Auto-Mirror:
+              <span className="sm:hidden">Mirror:</span>
+              <span className="hidden sm:inline">Auto-Mirror:</span>
             </span>
 
             {/* Manual Server Dropdown Menu (RABBiT TV Branded Mirrors Only) */}
-            <div ref={serverMenuRef} className="relative min-w-0 flex-1 sm:flex-initial sm:w-52">
+            <div ref={serverMenuRef} className="relative min-w-[126px] flex-1 sm:flex-initial sm:w-52">
               <button
                 type="button"
                 onClick={() => {
