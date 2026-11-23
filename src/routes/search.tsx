@@ -43,6 +43,18 @@ const REAL_SURPRISE_ME_BTN_URL =
 const SEARCH_BUTTON_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/searchbutton.png";
 
+const SEARCH_PAGE_WRAPPER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/SearchPageWrapper.jpg";
+
+const TRENDING_HITS_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/TrendingHits.jpg";
+
+const MASTERPIECES_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Masterpieces.jpg";
+
+const FILTERED_CATALOG_BANNER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/FilteredCatalog.jpg";
+
 /**
  * Viewport-locked layout rules for Search top utility wrapper (single
  * buttonwrapper.png holding Back to Home + Surprise Me), custom Search submit
@@ -50,7 +62,98 @@ const SEARCH_BUTTON_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const SEARCH_VIEWPORT_STYLES = `
-  /* Uses shared global .rabtv-dual-wrapper & .rabtv-section-banner from __root.tsx */
+  /* Theme-Synchronized Single-Pass GPU Filters for Warm Fire/Amber Search Assets
+     TrendingHits base hue ~15deg | Masterpieces & FilteredCatalog base hue ~28deg */
+  :root,
+  html[data-theme="violet"] {
+    --rabtv-srch-fire-filter: hue-rotate(-100deg) saturate(1.16) brightness(1.04);
+    --rabtv-srch-amber-filter: hue-rotate(-112deg) saturate(1.16) brightness(1.04);
+    --rabtv-srch-num-color: #f3e8ff;
+    --rabtv-srch-num-glow: 0 0 6px rgba(192, 132, 252, 0.95), 0 0 14px rgba(168, 85, 247, 0.8), 0 2px 4px rgba(0, 0, 0, 0.95);
+    --rabtv-srch-deck-tint: rgba(88, 28, 135, 0.24);
+  }
+
+  html[data-theme="red"] {
+    --rabtv-srch-fire-filter: hue-rotate(-10deg) saturate(1.18) brightness(1.02);
+    --rabtv-srch-amber-filter: hue-rotate(-20deg) saturate(1.18) brightness(1.02);
+    --rabtv-srch-num-color: #ffe4e6;
+    --rabtv-srch-num-glow: 0 0 6px rgba(248, 113, 113, 0.95), 0 0 14px rgba(239, 68, 68, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
+    --rabtv-srch-deck-tint: rgba(127, 29, 29, 0.24);
+  }
+
+  html[data-theme="midnight"] {
+    --rabtv-srch-fire-filter: hue-rotate(-165deg) saturate(1.16) brightness(1.06);
+    --rabtv-srch-amber-filter: hue-rotate(-178deg) saturate(1.16) brightness(1.06);
+    --rabtv-srch-num-color: #e0f2fe;
+    --rabtv-srch-num-glow: 0 0 6px rgba(125, 211, 252, 0.95), 0 0 14px rgba(56, 189, 248, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
+    --rabtv-srch-deck-tint: rgba(30, 58, 138, 0.26);
+  }
+
+  html[data-theme="emerald"] {
+    --rabtv-srch-fire-filter: hue-rotate(136deg) saturate(1.14) brightness(1.04);
+    --rabtv-srch-amber-filter: hue-rotate(124deg) saturate(1.14) brightness(1.04);
+    --rabtv-srch-num-color: #d1fae5;
+    --rabtv-srch-num-glow: 0 0 6px rgba(110, 231, 183, 0.95), 0 0 14px rgba(16, 185, 129, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
+    --rabtv-srch-deck-tint: rgba(6, 78, 59, 0.24);
+  }
+
+  html[data-theme="amber"] {
+    --rabtv-srch-fire-filter: hue-rotate(16deg) saturate(1.12) brightness(1.04);
+    --rabtv-srch-amber-filter: hue-rotate(4deg) saturate(1.12) brightness(1.04);
+    --rabtv-srch-num-color: #fef3c7;
+    --rabtv-srch-num-glow: 0 0 6px rgba(252, 211, 77, 0.95), 0 0 14px rgba(245, 158, 11, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
+    --rabtv-srch-deck-tint: rgba(120, 53, 15, 0.22);
+  }
+
+  html[data-theme="cyan"] {
+    --rabtv-srch-fire-filter: hue-rotate(172deg) saturate(1.16) brightness(1.06);
+    --rabtv-srch-amber-filter: hue-rotate(160deg) saturate(1.16) brightness(1.06);
+    --rabtv-srch-num-color: #cffafe;
+    --rabtv-srch-num-glow: 0 0 6px rgba(103, 232, 249, 0.95), 0 0 14px rgba(6, 182, 212, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
+    --rabtv-srch-deck-tint: rgba(22, 78, 99, 0.26);
+  }
+
+  /* Full-Bleed 100% x 100% Search Deck Wallpaper Wrapper */
+  .rabtv-srch-deck {
+    position: relative;
+    overflow: hidden;
+    contain: layout paint;
+  }
+
+  .rabtv-srch-deck-wall {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    opacity: 0.56;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-srch-deck-scrim {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 80%, var(--rabtv-srch-deck-tint) 0%, transparent 72%),
+      linear-gradient(180deg, rgba(5, 5, 10, 0.62) 0%, rgba(5, 5, 10, 0.44) 48%, rgba(4, 4, 8, 0.66) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-srch-deck-laser-top,
+  .rabtv-srch-deck-laser-bot {
+    position: absolute;
+    inset-inline: 8%;
+    height: 1.5px;
+    background: var(--rabtv-neon-line, linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.75), transparent));
+    pointer-events: none;
+    z-index: 15;
+  }
+  .rabtv-srch-deck-laser-top { top: 0; }
+  .rabtv-srch-deck-laser-bot { bottom: 0; }
+
+  /* Search Submit Art Button */
   .rabtv-srch-submit-art {
     position: relative;
     display: inline-flex;
@@ -78,10 +181,206 @@ const SEARCH_VIEWPORT_STYLES = `
     filter: var(--rabtv-search-filter);
   }
 
+  /* Hero Art Preset Buttons: Trending Hits & Masterpieces (Exact Measured Pill Crop) */
+  .rabtv-srch-hero-presets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(8px, 2.4vw, 16px);
+    width: 100%;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+
+  .rabtv-srch-art-preset {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 2.52 / 1;
+    min-height: 44px;
+    max-height: clamp(54px, 14.5vw, 68px);
+    border-radius: 9999px;
+    border: 0;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    cursor: pointer;
+    contain: layout paint;
+    transition: transform 160ms ease, box-shadow 180ms ease;
+  }
+
+  .rabtv-srch-art-preset:hover {
+    transform: scale(1.03);
+  }
+
+  .rabtv-srch-art-preset:active {
+    transform: scale(0.97);
+  }
+
+  .rabtv-srch-art-preset--active {
+    box-shadow:
+      0 0 0 1.5px var(--rabtv-neon-accent, #a855f7),
+      0 0 18px var(--rabtv-neon-glow, rgba(168, 85, 247, 0.45));
+  }
+
+  /* Tightly crops the 3.6% horizontal / 16% vertical black margins of TrendingHits & Masterpieces */
+  .rabtv-srch-art-preset-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 108% 147%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    -webkit-mask-image: radial-gradient(
+      ellipse 52% 55% at 50% 50%,
+      rgba(0, 0, 0, 1) 74%,
+      rgba(0, 0, 0, 0.85) 90%,
+      rgba(0, 0, 0, 0.25) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 52% 55% at 50% 50%,
+      rgba(0, 0, 0, 1) 74%,
+      rgba(0, 0, 0, 0.85) 90%,
+      rgba(0, 0, 0, 0.25) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-srch-art-preset-bg--trending {
+    filter: var(--rabtv-srch-fire-filter);
+  }
+
+  .rabtv-srch-art-preset-bg--masterpieces {
+    filter: var(--rabtv-srch-amber-filter);
+  }
+
+  /* Pixel-calibrated injection bay inside Masterpieces.jpg:
+     Star ends at 28.3%, "Masterpieces" begins at 52.9% -> dead center = 40.6% */
+  .rabtv-srch-mp-num {
+    position: absolute;
+    left: 40.6%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    width: 23%;
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-size: clamp(13px, 4.1vw, 22px);
+    color: var(--rabtv-srch-num-color);
+    text-shadow: var(--rabtv-srch-num-glow);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  /* Full-Width Blended Filtered Catalog Artwork Banner (Zero Duplicate Overlay Words!) */
+  .rabtv-srch-catalog-banner-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  .rabtv-srch-catalog-wing {
+    display: none;
+    flex: 1 1 0;
+    height: 1.5px;
+    background: var(--rabtv-neon-line, linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.72), transparent));
+    opacity: 0.75;
+    pointer-events: none;
+  }
+
+  .rabtv-srch-catalog-art-banner {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    aspect-ratio: 3.25 / 1;
+    min-height: 54px;
+    max-height: clamp(68px, 18vw, 108px);
+    margin-inline: auto;
+    border-radius: 9999px;
+    overflow: hidden;
+    contain: layout paint;
+  }
+
+  /* Tightly crops the 0.9% horizontal / 7% vertical black margins of FilteredCatalog.jpg */
+  .rabtv-srch-catalog-art-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 102% 120%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.92;
+    filter: var(--rabtv-srch-amber-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 51% 54% at 50% 50%,
+      rgba(0, 0, 0, 1) 72%,
+      rgba(0, 0, 0, 0.80) 88%,
+      rgba(0, 0, 0, 0.22) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 51% 54% at 50% 50%,
+      rgba(0, 0, 0, 1) 72%,
+      rgba(0, 0, 0, 0.80) 88%,
+      rgba(0, 0, 0, 0.22) 100%
+    );
+    pointer-events: none;
+  }
+
   @media (min-width: 640px) {
     .rabtv-srch-submit-art {
       height: clamp(44px, 4.5vw, 52px);
       width: clamp(142px, 14vw, 176px);
+    }
+
+    .rabtv-srch-hero-presets {
+      max-width: 540px;
+      gap: 16px;
+    }
+
+    .rabtv-srch-art-preset {
+      max-height: 68px;
+    }
+
+    .rabtv-srch-mp-num {
+      font-size: clamp(18px, 2.2vw, 24px);
+    }
+
+    .rabtv-srch-catalog-wing {
+      display: block;
+    }
+
+    .rabtv-srch-catalog-art-banner {
+      width: clamp(360px, 46vw, 540px);
+      max-width: 540px;
+      max-height: 112px;
+      flex: 0 0 auto;
+    }
+  }
+
+  @media (min-width: 640px) and (max-height: 500px) {
+    .rabtv-srch-art-preset {
+      max-height: 50px;
+    }
+
+    .rabtv-srch-mp-num {
+      font-size: 16px;
+    }
+
+    .rabtv-srch-catalog-art-banner {
+      max-height: 72px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .rabtv-srch-catalog-art-banner {
+      width: 560px;
+      max-width: 560px;
+      max-height: 118px;
     }
   }
 `;
@@ -321,10 +620,10 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBadge: "bg-red-950/80 border border-red-500/40 text-red-200",
         surfacePanel:
           "bg-zinc-950/68 border-red-500/35 shadow-[0_16px_50px_rgba(239,68,68,0.18)]",
-        controlBox: "bg-black/75 border-red-500/25",
+        controlBox: "bg-black/58 backdrop-blur-[3px] border-red-500/25",
         dividerBorder: "border-red-500/20",
         inputClass:
-          "border-red-500/35 bg-black/80 text-white placeholder-zinc-400 focus:ring-4 focus:ring-red-500/40 focus:border-red-400",
+          "border-red-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-zinc-400 focus:ring-4 focus:ring-red-500/40 focus:border-red-400",
         optionBg: "bg-zinc-950 text-white",
         btn: "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/35",
         btnSecondary:
@@ -357,10 +656,10 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBadge: "bg-blue-950/80 border border-blue-500/40 text-sky-200",
         surfacePanel:
           "bg-slate-950/68 border-blue-500/35 shadow-[0_16px_50px_rgba(59,130,246,0.18)]",
-        controlBox: "bg-black/75 border-blue-500/25",
+        controlBox: "bg-black/58 backdrop-blur-[3px] border-blue-500/25",
         dividerBorder: "border-blue-500/20",
         inputClass:
-          "border-blue-500/35 bg-black/80 text-white placeholder-slate-400 focus:ring-4 focus:ring-sky-400/40 focus:border-sky-400",
+          "border-blue-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-slate-400 focus:ring-4 focus:ring-sky-400/40 focus:border-sky-400",
         optionBg: "bg-slate-950 text-white",
         btn: "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/35",
         btnSecondary:
@@ -394,10 +693,10 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
           "bg-emerald-950/80 border border-emerald-500/40 text-emerald-200",
         surfacePanel:
           "bg-neutral-950/68 border-emerald-500/35 shadow-[0_16px_50px_rgba(16,185,129,0.18)]",
-        controlBox: "bg-black/75 border-emerald-500/25",
+        controlBox: "bg-black/58 backdrop-blur-[3px] border-emerald-500/25",
         dividerBorder: "border-emerald-500/20",
         inputClass:
-          "border-emerald-500/35 bg-black/80 text-white placeholder-neutral-400 focus:ring-4 focus:ring-emerald-400/40 focus:border-emerald-400",
+          "border-emerald-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-neutral-400 focus:ring-4 focus:ring-emerald-400/40 focus:border-emerald-400",
         optionBg: "bg-neutral-950 text-white",
         btn: "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/35",
         btnSecondary:
@@ -430,10 +729,10 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBadge: "bg-amber-950/80 border border-amber-500/40 text-amber-200",
         surfacePanel:
           "bg-stone-950/68 border-amber-500/35 shadow-[0_16px_50px_rgba(245,158,11,0.18)]",
-        controlBox: "bg-black/75 border-amber-500/25",
+        controlBox: "bg-black/58 backdrop-blur-[3px] border-amber-500/25",
         dividerBorder: "border-amber-500/20",
         inputClass:
-          "border-amber-500/35 bg-black/80 text-white placeholder-stone-400 focus:ring-4 focus:ring-amber-400/40 focus:border-amber-400",
+          "border-amber-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-stone-400 focus:ring-4 focus:ring-amber-400/40 focus:border-amber-400",
         optionBg: "bg-stone-950 text-white",
         btn: "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/35",
         btnSecondary:
@@ -466,10 +765,10 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBadge: "bg-cyan-950/80 border border-cyan-500/40 text-cyan-200",
         surfacePanel:
           "bg-slate-950/68 border-cyan-500/35 shadow-[0_16px_50px_rgba(6,182,212,0.18)]",
-        controlBox: "bg-black/75 border-cyan-500/25",
+        controlBox: "bg-black/58 backdrop-blur-[3px] border-cyan-500/25",
         dividerBorder: "border-cyan-500/20",
         inputClass:
-          "border-cyan-500/35 bg-black/80 text-white placeholder-slate-400 focus:ring-4 focus:ring-cyan-400/40 focus:border-cyan-400",
+          "border-cyan-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-slate-400 focus:ring-4 focus:ring-cyan-400/40 focus:border-cyan-400",
         optionBg: "bg-slate-950 text-white",
         btn: "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/35",
         btnSecondary:
@@ -503,10 +802,10 @@ function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
         accentBadge: "bg-purple-950/80 border border-violet-500/40 text-violet-200",
         surfacePanel:
           "bg-slate-950/68 border-violet-500/35 shadow-[0_16px_50px_rgba(139,92,246,0.18)]",
-        controlBox: "bg-black/75 border-violet-500/25",
+        controlBox: "bg-black/58 backdrop-blur-[3px] border-violet-500/25",
         dividerBorder: "border-violet-500/20",
         inputClass:
-          "border-violet-500/35 bg-black/80 text-white placeholder-slate-400 focus:ring-4 focus:ring-violet-500/40 focus:border-violet-400",
+          "border-violet-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-slate-400 focus:ring-4 focus:ring-violet-500/40 focus:border-violet-400",
         optionBg: "bg-slate-950 text-white",
         btn: "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/35",
         btnSecondary:
@@ -561,6 +860,21 @@ const SearchInputForm = memo(function SearchInputForm({
     setHasValue(Boolean(syncedQuery));
   }, [syncedQuery]);
 
+  // Quick `/` shortcut on keyboards to jump straight into search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (e.key === "/" && tag !== "input" && tag !== "textarea" && tag !== "select") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      } else if (e.key === "Escape" && document.activeElement === inputRef.current) {
+        inputRef.current?.blur();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const raw = inputRef.current?.value || "";
@@ -584,7 +898,7 @@ const SearchInputForm = memo(function SearchInputForm({
     >
       <div className="relative flex-1 min-w-0">
         <span
-          className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none ${tokens.accentText}`}
+          className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm pointer-events-none ${tokens.accentText}`}
         >
           🔍
         </span>
@@ -605,7 +919,7 @@ const SearchInputForm = memo(function SearchInputForm({
           }}
           placeholder="Search movies, TV, actors, live..."
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
-          className={`w-full rounded-2xl border pl-10 pr-10 py-3.5 text-sm font-bold focus:outline-none shadow-inner transition ${tokens.inputClass}`}
+          className={`w-full rounded-2xl border pl-9 pr-9 py-3 sm:py-3.5 text-xs sm:text-sm font-bold focus:outline-none shadow-inner transition ${tokens.inputClass}`}
         />
         {hasValue && (
           <button
@@ -659,6 +973,9 @@ function SearchPage() {
   const [selectedProvider, setSelectedProvider] = useState<ProviderOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("popularity.desc");
   const [hiddenGemsMode, setHiddenGemsMode] = useState<boolean>(false);
+  const [activePreset, setActivePreset] = useState<
+    "trending" | "masterpieces" | "new" | "90s" | "family" | "hiddenGems" | null
+  >("trending");
   const [selectedPerson, setSelectedPerson] = useState<PersonMatch | null>(null);
 
   const [page, setPage] = useState<number>(1);
@@ -1183,6 +1500,7 @@ function SearchPage() {
     (raw: string) => {
       const clean = sanitizeQuery(raw);
       setSelectedPerson(null);
+      if (clean) setActivePreset(null);
       if (clean.length >= 2) {
         setRecentSearches(saveRecentSearch(clean));
       }
@@ -1207,6 +1525,7 @@ function SearchPage() {
         | "hiddenGems"
     ) => {
       setSelectedPerson(null);
+      setActivePreset(preset);
       navigate({ to: "/search", search: { q: "" } });
       setSelectedLangIndex(0);
       setSelectedProvider("all");
@@ -1270,6 +1589,7 @@ function SearchPage() {
     setSelectedProvider("all");
     setSortBy("popularity.desc");
     setHiddenGemsMode(false);
+    setActivePreset("trending");
     setSelectedPerson(null);
     setPage(1);
     navigate({ to: "/search", search: { q: "" } });
@@ -1414,12 +1734,23 @@ function SearchPage() {
           )}
         </div>
 
-        {/* Theme-Matched Crystal Glass Search & Discovery Control Deck */}
+        {/* Theme-Matched Punk-Neon Search & Discovery Control Deck (100% x 100% SearchPageWrapper) */}
         <div
-          className={`rounded-3xl border ${
-            isLowRam ? "" : "backdrop-blur-md"
-          } p-3.5 sm:p-6 space-y-4 ${themeTokens.surfacePanel}`}
+          className={`rabtv-srch-deck rounded-3xl border p-3.5 sm:p-6 ${themeTokens.surfacePanel}`}
         >
+          {/* Full-Bleed 100% x 100% Grunge Rabbit Vault Backdrop */}
+          <img
+            src={SEARCH_PAGE_WRAPPER_URL}
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+            className="rabtv-srch-deck-wall"
+          />
+          <div className="rabtv-srch-deck-scrim" aria-hidden="true" />
+          <div className="rabtv-srch-deck-laser-top" aria-hidden="true" />
+          <div className="rabtv-srch-deck-laser-bot" aria-hidden="true" />
+
+          <div className="relative z-10 space-y-4">
           {/* Isolated Uncontrolled Search Form (Immune to Android WebView Backwards-Typing Bug) */}
           <SearchInputForm
             syncedQuery={activeUrlQuery}
@@ -1429,27 +1760,92 @@ function SearchPage() {
             onClearQuery={handleClearSearchQuery}
           />
 
-          {/* One-Tap Curated Discovery Presets */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+          {/* Flagship Custom Artwork Preset Buttons: Trending Hits & Masterpieces (with Injected Rating) */}
+          <div className="rabtv-srch-hero-presets">
+            <button
+              type="button"
+              onClick={() => applyDiscoveryPreset("trending")}
+              aria-label="Trending Hits"
+              aria-pressed={activePreset === "trending"}
+              title="Load Trending Hits"
+              className={`rabtv-srch-art-preset focus:outline-none focus:ring-2 ${
+                themeTokens.focusRing
+              } ${
+                activePreset === "trending" ? "rabtv-srch-art-preset--active" : ""
+              }`}
+            >
+              <span
+                className="rabtv-srch-art-preset-bg rabtv-srch-art-preset-bg--trending"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${TRENDING_HITS_BTN_URL})` }}
+              />
+              <span className="sr-only">Trending Hits</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyDiscoveryPreset("masterpieces")}
+              aria-label={`${
+                activePreset === "masterpieces" && minRating > 0 ? minRating : 8
+              }+ Masterpieces`}
+              aria-pressed={activePreset === "masterpieces"}
+              title="Load Top-Rated Masterpieces"
+              className={`rabtv-srch-art-preset focus:outline-none focus:ring-2 ${
+                themeTokens.focusRing
+              } ${
+                activePreset === "masterpieces"
+                  ? "rabtv-srch-art-preset--active"
+                  : ""
+              }`}
+            >
+              <span
+                className="rabtv-srch-art-preset-bg rabtv-srch-art-preset-bg--masterpieces"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${MASTERPIECES_BTN_URL})` }}
+              />
+              {/* Injected Rating Number Aligned Dead-Center Between Star & Masterpieces */}
+              <span className="rabtv-srch-mp-num" aria-hidden="true">
+                {activePreset === "masterpieces" && minRating > 0
+                  ? `${minRating}+`
+                  : "8+"}
+              </span>
+              <span className="sr-only">
+                {activePreset === "masterpieces" && minRating > 0
+                  ? `${minRating}+`
+                  : "8+"}{" "}
+                Masterpieces
+              </span>
+            </button>
+          </div>
+
+          {/* Secondary One-Tap Curated Discovery Presets */}
+          <div className="flex items-center justify-start sm:justify-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
             {(
               [
-                { id: "trending", label: "🔥 Trending Hits" },
-                { id: "masterpieces", label: "⭐ 8+ Masterpieces" },
                 { id: "new", label: "🆕 2025–2026 New" },
                 { id: "90s", label: "📼 90s Classics" },
                 { id: "family", label: "👨‍👩‍👧 Family Night" },
                 { id: "hiddenGems", label: "💎 Hidden Gems" },
               ] as const
-            ).map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => applyDiscoveryPreset(preset.id)}
-                className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-extrabold transition cursor-pointer whitespace-nowrap focus:outline-none focus:ring-2 ${themeTokens.pillIdle} ${themeTokens.focusRing}`}
-              >
-                {preset.label}
-              </button>
-            ))}
+            ).map((preset) => {
+              const isSelected = activePreset === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => applyDiscoveryPreset(preset.id)}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-extrabold transition cursor-pointer whitespace-nowrap focus:outline-none focus:ring-2 ${
+                    themeTokens.focusRing
+                  } ${
+                    isSelected
+                      ? `${themeTokens.btn} border-white/25 scale-[1.03]`
+                      : themeTokens.pillIdle
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Recent Search History Pills */}
@@ -1550,7 +1946,7 @@ function SearchPage() {
               </span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                onChange={(e) => { setSortBy(e.target.value as SortOption); setActivePreset(null); }}
                 className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
               >
                 {sortOptions.map((opt) => (
@@ -1631,7 +2027,7 @@ function SearchPage() {
               </span>
               <select
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
+                onChange={(e) => { setSelectedYear(e.target.value); setActivePreset(null); }}
                 className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
               >
                 {yearOptions.map((opt) => (
@@ -1657,7 +2053,7 @@ function SearchPage() {
               </span>
               <select
                 value={minRating}
-                onChange={(e) => setMinRating(Number(e.target.value))}
+                onChange={(e) => { const v = Number(e.target.value); setMinRating(v); if (v < 7) setActivePreset(null); }}
                 className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
               >
                 <option value={0} className={themeTokens.optionBg}>
@@ -1684,11 +2080,23 @@ function SearchPage() {
 
           {/* Genre Pill Bar */}
           <div className="space-y-1.5">
-            <span
-              className={`text-[11px] font-extrabold uppercase tracking-wider block px-1 ${themeTokens.subMutedText}`}
-            >
-              Genre Filter:
-            </span>
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span
+                className={`text-[11px] font-extrabold uppercase tracking-wider ${themeTokens.subMutedText}`}
+              >
+                Genre Filter:
+              </span>
+              {!loading && filteredResults.length > 0 && (
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold ${themeTokens.accentBadge}`}
+                >
+                  {filteredResults.length} matches
+                  {totalPages > 1 && !selectedPerson
+                    ? ` • Pg ${page}/${totalPages}`
+                    : ""}
+                </span>
+              )}
+            </div>
             <ScrollPillBar
               options={allGenreOptions}
               activeId={selectedGenre}
@@ -1697,11 +2105,84 @@ function SearchPage() {
                   prev === id && id !== "All" ? "All" : id
                 );
                 setHiddenGemsMode(false);
+                setActivePreset(null);
               }}
               appTheme={appTheme}
               getPrimaryBgColor={getPrimaryBgColor}
               ariaLabel="Search genres"
             />
+          </div>
+
+          {/* Quick-Clear Active Filter Chips */}
+          {hasActiveFilters && (
+            <div className={`flex flex-wrap items-center gap-1.5 pt-2 border-t ${themeTokens.dividerBorder}`}>
+              <span className={`text-[10px] font-extrabold uppercase tracking-wider mr-1 ${themeTokens.subMutedText}`}>
+                Active:
+              </span>
+              {mediaType !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => setMediaType("all")}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
+                >
+                  <span>{mediaType === "movie" ? "🎬 Movies" : "📺 TV"}</span>
+                  <span>✕</span>
+                </button>
+              )}
+              {selectedGenre !== "All" && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedGenre("All")}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
+                >
+                  <span>{selectedGenre}</span>
+                  <span>✕</span>
+                </button>
+              )}
+              {selectedYear !== "" && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedYear("")}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
+                >
+                  <span>{selectedYear.replace("decade:", "")}</span>
+                  <span>✕</span>
+                </button>
+              )}
+              {minRating > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMinRating(0)}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
+                >
+                  <span>★ {minRating}+</span>
+                  <span>✕</span>
+                </button>
+              )}
+              {selectedLangIndex !== 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedLangIndex(0)}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
+                >
+                  <span>{languageFilters[selectedLangIndex]?.label}</span>
+                  <span>✕</span>
+                </button>
+              )}
+              {selectedProvider !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedProvider("all")}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
+                >
+                  <span>
+                    {providerFilters.find((p) => p.id === selectedProvider)?.label}
+                  </span>
+                  <span>✕</span>
+                </button>
+              )}
+            </div>
+          )}
           </div>
         </div>
 
@@ -1841,25 +2322,40 @@ function SearchPage() {
           </section>
         )}
 
-        {/* RESULTS HEADER */}
-        <div className="rabtv-section-banner">
-          <div
-            className="rabtv-art-bg"
-            aria-hidden="true"
-            style={{
-              backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-            }}
-          />
-          <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-            {selectedPerson
-              ? `${selectedPerson.name} — Credits`
-              : activeUrlQuery
-                ? `Results: "${activeUrlQuery}"`
-                : hiddenGemsMode
-                  ? "💎 Hidden Gems"
-                  : "Filtered Catalog"}
-          </h2>
-        </div>
+        {/* RESULTS HEADER: Custom Cyber-Grunge Filtered Catalog Artwork Banner (Zero Duplicate Words) */}
+        {!selectedPerson && !activeUrlQuery && !hiddenGemsMode ? (
+          <div className="rabtv-srch-catalog-banner-row" aria-label="Filtered Catalog">
+            <span className="rabtv-srch-catalog-wing" aria-hidden="true" />
+            <div className="rabtv-srch-catalog-art-banner">
+              <div
+                className="rabtv-srch-catalog-art-bg"
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${FILTERED_CATALOG_BANNER_URL})`,
+                }}
+              />
+              <h2 className="sr-only">Filtered Catalog</h2>
+            </div>
+            <span className="rabtv-srch-catalog-wing" aria-hidden="true" />
+          </div>
+        ) : (
+          <div className="rabtv-section-banner">
+            <div
+              className="rabtv-art-bg"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+              }}
+            />
+            <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+              {selectedPerson
+                ? `${selectedPerson.name} — Credits`
+                : activeUrlQuery
+                  ? `Results: "${activeUrlQuery}"`
+                  : "💎 Hidden Gems"}
+            </h2>
+          </div>
+        )}
 
         {/* RESULTS GRID */}
         {loading ? (
