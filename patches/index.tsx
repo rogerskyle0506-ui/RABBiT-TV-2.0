@@ -120,14 +120,23 @@ const FAVORITES_STORAGE_KEY = "rabtv_favorites";
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY as string;
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 
-const RABBIT_HEADER_PILL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
+const RABBIT_TV_PILL_TRACK_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-track-background.jpg";
 
-const GREETING_WRAPPER_BG_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/fontwrapper.png";
+const RABBIT_TV_PILL_INACTIVE_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-inactive-dark.jpg";
 
-const BUTTON_WRAPPER_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
+const RABBIT_TV_PILL_ACTIVE_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-active-crimson.jpg";
+
+const RABBIT_TV_GREETING_BG_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-greeting-background.jpg";
+
+const RABBIT_TV_BUTTON_WRAPPER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-wrapper-background.jpg";
+
+const RABBIT_TV_PLAY_PRIMARY_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-play-primary.jpg";
 
 const MOVIE_NIGHT_BTN_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/surpriseme.png";
@@ -200,6 +209,274 @@ const HOME_VIEWPORT_STYLES = `
     font-size: clamp(16px, 4.2vw, 24px);
     line-height: 1.15;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+  }
+
+  /* 6-Theme Hue-Shift Tokens Tuned for Crimson (#C4282A) / #0C0A09 Rabbit TV Plates */
+  :root,
+  html[data-theme="violet"] {
+    --rabtv-idx-plate-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02);
+    --rabtv-idx-play-filter: hue-rotate(-74deg) saturate(1.16) brightness(1.05);
+  }
+
+  html[data-theme="red"] {
+    --rabtv-idx-plate-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0);
+    --rabtv-idx-play-filter: hue-rotate(0deg) saturate(1.14) brightness(1.04);
+  }
+
+  html[data-theme="midnight"] {
+    --rabtv-idx-plate-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04);
+    --rabtv-idx-play-filter: hue-rotate(-128deg) saturate(1.18) brightness(1.06);
+  }
+
+  html[data-theme="emerald"] {
+    --rabtv-idx-plate-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02);
+    --rabtv-idx-play-filter: hue-rotate(150deg) saturate(1.15) brightness(1.04);
+  }
+
+  html[data-theme="amber"] {
+    --rabtv-idx-plate-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04);
+    --rabtv-idx-play-filter: hue-rotate(24deg) saturate(1.18) brightness(1.06);
+  }
+
+  html[data-theme="cyan"] {
+    --rabtv-idx-plate-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04);
+    --rabtv-idx-play-filter: hue-rotate(-150deg) saturate(1.16) brightness(1.06);
+  }
+
+  /* Panoramic Greeting Backdrop (rabbit-tv-greeting-background.jpg) — Blended & Center-Balanced */
+  .rabtv-home-greet-plate {
+    position: relative;
+    overflow: hidden;
+    border-radius: 26px;
+    contain: layout paint;
+  }
+
+  .rabtv-home-greet-plate-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.72;
+    filter: var(--rabtv-idx-plate-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 88% 82% at 50% 50%,
+      rgba(12, 10, 9, 1) 58%,
+      rgba(12, 10, 9, 0.72) 82%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 88% 82% at 50% 50%,
+      rgba(12, 10, 9, 1) 58%,
+      rgba(12, 10, 9, 0.72) 82%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-home-greet-plate-veil {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse 68% 72% at 50% 42%,
+      rgba(12, 10, 9, 0.56) 0%,
+      rgba(12, 10, 9, 0.24) 68%,
+      rgba(12, 10, 9, 0.45) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Dual Button Industrial Backplate (rabbit-tv-button-wrapper-background.jpg) */
+  .rabtv-home-action-plate .rabtv-art-bg {
+    background-size: 100% 100%;
+    opacity: 0.84;
+    filter: var(--rabtv-idx-plate-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 84% 78% at 50% 50%,
+      rgba(12, 10, 9, 1) 66%,
+      rgba(12, 10, 9, 0.78) 88%,
+      rgba(12, 10, 9, 0.35) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 84% 78% at 50% 50%,
+      rgba(12, 10, 9, 1) 66%,
+      rgba(12, 10, 9, 0.78) 88%,
+      rgba(12, 10, 9, 0.35) 100%
+    );
+  }
+
+  /* Recessed Scrollable Pill Track (rabbit-tv-pill-track-background.jpg) */
+  .rabtv-home-pill-track {
+    position: relative;
+    background-color: #0c0a09;
+    overflow: hidden;
+    contain: layout paint;
+  }
+
+  .rabtv-home-pill-track-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.78;
+    filter: var(--rabtv-idx-plate-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 94% 84% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.68) 92%,
+      rgba(12, 10, 9, 0.32) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 94% 84% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.68) 92%,
+      rgba(12, 10, 9, 0.32) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-home-pill-track-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(12, 10, 9, 0.32) 0%, rgba(12, 10, 9, 0.46) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Individual Pill States (rabbit-tv-pill-active-crimson.jpg & rabbit-tv-pill-inactive-dark.jpg) */
+  .rabtv-home-pill-btn {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    box-shadow: none !important;
+    contain: layout paint;
+  }
+
+  .rabtv-home-pill-btn-art {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 160ms ease, filter 180ms ease;
+  }
+
+  .rabtv-home-pill-btn-art--inactive {
+    opacity: 0.80;
+    filter: var(--rabtv-idx-plate-filter) brightness(0.92);
+    -webkit-mask-image: radial-gradient(
+      ellipse 88% 76% at 50% 50%,
+      rgba(12, 10, 9, 0.95) 68%,
+      rgba(12, 10, 9, 0.52) 92%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 88% 76% at 50% 50%,
+      rgba(12, 10, 9, 0.95) 68%,
+      rgba(12, 10, 9, 0.52) 92%,
+      transparent 100%
+    );
+  }
+
+  .rabtv-home-pill-btn-art--active {
+    opacity: 0.96;
+    filter: var(--rabtv-idx-plate-filter) brightness(1.06);
+    -webkit-mask-image: radial-gradient(
+      ellipse 90% 78% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.65) 94%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 90% 78% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.65) 94%,
+      transparent 100%
+    );
+  }
+
+  .rabtv-home-pill-btn-scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-home-pill-btn-scrim--inactive {
+    background: radial-gradient(ellipse 74% 68% at 50% 50%, rgba(12, 10, 9, 0.56) 0%, rgba(12, 10, 9, 0.24) 100%);
+  }
+
+  .rabtv-home-pill-btn-scrim--active {
+    background: radial-gradient(ellipse 74% 68% at 50% 50%, rgba(12, 10, 9, 0.44) 0%, rgba(12, 10, 9, 0.14) 100%);
+  }
+
+  .rabtv-home-pill-btn-label {
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    text-shadow: 0 1px 4px rgba(12, 10, 9, 0.96), 0 0 8px rgba(12, 10, 9, 0.8);
+  }
+
+  /* Primary Armored Action Button (rabbit-tv-button-play-primary.jpg) */
+  .rabtv-home-play-cta {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    box-shadow: none !important;
+    contain: layout paint;
+  }
+
+  .rabtv-home-play-cta-art {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.95;
+    filter: var(--rabtv-idx-play-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 90% 80% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.62) 94%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 90% 80% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.62) 94%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+    transition: transform 160ms ease, filter 180ms ease;
+  }
+
+  .rabtv-home-play-cta:hover .rabtv-home-play-cta-art {
+    filter: var(--rabtv-idx-play-filter) brightness(1.12);
+    transform: scale(1.03);
+  }
+
+  .rabtv-home-play-cta-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 76% 68% at 50% 50%, rgba(12, 10, 9, 0.42) 0%, rgba(12, 10, 9, 0.14) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-home-play-cta-label {
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    text-shadow: 0 1px 4px rgba(12, 10, 9, 0.96), 0 0 10px rgba(12, 10, 9, 0.85);
   }
 
   @media (min-width: 640px) {
@@ -1821,19 +2098,19 @@ function Home() {
     >
       <style>{HOME_VIEWPORT_STYLES}</style>
       <div className="relative z-10">
-        {/* Theme-Tinted Translucent Top Navigation Bar (Non-Overlapping Scroll Controls) */}
+        {/* Top Navigation Bar with Recessed Pill Track & Active/Inactive Pill Plates */}
         <div className="sticky top-0 z-30 mb-4 mt-1 px-2 sm:px-4 py-2 flex justify-center">
           <div
-            className={`relative max-w-6xl w-full flex items-center gap-1.5 rounded-2xl overflow-hidden border px-2 py-2 ${themeStyles.navShell}`}
-            style={{
-              backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-              backgroundSize: "112% 380%",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center center",
-            }}
+            className={`rabtv-home-pill-track relative max-w-6xl w-full flex items-center gap-1.5 rounded-2xl border px-2 py-2 ${themeStyles.navShell}`}
           >
             <div
-              className={`absolute inset-0 backdrop-blur-[3px] pointer-events-none rounded-2xl z-0 ${themeStyles.navOverlay}`}
+              className="rabtv-home-pill-track-bg"
+              aria-hidden="true"
+              style={{ backgroundImage: `url(${RABBIT_TV_PILL_TRACK_URL})` }}
+            />
+            <div
+              className="rabtv-home-pill-track-scrim"
+              aria-hidden="true"
             />
             <button
               type="button"
@@ -1857,17 +2134,36 @@ function Home() {
                       key={tab}
                       type="button"
                       onClick={() => handleTabSelect(tab)}
-                      className={`${
+                      className={`rabtv-home-pill-btn ${
                         largeButtons ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-xs"
                       } rounded-xl font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
                         themeStyles.focusRing
-                      } ${
-                        isActive
-                          ? `${themeStyles.btnActive} scale-[1.03]`
-                          : themeStyles.pillInactive
-                      }`}
+                      } ${isActive ? "text-white scale-[1.03]" : "text-slate-100 hover:text-white"}`}
                     >
-                      {tab}
+                      <span
+                        className={`rabtv-home-pill-btn-art ${
+                          isActive
+                            ? "rabtv-home-pill-btn-art--active"
+                            : "rabtv-home-pill-btn-art--inactive"
+                        }`}
+                        aria-hidden="true"
+                        style={{
+                          backgroundImage: `url(${
+                            isActive
+                              ? RABBIT_TV_PILL_ACTIVE_URL
+                              : RABBIT_TV_PILL_INACTIVE_URL
+                          })`,
+                        }}
+                      />
+                      <span
+                        className={`rabtv-home-pill-btn-scrim ${
+                          isActive
+                            ? "rabtv-home-pill-btn-scrim--active"
+                            : "rabtv-home-pill-btn-scrim--inactive"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span className="rabtv-home-pill-btn-label">{tab}</span>
                     </button>
                   );
                 })}
@@ -1886,20 +2182,20 @@ function Home() {
         </div>
 
         <div className="mx-auto max-w-7xl px-2 sm:px-6 overflow-x-clip flex flex-col items-center">
-          {/* Blended Greeting Card + Bigger Mascot + Single Button Wrapper Holding Movie Night & Surprise Me */}
+          {/* Blended Greeting Plate + Mascot + Dual Action Backplate Holding Movie Night & Surprise Me */}
           {(greetingText || filteredItems.length > 0) && (
             <div
               data-tour="greeting-header"
-              className="rabtv-home-greet-card mb-5 bg-transparent border-0 text-center"
+              className="rabtv-home-greet-card rabtv-home-greet-plate mb-5 bg-transparent border-0 text-center"
             >
-              {/* Organic Elliptical Feathered Artwork Backdrop (Zero Hard Box Edges) */}
               <div
-                className="rabtv-home-greet-bg"
+                className="rabtv-home-greet-plate-bg"
                 aria-hidden="true"
                 style={{
-                  backgroundImage: `url(${GREETING_WRAPPER_BG_URL})`,
+                  backgroundImage: `url(${RABBIT_TV_GREETING_BG_URL})`,
                 }}
               />
+              <div className="rabtv-home-greet-plate-veil" aria-hidden="true" />
               <div className="rabtv-home-greet-laser" aria-hidden="true" />
 
               <div className="relative z-10 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 max-w-full min-w-0">
@@ -1917,7 +2213,6 @@ function Home() {
                     </p>
                   </div>
                 )}
-                {/* Semantic Kids Safe status indicator */}
                 {kidsLocked && (
                   <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0 backdrop-blur-sm">
                     🧒 Kids Safe Mode
@@ -1925,13 +2220,12 @@ function Home() {
                 )}
               </div>
 
-              {/* Compact Theme-Tuned Studded Wrapper — Buttons Pushed to Far Left & Right */}
-              <div className="rabtv-dual-wrapper relative z-10">
+              <div className="rabtv-dual-wrapper rabtv-home-action-plate relative z-10">
                 <div
                   className="rabtv-art-bg"
                   aria-hidden="true"
                   style={{
-                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                    backgroundImage: `url(${RABBIT_TV_BUTTON_WRAPPER_URL})`,
                   }}
                 />
                 <button
@@ -1974,7 +2268,6 @@ function Home() {
               data-tour="hero-banner"
               className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] flex flex-col group ${themeStyles.heroContainer}`}
             >
-              {/* Top: Full-Bleed Stretched Cover Art — Fills 100% of Container on All Sides, Zero Overlaid Text */}
               <Link
                 to="/details"
                 search={heroDetailsSearch}
@@ -1991,11 +2284,9 @@ function Home() {
                 />
               </Link>
 
-              {/* Bottom: Clean Theme-Matched Glass Details Panel */}
               <div
                 className={`p-4 sm:p-6 md:p-7 text-left space-y-3 ${themeStyles.heroPanelBg}`}
               >
-                {/* Metadata Badges */}
                 <div className="flex items-center flex-wrap gap-2">
                   <span
                     className={`rounded-full px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.16em] leading-snug ${themeStyles.accentBadge}`}
@@ -2018,7 +2309,6 @@ function Home() {
                   )}
                 </div>
 
-                {/* Title */}
                 <Link
                   to="/details"
                   search={heroDetailsSearch}
@@ -2029,7 +2319,6 @@ function Home() {
                   </h2>
                 </Link>
 
-                {/* Synopsis */}
                 {activeHeroItem.description && (
                   <p
                     className={`text-xs sm:text-sm leading-relaxed line-clamp-2 sm:line-clamp-3 max-w-3xl ${themeStyles.mutedText}`}
@@ -2038,7 +2327,6 @@ function Home() {
                   </p>
                 )}
 
-                {/* Action Buttons + Dedicated Non-Overlapping Carousel Controls */}
                 <div className="pt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center flex-wrap gap-2.5">
                     <Link
@@ -2046,15 +2334,21 @@ function Home() {
                       search={heroPlayerSearch}
                       onClick={() => bgAudio.pause()}
                       data-tour="hero-play"
-                      className={`inline-flex items-center gap-2 ${
+                      className={`rabtv-home-play-cta inline-flex items-center gap-2 ${
                         largeButtons
                           ? "px-6 py-3 text-sm"
                           : "px-5 py-2.5 text-xs"
-                      } rounded-xl font-bold uppercase tracking-wider transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${
-                        themeStyles.btnActive
-                      } ${themeStyles.focusRing}`}
+                      } rounded-xl font-bold uppercase tracking-wider text-white transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${
+                        themeStyles.focusRing
+                      }`}
                     >
-                      ▶ Watch Now
+                      <span
+                        className="rabtv-home-play-cta-art"
+                        aria-hidden="true"
+                        style={{ backgroundImage: `url(${RABBIT_TV_PLAY_PRIMARY_URL})` }}
+                      />
+                      <span className="rabtv-home-play-cta-scrim" aria-hidden="true" />
+                      <span className="rabtv-home-play-cta-label">▶ Watch Now</span>
                     </Link>
                     <Link
                       to="/details"
@@ -2142,7 +2436,7 @@ function Home() {
             </section>
           )}
 
-          {/* CONTINUE WATCHING ROW (Home Tab — In-Progress Movies & TV Shows with Progress Bars & Episode Radar) */}
+          {/* CONTINUE WATCHING ROW */}
           {activeTab === "Home" && continueWatchingItems.length > 0 && (
             <section
               data-tour="continue-watching-row"
@@ -2153,7 +2447,7 @@ function Home() {
                   className="rabtv-art-bg"
                   aria-hidden="true"
                   style={{
-                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                    backgroundImage: `url(${RABBIT_TV_BUTTON_WRAPPER_URL})`,
                   }}
                 />
                 <h3 className="rabtv-section-banner-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
@@ -2230,17 +2524,29 @@ function Home() {
                               episode: targetEpisode,
                             }}
                             onClick={() => bgAudio.pause()}
-                            className={`block w-full text-center rounded-xl py-1.5 text-[10px] font-extrabold uppercase tracking-wider transition focus:outline-none focus:ring-2 ${
+                            className={`relative overflow-hidden block w-full text-center rounded-xl py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white transition focus:outline-none focus:ring-2 ${
                               freshAlert
-                                ? themeStyles.btnActive
+                                ? "rabtv-home-play-cta"
                                 : themeStyles.btnSecondary
                             } ${themeStyles.focusRing}`}
                           >
-                            {freshAlert
-                              ? `▶ New S${freshAlert.seasonNumber}E${freshAlert.episodeNumber}`
-                              : entry.mediaType === "tv" && nextEp
-                                ? `▶ Resume ${nextEp.label}`
-                                : "▶ Resume Movie"}
+                            {freshAlert && (
+                              <>
+                                <span
+                                  className="rabtv-home-play-cta-art"
+                                  aria-hidden="true"
+                                  style={{ backgroundImage: `url(${RABBIT_TV_PLAY_PRIMARY_URL})` }}
+                                />
+                                <span className="rabtv-home-play-cta-scrim" aria-hidden="true" />
+                              </>
+                            )}
+                            <span className="rabtv-home-play-cta-label">
+                              {freshAlert
+                                ? `▶ New S${freshAlert.seasonNumber}E${freshAlert.episodeNumber}`
+                                : entry.mediaType === "tv" && nextEp
+                                  ? `▶ Resume ${nextEp.label}`
+                                  : "▶ Resume Movie"}
+                            </span>
                           </Link>
                         </div>
                       </div>
@@ -2256,7 +2562,7 @@ function Home() {
               data-tour="catalog-filters"
               className="mb-6 space-y-4 flex flex-col items-center justify-center text-center w-full max-w-6xl"
             >
-              {/* Disney+ Style Translucent Brand Hub Tiles (Netflix, Prime, Disney+, All) */}
+              {/* Provider Tiles */}
               <div data-tour="provider-filter" className="w-full px-1">
                 <div className="grid grid-cols-4 gap-2.5 sm:gap-4 w-full">
                   {providerCategories.map((prov) => {
@@ -2294,11 +2600,20 @@ function Home() {
                 </div>
               </div>
 
-              {/* Sleek Theme-Matched Glass Genre Ribbon (Non-Overlapping Scroll Controls) */}
+              {/* Genre Ribbon with Pill Track & Pill States */}
               <div data-tour="genre-filter" className="flex justify-center w-full px-1">
                 <div
-                  className={`relative w-full flex items-center gap-1.5 rounded-2xl backdrop-blur-md overflow-hidden px-2 py-2 ${themeStyles.surfacePanel}`}
+                  className={`rabtv-home-pill-track relative w-full flex items-center gap-1.5 rounded-2xl border px-2 py-2 ${themeStyles.surfacePanel}`}
                 >
+                  <div
+                    className="rabtv-home-pill-track-bg"
+                    aria-hidden="true"
+                    style={{ backgroundImage: `url(${RABBIT_TV_PILL_TRACK_URL})` }}
+                  />
+                  <div
+                    className="rabtv-home-pill-track-scrim"
+                    aria-hidden="true"
+                  />
                   <button
                     type="button"
                     onClick={() => scrollPill("genre-pill", "left")}
@@ -2321,19 +2636,38 @@ function Home() {
                             key={genre}
                             type="button"
                             onClick={() => setSelectedGenre(genre)}
-                            className={`${
+                            className={`rabtv-home-pill-btn ${
                               largeButtons
                                 ? "px-4 py-2 text-sm"
                                 : "px-3.5 py-1.5 text-xs"
                             } rounded-xl font-bold tracking-wide transition-all duration-200 cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
                               themeStyles.focusRing
-                            } ${
-                              isActive
-                                ? `${themeStyles.btnActive} scale-[1.03]`
-                                : themeStyles.pillInactive
-                            }`}
+                            } ${isActive ? "text-white scale-[1.03]" : "text-slate-100 hover:text-white"}`}
                           >
-                            {genre}
+                            <span
+                              className={`rabtv-home-pill-btn-art ${
+                                isActive
+                                  ? "rabtv-home-pill-btn-art--active"
+                                  : "rabtv-home-pill-btn-art--inactive"
+                              }`}
+                              aria-hidden="true"
+                              style={{
+                                backgroundImage: `url(${
+                                  isActive
+                                    ? RABBIT_TV_PILL_ACTIVE_URL
+                                    : RABBIT_TV_PILL_INACTIVE_URL
+                                })`,
+                              }}
+                            />
+                            <span
+                              className={`rabtv-home-pill-btn-scrim ${
+                                isActive
+                                  ? "rabtv-home-pill-btn-scrim--active"
+                                  : "rabtv-home-pill-btn-scrim--inactive"
+                              }`}
+                              aria-hidden="true"
+                            />
+                            <span className="rabtv-home-pill-btn-label">{genre}</span>
                           </button>
                         );
                       })}
@@ -2356,8 +2690,17 @@ function Home() {
           {activeTab === "My List" && (
             <section className="mb-6 flex justify-center w-full max-w-4xl px-1">
               <div
-                className={`relative w-full flex items-center gap-1.5 rounded-2xl backdrop-blur-md overflow-hidden px-2 py-2 ${themeStyles.surfacePanel}`}
+                className={`rabtv-home-pill-track relative w-full flex items-center gap-1.5 rounded-2xl border px-2 py-2 ${themeStyles.surfacePanel}`}
               >
+                <div
+                  className="rabtv-home-pill-track-bg"
+                  aria-hidden="true"
+                  style={{ backgroundImage: `url(${RABBIT_TV_PILL_TRACK_URL})` }}
+                />
+                <div
+                  className="rabtv-home-pill-track-scrim"
+                  aria-hidden="true"
+                />
                 <button
                   type="button"
                   onClick={() => scrollPill("mylist-pill", "left")}
@@ -2373,65 +2716,71 @@ function Home() {
                   className="relative z-10 flex-1 min-w-0 overflow-x-auto scrollbar-none px-2 py-0.5 flex items-center justify-start gap-2"
                 >
                   <div className="flex items-center gap-2 min-w-max mx-auto">
-                    <button
-                      type="button"
-                      onClick={() => setMyListSubTab("all")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-                        themeStyles.focusRing
-                      } ${
-                        myListSubTab === "all"
-                          ? `${themeStyles.btnActive} scale-[1.03]`
-                          : themeStyles.pillInactive
-                      }`}
-                    >
-                      All Saved (
-                      {savedMyList.length +
-                        savedFavorites.length +
-                        inProgressHistory.length}
-                      )
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setMyListSubTab("in_progress")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-                        themeStyles.focusRing
-                      } ${
-                        myListSubTab === "in_progress"
-                          ? `${themeStyles.btnActive} scale-[1.03]`
-                          : themeStyles.pillInactive
-                      }`}
-                    >
-                      ⏳ In Progress ({inProgressHistory.length})
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setMyListSubTab("mylist")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-                        themeStyles.focusRing
-                      } ${
-                        myListSubTab === "mylist"
-                          ? `${themeStyles.btnActive} scale-[1.03]`
-                          : themeStyles.pillInactive
-                      }`}
-                    >
-                      🔖 Watch Later ({savedMyList.length})
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setMyListSubTab("favorites")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
-                        themeStyles.focusRing
-                      } ${
-                        myListSubTab === "favorites"
-                          ? `${themeStyles.btnActive} scale-[1.03]`
-                          : themeStyles.pillInactive
-                      }`}
-                    >
-                      ⭐ Favorites ({savedFavorites.length})
-                    </button>
+                    {(
+                      [
+                        {
+                          key: "all",
+                          label: `All Saved (${
+                            savedMyList.length +
+                            savedFavorites.length +
+                            inProgressHistory.length
+                          })`,
+                        },
+                        {
+                          key: "in_progress",
+                          label: `⏳ In Progress (${inProgressHistory.length})`,
+                        },
+                        {
+                          key: "mylist",
+                          label: `🔖 Watch Later (${savedMyList.length})`,
+                        },
+                        {
+                          key: "favorites",
+                          label: `⭐ Favorites (${savedFavorites.length})`,
+                        },
+                      ] as const
+                    ).map((sub) => {
+                      const isSubActive = myListSubTab === sub.key;
+                      return (
+                        <button
+                          key={sub.key}
+                          type="button"
+                          onClick={() => setMyListSubTab(sub.key)}
+                          className={`rabtv-home-pill-btn px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                            themeStyles.focusRing
+                          } ${
+                            isSubActive
+                              ? "text-white scale-[1.03]"
+                              : "text-slate-100 hover:text-white"
+                          }`}
+                        >
+                          <span
+                            className={`rabtv-home-pill-btn-art ${
+                              isSubActive
+                                ? "rabtv-home-pill-btn-art--active"
+                                : "rabtv-home-pill-btn-art--inactive"
+                            }`}
+                            aria-hidden="true"
+                            style={{
+                              backgroundImage: `url(${
+                                isSubActive
+                                  ? RABBIT_TV_PILL_ACTIVE_URL
+                                  : RABBIT_TV_PILL_INACTIVE_URL
+                              })`,
+                            }}
+                          />
+                          <span
+                            className={`rabtv-home-pill-btn-scrim ${
+                              isSubActive
+                                ? "rabtv-home-pill-btn-scrim--active"
+                                : "rabtv-home-pill-btn-scrim--inactive"
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <span className="rabtv-home-pill-btn-label">{sub.label}</span>
+                        </button>
+                      );
+                    })}
 
                     {customShelves.map((shelf) => {
                       const shelfKey = `shelf:${shelf.id}`;
@@ -2441,15 +2790,40 @@ function Home() {
                           key={shelf.id}
                           type="button"
                           onClick={() => setMyListSubTab(shelfKey)}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
+                          className={`rabtv-home-pill-btn px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${
                             themeStyles.focusRing
                           } ${
                             isSelected
-                              ? `${themeStyles.btnActive} scale-[1.03]`
-                              : themeStyles.pillInactive
+                              ? "text-white scale-[1.03]"
+                              : "text-slate-100 hover:text-white"
                           }`}
                         >
-                          {shelf.icon} {shelf.name} ({shelf.items.length})
+                          <span
+                            className={`rabtv-home-pill-btn-art ${
+                              isSelected
+                                ? "rabtv-home-pill-btn-art--active"
+                                : "rabtv-home-pill-btn-art--inactive"
+                            }`}
+                            aria-hidden="true"
+                            style={{
+                              backgroundImage: `url(${
+                                isSelected
+                                  ? RABBIT_TV_PILL_ACTIVE_URL
+                                  : RABBIT_TV_PILL_INACTIVE_URL
+                              })`,
+                            }}
+                          />
+                          <span
+                            className={`rabtv-home-pill-btn-scrim ${
+                              isSelected
+                                ? "rabtv-home-pill-btn-scrim--active"
+                                : "rabtv-home-pill-btn-scrim--inactive"
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <span className="rabtv-home-pill-btn-label">
+                            {shelf.icon} {shelf.name} ({shelf.items.length})
+                          </span>
                         </button>
                       );
                     })}
@@ -2457,9 +2831,20 @@ function Home() {
                     <button
                       type="button"
                       onClick={() => setShowCreateShelfBar((v) => !v)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeStyles.btnSecondary} ${themeStyles.focusRing}`}
+                      className={`rabtv-home-pill-btn px-3.5 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer shrink-0 text-white focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
                     >
-                      {showCreateShelfBar ? "✕ Close" : "+ New Shelf"}
+                      <span
+                        className="rabtv-home-pill-btn-art rabtv-home-pill-btn-art--inactive"
+                        aria-hidden="true"
+                        style={{ backgroundImage: `url(${RABBIT_TV_PILL_INACTIVE_URL})` }}
+                      />
+                      <span
+                        className="rabtv-home-pill-btn-scrim rabtv-home-pill-btn-scrim--inactive"
+                        aria-hidden="true"
+                      />
+                      <span className="rabtv-home-pill-btn-label">
+                        {showCreateShelfBar ? "✕ Close" : "+ New Shelf"}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -2520,7 +2905,7 @@ function Home() {
                 className="rabtv-art-bg"
                 aria-hidden="true"
                 style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  backgroundImage: `url(${RABBIT_TV_BUTTON_WRAPPER_URL})`,
                 }}
               />
               <h3 className="rabtv-section-banner-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
@@ -2600,7 +2985,7 @@ function Home() {
                   className="rabtv-art-bg"
                   aria-hidden="true"
                   style={{
-                    backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                    backgroundImage: `url(${RABBIT_TV_BUTTON_WRAPPER_URL})`,
                   }}
                 />
                 <h3 className="rabtv-section-banner-title relative z-10 font-black text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
@@ -2655,13 +3040,19 @@ function Home() {
                   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
                 }}
                 disabled={page >= totalPages || loading}
-                className={`rounded-xl ${themeStyles.btnActive} ${
+                className={`rabtv-home-play-cta rounded-xl text-white ${
                   largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
-                } font-bold shadow transition disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer ${
+                } font-bold transition disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer ${
                   themeStyles.focusRing
                 }`}
               >
-                Next ▶
+                <span
+                  className="rabtv-home-play-cta-art"
+                  aria-hidden="true"
+                  style={{ backgroundImage: `url(${RABBIT_TV_PLAY_PRIMARY_URL})` }}
+                />
+                <span className="rabtv-home-play-cta-scrim" aria-hidden="true" />
+                <span className="rabtv-home-play-cta-label">Next ▶</span>
               </button>
             </div>
           )}
