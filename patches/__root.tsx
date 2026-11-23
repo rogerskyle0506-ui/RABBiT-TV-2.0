@@ -234,19 +234,19 @@ const VIEWPORT_HEADER_STYLES = `
     contain: layout paint;
   }
 
-  /* Pixel-calibrated dead-center INSIDE the purple bezel ring of sidebar.png */
+  /* Pixel-calibrated to fill the full oval dark bezel opening of sidebar.png */
   .rabtv-hdr-profile-avatar {
     position: absolute;
     z-index: 10;
-    left: 22.8%;
+    left: 23.2%;
     top: 50%;
     transform: translate(-50%, -50%);
-    height: 55%;
-    aspect-ratio: 1 / 1;
+    width: 25.5%;
+    height: 69%;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 9999px;
+    border-radius: 50%;
     overflow: hidden;
     pointer-events: none;
   }
@@ -389,19 +389,21 @@ const VIEWPORT_HEADER_STYLES = `
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
-    opacity: 0.78;
+    opacity: 0.64;
     filter: var(--rabtv-wrap-filter);
     -webkit-mask-image: radial-gradient(
-      ellipse 51% 54% at 50% 50%,
-      rgba(0, 0, 0, 1) 68%,
-      rgba(0, 0, 0, 0.76) 86%,
-      rgba(0, 0, 0, 0.24) 100%
+      ellipse 49% 51% at 50% 50%,
+      rgba(0, 0, 0, 0.96) 54%,
+      rgba(0, 0, 0, 0.72) 74%,
+      rgba(0, 0, 0, 0.20) 89%,
+      transparent 100%
     );
     mask-image: radial-gradient(
-      ellipse 51% 54% at 50% 50%,
-      rgba(0, 0, 0, 1) 68%,
-      rgba(0, 0, 0, 0.76) 86%,
-      rgba(0, 0, 0, 0.24) 100%
+      ellipse 49% 51% at 50% 50%,
+      rgba(0, 0, 0, 0.96) 54%,
+      rgba(0, 0, 0, 0.72) 74%,
+      rgba(0, 0, 0, 0.20) 89%,
+      transparent 100%
     );
     pointer-events: none;
     z-index: 0;
@@ -416,12 +418,12 @@ const VIEWPORT_HEADER_STYLES = `
     box-sizing: border-box;
   }
 
-  /* Precision Dual-Button Studded Wrapper — Bigger Buttons Locked Inside Dark Bay */
+  /* Precision Dual-Button Studded Wrapper — Edge-Aligned Buttons Locked Inside Dark Bay */
   .rabtv-dual-wrapper {
     position: relative;
     width: min(95%, 352px);
     height: clamp(46px, 12.6vw, 56px);
-    padding: 0 11.2%;
+    padding: 0 9.8%;
     margin-inline: auto;
     display: flex;
     align-items: center;
@@ -438,7 +440,7 @@ const VIEWPORT_HEADER_STYLES = `
     position: relative;
     width: min(70%, 232px);
     height: clamp(46px, 12.6vw, 56px);
-    padding: 0 13%;
+    padding: 0 12%;
     margin-inline: auto;
     display: flex;
     align-items: center;
@@ -449,7 +451,7 @@ const VIEWPORT_HEADER_STYLES = `
     contain: layout paint;
   }
 
-  /* Artwork Button Locked Strictly Inside the 47.2% Dark Middle Bay */
+  /* Artwork Button Locked Inside the Dark Middle Bay with Unclipped Glow Clearance */
   .rabtv-wrap-art-btn {
     position: relative;
     z-index: 6;
@@ -457,8 +459,8 @@ const VIEWPORT_HEADER_STYLES = `
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 47%;
-    height: 45%;
+    width: 47.5%;
+    height: 49%;
     background: transparent;
     border: 0;
     padding: 0;
@@ -481,21 +483,25 @@ const VIEWPORT_HEADER_STYLES = `
     display: block;
   }
 
-  /* Center-cropped calibrated scales so each PNG fills ~88% of the dark bay cleanly */
+  /* Calibrated Scales + Left/Right Nudge so Both Buttons Match Height & Hug the Dark Bay Edges */
   .rabtv-wrap-art-btn--movie img {
-    transform: scale(2.00);
+    transform: translateX(-14%) scale(2.04);
   }
 
   .rabtv-wrap-art-btn--surprise img {
-    transform: scale(2.65);
+    transform: translateX(12%) scale(2.22);
   }
 
   .rabtv-wrap-art-btn--home img {
-    transform: scale(1.92);
+    transform: translateX(-16%) scale(2.14);
+  }
+
+  .rabtv-single-wrapper .rabtv-wrap-art-btn--home img {
+    transform: scale(2.14);
   }
 
   .rabtv-wrap-art-btn--tvdetails img {
-    transform: scale(1.90);
+    transform: translateX(14%) scale(2.00);
   }
 
   /* Font-Created Pill Button Strictly Constrained Inside the Dark Bay (NEVER overflows neon rim!) */
@@ -507,7 +513,7 @@ const VIEWPORT_HEADER_STYLES = `
     justify-content: center;
     gap: 4px;
     flex: 0 0 auto;
-    width: 46.5%;
+    width: 46%;
     height: 41%;
     padding: 0 clamp(6px, 1.8vw, 11px);
     border-radius: 9999px;
@@ -552,6 +558,28 @@ const VIEWPORT_HEADER_STYLES = `
     font-size: clamp(9.5px, 2.5vw, 12.5px);
     line-height: 1.1;
     white-space: nowrap;
+  }
+
+  /* Split Section Banner (Title on Left, Action Link on Right — Zero Truncation!) */
+  .rabtv-section-banner--split {
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 clamp(26px, 10.2%, 56px);
+  }
+
+  .rabtv-section-banner--split .rabtv-section-banner-title {
+    text-align: left;
+    min-width: 0;
+    flex: 1 1 auto;
+    padding-inline: 0;
+  }
+
+  .rabtv-section-banner--split .rabtv-section-banner-action {
+    position: relative;
+    right: auto;
+    top: auto;
+    transform: none;
+    flex: 0 0 auto;
   }
 
   /* =========================================================================
@@ -620,7 +648,7 @@ const VIEWPORT_HEADER_STYLES = `
     .rabtv-dual-wrapper {
       width: min(82%, clamp(356px, 44vw, 460px));
       height: clamp(50px, 5.2vw, 62px);
-      padding: 0 11.2%;
+      padding: 0 9.8%;
     }
 
     .rabtv-single-wrapper {
@@ -630,8 +658,8 @@ const VIEWPORT_HEADER_STYLES = `
     }
 
     .rabtv-wrap-art-btn {
-      width: 47%;
-      height: 45%;
+      width: 47.5%;
+      height: 49%;
     }
 
     .rabtv-wrap-pill-btn {
@@ -683,7 +711,7 @@ const VIEWPORT_HEADER_STYLES = `
     .rabtv-dual-wrapper {
       width: min(76%, 324px);
       height: 42px;
-      padding: 0 11.2%;
+      padding: 0 9.8%;
     }
 
     .rabtv-single-wrapper {
@@ -742,7 +770,7 @@ const VIEWPORT_HEADER_STYLES = `
     .rabtv-dual-wrapper {
       width: 472px;
       height: 64px;
-      padding: 0 11.2%;
+      padding: 0 9.8%;
     }
 
     .rabtv-section-banner {
@@ -1724,7 +1752,7 @@ function RootComponent() {
                           mascot={profileMascot}
                           size="sm"
                           rounded="full"
-                          className="!w-full !h-full !border-0 !bg-transparent !shadow-none [&_img]:w-full [&_img]:h-full [&_img]:object-cover"
+                          className="!w-full !h-full !border-0 !bg-transparent !shadow-none !rounded-[50%] [&_img]:w-full [&_img]:h-full [&_img]:object-cover [&_img]:scale-[1.12]"
                           alt={savedProfileName}
                         />
                       </div>
