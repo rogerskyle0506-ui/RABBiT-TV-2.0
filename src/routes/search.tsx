@@ -917,7 +917,7 @@ const SearchInputForm = memo(function SearchInputForm({
             const nextHas = Boolean((e.target as HTMLInputElement).value);
             setHasValue((prev) => (prev === nextHas ? prev : nextHas));
           }}
-          placeholder="Search movies, TV, actors, live..."
+          placeholder="Search movies, TV, actors..."
           style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
           className={`w-full rounded-2xl border pl-9 pr-9 py-3 sm:py-3.5 text-xs sm:text-sm font-bold focus:outline-none shadow-inner transition ${tokens.inputClass}`}
         />
@@ -2189,7 +2189,7 @@ function SearchPage() {
         {/* MATCHING LIVE TV CHANNELS CROSS-SEARCH SHELF */}
         {matchingLiveChannels.length > 0 && (
           <section className="space-y-3">
-            <div className="rabtv-section-banner">
+            <div className="rabtv-section-banner rabtv-section-banner--split">
               <div
                 className="rabtv-art-bg"
                 aria-hidden="true"
@@ -2197,7 +2197,7 @@ function SearchPage() {
                   backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
                 }}
               />
-              <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate px-14 sm:px-24 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+              <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 📡 Matching Live TV
               </h3>
               <Link
