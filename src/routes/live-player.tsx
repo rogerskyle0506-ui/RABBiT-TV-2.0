@@ -2331,7 +2331,7 @@ function LivePlayerComponent() {
 
         {/* Up Next / More Live Channels (Clean Minimal Cards) */}
         <div className="w-full pt-1 space-y-3">
-          <div className="rabtv-section-banner">
+          <div className="rabtv-section-banner rabtv-section-banner--split">
             <div
               className="rabtv-art-bg"
               aria-hidden="true"
@@ -2339,7 +2339,7 @@ function LivePlayerComponent() {
                 backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
               }}
             />
-            <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate px-12 sm:px-24 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+            <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
               📡 More Live Channels
             </h2>
 
