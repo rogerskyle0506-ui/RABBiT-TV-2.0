@@ -78,7 +78,7 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     position: relative;
     width: min(95%, 352px);
     height: clamp(46px, 12.6vw, 56px);
-    padding: 0 11.2%;
+    padding: 0 9.8%;
     margin-inline: auto;
     display: flex;
     align-items: center;
@@ -96,19 +96,21 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
-    opacity: 0.78;
+    opacity: 0.64;
     filter: var(--rabtv-wrap-filter, hue-rotate(-14deg) saturate(1.06));
     -webkit-mask-image: radial-gradient(
-      ellipse 51% 54% at 50% 50%,
-      rgba(0, 0, 0, 1) 68%,
-      rgba(0, 0, 0, 0.76) 86%,
-      rgba(0, 0, 0, 0.24) 100%
+      ellipse 49% 51% at 50% 50%,
+      rgba(0, 0, 0, 0.96) 54%,
+      rgba(0, 0, 0, 0.72) 74%,
+      rgba(0, 0, 0, 0.20) 89%,
+      transparent 100%
     );
     mask-image: radial-gradient(
-      ellipse 51% 54% at 50% 50%,
-      rgba(0, 0, 0, 1) 68%,
-      rgba(0, 0, 0, 0.76) 86%,
-      rgba(0, 0, 0, 0.24) 100%
+      ellipse 49% 51% at 50% 50%,
+      rgba(0, 0, 0, 0.96) 54%,
+      rgba(0, 0, 0, 0.72) 74%,
+      rgba(0, 0, 0, 0.20) 89%,
+      transparent 100%
     );
     pointer-events: none;
     z-index: 0;
@@ -121,8 +123,8 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 47%;
-    height: 45%;
+    width: 47.5%;
+    height: 49%;
     background: transparent;
     border: 0;
     padding: 0;
@@ -138,7 +140,7 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     object-fit: contain;
     object-position: center center;
     transform-origin: center center;
-    transform: scale(1.92);
+    transform: translateX(-16%) scale(2.14);
     display: block;
   }
 
@@ -189,12 +191,12 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     .rabtv-wh-dual-wrap {
       width: min(82%, clamp(356px, 44vw, 460px));
       height: clamp(50px, 5.2vw, 62px);
-      padding: 0 11.2%;
+      padding: 0 9.8%;
     }
 
     .rabtv-wh-home-btn {
-      width: 47%;
-      height: 45%;
+      width: 47.5%;
+      height: 49%;
     }
 
     .rabtv-wh-mylist-pill {
@@ -217,7 +219,7 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     .rabtv-wh-dual-wrap {
       width: min(76%, 324px);
       height: 42px;
-      padding: 0 11.2%;
+      padding: 0 9.8%;
     }
 
     .rabtv-wh-mylist-pill {
@@ -234,7 +236,7 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     .rabtv-wh-dual-wrap {
       width: 472px;
       height: 64px;
-      padding: 0 11.2%;
+      padding: 0 9.8%;
     }
 
     .rabtv-wh-section-ribbon {
