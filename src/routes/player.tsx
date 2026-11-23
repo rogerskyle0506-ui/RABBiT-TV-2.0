@@ -176,19 +176,21 @@ const PLAYER_VIEWPORT_STYLES = `
     background-size: 110% 188%;
     background-repeat: no-repeat;
     background-position: center center;
-    opacity: 0.78;
+    opacity: 0.64;
     filter: var(--rabtv-wrap-filter, hue-rotate(-14deg) saturate(1.06));
     -webkit-mask-image: radial-gradient(
-      ellipse 51% 54% at 50% 50%,
-      rgba(0, 0, 0, 1) 68%,
-      rgba(0, 0, 0, 0.76) 86%,
-      rgba(0, 0, 0, 0.24) 100%
+      ellipse 49% 51% at 50% 50%,
+      rgba(0, 0, 0, 0.96) 54%,
+      rgba(0, 0, 0, 0.72) 74%,
+      rgba(0, 0, 0, 0.20) 89%,
+      transparent 100%
     );
     mask-image: radial-gradient(
-      ellipse 51% 54% at 50% 50%,
-      rgba(0, 0, 0, 1) 68%,
-      rgba(0, 0, 0, 0.76) 86%,
-      rgba(0, 0, 0, 0.24) 100%
+      ellipse 49% 51% at 50% 50%,
+      rgba(0, 0, 0, 0.96) 54%,
+      rgba(0, 0, 0, 0.72) 74%,
+      rgba(0, 0, 0, 0.20) 89%,
+      transparent 100%
     );
     pointer-events: none;
     z-index: 0;
