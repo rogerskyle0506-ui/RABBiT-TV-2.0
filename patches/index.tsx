@@ -2148,7 +2148,7 @@ function Home() {
               data-tour="continue-watching-row"
               className="mb-6 w-full max-w-6xl space-y-3 px-1"
             >
-              <div className="rabtv-section-banner">
+              <div className="rabtv-section-banner rabtv-section-banner--split">
                 <div
                   className="rabtv-art-bg"
                   aria-hidden="true"
@@ -2156,7 +2156,7 @@ function Home() {
                     backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
                   }}
                 />
-                <h3 className="rabtv-section-banner-title relative z-10 font-black tracking-tight text-white truncate px-14 sm:px-24 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                <h3 className="rabtv-section-banner-title relative z-10 font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                   ▶ Continue Watching
                 </h3>
                 <Link
