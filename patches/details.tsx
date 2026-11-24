@@ -76,8 +76,8 @@ const RABBIT_TV_TRAILER_BADGE_URL =
 const RABBIT_TV_STAT_CARD_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-stat-card-background.jpg";
 
-const BACK_TO_HOME_BTN_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
+const RABBIT_TV_HOME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-home-primary.jpg";
 
 /**
  * Viewport-locked layout rules for Details top utility wrapper, Back to Home
@@ -117,11 +117,20 @@ const DETAILS_VIEWPORT_STYLES = `
     --rabtv-dtl-play-filter: hue-rotate(-150deg) saturate(1.16) brightness(1.06);
   }
 
+  /* Landscape Full-Width Top Utility Wrapper */
+  @media (min-width: 640px) {
+    .rabtv-dtl-action-plate {
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 0 3.5% !important;
+    }
+  }
+
   /* Top Dual-Wrapper & Section Banners (rabbit-tv-button-wrapper-background.jpg) */
   .rabtv-dtl-action-plate .rabtv-art-bg,
   .rabtv-dtl-banner-plate .rabtv-art-bg {
     background-size: 100% 100%;
-    opacity: 0.84;
+    opacity: 0.74;
     filter: var(--rabtv-dtl-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 86% 78% at 50% 50%,
@@ -141,7 +150,7 @@ const DETAILS_VIEWPORT_STYLES = `
   .rabtv-dtl-panel {
     position: relative;
     overflow: hidden;
-    background-color: #0c0a09;
+    background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
   }
 
@@ -151,7 +160,7 @@ const DETAILS_VIEWPORT_STYLES = `
     background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.78;
+    opacity: 0.68;
     filter: var(--rabtv-dtl-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 96% 94% at 50% 50%,
@@ -1976,13 +1985,15 @@ export function DetailsPage() {
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-wrap-art-btn rabtv-wrap-art-btn--left rabtv-wrap-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${activeTheme.ring}`}
+              className={`rabtv-wrap-pill-btn rabtv-dtl-sec-cta font-extrabold text-white transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${activeTheme.ring}`}
             >
-              <img
-                src={BACK_TO_HOME_BTN_URL}
-                alt="Back to Home"
-                decoding="async"
+              <span
+                className="rabtv-dtl-sec-cta-art"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${RABBIT_TV_HOME_BTN_URL})` }}
               />
+              <span className="rabtv-dtl-sec-cta-scrim" aria-hidden="true" />
+              <span className="rabtv-dtl-cta-content truncate">← Back to Home</span>
             </Link>
 
             <a
