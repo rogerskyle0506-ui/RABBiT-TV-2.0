@@ -1,6 +1,13 @@
 // src/routes/search.tsx
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import React, { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  memo,
+} from "react";
 import type { MediaItem } from "@/lib/tmdb-scraper";
 import {
   CardSize,
@@ -19,7 +26,6 @@ import {
   getKidsModeLocked,
 } from "@/lib/settings";
 import { MediaCard } from "@/routes/index";
-import { ScrollPillBar } from "@/components/scroll-pill-bar";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { isTitleDisliked, recordWatchHistory } from "@/lib/watch-history";
 import { isTitleBroken } from "@/lib/broken-links";
@@ -29,104 +35,109 @@ const TMDB_API_KEY =
   ((import.meta as any).env?.VITE_TMDB_API_KEY as string) || "";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3/";
 const RECENT_SEARCHES_KEY = "rabtv_recent_searches_v1";
+const SMART_BEHAVIOR_KEY = "rabtv_search_behavior_v1";
 const FETCH_TIMEOUT_MS = 8500;
+const PREDICTIVE_DEBOUNCE_MS = 280;
 
-const BUTTON_WRAPPER_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
-
-const BACK_TO_HOME_BTN_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
-
-const REAL_SURPRISE_ME_BTN_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/real_surprisemmebutton.png";
-
-const SEARCH_BUTTON_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/searchbutton.png";
-
-const SEARCH_PAGE_WRAPPER_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/SearchPageWrapper.jpg";
-
-const TRENDING_HITS_BTN_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/TrendingHits.jpg";
-
-const MASTERPIECES_BTN_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Masterpieces.jpg";
-
-const FILTERED_CATALOG_BANNER_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/FilteredCatalog.jpg";
+// =============================================================================
+// NEW PHASE-1 COMMITTED SEARCH PAGE IMAGE ASSETS (10 ISOLATED FILES)
+// =============================================================================
+const IMG_DECK_PANEL_BG =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-deck-panel-background.jpg";
+const IMG_CATALOG_BANNER_BG =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-catalog-banner-background.jpg";
+const IMG_INPUT_BAR_BG =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-input-bar-background.jpg";
+const IMG_BTN_HOME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-home-primary.jpg";
+const IMG_BTN_SUBMIT =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-submit-primary.jpg";
+const IMG_BTN_FILTER_IDLE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-filter-idle.jpg";
+const IMG_BTN_FILTER_ACTIVE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-filter-active.jpg";
+const IMG_BTN_CLEAR_DANGER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-clear-danger.jpg";
+const IMG_DROPDOWN_TRIGGER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-dropdown-trigger-idle.jpg";
+const IMG_DROPDOWN_MENU_PANEL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-dropdown-menu-panel.jpg";
 
 /**
- * Viewport-locked layout rules for Search top utility wrapper (single
- * buttonwrapper.png holding Back to Home + Surprise Me), custom Search submit
- * artwork button, and buttonwrapper-backed section headers across portrait
- * phones, landscape phones, tablets, desktops, TVs, and projectors.
+ * 6-Theme Hue-Shift Tokens & Armored UI Plate Geometry
+ * Synced 1:1 with Index, Details, and Player pages.
  */
-const SEARCH_VIEWPORT_STYLES = `
-  /* Theme-Synchronized Single-Pass GPU Filters for Warm Fire/Amber Search Assets
-     TrendingHits base hue ~15deg | Masterpieces & FilteredCatalog base hue ~28deg */
+const SEARCH_PAGE_STYLES = `
   :root,
   html[data-theme="violet"] {
-    --rabtv-srch-fire-filter: hue-rotate(-100deg) saturate(1.16) brightness(1.04);
-    --rabtv-srch-amber-filter: hue-rotate(-112deg) saturate(1.16) brightness(1.04);
-    --rabtv-srch-num-color: #f3e8ff;
-    --rabtv-srch-num-glow: 0 0 6px rgba(192, 132, 252, 0.95), 0 0 14px rgba(168, 85, 247, 0.8), 0 2px 4px rgba(0, 0, 0, 0.95);
-    --rabtv-srch-deck-tint: rgba(88, 28, 135, 0.24);
+    --rabtv-srch-plate-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02);
+    --rabtv-srch-play-filter: hue-rotate(-74deg) saturate(1.16) brightness(1.05);
+    --rabtv-srch-ambient-ring: rgba(168, 85, 247, 0.34);
   }
 
   html[data-theme="red"] {
-    --rabtv-srch-fire-filter: hue-rotate(-10deg) saturate(1.18) brightness(1.02);
-    --rabtv-srch-amber-filter: hue-rotate(-20deg) saturate(1.18) brightness(1.02);
-    --rabtv-srch-num-color: #ffe4e6;
-    --rabtv-srch-num-glow: 0 0 6px rgba(248, 113, 113, 0.95), 0 0 14px rgba(239, 68, 68, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
-    --rabtv-srch-deck-tint: rgba(127, 29, 29, 0.24);
+    --rabtv-srch-plate-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0);
+    --rabtv-srch-play-filter: hue-rotate(0deg) saturate(1.14) brightness(1.04);
+    --rabtv-srch-ambient-ring: rgba(196, 40, 42, 0.38);
   }
 
   html[data-theme="midnight"] {
-    --rabtv-srch-fire-filter: hue-rotate(-165deg) saturate(1.16) brightness(1.06);
-    --rabtv-srch-amber-filter: hue-rotate(-178deg) saturate(1.16) brightness(1.06);
-    --rabtv-srch-num-color: #e0f2fe;
-    --rabtv-srch-num-glow: 0 0 6px rgba(125, 211, 252, 0.95), 0 0 14px rgba(56, 189, 248, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
-    --rabtv-srch-deck-tint: rgba(30, 58, 138, 0.26);
+    --rabtv-srch-plate-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04);
+    --rabtv-srch-play-filter: hue-rotate(-128deg) saturate(1.18) brightness(1.06);
+    --rabtv-srch-ambient-ring: rgba(56, 189, 248, 0.34);
   }
 
   html[data-theme="emerald"] {
-    --rabtv-srch-fire-filter: hue-rotate(136deg) saturate(1.14) brightness(1.04);
-    --rabtv-srch-amber-filter: hue-rotate(124deg) saturate(1.14) brightness(1.04);
-    --rabtv-srch-num-color: #d1fae5;
-    --rabtv-srch-num-glow: 0 0 6px rgba(110, 231, 183, 0.95), 0 0 14px rgba(16, 185, 129, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
-    --rabtv-srch-deck-tint: rgba(6, 78, 59, 0.24);
+    --rabtv-srch-plate-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02);
+    --rabtv-srch-play-filter: hue-rotate(150deg) saturate(1.15) brightness(1.04);
+    --rabtv-srch-ambient-ring: rgba(16, 185, 129, 0.34);
   }
 
   html[data-theme="amber"] {
-    --rabtv-srch-fire-filter: hue-rotate(16deg) saturate(1.12) brightness(1.04);
-    --rabtv-srch-amber-filter: hue-rotate(4deg) saturate(1.12) brightness(1.04);
-    --rabtv-srch-num-color: #fef3c7;
-    --rabtv-srch-num-glow: 0 0 6px rgba(252, 211, 77, 0.95), 0 0 14px rgba(245, 158, 11, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
-    --rabtv-srch-deck-tint: rgba(120, 53, 15, 0.22);
+    --rabtv-srch-plate-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04);
+    --rabtv-srch-play-filter: hue-rotate(24deg) saturate(1.18) brightness(1.06);
+    --rabtv-srch-ambient-ring: rgba(245, 158, 11, 0.34);
   }
 
   html[data-theme="cyan"] {
-    --rabtv-srch-fire-filter: hue-rotate(172deg) saturate(1.16) brightness(1.06);
-    --rabtv-srch-amber-filter: hue-rotate(160deg) saturate(1.16) brightness(1.06);
-    --rabtv-srch-num-color: #cffafe;
-    --rabtv-srch-num-glow: 0 0 6px rgba(103, 232, 249, 0.95), 0 0 14px rgba(6, 182, 212, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95);
-    --rabtv-srch-deck-tint: rgba(22, 78, 99, 0.26);
+    --rabtv-srch-plate-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04);
+    --rabtv-srch-play-filter: hue-rotate(-150deg) saturate(1.16) brightness(1.06);
+    --rabtv-srch-ambient-ring: rgba(34, 211, 238, 0.36);
   }
 
-  /* Full-Bleed 100% x 100% Search Deck Wallpaper Wrapper */
+  /* Main Search Control Deck (Female Rabbit Detective in Bottom-Right) */
   .rabtv-srch-deck {
     position: relative;
-    overflow: hidden;
-    contain: layout paint;
+    background-color: #0c0a09;
+    overflow: visible;
+    transition: box-shadow 260ms ease;
   }
 
-  .rabtv-srch-deck-wall {
+  .rabtv-srch-deck--engaged {
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.32), 0 0 36px var(--rabtv-srch-ambient-ring);
+  }
+
+  .rabtv-srch-deck-bg {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: fill;
-    opacity: 0.56;
+    border-radius: inherit;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.84;
+    filter: var(--rabtv-srch-plate-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 96% 94% at 50% 50%,
+      rgba(12, 10, 9, 1) 74%,
+      rgba(12, 10, 9, 0.74) 93%,
+      rgba(12, 10, 9, 0.34) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 96% 94% at 50% 50%,
+      rgba(12, 10, 9, 1) 74%,
+      rgba(12, 10, 9, 0.74) 93%,
+      rgba(12, 10, 9, 0.34) 100%
+    );
     pointer-events: none;
     z-index: 0;
   }
@@ -134,262 +145,243 @@ const SEARCH_VIEWPORT_STYLES = `
   .rabtv-srch-deck-scrim {
     position: absolute;
     inset: 0;
-    background:
-      radial-gradient(ellipse 90% 70% at 50% 80%, var(--rabtv-srch-deck-tint) 0%, transparent 72%),
-      linear-gradient(180deg, rgba(5, 5, 10, 0.62) 0%, rgba(5, 5, 10, 0.44) 48%, rgba(4, 4, 8, 0.66) 100%);
+    border-radius: inherit;
+    background: radial-gradient(
+      ellipse 78% 76% at 38% 36%,
+      rgba(12, 10, 9, 0.62) 0%,
+      rgba(12, 10, 9, 0.42) 66%,
+      rgba(12, 10, 9, 0.24) 100%
+    );
     pointer-events: none;
     z-index: 1;
   }
 
-  .rabtv-srch-deck-laser-top,
-  .rabtv-srch-deck-laser-bot {
-    position: absolute;
-    inset-inline: 8%;
-    height: 1.5px;
-    background: var(--rabtv-neon-line, linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.75), transparent));
-    pointer-events: none;
-    z-index: 15;
-  }
-  .rabtv-srch-deck-laser-top { top: 0; }
-  .rabtv-srch-deck-laser-bot { bottom: 0; }
-
-  /* Search Submit Art Button */
-  .rabtv-srch-submit-art {
+  /* Search Input Bar Housing (rabbit-tv-search-input-bar-background.jpg) */
+  .rabtv-srch-input-shell {
     position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: clamp(42px, 10.8vw, 50px);
-    width: clamp(134px, 36vw, 172px);
-    max-width: 100%;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
+    background-color: #0c0a09;
     overflow: hidden;
-    border-radius: 9999px;
-    flex: 0 0 auto;
-    transition: transform 150ms ease;
-  }
-
-  .rabtv-srch-submit-art img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-    transform: scale(1.14);
-    filter: var(--rabtv-search-filter);
-  }
-
-  /* Hero Art Preset Buttons: Trending Hits & Masterpieces (Exact Measured Pill Crop) */
-  .rabtv-srch-hero-presets {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(8px, 2.4vw, 16px);
-    width: 100%;
-    max-width: 560px;
-    margin-inline: auto;
-  }
-
-  .rabtv-srch-art-preset {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    aspect-ratio: 2.52 / 1;
-    min-height: 44px;
-    max-height: clamp(54px, 14.5vw, 68px);
-    border-radius: 9999px;
-    border: 0;
-    padding: 0;
-    background: rgba(0, 0, 0, 0.45);
-    overflow: hidden;
-    cursor: pointer;
     contain: layout paint;
-    transition: transform 160ms ease, box-shadow 180ms ease;
   }
 
-  .rabtv-srch-art-preset:hover {
+  .rabtv-srch-input-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.94;
+    filter: var(--rabtv-srch-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-srch-input-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(12, 10, 9, 0.34) 0%, rgba(12, 10, 9, 0.52) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Universal Image-Backed Armored Button */
+  .rabtv-srch-img-btn {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    box-shadow: none !important;
+    contain: layout paint;
+    transition: transform 150ms ease, opacity 150ms ease;
+  }
+
+  .rabtv-srch-img-btn:hover:not(:disabled) {
     transform: scale(1.03);
   }
 
-  .rabtv-srch-art-preset:active {
+  .rabtv-srch-img-btn:active:not(:disabled) {
     transform: scale(0.97);
   }
 
-  .rabtv-srch-art-preset--active {
-    box-shadow:
-      0 0 0 1.5px var(--rabtv-neon-accent, #a855f7),
-      0 0 18px var(--rabtv-neon-glow, rgba(168, 85, 247, 0.45));
-  }
-
-  /* Tightly crops the 3.6% horizontal / 16% vertical black margins of TrendingHits & Masterpieces */
-  .rabtv-srch-art-preset-bg {
+  .rabtv-srch-img-btn-art {
     position: absolute;
     inset: 0;
-    background-size: 108% 147%;
+    background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
+    pointer-events: none;
+    z-index: 0;
+    transition: filter 160ms ease, transform 160ms ease;
     -webkit-mask-image: radial-gradient(
-      ellipse 52% 55% at 50% 50%,
-      rgba(0, 0, 0, 1) 74%,
-      rgba(0, 0, 0, 0.85) 90%,
-      rgba(0, 0, 0, 0.25) 100%
+      ellipse 92% 84% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.62) 94%,
+      transparent 100%
     );
     mask-image: radial-gradient(
-      ellipse 52% 55% at 50% 50%,
-      rgba(0, 0, 0, 1) 74%,
-      rgba(0, 0, 0, 0.85) 90%,
-      rgba(0, 0, 0, 0.25) 100%
+      ellipse 92% 84% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.62) 94%,
+      transparent 100%
+    );
+  }
+
+  .rabtv-srch-img-btn-art--idle {
+    opacity: 0.92;
+    filter: var(--rabtv-srch-plate-filter) brightness(0.96);
+  }
+
+  .rabtv-srch-img-btn-art--active {
+    opacity: 0.98;
+    filter: saturate(1.08) brightness(1.05);
+  }
+
+  .rabtv-srch-img-btn-art--primary {
+    opacity: 0.96;
+    filter: var(--rabtv-srch-play-filter);
+  }
+
+  .rabtv-srch-img-btn-art--danger {
+    opacity: 0.96;
+    filter: saturate(1.12) brightness(1.02);
+  }
+
+  .rabtv-srch-img-btn:hover:not(:disabled) .rabtv-srch-img-btn-art {
+    filter: brightness(1.12) saturate(1.12);
+    transform: scale(1.02);
+  }
+
+  .rabtv-srch-img-btn-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 76% 68% at 50% 50%, rgba(12, 10, 9, 0.44) 0%, rgba(12, 10, 9, 0.16) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-srch-img-btn-label {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+    max-width: 100%;
+    text-shadow: 0 1px 4px rgba(12, 10, 9, 0.96), 0 0 10px rgba(12, 10, 9, 0.85);
+  }
+
+  /* Custom Image-Backed Dropdown Trigger & Popover Menu Panel */
+  .rabtv-srch-dd-trigger {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    contain: layout paint;
+  }
+
+  .rabtv-srch-dd-trigger-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.94;
+    filter: var(--rabtv-srch-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-srch-dd-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 60;
+    border-radius: 18px;
+    overflow: hidden;
+    background-color: #0c0a09;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.92), 0 0 22px var(--rabtv-srch-ambient-ring);
+  }
+
+  .rabtv-srch-dd-menu-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.95;
+    filter: var(--rabtv-srch-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Panoramic Catalog & Section Banner (Male Rabbit at Computer Terminal on Right Flank) */
+  .rabtv-srch-banner {
+    position: relative;
+    width: 100%;
+    min-height: clamp(58px, 16vw, 88px);
+    padding: 10px clamp(84px, 24%, 210px) 10px clamp(18px, 5%, 36px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-radius: 20px;
+    overflow: hidden;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+
+  .rabtv-srch-banner-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.92;
+    filter: var(--rabtv-srch-plate-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 96% 90% at 50% 50%,
+      rgba(12, 10, 9, 1) 74%,
+      rgba(12, 10, 9, 0.72) 93%,
+      rgba(12, 10, 9, 0.32) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 96% 90% at 50% 50%,
+      rgba(12, 10, 9, 1) 74%,
+      rgba(12, 10, 9, 0.72) 93%,
+      rgba(12, 10, 9, 0.32) 100%
     );
     pointer-events: none;
     z-index: 0;
   }
 
-  .rabtv-srch-art-preset-bg--trending {
-    filter: var(--rabtv-srch-fire-filter);
-  }
-
-  .rabtv-srch-art-preset-bg--masterpieces {
-    filter: var(--rabtv-srch-amber-filter);
-  }
-
-  /* Pixel-calibrated injection bay inside Masterpieces.jpg:
-     Star ends at 28.3%, "Masterpieces" begins at 52.9% -> dead center = 40.6% */
-  .rabtv-srch-mp-num {
-    position: absolute;
-    left: 40.6%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;
-    width: 23%;
-    text-align: center;
-    font-family: Georgia, "Times New Roman", serif;
-    font-weight: 900;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    font-size: clamp(13px, 4.1vw, 22px);
-    color: var(--rabtv-srch-num-color);
-    text-shadow: var(--rabtv-srch-num-glow);
-    pointer-events: none;
-    white-space: nowrap;
-  }
-
-  /* Full-Width Blended Filtered Catalog Artwork Banner (Zero Duplicate Overlay Words!) */
-  .rabtv-srch-catalog-banner-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-  }
-
-  .rabtv-srch-catalog-wing {
-    display: none;
-    flex: 1 1 0;
-    height: 1.5px;
-    background: var(--rabtv-neon-line, linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.72), transparent));
-    opacity: 0.75;
-    pointer-events: none;
-  }
-
-  .rabtv-srch-catalog-art-banner {
-    position: relative;
-    width: 100%;
-    max-width: 500px;
-    aspect-ratio: 3.25 / 1;
-    min-height: 54px;
-    max-height: clamp(68px, 18vw, 108px);
-    margin-inline: auto;
-    border-radius: 9999px;
-    overflow: hidden;
-    contain: layout paint;
-  }
-
-  /* Tightly crops the 0.9% horizontal / 7% vertical black margins of FilteredCatalog.jpg */
-  .rabtv-srch-catalog-art-bg {
+  .rabtv-srch-banner-scrim {
     position: absolute;
     inset: 0;
-    background-size: 102% 120%;
-    background-position: center center;
-    background-repeat: no-repeat;
-    opacity: 0.92;
-    filter: var(--rabtv-srch-amber-filter);
-    -webkit-mask-image: radial-gradient(
-      ellipse 51% 54% at 50% 50%,
-      rgba(0, 0, 0, 1) 72%,
-      rgba(0, 0, 0, 0.80) 88%,
-      rgba(0, 0, 0, 0.22) 100%
-    );
-    mask-image: radial-gradient(
-      ellipse 51% 54% at 50% 50%,
-      rgba(0, 0, 0, 1) 72%,
-      rgba(0, 0, 0, 0.80) 88%,
-      rgba(0, 0, 0, 0.22) 100%
-    );
+    background: linear-gradient(90deg, rgba(12, 10, 9, 0.54) 0%, rgba(12, 10, 9, 0.34) 64%, rgba(12, 10, 9, 0.08) 100%);
     pointer-events: none;
-  }
-
-  @media (min-width: 640px) {
-    .rabtv-srch-submit-art {
-      height: clamp(44px, 4.5vw, 52px);
-      width: clamp(142px, 14vw, 176px);
-    }
-
-    .rabtv-srch-hero-presets {
-      max-width: 540px;
-      gap: 16px;
-    }
-
-    .rabtv-srch-art-preset {
-      max-height: 68px;
-    }
-
-    .rabtv-srch-mp-num {
-      font-size: clamp(18px, 2.2vw, 24px);
-    }
-
-    .rabtv-srch-catalog-wing {
-      display: block;
-    }
-
-    .rabtv-srch-catalog-art-banner {
-      width: clamp(360px, 46vw, 540px);
-      max-width: 540px;
-      max-height: 112px;
-      flex: 0 0 auto;
-    }
-  }
-
-  @media (min-width: 640px) and (max-height: 500px) {
-    .rabtv-srch-art-preset {
-      max-height: 50px;
-    }
-
-    .rabtv-srch-mp-num {
-      font-size: 16px;
-    }
-
-    .rabtv-srch-catalog-art-banner {
-      max-height: 72px;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .rabtv-srch-catalog-art-banner {
-      width: 560px;
-      max-width: 560px;
-      max-height: 118px;
-    }
+    z-index: 1;
   }
 `;
 
+// =============================================================================
+// TYPES & CONFIGURATION
+// =============================================================================
 interface PersonMatch {
   id: number;
   name: string;
   profilePath: string | null;
   department: string;
+}
+
+interface PredictiveMatch {
+  id: string;
+  title: string;
+  mediaType: "movie" | "tv" | "person";
+  year?: string;
+  rating?: string;
+  posterUrl?: string;
 }
 
 type SortOption =
@@ -400,7 +392,75 @@ type SortOption =
 
 type ProviderOption = "all" | "8" | "119" | "337";
 
-// Accurate Movie + TV TMDB genre IDs so TV filtering works reliably
+type PresetId =
+  | "trending"
+  | "masterpieces"
+  | "new"
+  | "90s"
+  | "family"
+  | "hiddenGems";
+
+type MoodId =
+  | "adrenaline"
+  | "mindbender"
+  | "chill"
+  | "latenight"
+  | "emotional"
+  | "escapism";
+
+interface MoodConfig {
+  id: MoodId;
+  label: string;
+  genres: string[];
+  minRating: number;
+  sortBy: SortOption;
+}
+
+const MOOD_VIBES: MoodConfig[] = [
+  {
+    id: "adrenaline",
+    label: "⚡ Adrenaline",
+    genres: ["Action", "Thriller"],
+    minRating: 6.8,
+    sortBy: "popularity.desc",
+  },
+  {
+    id: "mindbender",
+    label: "🧠 Mind-Bender",
+    genres: ["Sci-Fi", "Mystery"],
+    minRating: 7.4,
+    sortBy: "vote_average.desc",
+  },
+  {
+    id: "chill",
+    label: "😂 Chill & Laugh",
+    genres: ["Comedy"],
+    minRating: 6.5,
+    sortBy: "popularity.desc",
+  },
+  {
+    id: "latenight",
+    label: "🌙 Late Night",
+    genres: ["Horror", "Crime"],
+    minRating: 6.5,
+    sortBy: "popularity.desc",
+  },
+  {
+    id: "emotional",
+    label: "💔 Deep Drama",
+    genres: ["Drama"],
+    minRating: 7.6,
+    sortBy: "vote_average.desc",
+  },
+  {
+    id: "escapism",
+    label: "🚀 Pure Escapism",
+    genres: ["Fantasy", "Adventure"],
+    minRating: 7.0,
+    sortBy: "popularity.desc",
+  },
+];
+
 const GENRE_ID_PAIRS: Record<string, { movie?: number; tv?: number }> = {
   Action: { movie: 28, tv: 10759 },
   Adventure: { movie: 12, tv: 10759 },
@@ -450,6 +510,15 @@ const sortOptions: { id: SortOption; label: string }[] = [
   { id: "vote_count.desc", label: "🏆 Most Voted" },
 ];
 
+const ratingOptions = [
+  { value: "0", label: "⭐ Any Rating" },
+  { value: "6", label: "⭐ 6.0 & Above" },
+  { value: "7", label: "⭐ 7.0 & Above" },
+  { value: "7.5", label: "⭐ 7.5 & Above" },
+  { value: "8", label: "⭐ 8.0 & Above" },
+  { value: "8.5", label: "⭐ 8.5 & Above" },
+];
+
 const MATURE_LIVE_KEYWORDS = [
   "adult",
   "crime",
@@ -468,6 +537,9 @@ const MATURE_LIVE_KEYWORDS = [
   "ridiculousness",
 ];
 
+// =============================================================================
+// SAFE STORAGE & BEHAVIOR HELPERS
+// =============================================================================
 function sanitizeQuery(raw: string): string {
   return String(raw || "")
     .replace(/[<>]/g, "")
@@ -503,7 +575,7 @@ function saveRecentSearch(term: string): string[] {
     try {
       localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
     } catch {
-      // ignore storage quota errors
+      // ignore quota errors
     }
   }
   return updated;
@@ -530,6 +602,29 @@ function clearAllRecentSearches(): string[] {
     }
   }
   return [];
+}
+
+function recordGenreAffinity(genre: string): Record<string, number> {
+  if (typeof window === "undefined" || !genre || genre === "All") return {};
+  try {
+    const current: Record<string, number> = JSON.parse(
+      localStorage.getItem(SMART_BEHAVIOR_KEY) || "{}"
+    );
+    current[genre] = (current[genre] || 0) + 1;
+    localStorage.setItem(SMART_BEHAVIOR_KEY, JSON.stringify(current));
+    return current;
+  } catch {
+    return {};
+  }
+}
+
+function loadGenreAffinity(): Record<string, number> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(SMART_BEHAVIOR_KEY) || "{}");
+  } catch {
+    return {};
+  }
 }
 
 function mapRawItem(
@@ -578,306 +673,322 @@ function mapRawItem(
   };
 }
 
-interface SearchThemeTokens {
-  bg: string;
-  baseText: string;
-  mutedText: string;
-  subMutedText: string;
-  accentText: string;
-  accentBar: string;
-  accentBadge: string;
-  surfacePanel: string;
-  controlBox: string;
-  dividerBorder: string;
-  inputClass: string;
-  optionBg: string;
-  btn: string;
-  btnSecondary: string;
-  backCapsule: string;
-  backBadge: string;
-  pillIdle: string;
-  recentChip: string;
-  personBanner: string;
-  liveCard: string;
-  avatarFrame: string;
-  avatarRing: string;
-  spinner: string;
-  focusRing: string;
-  ambient: string;
-  arrow: string;
+// =============================================================================
+// REUSABLE IMAGE-BACKED UI COMPONENTS
+// =============================================================================
+type ArmoredBtnVariant = "idle" | "active" | "primary" | "danger" | "home";
+
+const ArmoredButton = memo(function ArmoredButton({
+  variant = "idle",
+  className = "",
+  children,
+  onClick,
+  type = "button",
+  disabled = false,
+  title,
+  ariaLabel,
+  ariaPressed,
+}: {
+  variant?: ArmoredBtnVariant;
+  className?: string;
+  children: React.ReactNode;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  type?: "button" | "submit";
+  disabled?: boolean;
+  title?: string;
+  ariaLabel?: string;
+  ariaPressed?: boolean;
+}) {
+  const bgUrl =
+    variant === "home"
+      ? IMG_BTN_HOME
+      : variant === "primary"
+        ? IMG_BTN_SUBMIT
+        : variant === "active"
+          ? IMG_BTN_FILTER_ACTIVE
+          : variant === "danger"
+            ? IMG_BTN_CLEAR_DANGER
+            : IMG_BTN_FILTER_IDLE;
+
+  const artMod =
+    variant === "primary"
+      ? "rabtv-srch-img-btn-art--primary"
+      : variant === "active"
+        ? "rabtv-srch-img-btn-art--active"
+        : variant === "danger"
+          ? "rabtv-srch-img-btn-art--danger"
+          : "rabtv-srch-img-btn-art--idle";
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
+      className={`rabtv-srch-img-btn rounded-xl text-white font-extrabold cursor-pointer disabled:opacity-40 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-cyan-400 ${className}`}
+    >
+      <span
+        className={`rabtv-srch-img-btn-art ${artMod}`}
+        aria-hidden="true"
+        style={{ backgroundImage: `url(${bgUrl})` }}
+      />
+      <span className="rabtv-srch-img-btn-scrim" aria-hidden="true" />
+      <span className="rabtv-srch-img-btn-label">{children}</span>
+    </button>
+  );
+});
+
+interface DropdownOption {
+  value: string;
+  label: string;
 }
 
-function getSearchThemeTokens(theme: AppTheme): SearchThemeTokens {
-  switch (theme) {
-    case "red":
-      return {
-        bg: "bg-gradient-to-br from-zinc-950/65 via-red-950/30 to-black/75",
-        baseText: "text-zinc-100",
-        mutedText: "text-zinc-300",
-        subMutedText: "text-zinc-400",
-        accentText: "text-red-400",
-        accentBar: "bg-red-500 shadow-[0_0_14px_rgba(239,68,68,0.95)]",
-        accentBadge: "bg-red-950/80 border border-red-500/40 text-red-200",
-        surfacePanel:
-          "bg-zinc-950/68 border-red-500/35 shadow-[0_16px_50px_rgba(239,68,68,0.18)]",
-        controlBox: "bg-black/58 backdrop-blur-[3px] border-red-500/25",
-        dividerBorder: "border-red-500/20",
-        inputClass:
-          "border-red-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-zinc-400 focus:ring-4 focus:ring-red-500/40 focus:border-red-400",
-        optionBg: "bg-zinc-950 text-white",
-        btn: "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/35",
-        btnSecondary:
-          "bg-red-950/65 hover:bg-red-900/80 border border-red-500/35 text-red-100 hover:text-white",
-        backCapsule:
-          "bg-zinc-950/85 hover:bg-red-950/80 border-red-500/35 hover:border-red-400 text-zinc-100 hover:text-white",
-        backBadge:
-          "bg-gradient-to-tr from-red-600/60 via-rose-500/50 to-orange-500/50 border-red-400/50 text-white",
-        pillIdle:
-          "bg-red-950/40 hover:bg-red-900/65 border-red-500/25 text-red-100 hover:text-white",
-        recentChip: "bg-black/75 border-red-500/30",
-        personBanner: "bg-red-950/60 border-red-400/45 text-red-100",
-        liveCard:
-          "border-red-500/35 hover:border-red-400 bg-zinc-950/90 shadow-[0_10px_28px_rgba(239,68,68,0.14)]",
-        avatarFrame: "bg-zinc-950 border-zinc-950",
-        avatarRing: "from-red-500 via-rose-400 to-orange-400",
-        spinner: "border-red-400",
-        focusRing: "focus:ring-red-500",
-        ambient: "from-red-600/15 via-transparent to-transparent",
-        arrow: "text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.85)]",
-      };
-    case "midnight":
-      return {
-        bg: "bg-gradient-to-br from-slate-950/65 via-blue-950/30 to-black/75",
-        baseText: "text-slate-100",
-        mutedText: "text-slate-300",
-        subMutedText: "text-slate-400",
-        accentText: "text-sky-300",
-        accentBar: "bg-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.95)]",
-        accentBadge: "bg-blue-950/80 border border-blue-500/40 text-sky-200",
-        surfacePanel:
-          "bg-slate-950/68 border-blue-500/35 shadow-[0_16px_50px_rgba(59,130,246,0.18)]",
-        controlBox: "bg-black/58 backdrop-blur-[3px] border-blue-500/25",
-        dividerBorder: "border-blue-500/20",
-        inputClass:
-          "border-blue-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-slate-400 focus:ring-4 focus:ring-sky-400/40 focus:border-sky-400",
-        optionBg: "bg-slate-950 text-white",
-        btn: "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 text-white shadow-lg shadow-blue-600/35",
-        btnSecondary:
-          "bg-blue-950/65 hover:bg-blue-900/80 border border-blue-500/35 text-blue-100 hover:text-white",
-        backCapsule:
-          "bg-slate-950/85 hover:bg-blue-950/80 border-blue-500/35 hover:border-sky-400 text-slate-100 hover:text-white",
-        backBadge:
-          "bg-gradient-to-tr from-blue-600/60 via-sky-500/50 to-cyan-400/50 border-sky-400/50 text-white",
-        pillIdle:
-          "bg-blue-950/40 hover:bg-blue-900/65 border-blue-500/25 text-blue-100 hover:text-white",
-        recentChip: "bg-black/75 border-blue-500/30",
-        personBanner: "bg-blue-950/60 border-sky-400/45 text-sky-100",
-        liveCard:
-          "border-blue-500/35 hover:border-sky-400 bg-slate-950/90 shadow-[0_10px_28px_rgba(59,130,246,0.14)]",
-        avatarFrame: "bg-slate-950 border-slate-950",
-        avatarRing: "from-cyan-400 via-sky-500 to-blue-500",
-        spinner: "border-sky-400",
-        focusRing: "focus:ring-sky-400",
-        ambient: "from-blue-600/15 via-transparent to-transparent",
-        arrow: "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.85)]",
-      };
-    case "emerald":
-      return {
-        bg: "bg-gradient-to-br from-neutral-950/65 via-emerald-950/30 to-black/75",
-        baseText: "text-neutral-100",
-        mutedText: "text-neutral-300",
-        subMutedText: "text-neutral-400",
-        accentText: "text-emerald-300",
-        accentBar: "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.95)]",
-        accentBadge:
-          "bg-emerald-950/80 border border-emerald-500/40 text-emerald-200",
-        surfacePanel:
-          "bg-neutral-950/68 border-emerald-500/35 shadow-[0_16px_50px_rgba(16,185,129,0.18)]",
-        controlBox: "bg-black/58 backdrop-blur-[3px] border-emerald-500/25",
-        dividerBorder: "border-emerald-500/20",
-        inputClass:
-          "border-emerald-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-neutral-400 focus:ring-4 focus:ring-emerald-400/40 focus:border-emerald-400",
-        optionBg: "bg-neutral-950 text-white",
-        btn: "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/35",
-        btnSecondary:
-          "bg-emerald-950/65 hover:bg-emerald-900/80 border border-emerald-500/35 text-emerald-100 hover:text-white",
-        backCapsule:
-          "bg-neutral-950/85 hover:bg-emerald-950/80 border-emerald-500/35 hover:border-emerald-400 text-neutral-100 hover:text-white",
-        backBadge:
-          "bg-gradient-to-tr from-emerald-600/60 via-teal-500/50 to-green-400/50 border-emerald-400/50 text-white",
-        pillIdle:
-          "bg-emerald-950/40 hover:bg-emerald-900/65 border-emerald-500/25 text-emerald-100 hover:text-white",
-        recentChip: "bg-black/75 border-emerald-500/30",
-        personBanner: "bg-emerald-950/60 border-emerald-400/45 text-emerald-100",
-        liveCard:
-          "border-emerald-500/35 hover:border-emerald-400 bg-neutral-950/90 shadow-[0_10px_28px_rgba(16,185,129,0.14)]",
-        avatarFrame: "bg-neutral-950 border-neutral-950",
-        avatarRing: "from-emerald-400 via-teal-400 to-green-500",
-        spinner: "border-emerald-400",
-        focusRing: "focus:ring-emerald-400",
-        ambient: "from-emerald-600/15 via-transparent to-transparent",
-        arrow: "text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.85)]",
-      };
-    case "amber":
-      return {
-        bg: "bg-gradient-to-br from-stone-950/65 via-yellow-950/30 to-black/75",
-        baseText: "text-stone-100",
-        mutedText: "text-stone-300",
-        subMutedText: "text-stone-400",
-        accentText: "text-amber-300",
-        accentBar: "bg-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.95)]",
-        accentBadge: "bg-amber-950/80 border border-amber-500/40 text-amber-200",
-        surfacePanel:
-          "bg-stone-950/68 border-amber-500/35 shadow-[0_16px_50px_rgba(245,158,11,0.18)]",
-        controlBox: "bg-black/58 backdrop-blur-[3px] border-amber-500/25",
-        dividerBorder: "border-amber-500/20",
-        inputClass:
-          "border-amber-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-stone-400 focus:ring-4 focus:ring-amber-400/40 focus:border-amber-400",
-        optionBg: "bg-stone-950 text-white",
-        btn: "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/35",
-        btnSecondary:
-          "bg-amber-950/65 hover:bg-amber-900/80 border border-amber-500/35 text-amber-100 hover:text-white",
-        backCapsule:
-          "bg-stone-950/85 hover:bg-amber-950/80 border-amber-500/35 hover:border-amber-400 text-stone-100 hover:text-white",
-        backBadge:
-          "bg-gradient-to-tr from-amber-600/60 via-yellow-500/50 to-orange-500/50 border-amber-400/50 text-white",
-        pillIdle:
-          "bg-amber-950/40 hover:bg-amber-900/65 border-amber-500/25 text-amber-100 hover:text-white",
-        recentChip: "bg-black/75 border-amber-500/30",
-        personBanner: "bg-amber-950/60 border-amber-400/45 text-amber-100",
-        liveCard:
-          "border-amber-500/35 hover:border-amber-400 bg-stone-950/90 shadow-[0_10px_28px_rgba(245,158,11,0.14)]",
-        avatarFrame: "bg-stone-950 border-stone-950",
-        avatarRing: "from-amber-400 via-yellow-400 to-orange-500",
-        spinner: "border-amber-400",
-        focusRing: "focus:ring-amber-400",
-        ambient: "from-amber-600/15 via-transparent to-transparent",
-        arrow: "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.85)]",
-      };
-    case "cyan":
-      return {
-        bg: "bg-gradient-to-br from-slate-950/65 via-cyan-950/30 to-black/75",
-        baseText: "text-slate-100",
-        mutedText: "text-slate-300",
-        subMutedText: "text-slate-400",
-        accentText: "text-cyan-300",
-        accentBar: "bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.95)]",
-        accentBadge: "bg-cyan-950/80 border border-cyan-500/40 text-cyan-200",
-        surfacePanel:
-          "bg-slate-950/68 border-cyan-500/35 shadow-[0_16px_50px_rgba(6,182,212,0.18)]",
-        controlBox: "bg-black/58 backdrop-blur-[3px] border-cyan-500/25",
-        dividerBorder: "border-cyan-500/20",
-        inputClass:
-          "border-cyan-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-slate-400 focus:ring-4 focus:ring-cyan-400/40 focus:border-cyan-400",
-        optionBg: "bg-slate-950 text-white",
-        btn: "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/35",
-        btnSecondary:
-          "bg-cyan-950/65 hover:bg-cyan-900/80 border border-cyan-500/35 text-cyan-100 hover:text-white",
-        backCapsule:
-          "bg-slate-950/85 hover:bg-cyan-950/80 border-cyan-500/35 hover:border-cyan-400 text-slate-100 hover:text-white",
-        backBadge:
-          "bg-gradient-to-tr from-cyan-600/60 via-teal-500/50 to-sky-400/50 border-cyan-400/50 text-white",
-        pillIdle:
-          "bg-cyan-950/40 hover:bg-cyan-900/65 border-cyan-500/25 text-cyan-100 hover:text-white",
-        recentChip: "bg-black/75 border-cyan-500/30",
-        personBanner: "bg-cyan-950/60 border-cyan-400/45 text-cyan-100",
-        liveCard:
-          "border-cyan-500/35 hover:border-cyan-400 bg-slate-950/90 shadow-[0_10px_28px_rgba(6,182,212,0.14)]",
-        avatarFrame: "bg-slate-950 border-slate-950",
-        avatarRing: "from-cyan-400 via-teal-400 to-sky-500",
-        spinner: "border-cyan-400",
-        focusRing: "focus:ring-cyan-400",
-        ambient: "from-cyan-600/15 via-transparent to-transparent",
-        arrow: "text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.85)]",
-      };
-    case "violet":
-    default:
-      return {
-        bg: "bg-gradient-to-br from-slate-950/65 via-purple-950/30 to-black/75",
-        baseText: "text-slate-100",
-        mutedText: "text-slate-300",
-        subMutedText: "text-slate-400",
-        accentText: "text-violet-300",
-        accentBar: "bg-violet-500 shadow-[0_0_14px_rgba(139,92,246,0.95)]",
-        accentBadge: "bg-purple-950/80 border border-violet-500/40 text-violet-200",
-        surfacePanel:
-          "bg-slate-950/68 border-violet-500/35 shadow-[0_16px_50px_rgba(139,92,246,0.18)]",
-        controlBox: "bg-black/58 backdrop-blur-[3px] border-violet-500/25",
-        dividerBorder: "border-violet-500/20",
-        inputClass:
-          "border-violet-500/35 bg-black/62 backdrop-blur-[3px] text-white placeholder-slate-400 focus:ring-4 focus:ring-violet-500/40 focus:border-violet-400",
-        optionBg: "bg-slate-950 text-white",
-        btn: "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/35",
-        btnSecondary:
-          "bg-purple-950/65 hover:bg-purple-900/80 border border-violet-500/35 text-purple-100 hover:text-white",
-        backCapsule:
-          "bg-slate-950/85 hover:bg-purple-950/80 border-violet-500/35 hover:border-violet-400 text-slate-100 hover:text-white",
-        backBadge:
-          "bg-gradient-to-tr from-violet-600/60 via-purple-500/50 to-indigo-500/50 border-violet-400/50 text-white",
-        pillIdle:
-          "bg-purple-950/40 hover:bg-purple-900/65 border-violet-500/25 text-purple-100 hover:text-white",
-        recentChip: "bg-black/75 border-violet-500/30",
-        personBanner: "bg-purple-950/60 border-violet-400/45 text-violet-100",
-        liveCard:
-          "border-violet-500/35 hover:border-violet-400 bg-slate-950/90 shadow-[0_10px_28px_rgba(139,92,246,0.14)]",
-        avatarFrame: "bg-slate-950 border-slate-950",
-        avatarRing: "from-violet-400 via-purple-500 to-indigo-500",
-        spinner: "border-violet-400",
-        focusRing: "focus:ring-violet-400",
-        ambient: "from-violet-600/15 via-transparent to-transparent",
-        arrow: "text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.85)]",
-      };
-  }
-}
+const ArmoredDropdown = memo(function ArmoredDropdown({
+  label,
+  value,
+  options,
+  onChange,
+  disabled = false,
+  isOpen,
+  onToggle,
+  onClose,
+}: {
+  label: string;
+  value: string;
+  options: DropdownOption[];
+  onChange: (val: string) => void;
+  disabled?: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const current = options.find((o) => o.value === value) || options[0];
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", onDocClick);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [isOpen, onClose]);
+
+  return (
+    <div ref={containerRef} className="relative min-w-0">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onToggle}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        className="rabtv-srch-dd-trigger w-full rounded-xl px-3 py-2 text-left flex items-center justify-between gap-2 cursor-pointer disabled:opacity-45 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-cyan-400 transition hover:brightness-110"
+      >
+        <span
+          className="rabtv-srch-dd-trigger-bg"
+          aria-hidden="true"
+          style={{ backgroundImage: `url(${IMG_DROPDOWN_TRIGGER})` }}
+        />
+        <span className="relative z-10 flex flex-col min-w-0 pr-2">
+          <span className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 leading-none mb-0.5">
+            {label}
+          </span>
+          <span className="text-xs font-extrabold text-white truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+            {current?.label || ""}
+          </span>
+        </span>
+        <span
+          className={`relative z-10 w-6 text-center text-xs font-black text-cyan-300 shrink-0 transition-transform duration-150 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+          aria-hidden="true"
+        >
+          ▾
+        </span>
+      </button>
+
+      {isOpen && (
+        <div role="listbox" className="rabtv-srch-dd-menu p-2">
+          <div
+            className="rabtv-srch-dd-menu-bg"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${IMG_DROPDOWN_MENU_PANEL})` }}
+          />
+          <div className="relative z-10 max-h-60 overflow-y-auto scrollbar-none space-y-1 p-1">
+            {options.map((opt) => {
+              const selected = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    onChange(opt.value);
+                    onClose();
+                  }}
+                  className="rabtv-srch-img-btn w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                >
+                  <span
+                    className={`rabtv-srch-img-btn-art ${
+                      selected
+                        ? "rabtv-srch-img-btn-art--active"
+                        : "rabtv-srch-img-btn-art--idle"
+                    }`}
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(${
+                        selected ? IMG_BTN_FILTER_ACTIVE : IMG_BTN_FILTER_IDLE
+                      })`,
+                    }}
+                  />
+                  <span className="rabtv-srch-img-btn-scrim" aria-hidden="true" />
+                  <span className="relative z-10 flex items-center justify-between gap-2 w-full">
+                    <span className="truncate">{opt.label}</span>
+                    {selected && (
+                      <span className="text-[10px] font-black text-cyan-300 shrink-0">
+                        ✓
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
 
 /**
- * Isolated uncontrolled Search Bar form:
- * Prevents full-page re-renders on every keystroke so Android WebView / Capacitor
- * never resets the IME caret to 0 (which previously caused "talk" -> "klat").
+ * Isolated Uncontrolled Search Input with:
+ * - Android WebView IME caret protection
+ * - Predictive Instant Suggestions dropdown (ArrowUp / ArrowDown / Enter / Esc)
+ * - Voice Search (Web Speech API ready) + Visual Search readiness trigger
+ * - `/` keyboard shortcut to focus
  */
-const SearchInputForm = memo(function SearchInputForm({
+const SearchInputDeck = memo(function SearchInputDeck({
   syncedQuery,
   largeButtons,
-  tokens,
   onSubmitQuery,
   onClearQuery,
+  onSelectPrediction,
+  onFocusChange,
+  onNotice,
 }: {
   syncedQuery: string;
   largeButtons: boolean;
-  tokens: SearchThemeTokens;
   onSubmitQuery: (raw: string) => void;
   onClearQuery: () => void;
+  onSelectPrediction: (match: PredictiveMatch) => void;
+  onFocusChange: (engaged: boolean) => void;
+  onNotice: (msg: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [hasValue, setHasValue] = useState<boolean>(Boolean(syncedQuery));
+  const [liveTerm, setLiveTerm] = useState<string>(syncedQuery);
+  const [predictions, setPredictions] = useState<PredictiveMatch[]>([]);
+  const [showPredictions, setShowPredictions] = useState<boolean>(false);
+  const [highlightIdx, setHighlightIdx] = useState<number>(-1);
+  const [isListening, setIsListening] = useState<boolean>(false);
 
-  // Sync only when URL query changes externally (e.g., clicking a Recent pill or Reset)
   useEffect(() => {
     const el = inputRef.current;
     if (el && el.value !== syncedQuery && document.activeElement !== el) {
       el.value = syncedQuery;
     }
     setHasValue(Boolean(syncedQuery));
+    setLiveTerm(syncedQuery);
   }, [syncedQuery]);
 
-  // Quick `/` shortcut on keyboards to jump straight into search
+  // Global `/` shortcut to jump directly into search
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      if (e.key === "/" && tag !== "input" && tag !== "textarea" && tag !== "select") {
+      if (
+        e.key === "/" &&
+        tag !== "input" &&
+        tag !== "textarea" &&
+        tag !== "select"
+      ) {
         e.preventDefault();
         inputRef.current?.focus();
-      } else if (e.key === "Escape" && document.activeElement === inputRef.current) {
-        inputRef.current?.blur();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Debounced Predictive Search (TMDB multi-search)
+  useEffect(() => {
+    const clean = sanitizeQuery(liveTerm);
+    if (clean.length < 2 || !TMDB_API_KEY) {
+      setPredictions([]);
+      setHighlightIdx(-1);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${TMDB_BASE_URL}search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(
+            clean
+          )}&include_adult=false&page=1`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const items = (data.results || []).slice(0, 6).map((r: any) => ({
+          id: String(r.id),
+          title: String(r.title || r.name || ""),
+          mediaType:
+            r.media_type === "tv" || r.media_type === "person"
+              ? r.media_type
+              : "movie",
+          year: String(r.release_date || r.first_air_date || "").split("-")[0],
+          rating:
+            typeof r.vote_average === "number" && r.vote_average > 0
+              ? r.vote_average.toFixed(1)
+              : undefined,
+          posterUrl: r.poster_path
+            ? `https://image.tmdb.org/t/p/w92${r.poster_path}`
+            : r.profile_path
+              ? `https://image.tmdb.org/t/p/w92${r.profile_path}`
+              : undefined,
+        }));
+        setPredictions(items.filter((x: PredictiveMatch) => Boolean(x.title)));
+        setHighlightIdx(-1);
+      } catch {
+        // ignore aborts
+      }
+    }, PREDICTIVE_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [liveTerm]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const raw = inputRef.current?.value || "";
+    setShowPredictions(false);
     onSubmitQuery(raw);
     inputRef.current?.blur();
   };
@@ -888,100 +999,283 @@ const SearchInputForm = memo(function SearchInputForm({
       inputRef.current.focus();
     }
     setHasValue(false);
+    setLiveTerm("");
+    setPredictions([]);
+    setShowPredictions(false);
     onClearQuery();
   };
 
+  const handleVoiceSearch = () => {
+    const SpeechRec =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      onNotice("🎙️ Voice search ready — browser speech API unavailable on this device.");
+      return;
+    }
+    try {
+      const recognition = new SpeechRec();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      setIsListening(true);
+      recognition.onresult = (event: any) => {
+        const transcript = sanitizeQuery(
+          event?.results?.[0]?.[0]?.transcript || ""
+        );
+        setIsListening(false);
+        if (transcript) {
+          if (inputRef.current) inputRef.current.value = transcript;
+          setHasValue(true);
+          setLiveTerm(transcript);
+          onSubmitQuery(transcript);
+        }
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
+    } catch {
+      setIsListening(false);
+      onNotice("🎙️ Voice search could not start — check microphone permissions.");
+    }
+  };
+
+  const handleVisualSearchReady = () => {
+    onNotice("📷 Visual poster & scene scanner ready — camera input module coming soon.");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showPredictions || predictions.length === 0) {
+      if (e.key === "Escape") inputRef.current?.blur();
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIdx((i) => (i + 1) % predictions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIdx((i) => (i <= 0 ? predictions.length - 1 : i - 1));
+    } else if (e.key === "Enter" && highlightIdx >= 0) {
+      e.preventDefault();
+      const chosen = predictions[highlightIdx];
+      setShowPredictions(false);
+      onSelectPrediction(chosen);
+    } else if (e.key === "Escape") {
+      setShowPredictions(false);
+      inputRef.current?.blur();
+    }
+  };
+
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center w-full"
-    >
-      <div className="relative flex-1 min-w-0">
-        <span
-          className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm pointer-events-none ${tokens.accentText}`}
+    <form onSubmit={handleSubmit} className="relative w-full space-y-2.5">
+      <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center w-full">
+        {/* Armored Search Input Bar */}
+        <div className="rabtv-srch-input-shell relative flex-1 min-w-0 rounded-2xl">
+          <div
+            className="rabtv-srch-input-bg"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${IMG_INPUT_BAR_BG})` }}
+          />
+          <div className="rabtv-srch-input-scrim" aria-hidden="true" />
+
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-xs sm:text-sm pointer-events-none text-cyan-300">
+            🔍
+          </span>
+
+          <input
+            ref={inputRef}
+            type="search"
+            dir="ltr"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            defaultValue={syncedQuery}
+            data-tour="global-search-input"
+            onFocus={() => {
+              onFocusChange(true);
+              if (predictions.length > 0) setShowPredictions(true);
+            }}
+            onBlur={() => {
+              onFocusChange(false);
+              window.setTimeout(() => setShowPredictions(false), 180);
+            }}
+            onKeyDown={handleKeyDown}
+            onInput={(e) => {
+              const val = (e.target as HTMLInputElement).value;
+              setHasValue(Boolean(val));
+              setLiveTerm(val);
+              setShowPredictions(val.trim().length >= 2);
+            }}
+            placeholder="Search movies, TV, actors... (Press /)"
+            style={{
+              direction: "ltr",
+              unicodeBidi: "plaintext",
+              textAlign: "left",
+            }}
+            className="relative z-10 w-full bg-transparent pl-10 pr-24 py-3.5 text-xs sm:text-sm font-bold text-white placeholder-zinc-400 focus:outline-none"
+          />
+
+          {/* Inline Voice + Visual Search + Clear Triggers */}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
+            {hasValue && (
+              <ArmoredButton
+                variant="danger"
+                onClick={handleClear}
+                ariaLabel="Clear search"
+                title="Clear search"
+                className="h-7 w-7 rounded-lg text-[10px]"
+              >
+                ✕
+              </ArmoredButton>
+            )}
+            <ArmoredButton
+              variant={isListening ? "active" : "idle"}
+              onClick={handleVoiceSearch}
+              ariaLabel="Voice search"
+              title="Voice Search"
+              className="h-7 w-7 rounded-lg text-xs"
+            >
+              🎙️
+            </ArmoredButton>
+            <ArmoredButton
+              variant="idle"
+              onClick={handleVisualSearchReady}
+              ariaLabel="Visual search"
+              title="Visual Search (Ready)"
+              className="h-7 w-7 rounded-lg text-xs"
+            >
+              📷
+            </ArmoredButton>
+          </div>
+        </div>
+
+        {/* Primary Search Submit Image Button */}
+        <ArmoredButton
+          type="submit"
+          variant="primary"
+          ariaLabel="Search and Filter"
+          title="Search & Filter"
+          className={`self-center sm:self-stretch px-7 ${
+            largeButtons ? "py-3.5 text-sm" : "py-3 text-xs sm:text-sm"
+          } uppercase tracking-wider shrink-0`}
         >
-          🔍
-        </span>
-        <input
-          ref={inputRef}
-          type="search"
-          dir="ltr"
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          enterKeyHint="search"
-          defaultValue={syncedQuery}
-          data-tour="global-search-input"
-          onInput={(e) => {
-            const nextHas = Boolean((e.target as HTMLInputElement).value);
-            setHasValue((prev) => (prev === nextHas ? prev : nextHas));
-          }}
-          placeholder="Search movies, TV, actors..."
-          style={{ direction: "ltr", unicodeBidi: "plaintext", textAlign: "left" }}
-          className={`w-full rounded-2xl border pl-9 pr-9 py-3 sm:py-3.5 text-xs sm:text-sm font-bold focus:outline-none shadow-inner transition ${tokens.inputClass}`}
-        />
-        {hasValue && (
-          <button
-            type="button"
-            onClick={handleClear}
-            aria-label="Clear search"
-            className={`absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-xs font-bold flex items-center justify-center cursor-pointer transition ${tokens.btnSecondary}`}
-          >
-            ✕
-          </button>
-        )}
+          <span>Search</span>
+        </ArmoredButton>
       </div>
-      <button
-        type="submit"
-        aria-label="Search and Filter"
-        title="Search & Filter"
-        className={`rabtv-srch-submit-art self-center rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${
-          largeButtons ? "scale-105" : ""
-        } ${tokens.focusRing}`}
-      >
-        <img
-          src={SEARCH_BUTTON_URL}
-          alt="Search"
-          decoding="async"
-        />
-      </button>
+
+      {/* Predictive Instant Suggestions Popover */}
+      {showPredictions && predictions.length > 0 && (
+        <div className="rabtv-srch-dd-menu p-2">
+          <div
+            className="rabtv-srch-dd-menu-bg"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${IMG_DROPDOWN_MENU_PANEL})` }}
+          />
+          <div className="relative z-10 space-y-1 p-1">
+            <div className="px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest text-cyan-300/90">
+              ⚡ Instant Matches
+            </div>
+            {predictions.map((p, idx) => (
+              <button
+                key={`${p.mediaType}-${p.id}`}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setShowPredictions(false);
+                  onSelectPrediction(p);
+                }}
+                className="rabtv-srch-img-btn w-full rounded-xl px-2.5 py-2 text-left text-white cursor-pointer"
+              >
+                <span
+                  className={`rabtv-srch-img-btn-art ${
+                    idx === highlightIdx
+                      ? "rabtv-srch-img-btn-art--active"
+                      : "rabtv-srch-img-btn-art--idle"
+                  }`}
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: `url(${
+                      idx === highlightIdx
+                        ? IMG_BTN_FILTER_ACTIVE
+                        : IMG_BTN_FILTER_IDLE
+                    })`,
+                  }}
+                />
+                <span className="rabtv-srch-img-btn-scrim" aria-hidden="true" />
+                <span className="relative z-10 flex items-center justify-between gap-2 w-full">
+                  <span className="flex items-center gap-2 min-w-0">
+                    {p.posterUrl ? (
+                      <img
+                        src={p.posterUrl}
+                        alt=""
+                        loading="lazy"
+                        className="h-8 w-6 rounded object-cover shrink-0 border border-white/15"
+                      />
+                    ) : (
+                      <span className="text-sm shrink-0">
+                        {p.mediaType === "person" ? "🎭" : "🎬"}
+                      </span>
+                    )}
+                    <span className="text-xs font-extrabold truncate">
+                      {p.title}
+                    </span>
+                  </span>
+                  <span className="text-[10px] font-bold text-zinc-300 shrink-0">
+                    {p.mediaType.toUpperCase()}
+                    {p.year ? ` • ${p.year}` : ""}
+                    {p.rating ? ` • ★${p.rating}` : ""}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </form>
   );
 });
 
+// =============================================================================
+// ROUTE & MAIN SEARCH PAGE
+// =============================================================================
 export const Route = createFileRoute("/search")({
   component: SearchPage,
-  validateSearch: (search: Record<string, unknown>) => {
-    return {
-      q: (search.q as string) || "",
-    };
-  },
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: (search.q as string) || "",
+  }),
 });
 
 function SearchPage() {
   const navigate = useNavigate();
   const searchParams = Route.useSearch();
+  const genreScrollRef = useRef<HTMLDivElement>(null);
 
-  // Filter States
+  // Filter States (Multi-Select Genres + Mood + Presets + 5 Custom Dropdowns)
   const activeUrlQuery = sanitizeQuery(searchParams.q || "");
   const [mediaType, setMediaType] = useState<"all" | "movie" | "tv">("all");
-  const [selectedGenre, setSelectedGenre] = useState<string>("All");
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [minRating, setMinRating] = useState<number>(0);
   const [selectedLangIndex, setSelectedLangIndex] = useState<number>(0);
   const [selectedProvider, setSelectedProvider] = useState<ProviderOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("popularity.desc");
   const [hiddenGemsMode, setHiddenGemsMode] = useState<boolean>(false);
-  const [activePreset, setActivePreset] = useState<
-    "trending" | "masterpieces" | "new" | "90s" | "family" | "hiddenGems" | null
-  >("trending");
+  const [activePreset, setActivePreset] = useState<PresetId | null>("trending");
+  const [activeMood, setActiveMood] = useState<MoodId | null>(null);
   const [selectedPerson, setSelectedPerson] = useState<PersonMatch | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [isEngaged, setIsEngaged] = useState<boolean>(false);
+  const [toastNotice, setToastNotice] = useState<string | null>(null);
 
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [recentSearches, setRecentSearches] = useState<string[]>(() =>
     loadRecentSearches()
+  );
+  const [genreAffinity, setGenreAffinity] = useState<Record<string, number>>(
+    () => loadGenreAffinity()
   );
   const [retryTick, setRetryTick] = useState<number>(0);
 
@@ -991,7 +1285,7 @@ function SearchPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Live Settings from settings.ts
+  // Live Settings
   const [appTheme, setAppTheme] = useState<AppTheme>(() => getSavedTheme());
   const [cardSize, setCardSize] = useState<CardSize>(() => getSavedCardSize());
   const [userAge, setUserAge] = useState<number>(() => getSavedUserAge());
@@ -1018,10 +1312,11 @@ function SearchPage() {
     () => getHardwareLimits().effectiveMode === "low"
   );
 
-  const [canScrollDown, setCanScrollDown] = useState<boolean>(false);
-  const [showScrollReminder, setShowScrollReminder] = useState<boolean>(false);
+  const showNotice = useCallback((msg: string) => {
+    setToastNotice(msg);
+    window.setTimeout(() => setToastNotice(null), 3200);
+  }, []);
 
-  // Record recent searches when URL query updates
   useEffect(() => {
     if (activeUrlQuery.length >= 2) {
       setRecentSearches(saveRecentSearch(activeUrlQuery));
@@ -1030,7 +1325,6 @@ function SearchPage() {
     setPage(1);
   }, [activeUrlQuery]);
 
-  // Live settings listener
   useEffect(() => {
     const syncSettings = () => {
       const nextTheme = getSavedTheme();
@@ -1045,7 +1339,6 @@ function SearchPage() {
       setGlowOff(getGlowIntensity() === "off");
       setIsLowRam(getHardwareLimits().effectiveMode === "low");
     };
-
     syncSettings();
     window.addEventListener("rabtv_settings_updated", syncSettings);
     window.addEventListener("rabtv_ram_mode_updated", syncSettings);
@@ -1055,12 +1348,11 @@ function SearchPage() {
     };
   }, []);
 
-  // Reset pagination when any filter changes
   useEffect(() => {
     setPage(1);
   }, [
     mediaType,
-    selectedGenre,
+    selectedGenres,
     selectedYear,
     minRating,
     selectedLangIndex,
@@ -1070,53 +1362,7 @@ function SearchPage() {
     selectedPerson,
   ]);
 
-  useEffect(() => {
-    const handleScrollCheck = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = window.innerHeight;
-      setCanScrollDown(scrollTop + clientHeight < scrollHeight - 100);
-    };
-
-    handleScrollCheck();
-    window.addEventListener("scroll", handleScrollCheck, { passive: true });
-    window.addEventListener("resize", handleScrollCheck);
-    return () => {
-      window.removeEventListener("scroll", handleScrollCheck);
-      window.removeEventListener("resize", handleScrollCheck);
-    };
-  }, [results, loading]);
-
-  useEffect(() => {
-    let inactivityTimer: ReturnType<typeof setTimeout>;
-    const resetInactivityTimer = () => {
-      clearTimeout(inactivityTimer);
-      setShowScrollReminder(false);
-      if (canScrollDown && !reducedMotion) {
-        inactivityTimer = setTimeout(() => {
-          setShowScrollReminder(true);
-        }, 30000);
-      }
-    };
-
-    resetInactivityTimer();
-    window.addEventListener("scroll", resetInactivityTimer, { passive: true });
-    window.addEventListener("click", resetInactivityTimer);
-    window.addEventListener("keydown", resetInactivityTimer);
-    window.addEventListener("touchstart", resetInactivityTimer, {
-      passive: true,
-    });
-
-    return () => {
-      clearTimeout(inactivityTimer);
-      window.removeEventListener("scroll", resetInactivityTimer);
-      window.removeEventListener("click", resetInactivityTimer);
-      window.removeEventListener("keydown", resetInactivityTimer);
-      window.removeEventListener("touchstart", resetInactivityTimer);
-    };
-  }, [canScrollDown, reducedMotion]);
-
-  // Cross-search your 284 Live TV channels instantly whenever a keyword is active
+  // Cross-search Live TV channels
   const matchingLiveChannels = useMemo<LiveChannel[]>(() => {
     if (activeUrlQuery.length < 2 || selectedPerson) return [];
     const found = searchLiveChannels(activeUrlQuery);
@@ -1130,7 +1376,15 @@ function SearchPage() {
       .slice(0, 6);
   }, [activeUrlQuery, selectedPerson, kidsLocked, userAge]);
 
-  // Main TMDB Search / Person Credits / Discover Fetcher with AbortController & Timeout
+  // Auto-built Smart Collection based on user's top explored genres
+  const smartTopGenres = useMemo(() => {
+    return Object.entries(genreAffinity)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([g]) => g);
+  }, [genreAffinity]);
+
+  // Main TMDB Search / Person Credits / Discover Fetcher
   useEffect(() => {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(
@@ -1141,9 +1395,7 @@ function SearchPage() {
 
     async function fetchJson(url: string) {
       const res = await fetch(url, { signal: controller.signal });
-      if (!res.ok) {
-        throw new Error(`TMDB returned HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`TMDB returned HTTP ${res.status}`);
       return res.json();
     }
 
@@ -1164,12 +1416,10 @@ function SearchPage() {
           const data = await fetchJson(url.toString());
           if (!active) return;
 
-          const castArr = Array.isArray(data.cast) ? data.cast : [];
-          const crewArr = Array.isArray(data.crew) ? data.crew : [];
-          const mergedRaw = [...castArr, ...crewArr] as Record<
-            string,
-            unknown
-          >[];
+          const mergedRaw = [
+            ...(Array.isArray(data.cast) ? data.cast : []),
+            ...(Array.isArray(data.crew) ? data.crew : []),
+          ] as Record<string, unknown>[];
 
           const seen = new Set<string>();
           const credits: MediaItem[] = [];
@@ -1184,15 +1434,11 @@ function SearchPage() {
             credits.push(mapped);
           }
 
-          credits.sort((a, b) => {
-            if (sortBy === "vote_average.desc") {
-              return Number(b.rating || 0) - Number(a.rating || 0);
-            }
-            if (sortBy === "release_date.desc") {
-              return (b.year || "").localeCompare(a.year || "");
-            }
-            return Number(b.rating || 0) - Number(a.rating || 0);
-          });
+          credits.sort((a, b) =>
+            sortBy === "release_date.desc"
+              ? (b.year || "").localeCompare(a.year || "")
+              : Number(b.rating || 0) - Number(a.rating || 0)
+          );
 
           setResults(credits.slice(0, 60));
           setTotalPages(1);
@@ -1200,7 +1446,7 @@ function SearchPage() {
           return;
         }
 
-        // 2. KEYWORD SEARCH MODE (Movies + TV + Actors)
+        // 2. KEYWORD SEARCH MODE
         if (activeUrlQuery) {
           const endpoint =
             mediaType === "movie"
@@ -1231,8 +1477,6 @@ function SearchPage() {
           const rawItems = (data.results || []) as Record<string, unknown>[];
           const people: PersonMatch[] = [];
           const mapped: MediaItem[] = [];
-          const genreSpec =
-            selectedGenre !== "All" ? GENRE_ID_PAIRS[selectedGenre] : undefined;
 
           for (const item of rawItems) {
             if (item.media_type === "person") {
@@ -1275,12 +1519,17 @@ function SearchPage() {
                 continue;
               }
             }
-            if (genreSpec) {
-              const targetGenreId =
-                itemObj.mediaType === "tv" ? genreSpec.tv : genreSpec.movie;
+            if (selectedGenres.length > 0) {
+              const targetIds = selectedGenres
+                .map((g) =>
+                  itemObj.mediaType === "tv"
+                    ? GENRE_ID_PAIRS[g]?.tv
+                    : GENRE_ID_PAIRS[g]?.movie
+                )
+                .filter((id): id is number => Boolean(id));
               if (
-                targetGenreId &&
-                !(itemObj.genreIds || []).includes(targetGenreId)
+                targetIds.length > 0 &&
+                !targetIds.some((id) => (itemObj.genreIds || []).includes(id))
               ) {
                 continue;
               }
@@ -1305,7 +1554,7 @@ function SearchPage() {
           return;
         }
 
-        // 3. PURE DISCOVER FILTER MODE
+        // 3. PURE DISCOVER FILTER MODE (Supports Multi-Select Genres!)
         setMatchedPeople([]);
 
         const buildDiscoverParams = (targetType: "movie" | "tv") => {
@@ -1330,12 +1579,21 @@ function SearchPage() {
             p.set("vote_count.gte", "150");
           }
 
-          const genreSpec =
-            selectedGenre !== "All" ? GENRE_ID_PAIRS[selectedGenre] : undefined;
-          const genreId =
-            targetType === "tv" ? genreSpec?.tv : genreSpec?.movie;
-          if (genreId) {
-            p.set("with_genres", String(genreId));
+          if (selectedGenres.length > 0) {
+            const ids = Array.from(
+              new Set(
+                selectedGenres
+                  .map((g) =>
+                    targetType === "tv"
+                      ? GENRE_ID_PAIRS[g]?.tv
+                      : GENRE_ID_PAIRS[g]?.movie
+                  )
+                  .filter((id): id is number => Boolean(id))
+              )
+            );
+            if (ids.length > 0) {
+              p.set("with_genres", ids.join(","));
+            }
           }
 
           if (selectedYear) {
@@ -1437,17 +1695,15 @@ function SearchPage() {
             )
           );
         } else {
-          const targetType = mediaType;
           const data = await fetchJson(
-            `${TMDB_BASE_URL}discover/${targetType}?${buildDiscoverParams(
-              targetType
+            `${TMDB_BASE_URL}discover/${mediaType}?${buildDiscoverParams(
+              mediaType
             ).toString()}`
           );
           if (!active) return;
 
-          const rawItems = (data.results || []) as Record<string, unknown>[];
-          const mapped = rawItems
-            .map((item) => mapRawItem(item, targetType, posterWidth))
+          const mapped = ((data.results || []) as Record<string, unknown>[])
+            .map((item) => mapRawItem(item, mediaType, posterWidth))
             .filter((x): x is MediaItem => Boolean(x));
 
           setResults(mapped);
@@ -1475,7 +1731,7 @@ function SearchPage() {
   }, [
     activeUrlQuery,
     mediaType,
-    selectedGenre,
+    selectedGenres,
     selectedYear,
     minRating,
     selectedLangIndex,
@@ -1488,7 +1744,6 @@ function SearchPage() {
     retryTick,
   ]);
 
-  // Apply Age Lock, Kids Safe Mode, Disliked & Broken Link guards
   const filteredResults = useMemo(() => {
     return results.filter((item) => {
       if (isTitleDisliked(item.id) || isTitleBroken(item.id)) return false;
@@ -1500,7 +1755,10 @@ function SearchPage() {
     (raw: string) => {
       const clean = sanitizeQuery(raw);
       setSelectedPerson(null);
-      if (clean) setActivePreset(null);
+      if (clean) {
+        setActivePreset(null);
+        setActiveMood(null);
+      }
       if (clean.length >= 2) {
         setRecentSearches(saveRecentSearch(clean));
       }
@@ -1514,18 +1772,30 @@ function SearchPage() {
     navigate({ to: "/search", search: { q: "" } });
   }, [navigate]);
 
+  const handleSelectPrediction = useCallback(
+    (match: PredictiveMatch) => {
+      if (match.mediaType === "person") {
+        setSelectedPerson({
+          id: Number(match.id),
+          name: match.title,
+          profilePath: null,
+          department: "Talent",
+        });
+        return;
+      }
+      navigate({
+        to: "/details",
+        search: { id: match.id, type: match.mediaType },
+      });
+    },
+    [navigate]
+  );
+
   const applyDiscoveryPreset = useCallback(
-    (
-      preset:
-        | "trending"
-        | "masterpieces"
-        | "new"
-        | "90s"
-        | "family"
-        | "hiddenGems"
-    ) => {
+    (preset: PresetId) => {
       setSelectedPerson(null);
       setActivePreset(preset);
+      setActiveMood(null);
       navigate({ to: "/search", search: { q: "" } });
       setSelectedLangIndex(0);
       setSelectedProvider("all");
@@ -1533,32 +1803,32 @@ function SearchPage() {
       setHiddenGemsMode(false);
 
       if (preset === "trending") {
-        setSelectedGenre("All");
+        setSelectedGenres([]);
         setSelectedYear("");
         setMinRating(0);
         setSortBy("popularity.desc");
       } else if (preset === "masterpieces") {
-        setSelectedGenre("All");
+        setSelectedGenres([]);
         setSelectedYear("");
         setMinRating(8);
         setSortBy("vote_average.desc");
       } else if (preset === "new") {
-        setSelectedGenre("All");
+        setSelectedGenres([]);
         setSelectedYear("recent-2yr");
         setMinRating(6);
         setSortBy("popularity.desc");
       } else if (preset === "90s") {
-        setSelectedGenre("All");
+        setSelectedGenres([]);
         setSelectedYear("decade:1990");
         setMinRating(7);
         setSortBy("vote_average.desc");
       } else if (preset === "family") {
-        setSelectedGenre("Family");
+        setSelectedGenres(["Family"]);
         setSelectedYear("");
         setMinRating(6.5);
         setSortBy("popularity.desc");
       } else if (preset === "hiddenGems") {
-        setSelectedGenre("All");
+        setSelectedGenres([]);
         setSelectedYear("");
         setMinRating(7.5);
         setSortBy("vote_average.desc");
@@ -1568,10 +1838,41 @@ function SearchPage() {
     [navigate]
   );
 
+  const applyMoodVibe = useCallback(
+    (mood: MoodConfig) => {
+      setSelectedPerson(null);
+      setActivePreset(null);
+      setActiveMood(mood.id);
+      setHiddenGemsMode(false);
+      navigate({ to: "/search", search: { q: "" } });
+      setSelectedGenres(mood.genres);
+      setMinRating(mood.minRating);
+      setSortBy(mood.sortBy);
+      mood.genres.forEach((g) => setGenreAffinity(recordGenreAffinity(g)));
+    },
+    [navigate]
+  );
+
+  const toggleGenre = useCallback((genre: string) => {
+    setHiddenGemsMode(false);
+    setActivePreset(null);
+    setActiveMood(null);
+    if (genre === "All") {
+      setSelectedGenres([]);
+      return;
+    }
+    setGenreAffinity(recordGenreAffinity(genre));
+    setSelectedGenres((prev) =>
+      prev.includes(genre)
+        ? prev.filter((g) => g !== genre)
+        : [...prev, genre].slice(-3)
+    );
+  }, []);
+
   const hasActiveFilters =
     Boolean(activeUrlQuery) ||
     mediaType !== "all" ||
-    selectedGenre !== "All" ||
+    selectedGenres.length > 0 ||
     selectedYear !== "" ||
     minRating > 0 ||
     selectedLangIndex !== 0 ||
@@ -1582,7 +1883,7 @@ function SearchPage() {
 
   const resetAllFilters = () => {
     setMediaType("all");
-    setSelectedGenre("All");
+    setSelectedGenres([]);
     setSelectedYear("");
     setMinRating(0);
     setSelectedLangIndex(0);
@@ -1590,20 +1891,10 @@ function SearchPage() {
     setSortBy("popularity.desc");
     setHiddenGemsMode(false);
     setActivePreset("trending");
+    setActiveMood(null);
     setSelectedPerson(null);
     setPage(1);
     navigate({ to: "/search", search: { q: "" } });
-  };
-
-  const handleSurpriseMe = () => {
-    if (!filteredResults.length) return;
-    const pick =
-      filteredResults[Math.floor(Math.random() * filteredResults.length)];
-    const cleanId = String(pick.id).replace(/^(movie|tv)-/i, "");
-    navigate({
-      to: "/details",
-      search: { id: cleanId, type: pick.mediaType === "tv" ? "tv" : "movie" },
-    });
   };
 
   const gridColsClass = useMemo(() => {
@@ -1616,22 +1907,8 @@ function SearchPage() {
     return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 justify-items-center";
   }, [cardSize]);
 
-  const themeTokens = useMemo(() => getSearchThemeTokens(appTheme), [appTheme]);
-
-  const getPrimaryBgColor = useCallback(
-    (theme: AppTheme) => getSearchThemeTokens(theme).btn,
-    []
-  );
-
-  const allGenreOptions = useMemo(() => {
-    return [
-      { id: "All", label: "✨ All Genres" },
-      ...Object.keys(GENRE_ID_PAIRS).map((g) => ({ id: g, label: g })),
-    ];
-  }, []);
-
-  const yearOptions = useMemo(() => {
-    const opts = [
+  const yearOptions = useMemo<DropdownOption[]>(() => {
+    const opts: DropdownOption[] = [
       { value: "", label: "✨ Any Year" },
       { value: "recent-2yr", label: "🆕 New (2025–2026)" },
       { value: "decade:2020", label: "📅 2020s" },
@@ -1648,619 +1925,527 @@ function SearchPage() {
     return opts;
   }, []);
 
+  const languageDropdownOptions = useMemo<DropdownOption[]>(
+    () => languageFilters.map((lf, idx) => ({ value: String(idx), label: lf.label })),
+    []
+  );
+
+  const providerDropdownOptions = useMemo<DropdownOption[]>(
+    () => providerFilters.map((pf) => ({ value: pf.id, label: pf.label })),
+    []
+  );
+
+  const sortDropdownOptions = useMemo<DropdownOption[]>(
+    () => sortOptions.map((o) => ({ value: o.id, label: o.label })),
+    []
+  );
+
   return (
     <main
       data-tour="search-page"
-      className={`min-h-screen ${themeTokens.bg} ${themeTokens.baseText} px-2.5 sm:px-6 py-4 sm:py-5 pb-16 flex flex-col items-center relative rounded-3xl overflow-x-clip`}
+      className="min-h-screen bg-gradient-to-br from-[#0c0a09]/85 via-black/75 to-[#0c0a09]/90 text-zinc-100 px-2.5 sm:px-6 py-4 sm:py-5 pb-16 flex flex-col items-center relative rounded-3xl overflow-x-clip"
     >
-      <style>{SEARCH_VIEWPORT_STYLES}</style>
+      <style>{SEARCH_PAGE_STYLES}</style>
       <AppWallpaper />
-      {!isLowRam && !reducedMotion && !glowOff && (
-        <div
-          className={`absolute inset-x-0 -top-12 h-96 bg-gradient-to-b ${themeTokens.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
-        />
-      )}
 
       <div className="mx-auto max-w-7xl w-full space-y-5 sm:space-y-6 relative z-10 min-w-0">
-        {/* Top Utility Row: Compact Theme-Tuned Wrapper — Back to Home Left, Surprise Me Right */}
-        <div className="rabtv-page-top-bar">
-          <div
-            className={
-              filteredResults.length > 0
-                ? "rabtv-dual-wrapper"
-                : "rabtv-single-wrapper"
-            }
-          >
-            <div
-              className="rabtv-art-bg"
-              aria-hidden="true"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
-            />
-            <Link
-              to="/"
-              data-tour="back-to-home"
-              aria-label="Back to Home"
+        {/* TOP UTILITY ROW: Back to Home Only (Surprise Me Removed) + Reset All Filters */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 w-full">
+          <Link to="/" data-tour="back-to-home" className="inline-block">
+            <ArmoredButton
+              variant="home"
+              ariaLabel="Back to Home"
               title="Back to Home"
-              className={`rabtv-wrap-art-btn ${
-                filteredResults.length > 0 ? "rabtv-wrap-art-btn--left" : ""
-              } rabtv-wrap-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${
-                themeTokens.focusRing
-              }`}
+              className="px-5 py-2.5 text-xs sm:text-sm uppercase tracking-wider"
             >
-              <img
-                src={BACK_TO_HOME_BTN_URL}
-                alt="Back to Home"
-                decoding="async"
-              />
-            </Link>
+              <span>← Back to Home</span>
+            </ArmoredButton>
+          </Link>
 
-            {filteredResults.length > 0 && (
-              <button
-                type="button"
-                onClick={handleSurpriseMe}
-                aria-label="Surprise Me"
-                title="Pick a random title from these results"
-                className={`rabtv-wrap-art-btn rabtv-wrap-art-btn--right rabtv-wrap-art-btn--surprise rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
+          <div className="flex flex-wrap items-center gap-2">
+            {kidsLocked && (
+              <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">
+                🧒 Kids Safe Mode
+              </span>
+            )}
+            {hasActiveFilters && (
+              <ArmoredButton
+                variant="danger"
+                onClick={resetAllFilters}
+                className="px-4 py-2 text-xs uppercase tracking-wider"
               >
-                <img
-                  src={REAL_SURPRISE_ME_BTN_URL}
-                  alt="Surprise Me"
-                  decoding="async"
-                />
-              </button>
+                <span>✕ Reset All Filters</span>
+              </ArmoredButton>
             )}
           </div>
-
-          {(kidsLocked || hasActiveFilters) && (
-            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full">
-              {kidsLocked && (
-                <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0 backdrop-blur-sm">
-                  🧒 Kids Safe Mode
-                </span>
-              )}
-
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={resetAllFilters}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold shadow backdrop-blur-md transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
-                >
-                  <span>✕ Reset All Filters</span>
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Theme-Matched Punk-Neon Search & Discovery Control Deck (100% x 100% SearchPageWrapper) */}
+        {toastNotice && (
+          <div className="rounded-2xl border border-cyan-400/40 bg-black/85 px-4 py-2 text-center text-xs font-extrabold text-cyan-200 shadow-lg">
+            {toastNotice}
+          </div>
+        )}
+
+        {/* MAIN SEARCH & DISCOVERY CONTROL DECK (Female Rabbit Detective in Bottom-Right) */}
         <div
-          className={`rabtv-srch-deck rounded-3xl border p-3.5 sm:p-6 ${themeTokens.surfacePanel}`}
+          className={`rabtv-srch-deck rounded-3xl border border-white/10 p-4 sm:p-6 ${
+            isEngaged && !glowOff ? "rabtv-srch-deck--engaged" : ""
+          }`}
         >
-          {/* Full-Bleed 100% x 100% Grunge Rabbit Vault Backdrop */}
-          <img
-            src={SEARCH_PAGE_WRAPPER_URL}
-            alt=""
+          <div
+            className="rabtv-srch-deck-bg"
             aria-hidden="true"
-            decoding="async"
-            className="rabtv-srch-deck-wall"
+            style={{ backgroundImage: `url(${IMG_DECK_PANEL_BG})` }}
           />
           <div className="rabtv-srch-deck-scrim" aria-hidden="true" />
-          <div className="rabtv-srch-deck-laser-top" aria-hidden="true" />
-          <div className="rabtv-srch-deck-laser-bot" aria-hidden="true" />
 
           <div className="relative z-10 space-y-4">
-          {/* Isolated Uncontrolled Search Form (Immune to Android WebView Backwards-Typing Bug) */}
-          <SearchInputForm
-            syncedQuery={activeUrlQuery}
-            largeButtons={largeButtons}
-            tokens={themeTokens}
-            onSubmitQuery={handleSearchSubmitQuery}
-            onClearQuery={handleClearSearchQuery}
-          />
+            {/* Search Input Bar + Predictive Suggestions + Voice/Visual Readiness */}
+            <SearchInputDeck
+              syncedQuery={activeUrlQuery}
+              largeButtons={largeButtons}
+              onSubmitQuery={handleSearchSubmitQuery}
+              onClearQuery={handleClearSearchQuery}
+              onSelectPrediction={handleSelectPrediction}
+              onFocusChange={setIsEngaged}
+              onNotice={showNotice}
+            />
 
-          {/* Flagship Custom Artwork Preset Buttons: Trending Hits & Masterpieces (with Injected Rating) */}
-          <div className="rabtv-srch-hero-presets">
-            <button
-              type="button"
-              onClick={() => applyDiscoveryPreset("trending")}
-              aria-label="Trending Hits"
-              aria-pressed={activePreset === "trending"}
-              title="Load Trending Hits"
-              className={`rabtv-srch-art-preset focus:outline-none focus:ring-2 ${
-                themeTokens.focusRing
-              } ${
-                activePreset === "trending" ? "rabtv-srch-art-preset--active" : ""
-              }`}
-            >
-              <span
-                className="rabtv-srch-art-preset-bg rabtv-srch-art-preset-bg--trending"
-                aria-hidden="true"
-                style={{ backgroundImage: `url(${TRENDING_HITS_BTN_URL})` }}
-              />
-              <span className="sr-only">Trending Hits</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyDiscoveryPreset("masterpieces")}
-              aria-label={`${
-                activePreset === "masterpieces" && minRating > 0 ? minRating : 8
-              }+ Masterpieces`}
-              aria-pressed={activePreset === "masterpieces"}
-              title="Load Top-Rated Masterpieces"
-              className={`rabtv-srch-art-preset focus:outline-none focus:ring-2 ${
-                themeTokens.focusRing
-              } ${
-                activePreset === "masterpieces"
-                  ? "rabtv-srch-art-preset--active"
-                  : ""
-              }`}
-            >
-              <span
-                className="rabtv-srch-art-preset-bg rabtv-srch-art-preset-bg--masterpieces"
-                aria-hidden="true"
-                style={{ backgroundImage: `url(${MASTERPIECES_BTN_URL})` }}
-              />
-              {/* Injected Rating Number Aligned Dead-Center Between Star & Masterpieces */}
-              <span className="rabtv-srch-mp-num" aria-hidden="true">
-                {activePreset === "masterpieces" && minRating > 0
-                  ? `${minRating}+`
-                  : "8+"}
-              </span>
-              <span className="sr-only">
-                {activePreset === "masterpieces" && minRating > 0
-                  ? `${minRating}+`
-                  : "8+"}{" "}
-                Masterpieces
-              </span>
-            </button>
-          </div>
-
-          {/* Secondary One-Tap Curated Discovery Presets */}
-          <div className="flex items-center justify-start sm:justify-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-            {(
-              [
-                { id: "new", label: "🆕 2025–2026 New" },
-                { id: "90s", label: "📼 90s Classics" },
-                { id: "family", label: "👨‍👩‍👧 Family Night" },
-                { id: "hiddenGems", label: "💎 Hidden Gems" },
-              ] as const
-            ).map((preset) => {
-              const isSelected = activePreset === preset.id;
-              return (
-                <button
+            {/* 6 Curated Discovery Presets (Every Preset Uses Image Plates) */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+              {(
+                [
+                  { id: "trending", label: "🔥 Trending Hits" },
+                  {
+                    id: "masterpieces",
+                    label: `⭐ ${
+                      activePreset === "masterpieces" && minRating > 0
+                        ? minRating
+                        : 8
+                    }+ Masterpieces`,
+                  },
+                  { id: "new", label: "🆕 2025–2026 New" },
+                  { id: "90s", label: "📼 90s Classics" },
+                  { id: "family", label: "👨‍👩‍👧 Family Night" },
+                  { id: "hiddenGems", label: "💎 Hidden Gems" },
+                ] as const
+              ).map((preset) => (
+                <ArmoredButton
                   key={preset.id}
-                  type="button"
+                  variant={activePreset === preset.id ? "active" : "idle"}
+                  ariaPressed={activePreset === preset.id}
                   onClick={() => applyDiscoveryPreset(preset.id)}
-                  className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-extrabold transition cursor-pointer whitespace-nowrap focus:outline-none focus:ring-2 ${
-                    themeTokens.focusRing
-                  } ${
-                    isSelected
-                      ? `${themeTokens.btn} border-white/25 scale-[1.03]`
-                      : themeTokens.pillIdle
-                  }`}
+                  className="shrink-0 px-3.5 py-2 text-[11px] whitespace-nowrap"
                 >
                   {preset.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Recent Search History Pills */}
-          {recentSearches.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span
-                className={`text-[10px] font-extrabold uppercase tracking-wider mr-1 ${themeTokens.subMutedText}`}
-              >
-                🕒 Recent:
-              </span>
-              {recentSearches.map((term) => (
-                <div
-                  key={term}
-                  className={`inline-flex items-center rounded-full border overflow-hidden ${themeTokens.recentChip}`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleSearchSubmitQuery(term)}
-                    className={`pl-2.5 pr-1.5 py-1 text-[11px] font-bold hover:text-white transition cursor-pointer ${themeTokens.mutedText}`}
-                  >
-                    {term}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRecentSearches(removeRecentSearch(term))}
-                    aria-label={`Remove ${term} from recent searches`}
-                    className={`pr-2 pl-1 py-1 text-[10px] hover:text-white transition cursor-pointer ${themeTokens.subMutedText}`}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setRecentSearches(clearAllRecentSearches())}
-                className={`text-[10px] font-bold underline ml-1 hover:text-white cursor-pointer ${themeTokens.accentText}`}
-              >
-                Clear
-              </button>
-            </div>
-          )}
-
-          {/* Active Person Filmography Pill */}
-          {selectedPerson && (
-            <div
-              className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3.5 py-2 ${themeTokens.personBanner}`}
-            >
-              <span className="text-xs font-extrabold truncate">
-                🎭 Viewing full filmography for{" "}
-                <strong className="text-white">{selectedPerson.name}</strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => setSelectedPerson(null)}
-                className={`shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-extrabold transition cursor-pointer ${themeTokens.btnSecondary}`}
-              >
-                ✕ Back to Search
-              </button>
-            </div>
-          )}
-
-          {/* 6-Slot Precision Filter Matrix */}
-          <div
-            data-tour="search-filters"
-            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-3 border-t ${themeTokens.dividerBorder}`}
-          >
-            {/* 1. Media Type Tabs */}
-            <div
-              data-tour="search-tabs"
-              className={`flex rounded-xl border p-1 ${themeTokens.controlBox}`}
-            >
-              {(["all", "movie", "tv"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setMediaType(t)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer focus:outline-none focus:ring-2 ${
-                    themeTokens.focusRing
-                  } ${
-                    mediaType === t
-                      ? `${themeTokens.btn} shadow-md`
-                      : `${themeTokens.subMutedText} hover:text-white`
-                  }`}
-                >
-                  {t === "all" ? "All" : t === "movie" ? "Movies" : "TV"}
-                </button>
+                </ArmoredButton>
               ))}
             </div>
 
-            {/* 2. Sort Selector */}
-            <div
-              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
-            >
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
-              >
-                Sort By
+            {/* Contextual Mood / Vibe Selector + Auto-Built Smart Collection */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 shrink-0 mr-1">
+                Vibe:
               </span>
-              <select
-                value={sortBy}
-                onChange={(e) => { setSortBy(e.target.value as SortOption); setActivePreset(null); }}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
-              >
-                {sortOptions.map((opt) => (
-                  <option
-                    key={opt.id}
-                    value={opt.id}
-                    className={themeTokens.optionBg}
-                  >
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 3. Streaming Service (Canada) */}
-            <div
-              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
-            >
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
-              >
-                Streaming Service
-              </span>
-              <select
-                value={selectedProvider}
-                onChange={(e) =>
-                  setSelectedProvider(e.target.value as ProviderOption)
-                }
-                disabled={Boolean(activeUrlQuery) || Boolean(selectedPerson)}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full disabled:opacity-50"
-              >
-                {providerFilters.map((pf) => (
-                  <option
-                    key={pf.id}
-                    value={pf.id}
-                    className={themeTokens.optionBg}
-                  >
-                    {pf.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 4. Language / Region */}
-            <div
-              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
-            >
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
-              >
-                Language / Region
-              </span>
-              <select
-                value={selectedLangIndex}
-                onChange={(e) => setSelectedLangIndex(Number(e.target.value))}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
-              >
-                {languageFilters.map((lf, idx) => (
-                  <option
-                    key={lf.label}
-                    value={idx}
-                    className={themeTokens.optionBg}
-                  >
-                    {lf.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 5. Year / Decade */}
-            <div
-              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
-            >
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
-              >
-                Year / Era
-              </span>
-              <select
-                value={selectedYear}
-                onChange={(e) => { setSelectedYear(e.target.value); setActivePreset(null); }}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
-              >
-                {yearOptions.map((opt) => (
-                  <option
-                    key={opt.value}
-                    value={opt.value}
-                    className={themeTokens.optionBg}
-                  >
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 6. Minimum Rating */}
-            <div
-              className={`flex flex-col border rounded-xl px-3 py-1.5 justify-center ${themeTokens.controlBox}`}
-            >
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider ${themeTokens.subMutedText}`}
-              >
-                Minimum Rating
-              </span>
-              <select
-                value={minRating}
-                onChange={(e) => { const v = Number(e.target.value); setMinRating(v); if (v < 7) setActivePreset(null); }}
-                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer py-0.5 w-full"
-              >
-                <option value={0} className={themeTokens.optionBg}>
-                  ⭐ Any Rating
-                </option>
-                <option value={6} className={themeTokens.optionBg}>
-                  ⭐ 6.0 & Above
-                </option>
-                <option value={7} className={themeTokens.optionBg}>
-                  ⭐ 7.0 & Above
-                </option>
-                <option value={7.5} className={themeTokens.optionBg}>
-                  ⭐ 7.5 & Above
-                </option>
-                <option value={8} className={themeTokens.optionBg}>
-                  ⭐ 8.0 & Above
-                </option>
-                <option value={8.5} className={themeTokens.optionBg}>
-                  ⭐ 8.5 & Above
-                </option>
-              </select>
-            </div>
-          </div>
-
-          {/* Genre Pill Bar */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between gap-2 px-1">
-              <span
-                className={`text-[11px] font-extrabold uppercase tracking-wider ${themeTokens.subMutedText}`}
-              >
-                Genre Filter:
-              </span>
-              {!loading && filteredResults.length > 0 && (
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold ${themeTokens.accentBadge}`}
+              {MOOD_VIBES.map((mood) => (
+                <ArmoredButton
+                  key={mood.id}
+                  variant={activeMood === mood.id ? "active" : "idle"}
+                  ariaPressed={activeMood === mood.id}
+                  onClick={() => applyMoodVibe(mood)}
+                  className="shrink-0 px-3 py-1.5 text-[11px] whitespace-nowrap"
                 >
-                  {filteredResults.length} matches
-                  {totalPages > 1 && !selectedPerson
-                    ? ` • Pg ${page}/${totalPages}`
-                    : ""}
+                  {mood.label}
+                </ArmoredButton>
+              ))}
+              {smartTopGenres.length > 0 && (
+                <ArmoredButton
+                  variant="active"
+                  onClick={() => {
+                    setSelectedGenres(smartTopGenres);
+                    setActivePreset(null);
+                    setActiveMood(null);
+                  }}
+                  className="shrink-0 px-3 py-1.5 text-[11px] whitespace-nowrap"
+                  title="Auto-built from your search history"
+                >
+                  ✨ For You: {smartTopGenres.join(" + ")}
+                </ArmoredButton>
+              )}
+            </div>
+
+            {/* Recent Search History Chips */}
+            {recentSearches.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mr-1">
+                  🕒 Recent:
                 </span>
-              )}
-            </div>
-            <ScrollPillBar
-              options={allGenreOptions}
-              activeId={selectedGenre}
-              onSelect={(id) => {
-                setSelectedGenre((prev) =>
-                  prev === id && id !== "All" ? "All" : id
-                );
-                setHiddenGemsMode(false);
-                setActivePreset(null);
-              }}
-              appTheme={appTheme}
-              getPrimaryBgColor={getPrimaryBgColor}
-              ariaLabel="Search genres"
-            />
-          </div>
+                {recentSearches.map((term) => (
+                  <div key={term} className="inline-flex items-center gap-1">
+                    <ArmoredButton
+                      variant="idle"
+                      onClick={() => handleSearchSubmitQuery(term)}
+                      className="px-3 py-1 text-[11px]"
+                    >
+                      {term}
+                    </ArmoredButton>
+                    <ArmoredButton
+                      variant="danger"
+                      onClick={() =>
+                        setRecentSearches(removeRecentSearch(term))
+                      }
+                      ariaLabel={`Remove ${term}`}
+                      className="h-6 w-6 text-[10px]"
+                    >
+                      ✕
+                    </ArmoredButton>
+                  </div>
+                ))}
+                <ArmoredButton
+                  variant="danger"
+                  onClick={() => setRecentSearches(clearAllRecentSearches())}
+                  className="px-2.5 py-1 text-[10px] ml-1"
+                >
+                  Clear
+                </ArmoredButton>
+              </div>
+            )}
 
-          {/* Quick-Clear Active Filter Chips */}
-          {hasActiveFilters && (
-            <div className={`flex flex-wrap items-center gap-1.5 pt-2 border-t ${themeTokens.dividerBorder}`}>
-              <span className={`text-[10px] font-extrabold uppercase tracking-wider mr-1 ${themeTokens.subMutedText}`}>
-                Active:
-              </span>
-              {mediaType !== "all" && (
-                <button
-                  type="button"
-                  onClick={() => setMediaType("all")}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
+            {/* Active Person Filmography Banner */}
+            {selectedPerson && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-cyan-400/35 bg-black/70 px-3.5 py-2">
+                <span className="text-xs font-extrabold truncate">
+                  🎭 Viewing full filmography for{" "}
+                  <strong className="text-cyan-300">{selectedPerson.name}</strong>
+                </span>
+                <ArmoredButton
+                  variant="danger"
+                  onClick={() => setSelectedPerson(null)}
+                  className="px-3 py-1 text-[10px]"
                 >
-                  <span>{mediaType === "movie" ? "🎬 Movies" : "📺 TV"}</span>
-                  <span>✕</span>
-                </button>
-              )}
-              {selectedGenre !== "All" && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedGenre("All")}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
-                >
-                  <span>{selectedGenre}</span>
-                  <span>✕</span>
-                </button>
-              )}
-              {selectedYear !== "" && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedYear("")}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
-                >
-                  <span>{selectedYear.replace("decade:", "")}</span>
-                  <span>✕</span>
-                </button>
-              )}
-              {minRating > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setMinRating(0)}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
-                >
-                  <span>★ {minRating}+</span>
-                  <span>✕</span>
-                </button>
-              )}
-              {selectedLangIndex !== 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedLangIndex(0)}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
-                >
-                  <span>{languageFilters[selectedLangIndex]?.label}</span>
-                  <span>✕</span>
-                </button>
-              )}
-              {selectedProvider !== "all" && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedProvider("all")}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold cursor-pointer transition ${themeTokens.accentBadge}`}
-                >
-                  <span>
-                    {providerFilters.find((p) => p.id === selectedProvider)?.label}
-                  </span>
-                  <span>✕</span>
-                </button>
-              )}
+                  ✕ Back to Search
+                </ArmoredButton>
+              </div>
+            )}
+
+            {/* 6-SLOT PRECISION FILTER MATRIX (Media Type Tabs + 5 Image-Based Custom Dropdowns) */}
+            <div
+              data-tour="search-filters"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-3 border-t border-white/10"
+            >
+              {/* 1. Media Type Segmented Tabs (ALL / MOVIES / TV) */}
+              <div
+                data-tour="search-tabs"
+                className="grid grid-cols-3 gap-1.5 items-center"
+              >
+                {(["all", "movie", "tv"] as const).map((t) => (
+                  <ArmoredButton
+                    key={t}
+                    variant={mediaType === t ? "active" : "idle"}
+                    ariaPressed={mediaType === t}
+                    onClick={() => setMediaType(t)}
+                    className="py-2.5 text-xs uppercase tracking-wider"
+                  >
+                    {t === "all" ? "All" : t === "movie" ? "Movies" : "TV"}
+                  </ArmoredButton>
+                ))}
+              </div>
+
+              {/* 2. Sort By Dropdown */}
+              <ArmoredDropdown
+                label="Sort By"
+                value={sortBy}
+                options={sortDropdownOptions}
+                onChange={(v) => {
+                  setSortBy(v as SortOption);
+                  setActivePreset(null);
+                }}
+                isOpen={openDropdown === "sort"}
+                onToggle={() =>
+                  setOpenDropdown((d) => (d === "sort" ? null : "sort"))
+                }
+                onClose={() => setOpenDropdown(null)}
+              />
+
+              {/* 3. Streaming Service Dropdown */}
+              <ArmoredDropdown
+                label="Streaming Service"
+                value={selectedProvider}
+                options={providerDropdownOptions}
+                disabled={Boolean(activeUrlQuery) || Boolean(selectedPerson)}
+                onChange={(v) => setSelectedProvider(v as ProviderOption)}
+                isOpen={openDropdown === "provider"}
+                onToggle={() =>
+                  setOpenDropdown((d) => (d === "provider" ? null : "provider"))
+                }
+                onClose={() => setOpenDropdown(null)}
+              />
+
+              {/* 4. Language / Region Dropdown */}
+              <ArmoredDropdown
+                label="Language / Region"
+                value={String(selectedLangIndex)}
+                options={languageDropdownOptions}
+                onChange={(v) => setSelectedLangIndex(Number(v))}
+                isOpen={openDropdown === "lang"}
+                onToggle={() =>
+                  setOpenDropdown((d) => (d === "lang" ? null : "lang"))
+                }
+                onClose={() => setOpenDropdown(null)}
+              />
+
+              {/* 5. Year / Era Dropdown */}
+              <ArmoredDropdown
+                label="Year / Era"
+                value={selectedYear}
+                options={yearOptions}
+                onChange={(v) => {
+                  setSelectedYear(v);
+                  setActivePreset(null);
+                }}
+                isOpen={openDropdown === "year"}
+                onToggle={() =>
+                  setOpenDropdown((d) => (d === "year" ? null : "year"))
+                }
+                onClose={() => setOpenDropdown(null)}
+              />
+
+              {/* 6. Minimum Rating Dropdown */}
+              <ArmoredDropdown
+                label="Minimum Rating"
+                value={String(minRating)}
+                options={ratingOptions}
+                onChange={(v) => {
+                  const num = Number(v);
+                  setMinRating(num);
+                  if (num < 7) setActivePreset(null);
+                }}
+                isOpen={openDropdown === "rating"}
+                onToggle={() =>
+                  setOpenDropdown((d) => (d === "rating" ? null : "rating"))
+                }
+                onClose={() => setOpenDropdown(null)}
+              />
             </div>
-          )}
+
+            {/* MULTI-SELECT GENRE FILTER BAR (Every Genre Pill Is an Image Button) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-400">
+                  Genre Filter (Multi-Select up to 3):
+                </span>
+                {!loading && filteredResults.length > 0 && (
+                  <span className="rounded-full bg-black/75 border border-cyan-400/35 px-2.5 py-0.5 text-[10px] font-extrabold text-cyan-200">
+                    {filteredResults.length} matches
+                    {totalPages > 1 && !selectedPerson
+                      ? ` • Pg ${page}/${totalPages}`
+                      : ""}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <ArmoredButton
+                  variant="idle"
+                  ariaLabel="Scroll genres left"
+                  onClick={() =>
+                    genreScrollRef.current?.scrollBy({
+                      left: -220,
+                      behavior: reducedMotion ? "auto" : "smooth",
+                    })
+                  }
+                  className="h-8 w-8 shrink-0 text-xs"
+                >
+                  ‹
+                </ArmoredButton>
+
+                <div
+                  ref={genreScrollRef}
+                  className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5"
+                >
+                  <ArmoredButton
+                    variant={selectedGenres.length === 0 ? "active" : "idle"}
+                    ariaPressed={selectedGenres.length === 0}
+                    onClick={() => toggleGenre("All")}
+                    className="shrink-0 px-3.5 py-1.5 text-xs whitespace-nowrap"
+                  >
+                    ✨ All Genres
+                  </ArmoredButton>
+                  {Object.keys(GENRE_ID_PAIRS).map((g) => {
+                    const active = selectedGenres.includes(g);
+                    return (
+                      <ArmoredButton
+                        key={g}
+                        variant={active ? "active" : "idle"}
+                        ariaPressed={active}
+                        onClick={() => toggleGenre(g)}
+                        className="shrink-0 px-3.5 py-1.5 text-xs whitespace-nowrap"
+                      >
+                        {g}
+                      </ArmoredButton>
+                    );
+                  })}
+                </div>
+
+                <ArmoredButton
+                  variant="idle"
+                  ariaLabel="Scroll genres right"
+                  onClick={() =>
+                    genreScrollRef.current?.scrollBy({
+                      left: 220,
+                      behavior: reducedMotion ? "auto" : "smooth",
+                    })
+                  }
+                  className="h-8 w-8 shrink-0 text-xs"
+                >
+                  ›
+                </ArmoredButton>
+              </div>
+            </div>
+
+            {/* QUICK-CLEAR ACTIVE FILTER CHIPS */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/10">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mr-1">
+                  Active:
+                </span>
+                {mediaType !== "all" && (
+                  <ArmoredButton
+                    variant="danger"
+                    onClick={() => setMediaType("all")}
+                    className="px-2.5 py-1 text-[10px]"
+                  >
+                    {mediaType === "movie" ? "🎬 Movies" : "📺 TV"} ✕
+                  </ArmoredButton>
+                )}
+                {selectedGenres.map((g) => (
+                  <ArmoredButton
+                    key={g}
+                    variant="danger"
+                    onClick={() => toggleGenre(g)}
+                    className="px-2.5 py-1 text-[10px]"
+                  >
+                    {g} ✕
+                  </ArmoredButton>
+                ))}
+                {selectedYear !== "" && (
+                  <ArmoredButton
+                    variant="danger"
+                    onClick={() => setSelectedYear("")}
+                    className="px-2.5 py-1 text-[10px]"
+                  >
+                    {selectedYear.replace("decade:", "")} ✕
+                  </ArmoredButton>
+                )}
+                {minRating > 0 && (
+                  <ArmoredButton
+                    variant="danger"
+                    onClick={() => setMinRating(0)}
+                    className="px-2.5 py-1 text-[10px]"
+                  >
+                    ★ {minRating}+ ✕
+                  </ArmoredButton>
+                )}
+                {selectedLangIndex !== 0 && (
+                  <ArmoredButton
+                    variant="danger"
+                    onClick={() => setSelectedLangIndex(0)}
+                    className="px-2.5 py-1 text-[10px]"
+                  >
+                    {languageFilters[selectedLangIndex]?.label} ✕
+                  </ArmoredButton>
+                )}
+                {selectedProvider !== "all" && (
+                  <ArmoredButton
+                    variant="danger"
+                    onClick={() => setSelectedProvider("all")}
+                    className="px-2.5 py-1 text-[10px]"
+                  >
+                    {
+                      providerFilters.find((p) => p.id === selectedProvider)
+                        ?.label
+                    }{" "}
+                    ✕
+                  </ArmoredButton>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* MATCHING LIVE TV CHANNELS CROSS-SEARCH SHELF */}
+        {/* MATCHING LIVE TV CHANNELS SHELF */}
         {matchingLiveChannels.length > 0 && (
           <section className="space-y-3">
-            <div className="rabtv-section-banner rabtv-section-banner--split">
+            <div className="rabtv-srch-banner">
               <div
-                className="rabtv-art-bg"
+                className="rabtv-srch-banner-bg"
                 aria-hidden="true"
-                style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                }}
+                style={{ backgroundImage: `url(${IMG_CATALOG_BANNER_BG})` }}
               />
-              <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+              <div className="rabtv-srch-banner-scrim" aria-hidden="true" />
+              <h3 className="relative z-10 text-base sm:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 📡 Matching Live TV
               </h3>
-              <Link
-                to="/live-tv"
-                className={`rabtv-section-banner-action font-extrabold hover:underline drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeTokens.accentText}`}
-              >
-                Guide →
+              <Link to="/live-tv" className="relative z-10 shrink-0">
+                <ArmoredButton
+                  variant="idle"
+                  className="px-3 py-1.5 text-[11px]"
+                >
+                  Guide →
+                </ArmoredButton>
               </Link>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {matchingLiveChannels.map((ch) => {
-                const targetUrl = ch.streamUrl || ch.url;
-                return (
-                  <Link
-                    key={ch.channelId}
-                    to="/live-player"
-                    search={{
-                      url: targetUrl,
+              {matchingLiveChannels.map((ch) => (
+                <Link
+                  key={ch.channelId}
+                  to="/live-player"
+                  search={{
+                    url: ch.streamUrl || ch.url,
+                    title: ch.title,
+                    logo: ch.logo || "",
+                    channelId: ch.channelId,
+                  }}
+                  onClick={() =>
+                    recordWatchHistory({
+                      id: ch.channelId,
                       title: ch.title,
-                      logo: ch.logo || "",
-                      channelId: ch.channelId,
-                    }}
-                    onClick={() => {
-                      recordWatchHistory({
-                        id: ch.channelId,
-                        title: ch.title,
-                        posterPath: ch.logo || "",
-                        type: "livetv",
-                      });
-                    }}
-                    className={`group rounded-2xl border p-3 text-center flex flex-col items-center justify-between gap-2 transition hover:-translate-y-1 focus:outline-none focus:ring-2 ${themeTokens.liveCard} ${themeTokens.focusRing}`}
-                  >
-                    <div
-                      className={`w-full h-16 rounded-xl bg-black/75 border p-2 flex items-center justify-center ${themeTokens.dividerBorder}`}
-                    >
-                      {ch.logo ? (
-                        <img
-                          src={ch.logo}
-                          alt={ch.title}
-                          loading="lazy"
-                          decoding="async"
-                          className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform"
-                        />
-                      ) : (
-                        <span
-                          className={`text-xs font-black ${themeTokens.accentText}`}
-                        >
-                          ● LIVE
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs font-black text-white line-clamp-1">
-                      {ch.title}
-                    </span>
+                      posterPath: ch.logo || "",
+                      type: "livetv",
+                    })
+                  }
+                  className="group rounded-2xl border border-white/15 bg-black/80 p-3 text-center flex flex-col items-center justify-between gap-2 transition hover:-translate-y-1"
+                >
+                  <div className="w-full h-16 rounded-xl bg-black/75 border border-white/10 p-2 flex items-center justify-center">
+                    {ch.logo ? (
+                      <img
+                        src={ch.logo}
+                        alt={ch.title}
+                        loading="lazy"
+                        decoding="async"
+                        className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform"
+                      />
+                    ) : (
+                      <span className="text-xs font-black text-cyan-300">
+                        ● LIVE
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs font-black text-white line-clamp-1">
+                    {ch.title}
+                  </span>
+                  <span className="rabtv-srch-img-btn w-full rounded-lg py-1.5 text-[10px] font-extrabold uppercase text-white">
                     <span
-                      className={`w-full py-1.5 rounded-lg text-[10px] font-extrabold uppercase transition ${themeTokens.btn}`}
-                    >
-                      ▶ Watch Live
-                    </span>
-                  </Link>
-                );
-              })}
+                      className="rabtv-srch-img-btn-art rabtv-srch-img-btn-art--primary"
+                      aria-hidden="true"
+                      style={{ backgroundImage: `url(${IMG_BTN_SUBMIT})` }}
+                    />
+                    <span className="rabtv-srch-img-btn-scrim" aria-hidden="true" />
+                    <span className="rabtv-srch-img-btn-label">▶ Watch Live</span>
+                  </span>
+                </Link>
+              ))}
             </div>
           </section>
         )}
@@ -2268,15 +2453,14 @@ function SearchPage() {
         {/* MATCHING ACTORS / CREATORS STRIP */}
         {matchedPeople.length > 0 && !selectedPerson && (
           <section className="space-y-3">
-            <div className="rabtv-section-banner">
+            <div className="rabtv-srch-banner">
               <div
-                className="rabtv-art-bg"
+                className="rabtv-srch-banner-bg"
                 aria-hidden="true"
-                style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                }}
+                style={{ backgroundImage: `url(${IMG_CATALOG_BANNER_BG})` }}
               />
-              <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+              <div className="rabtv-srch-banner-scrim" aria-hidden="true" />
+              <h3 className="relative z-10 text-base sm:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 🎭 Matching Cast & Crew
               </h3>
             </div>
@@ -2289,12 +2473,8 @@ function SearchPage() {
                   onClick={() => setSelectedPerson(person)}
                   className="group flex flex-col items-center text-center shrink-0 w-24 cursor-pointer focus:outline-none"
                 >
-                  <div
-                    className={`p-[2.5px] rounded-full bg-gradient-to-tr ${themeTokens.avatarRing} shadow-lg group-hover:scale-105 transition-transform mb-1.5`}
-                  >
-                    <div
-                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 flex items-center justify-center ${themeTokens.avatarFrame}`}
-                    >
+                  <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-red-500 via-rose-500 to-cyan-400 shadow-lg group-hover:scale-105 transition-transform mb-1.5">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-black bg-zinc-950 flex items-center justify-center">
                       {person.profilePath ? (
                         <img
                           src={`https://image.tmdb.org/t/p/w200${person.profilePath}`}
@@ -2311,9 +2491,7 @@ function SearchPage() {
                   <span className="text-xs font-bold text-white truncate w-full">
                     {person.name}
                   </span>
-                  <span
-                    className={`text-[10px] truncate w-full ${themeTokens.subMutedText}`}
-                  >
+                  <span className="text-[10px] truncate w-full text-zinc-400">
                     {person.department}
                   </span>
                 </button>
@@ -2322,65 +2500,46 @@ function SearchPage() {
           </section>
         )}
 
-        {/* RESULTS HEADER: Custom Cyber-Grunge Filtered Catalog Artwork Banner (Zero Duplicate Words) */}
-        {!selectedPerson && !activeUrlQuery && !hiddenGemsMode ? (
-          <div className="rabtv-srch-catalog-banner-row" aria-label="Filtered Catalog">
-            <span className="rabtv-srch-catalog-wing" aria-hidden="true" />
-            <div className="rabtv-srch-catalog-art-banner">
-              <div
-                className="rabtv-srch-catalog-art-bg"
-                aria-hidden="true"
-                style={{
-                  backgroundImage: `url(${FILTERED_CATALOG_BANNER_URL})`,
-                }}
-              />
-              <h2 className="sr-only">Filtered Catalog</h2>
-            </div>
-            <span className="rabtv-srch-catalog-wing" aria-hidden="true" />
-          </div>
-        ) : (
-          <div className="rabtv-section-banner">
-            <div
-              className="rabtv-art-bg"
-              aria-hidden="true"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
-            />
-            <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-              {selectedPerson
-                ? `${selectedPerson.name} — Credits`
-                : activeUrlQuery
-                  ? `Results: "${activeUrlQuery}"`
-                  : "💎 Hidden Gems"}
-            </h2>
-          </div>
-        )}
-
-        {/* RESULTS GRID */}
-        {loading ? (
+        {/* RESULTS HEADER BANNER (Male Punk Rabbit Searching at Computer Terminal on Right Flank) */}
+        <div className="rabtv-srch-banner">
           <div
-            className={`py-16 flex flex-col items-center justify-center gap-3 font-bold ${themeTokens.mutedText}`}
-          >
-            <div
-              className={`h-9 w-9 rounded-full border-2 border-t-transparent animate-spin ${themeTokens.spinner}`}
-            />
-            <span>Scanning catalog matches…</span>
+            className="rabtv-srch-banner-bg"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${IMG_CATALOG_BANNER_BG})` }}
+          />
+          <div className="rabtv-srch-banner-scrim" aria-hidden="true" />
+          <h2 className="relative z-10 text-base sm:text-2xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+            {selectedPerson
+              ? `🎭 ${selectedPerson.name} — Credits`
+              : activeUrlQuery
+                ? `🔍 Results: "${activeUrlQuery}"`
+                : hiddenGemsMode
+                  ? "💎 Hidden Gems"
+                  : activeMood
+                    ? `${
+                        MOOD_VIBES.find((m) => m.id === activeMood)?.label ||
+                        "Filtered"
+                      } Catalog`
+                    : "Filtered Catalog"}
+          </h2>
+        </div>
+
+        {/* RESULTS GRID / LOADING / ERROR / EMPTY STATES */}
+        {loading ? (
+          <div className="py-16 flex flex-col items-center justify-center gap-3 font-bold text-zinc-300">
+            <div className="h-9 w-9 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+            <span>Scanning Rabbit TV archive…</span>
           </div>
         ) : error ? (
-          <div
-            className={`rounded-3xl border p-8 text-center space-y-3 ${themeTokens.surfacePanel}`}
-          >
-            <p className={`text-sm font-bold ${themeTokens.accentText}`}>
-              ⚠️ {error}
-            </p>
-            <button
-              type="button"
+          <div className="rounded-3xl border border-red-500/35 bg-black/80 p-8 text-center space-y-3">
+            <p className="text-sm font-bold text-red-300">⚠️ {error}</p>
+            <ArmoredButton
+              variant="danger"
               onClick={() => setRetryTick((t) => t + 1)}
-              className={`rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${themeTokens.btnSecondary}`}
+              className="px-5 py-2 text-xs"
             >
               ↻ Retry Search
-            </button>
+            </ArmoredButton>
           </div>
         ) : filteredResults.length > 0 ? (
           <>
@@ -2403,11 +2562,10 @@ function SearchPage() {
 
             {/* Pagination Deck */}
             {totalPages > 1 && !selectedPerson && (
-              <div
-                className={`mt-4 flex items-center justify-center gap-4 rounded-2xl border backdrop-blur-sm p-3 mx-auto w-full max-w-sm ${themeTokens.surfacePanel}`}
-              >
-                <button
-                  type="button"
+              <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-white/15 bg-black/80 p-3 mx-auto w-full max-w-sm">
+                <ArmoredButton
+                  variant="idle"
+                  disabled={page <= 1 || loading}
                   onClick={() => {
                     setPage((p) => Math.max(1, p - 1));
                     window.scrollTo({
@@ -2415,22 +2573,20 @@ function SearchPage() {
                       behavior: reducedMotion ? "auto" : "smooth",
                     });
                   }}
-                  disabled={page <= 1 || loading}
-                  className={`rounded-xl ${
+                  className={
                     largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
-                  } font-bold transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
-                    themeTokens.btnSecondary
-                  } ${themeTokens.focusRing}`}
+                  }
                 >
                   ◀ Prev
-                </button>
+                </ArmoredButton>
 
-                <span className={`text-xs font-black ${themeTokens.accentText}`}>
+                <span className="text-xs font-black text-cyan-300">
                   Page {page} of {totalPages}
                 </span>
 
-                <button
-                  type="button"
+                <ArmoredButton
+                  variant="primary"
+                  disabled={page >= totalPages || loading}
                   onClick={() => {
                     setPage((p) => Math.min(totalPages, p + 1));
                     window.scrollTo({
@@ -2438,73 +2594,34 @@ function SearchPage() {
                       behavior: reducedMotion ? "auto" : "smooth",
                     });
                   }}
-                  disabled={page >= totalPages || loading}
-                  className={`rounded-xl ${themeTokens.btn} ${
+                  className={
                     largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
-                  } font-bold shadow transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
-                    themeTokens.focusRing
-                  }`}
+                  }
                 >
                   Next ▶
-                </button>
+                </ArmoredButton>
               </div>
             )}
           </>
         ) : (
-          <div
-            className={`rounded-3xl border p-10 sm:p-12 text-center backdrop-blur-sm space-y-3 ${themeTokens.surfacePanel}`}
-          >
+          <div className="rounded-3xl border border-white/10 bg-black/80 p-10 sm:p-12 text-center space-y-3">
             <div className="text-3xl">🔍</div>
             <p className="text-base font-bold text-white">
               No titles found matching that exact combination of filters.
             </p>
-            <p
-              className={`text-xs max-w-md mx-auto ${themeTokens.subMutedText}`}
-            >
-              Try relaxing your year, rating, streaming service, or language
-              filter—or tap one of the quick presets above!
+            <p className="text-xs max-w-md mx-auto text-zinc-400">
+              Try relaxing your year, rating, streaming service, or multi-genre
+              selection—or tap a Vibe or Preset above.
             </p>
             {hasActiveFilters && (
-              <button
-                type="button"
+              <ArmoredButton
+                variant="danger"
                 onClick={resetAllFilters}
-                className={`mt-2 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-extrabold shadow-lg transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btn} ${themeTokens.focusRing}`}
+                className="px-5 py-2.5 text-xs uppercase tracking-wider"
               >
                 ↺ Reset All Filters
-              </button>
+              </ArmoredButton>
             )}
-          </div>
-        )}
-
-        {canScrollDown && showScrollReminder && (
-          <div
-            className="fixed bottom-4 left-0 right-0 z-50 flex items-center justify-center pointer-events-none animate-flash-twice"
-            onAnimationEnd={() => setShowScrollReminder(false)}
-          >
-            <style>{`
-              @keyframes flashTwice {
-                0% { opacity: 0; }
-                25% { opacity: 1; }
-                50% { opacity: 0; }
-                75% { opacity: 1; }
-                100% { opacity: 0; }
-              }
-              .animate-flash-twice {
-                animation: flashTwice 8s ease-in-out forwards;
-              }
-            `}</style>
-            <div
-              className={`flex flex-col items-center gap-0.5 backdrop-blur-md px-4 py-2 rounded-xl border shadow-2xl ${themeTokens.surfacePanel}`}
-            >
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white">
-                More Content Below
-              </span>
-              <span
-                className={`text-xl font-black animate-slow-glow ${themeTokens.arrow}`}
-              >
-                ⌄
-              </span>
-            </div>
           </div>
         )}
       </div>
