@@ -138,6 +138,12 @@ const RABBIT_TV_BUTTON_WRAPPER_URL =
 const RABBIT_TV_PLAY_PRIMARY_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-play-primary.jpg";
 
+const RABBIT_TV_ACTION_SECONDARY_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-action-secondary.jpg";
+
+const RABBIT_TV_DETAILS_PANEL_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-details-panel-background.jpg";
+
 const MOVIE_NIGHT_BTN_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/surpriseme.png";
 
@@ -288,23 +294,63 @@ const HOME_VIEWPORT_STYLES = `
     z-index: 1;
   }
 
-  /* Dual Button Industrial Backplate (rabbit-tv-button-wrapper-background.jpg) */
-  .rabtv-home-action-plate .rabtv-art-bg {
+  /* Dual Button & Section Banner Industrial Backplate (rabbit-tv-button-wrapper-background.jpg) */
+  .rabtv-home-action-plate .rabtv-art-bg,
+  .rabtv-home-section-plate .rabtv-art-bg {
     background-size: 100% 100%;
     opacity: 0.84;
     filter: var(--rabtv-idx-plate-filter);
     -webkit-mask-image: radial-gradient(
-      ellipse 84% 78% at 50% 50%,
+      ellipse 86% 78% at 50% 50%,
       rgba(12, 10, 9, 1) 66%,
       rgba(12, 10, 9, 0.78) 88%,
-      rgba(12, 10, 9, 0.35) 100%
+      rgba(12, 10, 9, 0.32) 100%
     );
     mask-image: radial-gradient(
-      ellipse 84% 78% at 50% 50%,
+      ellipse 86% 78% at 50% 50%,
       rgba(12, 10, 9, 1) 66%,
       rgba(12, 10, 9, 0.78) 88%,
-      rgba(12, 10, 9, 0.35) 100%
+      rgba(12, 10, 9, 0.32) 100%
     );
+  }
+
+  /* Subtle Architectural Panel Plate (rabbit-tv-details-panel-background.jpg) */
+  .rabtv-home-panel-plate {
+    position: relative;
+    overflow: hidden;
+    contain: layout paint;
+  }
+
+  .rabtv-home-panel-plate-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.44;
+    filter: var(--rabtv-idx-plate-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 94% 90% at 50% 50%,
+      rgba(12, 10, 9, 0.96) 66%,
+      rgba(12, 10, 9, 0.58) 90%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 94% 90% at 50% 50%,
+      rgba(12, 10, 9, 0.96) 66%,
+      rgba(12, 10, 9, 0.58) 90%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-home-panel-plate-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(12, 10, 9, 0.52) 0%, rgba(12, 10, 9, 0.68) 100%);
+    pointer-events: none;
+    z-index: 1;
   }
 
   /* Recessed Scrollable Pill Track (rabbit-tv-pill-track-background.jpg) */
@@ -475,8 +521,60 @@ const HOME_VIEWPORT_STYLES = `
   .rabtv-home-play-cta-label {
     position: relative;
     z-index: 2;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     text-shadow: 0 1px 4px rgba(12, 10, 9, 0.96), 0 0 10px rgba(12, 10, 9, 0.85);
+  }
+
+  /* Secondary Dormant Armored Action Button (rabbit-tv-button-action-secondary.jpg) */
+  .rabtv-home-sec-cta {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    box-shadow: none !important;
+    contain: layout paint;
+  }
+
+  .rabtv-home-sec-cta-art {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.90;
+    filter: var(--rabtv-idx-plate-filter) brightness(0.96);
+    -webkit-mask-image: radial-gradient(
+      ellipse 90% 80% at 50% 50%,
+      rgba(12, 10, 9, 1) 70%,
+      rgba(12, 10, 9, 0.58) 93%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 90% 80% at 50% 50%,
+      rgba(12, 10, 9, 1) 70%,
+      rgba(12, 10, 9, 0.58) 93%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+    transition: transform 160ms ease, filter 180ms ease, opacity 160ms ease;
+  }
+
+  .rabtv-home-sec-cta:hover .rabtv-home-sec-cta-art {
+    opacity: 1;
+    filter: var(--rabtv-idx-plate-filter) brightness(1.10);
+    transform: scale(1.03);
+  }
+
+  .rabtv-home-sec-cta-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 76% 68% at 50% 50%, rgba(12, 10, 9, 0.48) 0%, rgba(12, 10, 9, 0.18) 100%);
+    pointer-events: none;
+    z-index: 1;
   }
 
   @media (min-width: 640px) {
@@ -912,13 +1010,39 @@ export function MediaCard({
             to="/player"
             search={playerSearch}
             onClick={() => bgAudio.pause()}
-            className={`mt-1 block w-full text-center rounded-xl border ${cardThemeStyles.watchBtn} ${
+            className={`mt-1 relative overflow-hidden block w-full text-center rounded-xl bg-[#0c0a09] text-white ${
               largeButtons ? "py-2.5 text-xs" : "py-1.5 text-[10px]"
-            } font-bold tracking-wider uppercase transition focus:outline-none focus:ring-2 ${
+            } font-bold tracking-wider uppercase transition hover:brightness-110 active:scale-[0.98] focus:outline-none focus:ring-2 ${
               cardThemeStyles.ring
             }`}
           >
-            ▶ Watch Now
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{
+                backgroundImage: `url(${RABBIT_TV_ACTION_SECONDARY_URL})`,
+                backgroundSize: "100% 100%",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+                opacity: 0.9,
+                filter: "var(--rabtv-idx-plate-filter, var(--rabtv-dtl-plate-filter, saturate(1.06)))",
+                WebkitMaskImage:
+                  "radial-gradient(ellipse 90% 80% at 50% 50%, rgba(12,10,9,1) 70%, rgba(12,10,9,0.58) 93%, transparent 100%)",
+                maskImage:
+                  "radial-gradient(ellipse 90% 80% at 50% 50%, rgba(12,10,9,1) 70%, rgba(12,10,9,0.58) 93%, transparent 100%)",
+              }}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-[1]"
+              style={{
+                background:
+                  "radial-gradient(ellipse 76% 68% at 50% 50%, rgba(12,10,9,0.46) 0%, rgba(12,10,9,0.18) 100%)",
+              }}
+            />
+            <span className="relative z-[2] drop-shadow-[0_1px_4px_rgba(0,0,0,0.96)]">
+              ▶ Watch Now
+            </span>
           </Link>
         </div>
       )}
@@ -930,13 +1054,39 @@ export function MediaCard({
             to="/player"
             search={playerSearch}
             onClick={() => bgAudio.pause()}
-            className={`w-full text-center rounded-xl border ${cardThemeStyles.watchBtn} ${
+            className={`relative overflow-hidden block w-full text-center rounded-xl bg-[#0c0a09] text-white ${
               largeButtons ? "py-2.5 text-xs" : "py-1.5 text-[10px]"
-            } font-bold tracking-wider uppercase transition focus:outline-none focus:ring-2 ${
+            } font-bold tracking-wider uppercase transition hover:brightness-110 active:scale-[0.98] focus:outline-none focus:ring-2 ${
               cardThemeStyles.ring
             }`}
           >
-            ▶ Watch Now
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{
+                backgroundImage: `url(${RABBIT_TV_ACTION_SECONDARY_URL})`,
+                backgroundSize: "100% 100%",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+                opacity: 0.9,
+                filter: "var(--rabtv-idx-plate-filter, var(--rabtv-dtl-plate-filter, saturate(1.06)))",
+                WebkitMaskImage:
+                  "radial-gradient(ellipse 90% 80% at 50% 50%, rgba(12,10,9,1) 70%, rgba(12,10,9,0.58) 93%, transparent 100%)",
+                maskImage:
+                  "radial-gradient(ellipse 90% 80% at 50% 50%, rgba(12,10,9,1) 70%, rgba(12,10,9,0.58) 93%, transparent 100%)",
+              }}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-[1]"
+              style={{
+                background:
+                  "radial-gradient(ellipse 76% 68% at 50% 50%, rgba(12,10,9,0.46) 0%, rgba(12,10,9,0.18) 100%)",
+              }}
+            />
+            <span className="relative z-[2] drop-shadow-[0_1px_4px_rgba(0,0,0,0.96)]">
+              ▶ Watch Now
+            </span>
           </Link>
         </div>
       )}
@@ -1032,8 +1182,15 @@ const NewShelfQuickBar = memo(function NewShelfQuickBar({
   return (
     <form
       onSubmit={handleSubmit}
-      className={`w-full max-w-4xl mx-auto rounded-2xl p-3 sm:p-4 space-y-2.5 backdrop-blur-md ${surfaceClass}`}
+      className={`rabtv-home-panel-plate w-full max-w-4xl mx-auto rounded-2xl p-3 sm:p-4 backdrop-blur-md ${surfaceClass}`}
     >
+      <div
+        className="rabtv-home-panel-plate-bg"
+        aria-hidden="true"
+        style={{ backgroundImage: `url(${RABBIT_TV_DETAILS_PANEL_URL})` }}
+      />
+      <div className="rabtv-home-panel-plate-scrim" aria-hidden="true" />
+      <div className="relative z-10 space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <span
           className={`text-[10px] font-extrabold uppercase tracking-wider ${subMutedClass}`}
@@ -1071,12 +1228,19 @@ const NewShelfQuickBar = memo(function NewShelfQuickBar({
         />
         <button
           type="submit"
-          className={`h-10 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${btnActiveClass} ${focusRingClass}`}
+          className={`rabtv-home-play-cta h-10 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider text-white shrink-0 transition hover:scale-[1.02] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${focusRingClass}`}
         >
-          + Create Shelf
+          <span
+            className="rabtv-home-play-cta-art"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${RABBIT_TV_PLAY_PRIMARY_URL})` }}
+          />
+          <span className="rabtv-home-play-cta-scrim" aria-hidden="true" />
+          <span className="rabtv-home-play-cta-label">+ Create Shelf</span>
         </button>
       </div>
       {err && <p className="text-[11px] font-bold text-red-400">{err}</p>}
+      </div>
     </form>
   );
 });
@@ -2285,8 +2449,15 @@ function Home() {
               </Link>
 
               <div
-                className={`p-4 sm:p-6 md:p-7 text-left space-y-3 ${themeStyles.heroPanelBg}`}
+                className={`rabtv-home-panel-plate p-4 sm:p-6 md:p-7 text-left ${themeStyles.heroPanelBg}`}
               >
+                <div
+                  className="rabtv-home-panel-plate-bg"
+                  aria-hidden="true"
+                  style={{ backgroundImage: `url(${RABBIT_TV_DETAILS_PANEL_URL})` }}
+                />
+                <div className="rabtv-home-panel-plate-scrim" aria-hidden="true" />
+                <div className="relative z-10 space-y-3">
                 <div className="flex items-center flex-wrap gap-2">
                   <span
                     className={`rounded-full px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.16em] leading-snug ${themeStyles.accentBadge}`}
@@ -2353,15 +2524,21 @@ function Home() {
                     <Link
                       to="/details"
                       search={heroDetailsSearch}
-                      className={`inline-flex items-center gap-1.5 ${
+                      className={`rabtv-home-sec-cta inline-flex items-center gap-1.5 ${
                         largeButtons
                           ? "px-5 py-3 text-sm"
                           : "px-4 py-2.5 text-xs"
-                      } rounded-xl font-bold transition focus:outline-none focus:ring-2 ${
-                        themeStyles.btnSecondary
-                      } ${themeStyles.focusRing}`}
+                      } rounded-xl font-bold text-white transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${
+                        themeStyles.focusRing
+                      }`}
                     >
-                      ⓘ Details
+                      <span
+                        className="rabtv-home-sec-cta-art"
+                        aria-hidden="true"
+                        style={{ backgroundImage: `url(${RABBIT_TV_ACTION_SECONDARY_URL})` }}
+                      />
+                      <span className="rabtv-home-sec-cta-scrim" aria-hidden="true" />
+                      <span className="rabtv-home-play-cta-label">ⓘ Details</span>
                     </Link>
                   </div>
 
@@ -2422,6 +2599,7 @@ function Home() {
                     </div>
                   )}
                 </div>
+                </div>
               </div>
             </div>
           ) : (
@@ -2442,7 +2620,7 @@ function Home() {
               data-tour="continue-watching-row"
               className="mb-6 w-full max-w-6xl space-y-3 px-1"
             >
-              <div className="rabtv-section-banner rabtv-section-banner--split">
+              <div className="rabtv-section-banner rabtv-section-banner--split rabtv-home-section-plate">
                 <div
                   className="rabtv-art-bg"
                   aria-hidden="true"
@@ -2524,22 +2702,35 @@ function Home() {
                               episode: targetEpisode,
                             }}
                             onClick={() => bgAudio.pause()}
-                            className={`relative overflow-hidden block w-full text-center rounded-xl py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white transition focus:outline-none focus:ring-2 ${
+                            className={`relative overflow-hidden block w-full text-center rounded-xl py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white transition hover:scale-[1.02] active:scale-95 focus:outline-none focus:ring-2 ${
                               freshAlert
                                 ? "rabtv-home-play-cta"
-                                : themeStyles.btnSecondary
+                                : "rabtv-home-sec-cta"
                             } ${themeStyles.focusRing}`}
                           >
-                            {freshAlert && (
-                              <>
-                                <span
-                                  className="rabtv-home-play-cta-art"
-                                  aria-hidden="true"
-                                  style={{ backgroundImage: `url(${RABBIT_TV_PLAY_PRIMARY_URL})` }}
-                                />
-                                <span className="rabtv-home-play-cta-scrim" aria-hidden="true" />
-                              </>
-                            )}
+                            <span
+                              className={
+                                freshAlert
+                                  ? "rabtv-home-play-cta-art"
+                                  : "rabtv-home-sec-cta-art"
+                              }
+                              aria-hidden="true"
+                              style={{
+                                backgroundImage: `url(${
+                                  freshAlert
+                                    ? RABBIT_TV_PLAY_PRIMARY_URL
+                                    : RABBIT_TV_ACTION_SECONDARY_URL
+                                })`,
+                              }}
+                            />
+                            <span
+                              className={
+                                freshAlert
+                                  ? "rabtv-home-play-cta-scrim"
+                                  : "rabtv-home-sec-cta-scrim"
+                              }
+                              aria-hidden="true"
+                            />
                             <span className="rabtv-home-play-cta-label">
                               {freshAlert
                                 ? `▶ New S${freshAlert.seasonNumber}E${freshAlert.episodeNumber}`
@@ -2888,9 +3079,15 @@ function Home() {
                   setCustomShelves(getCustomShelves());
                   setMyListSubTab("all");
                 }}
-                className="rounded-xl bg-red-950/60 hover:bg-red-700 border border-red-500/40 px-3 py-1.5 text-[11px] font-extrabold text-red-200 hover:text-white transition cursor-pointer backdrop-blur-sm"
+                className="rabtv-home-sec-cta rounded-xl px-3.5 py-2 text-[11px] font-extrabold text-red-200 hover:text-white transition hover:scale-[1.02] active:scale-95 cursor-pointer"
               >
-                🗑️ Delete This Custom Shelf
+                <span
+                  className="rabtv-home-sec-cta-art"
+                  aria-hidden="true"
+                  style={{ backgroundImage: `url(${RABBIT_TV_ACTION_SECONDARY_URL})` }}
+                />
+                <span className="rabtv-home-sec-cta-scrim" aria-hidden="true" />
+                <span className="rabtv-home-play-cta-label">🗑️ Delete This Custom Shelf</span>
               </button>
             </div>
           )}
@@ -2900,7 +3097,7 @@ function Home() {
             data-tour={activeTab === "My List" ? "favorites-grid" : "catalog-grid"}
             className="mb-8 px-1 w-full max-w-6xl"
           >
-            <div className="rabtv-section-banner mb-4">
+            <div className="rabtv-section-banner rabtv-home-section-plate mb-4">
               <div
                 className="rabtv-art-bg"
                 aria-hidden="true"
@@ -2980,7 +3177,7 @@ function Home() {
             <section
               className={`mb-8 px-1 pt-6 border-t w-full max-w-6xl ${themeStyles.dividerBorder}`}
             >
-              <div className="rabtv-section-banner mb-4">
+              <div className="rabtv-section-banner rabtv-home-section-plate mb-4">
                 <div
                   className="rabtv-art-bg"
                   aria-hidden="true"
@@ -3011,8 +3208,15 @@ function Home() {
           {activeTab !== "My List" && totalPages > 1 && (
             <div
               data-tour="load-more"
-              className={`mb-4 flex items-center justify-center gap-4 rounded-2xl backdrop-blur-md p-3 mx-2 w-full max-w-sm shadow-xl ${themeStyles.surfacePanel}`}
+              className={`rabtv-home-pill-track mb-4 flex items-center justify-between gap-3 rounded-2xl border p-2.5 sm:p-3 mx-2 w-full max-w-sm shadow-xl ${themeStyles.surfacePanel}`}
             >
+              <div
+                className="rabtv-home-pill-track-bg"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${RABBIT_TV_PILL_TRACK_URL})` }}
+              />
+              <div className="rabtv-home-pill-track-scrim" aria-hidden="true" />
+
               <button
                 type="button"
                 onClick={() => {
@@ -3020,16 +3224,22 @@ function Home() {
                   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
                 }}
                 disabled={page <= 1 || loading}
-                className={`rounded-xl ${
+                className={`rabtv-home-sec-cta relative z-10 rounded-xl text-white ${
                   largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
-                } font-bold transition disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer ${
-                  themeStyles.btnSecondary
-                } ${themeStyles.focusRing}`}
+                } font-extrabold transition hover:scale-[1.03] active:scale-95 disabled:opacity-40 disabled:pointer-events-none focus:outline-none focus:ring-4 cursor-pointer ${
+                  themeStyles.focusRing
+                }`}
               >
-                ◀ Prev
+                <span
+                  className="rabtv-home-sec-cta-art"
+                  aria-hidden="true"
+                  style={{ backgroundImage: `url(${RABBIT_TV_ACTION_SECONDARY_URL})` }}
+                />
+                <span className="rabtv-home-sec-cta-scrim" aria-hidden="true" />
+                <span className="rabtv-home-play-cta-label">◀ Prev</span>
               </button>
 
-              <span className={`text-xs font-bold ${themeStyles.accentText}`}>
+              <span className={`relative z-10 text-xs font-black drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}>
                 Page {page} of {totalPages}
               </span>
 
@@ -3040,9 +3250,9 @@ function Home() {
                   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
                 }}
                 disabled={page >= totalPages || loading}
-                className={`rabtv-home-play-cta rounded-xl text-white ${
+                className={`rabtv-home-play-cta relative z-10 rounded-xl text-white ${
                   largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2 text-xs"
-                } font-bold transition disabled:opacity-40 focus:outline-none focus:ring-4 cursor-pointer ${
+                } font-extrabold transition hover:scale-[1.03] active:scale-95 disabled:opacity-40 disabled:pointer-events-none focus:outline-none focus:ring-4 cursor-pointer ${
                   themeStyles.focusRing
                 }`}
               >
