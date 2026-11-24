@@ -27,7 +27,6 @@ import {
   getSavedUserAge,
   getKidsModeLocked,
   isAllowedForAge,
-  purgeOldTmdbCaches,
 } from "@/lib/settings";
 import { isTitleBroken, reportBrokenLink } from "@/lib/broken-links";
 import { MediaCard } from "@/routes/index";
@@ -43,18 +42,31 @@ import { isInMyList, toggleMyList } from "@/lib/storage";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { bgAudio } from "@/lib/background-audio";
 import { initAdBlockerGlobalInterceptors } from "@/lib/adblocker";
+import {
+  buildRabbitTvDirectUrl,
+  fetchTmdbAndResolveDirect,
+  probeVidsrcDirectInfo,
+  parseVidsrcPlayerEvent,
+  sanitizeTmdbId,
+  sanitizeImdbId,
+  sanitizePositiveInt,
+  type DirectIdMode,
+  type DirectStreamProbeResult,
+} from "@/lib/vidsrc-resolver";
 
 const FETCH_TIMEOUT_MS = 8000;
 const PLAYER_SERVER_STORAGE_KEY = "rabtv_preferred_player_server_v2";
+const STRICT_IFRAME_LOCK_STORAGE_KEY = "rabtv_strict_iframe_lock_v1";
 const FAILOVER_PROBE_TIMEOUT_MS = 6000;
 const FAILOVER_IFRAME_TIMEOUT_MS = 9500;
+const PROGRESS_SAVE_THROTTLE_MS = 15000;
 
 type PlayerServerId =
+  | "rabbittv-direct"
   | "rabbittv.pro"
   | "rabbittv.cc"
   | "rabbittv.net"
-  | "rabbittv.icu"
-  | "rabbittv.to";
+  | "rabbittv.icu";
 
 interface PlayerServerOption {
   id: PlayerServerId;
@@ -63,11 +75,11 @@ interface PlayerServerOption {
 }
 
 const PLAYER_SERVERS: PlayerServerOption[] = [
-  { id: "rabbittv.pro", label: "rabbittv.pro", tag: "Primary HD" },
-  { id: "rabbittv.cc", label: "rabbittv.cc", tag: "Mirror 2" },
-  { id: "rabbittv.net", label: "rabbittv.net", tag: "Mirror 3" },
-  { id: "rabbittv.icu", label: "rabbittv.icu", tag: "Mirror 4" },
-  { id: "rabbittv.to", label: "rabbittv.to", tag: "Mirror 5" },
+  { id: "rabbittv-direct", label: "Rabbit TV Direct", tag: "Direct Clean" },
+  { id: "rabbittv.pro", label: "rabbittv.pro", tag: "Mirror 2" },
+  { id: "rabbittv.cc", label: "rabbittv.cc", tag: "Mirror 3" },
+  { id: "rabbittv.net", label: "rabbittv.net", tag: "Mirror 4" },
+  { id: "rabbittv.icu", label: "rabbittv.icu", tag: "Mirror 5" },
 ];
 
 const THEME_HEX_ACCENT: Record<AppTheme, string> = {
@@ -79,15 +91,35 @@ const THEME_HEX_ACCENT: Record<AppTheme, string> = {
   violet: "8b5cf6",
 };
 
+function getServerLabel(id: PlayerServerId): string {
+  return PLAYER_SERVERS.find((s) => s.id === id)?.label || "Rabbit TV Direct";
+}
+
 function getSavedPlayerServer(): PlayerServerId {
-  if (typeof window === "undefined") return "rabbittv.pro";
-  const saved = localStorage.getItem(
-    PLAYER_SERVER_STORAGE_KEY
-  ) as PlayerServerId | null;
-  if (saved && PLAYER_SERVERS.some((s) => s.id === saved)) {
-    return saved;
+  if (typeof window === "undefined") return "rabbittv-direct";
+  const saved = localStorage.getItem(PLAYER_SERVER_STORAGE_KEY);
+  // Migrate anyone who previously saved legacy rabbittv.to straight to Rabbit TV Direct
+  if (saved === "rabbittv.to") {
+    try {
+      localStorage.setItem(PLAYER_SERVER_STORAGE_KEY, "rabbittv-direct");
+    } catch {
+      // ignore storage errors
+    }
+    return "rabbittv-direct";
   }
-  return "rabbittv.pro";
+  if (saved && PLAYER_SERVERS.some((s) => s.id === saved)) {
+    return saved as PlayerServerId;
+  }
+  return "rabbittv-direct";
+}
+
+function getSavedStrictIframeLock(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(STRICT_IFRAME_LOCK_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 function getNextFailoverServer(
@@ -111,31 +143,51 @@ function buildEmbedUrl(
   mediaId: string,
   season: number,
   episode: number,
-  appTheme: AppTheme
+  appTheme: AppTheme,
+  options?: {
+    imdbId?: string | null;
+    directIdMode?: DirectIdMode;
+    autoPlayNext?: boolean;
+  }
 ): string {
+  const safeId = sanitizeTmdbId(mediaId);
+  const safeSeason = sanitizePositiveInt(season, 1);
+  const safeEpisode = sanitizePositiveInt(episode, 1);
   const accentHex = THEME_HEX_ACCENT[appTheme] || "8b5cf6";
+
+  if (!safeId && !sanitizeImdbId(options?.imdbId)) {
+    return "about:blank";
+  }
+
   switch (serverId) {
+    case "rabbittv-direct":
+      return buildRabbitTvDirectUrl({
+        mediaType,
+        tmdbId: safeId,
+        imdbId: options?.imdbId,
+        idMode: options?.directIdMode || "tmdb",
+        season: safeSeason,
+        episode: safeEpisode,
+        autoPlayNext: options?.autoPlayNext,
+        defaultSubLang: "en",
+      });
     case "rabbittv.pro":
       return mediaType === "tv"
-        ? `https://vidlink.pro/tv/${mediaId}/${season}/${episode}?primaryColor=${accentHex}&autoplay=true&nextbutton=true`
-        : `https://vidlink.pro/movie/${mediaId}?primaryColor=${accentHex}&autoplay=true`;
+        ? `https://vidlink.pro/tv/${safeId}/${safeSeason}/${safeEpisode}?primaryColor=${accentHex}&autoplay=true&nextbutton=true`
+        : `https://vidlink.pro/movie/${safeId}?primaryColor=${accentHex}&autoplay=true`;
     case "rabbittv.cc":
       return mediaType === "tv"
-        ? `https://vidsrc.cc/v2/embed/tv/${mediaId}/${season}/${episode}`
-        : `https://vidsrc.cc/v2/embed/movie/${mediaId}`;
+        ? `https://vidsrc.cc/v2/embed/tv/${safeId}/${safeSeason}/${safeEpisode}`
+        : `https://vidsrc.cc/v2/embed/movie/${safeId}`;
     case "rabbittv.net":
       return mediaType === "tv"
-        ? `https://player.videasy.net/tv/${mediaId}/${season}/${episode}?color=${accentHex}`
-        : `https://player.videasy.net/movie/${mediaId}?color=${accentHex}`;
+        ? `https://player.videasy.net/tv/${safeId}/${safeSeason}/${safeEpisode}?color=${accentHex}`
+        : `https://player.videasy.net/movie/${safeId}?color=${accentHex}`;
     case "rabbittv.icu":
-      return mediaType === "tv"
-        ? `https://vidsrc.icu/embed/tv/${mediaId}/${season}/${episode}`
-        : `https://vidsrc.icu/embed/movie/${mediaId}`;
-    case "rabbittv.to":
     default:
       return mediaType === "tv"
-        ? `https://vidsrc.to/embed/tv/${mediaId}/${season}/${episode}`
-        : `https://vidsrc.to/embed/movie/${mediaId}`;
+        ? `https://vidsrc.icu/embed/tv/${safeId}/${safeSeason}/${safeEpisode}`
+        : `https://vidsrc.icu/embed/movie/${safeId}`;
   }
 }
 
@@ -548,21 +600,6 @@ function isReactOrCoreLayoutNode(node: Element): boolean {
   return false;
 }
 
-function safeCacheWrite(key: string, payload: unknown): void {
-  if (typeof window === "undefined") return;
-  const serialized = JSON.stringify(payload);
-  try {
-    localStorage.setItem(key, serialized);
-  } catch {
-    try {
-      purgeOldTmdbCaches();
-      localStorage.setItem(key, serialized);
-    } catch {
-      // Skip caching if device storage is critically full
-    }
-  }
-}
-
 async function fetchJsonWithTimeout(
   url: string,
   signal?: AbortSignal,
@@ -952,8 +989,8 @@ export function PlayerPage() {
       ? "movie"
       : null;
 
-  const mediaId = rawId.replace(/^(movie|tv)-/i, "").trim();
-  const safeApiId = /^\d+$/.test(mediaId) ? mediaId : "";
+  const mediaId = sanitizeTmdbId(rawId);
+  const safeApiId = mediaId;
   const urlType: "movie" | "tv" =
     inferredType || (search.type === "tv" ? "tv" : "movie");
 
@@ -1016,8 +1053,24 @@ export function PlayerPage() {
   >("connecting");
   const [playerReloadNonce, setPlayerReloadNonce] = useState<number>(0);
   const [isServerMenuOpen, setIsServerMenuOpen] = useState<boolean>(false);
+  const [directIdMode, setDirectIdMode] = useState<DirectIdMode>("tmdb");
+  const [directProbe, setDirectProbe] =
+    useState<DirectStreamProbeResult | null>(null);
+  const [strictIframeLock, setStrictIframeLock] = useState<boolean>(() =>
+    getSavedStrictIframeLock()
+  );
+  const [liveProgressPct, setLiveProgressPct] = useState<number | null>(null);
+  const [autoNextCountdown, setAutoNextCountdown] = useState<number | null>(
+    null
+  );
   const triedServersRef = useRef<Set<PlayerServerId>>(new Set());
+  const triedImdbFallbackRef = useRef<boolean>(false);
   const iframeLoadedRef = useRef<boolean>(false);
+  const lastProgressSaveRef = useRef<{ time: number; pct: number }>({
+    time: 0,
+    pct: -1,
+  });
+  const autoMarkedWatchedRef = useRef<string | null>(null);
   const serverMenuRef = useRef<HTMLDivElement>(null);
   const [inMyList, setInMyList] = useState<boolean>(() =>
     isInMyList(`${urlType}-${mediaId}`)
@@ -1055,6 +1108,24 @@ export function PlayerPage() {
     };
   }, []);
 
+  // Preconnect to vidsrc.sh once on mount so TLS handshake finishes while TMDB loads
+  useEffect(() => {
+    if (typeof document === "undefined" || !document.head) return;
+    const preconnect = document.createElement("link");
+    preconnect.rel = "preconnect";
+    preconnect.href = "https://vidsrc.sh";
+    preconnect.crossOrigin = "anonymous";
+    const dnsPrefetch = document.createElement("link");
+    dnsPrefetch.rel = "dns-prefetch";
+    dnsPrefetch.href = "https://vidsrc.sh";
+    document.head.appendChild(preconnect);
+    document.head.appendChild(dnsPrefetch);
+    return () => {
+      preconnect.remove();
+      dnsPrefetch.remove();
+    };
+  }, []);
+
   // Pause background lobby radio whenever entering or switching playback
   useEffect(() => {
     bgAudio.pause();
@@ -1073,11 +1144,17 @@ export function PlayerPage() {
     setPlayerLoadTime(Date.now());
   }, [mediaId, urlType, search.season, search.episode]);
 
-  // Reset finish-time anchor & failover history whenever media/episode switches
+  // Reset finish-time anchor, direct fallback & telemetry whenever media/episode switches
   useEffect(() => {
     setPlayerLoadTime(Date.now());
     triedServersRef.current = new Set([activeServer]);
+    triedImdbFallbackRef.current = false;
     iframeLoadedRef.current = false;
+    lastProgressSaveRef.current = { time: 0, pct: -1 };
+    setDirectIdMode("tmdb");
+    setDirectProbe(null);
+    setLiveProgressPct(null);
+    setAutoNextCountdown(null);
     setServerStatus("connecting");
   }, [mediaId, season, episode]);
 
@@ -1209,7 +1286,7 @@ export function PlayerPage() {
     };
   }, [season, safeApiId, mediaType]);
 
-  // Fetch player details & recommendations with cache, timeout & safe quota writes
+  // Scrub TMDB for full title details (cover art, actors, external IMDb ID) & resolve Rabbit TV Direct
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
@@ -1222,74 +1299,45 @@ export function PlayerPage() {
       }
 
       const apiKey = (import.meta as any).env?.VITE_TMDB_API_KEY as string;
-      let activeFetchType: "movie" | "tv" = urlType;
+      let resolvedTypeForRecs: "movie" | "tv" = urlType;
 
       try {
-        const cacheKey = `rabtv_cache_${activeFetchType}_${safeApiId}`;
-        const cachedItem = localStorage.getItem(cacheKey);
-        if (cachedItem) {
-          try {
-            const { data, timestamp } = JSON.parse(cachedItem);
-            if (
-              Date.now() - timestamp < 21600000 &&
-              data &&
-              data.success !== false
-            ) {
-              if (!cancelled) {
-                const isTv = !!(data?.seasons || data?.number_of_seasons);
-                setMediaType(isTv ? "tv" : activeFetchType);
-                setMediaDetails(data);
-                setLoading(false);
-              }
+        const resolved = await fetchTmdbAndResolveDirect({
+          tmdbId: safeApiId,
+          mediaType: urlType,
+          apiKey,
+          signal: controller.signal,
+          onCacheHit: (cached) => {
+            if (!cancelled) {
+              setMediaType(cached.mediaType);
+              setMediaDetails(cached.details);
+              setLoading(false);
             }
-          } catch {
-            // Ignore malformed cache
-          }
-        }
-
-        let data = await fetchJsonWithTimeout(
-          `https://api.themoviedb.org/3/${activeFetchType}/${safeApiId}?api_key=${apiKey}&append_to_response=credits,external_ids`,
-          controller.signal
-        );
-
-        if (!data || data.success === false || data.status_code) {
-          const otherType: "movie" | "tv" =
-            activeFetchType === "movie" ? "tv" : "movie";
-          const retryData = await fetchJsonWithTimeout(
-            `https://api.themoviedb.org/3/${otherType}/${safeApiId}?api_key=${apiKey}&append_to_response=credits,external_ids`,
-            controller.signal
-          );
-          if (retryData && retryData.success !== false && !retryData.status_code) {
-            data = retryData;
-            activeFetchType = otherType;
-          }
-        }
+          },
+        });
 
         if (cancelled) return;
 
-        if (data && data.success !== false && !data.status_code) {
-          const isTv =
-            !!(data?.seasons || data?.number_of_seasons) ||
-            activeFetchType === "tv";
-          const resolvedType = isTv ? "tv" : "movie";
-          setMediaType(resolvedType);
-          safeCacheWrite(`rabtv_cache_${activeFetchType}_${safeApiId}`, {
-            data,
-            timestamp: Date.now(),
-          });
-          setMediaDetails(data);
+        if (resolved) {
+          resolvedTypeForRecs = resolved.mediaType;
+          setMediaType(resolved.mediaType);
+          setMediaDetails(resolved.details);
         } else {
           setMediaDetails(null);
         }
 
         let recData = await fetchJsonWithTimeout(
-          `https://api.themoviedb.org/3/${activeFetchType}/${safeApiId}/recommendations?api_key=${apiKey}&language=en-US&page=1`,
+          `https://api.themoviedb.org/3/${resolvedTypeForRecs}/${safeApiId}/recommendations?api_key=${encodeURIComponent(
+            apiKey
+          )}&language=en-US&page=1`,
           controller.signal
         );
 
         if (!recData?.results || recData.results.length === 0) {
           recData = await fetchJsonWithTimeout(
-            `https://api.themoviedb.org/3/${activeFetchType}/popular?api_key=${apiKey}&language=en-US&page=1`,
+            `https://api.themoviedb.org/3/${resolvedTypeForRecs}/popular?api_key=${encodeURIComponent(
+              apiKey
+            )}&language=en-US&page=1`,
             controller.signal
           );
         }
@@ -1530,17 +1578,56 @@ export function PlayerPage() {
 
   const themeTokens = useMemo(() => getPlayerThemeTokens(appTheme), [appTheme]);
 
-  const embedUrl = buildEmbedUrl(
-    activeServer,
-    inferredMediaType,
-    mediaId,
-    season,
-    episode,
-    appTheme
+  const resolvedImdbId = useMemo(
+    () => sanitizeImdbId(mediaDetails?.external_ids?.imdb_id || mediaDetails?.imdb_id),
+    [mediaDetails]
+  );
+
+  const embedUrl = useMemo(
+    () =>
+      buildEmbedUrl(
+        activeServer,
+        inferredMediaType,
+        mediaId,
+        season,
+        episode,
+        appTheme,
+        {
+          imdbId: resolvedImdbId,
+          directIdMode,
+          autoPlayNext,
+        }
+      ),
+    [
+      activeServer,
+      inferredMediaType,
+      mediaId,
+      season,
+      episode,
+      appTheme,
+      resolvedImdbId,
+      directIdMode,
+      autoPlayNext,
+    ]
   );
 
   const triggerBackgroundFailover = useCallback(
     (reason: string) => {
+      // On Rabbit TV Direct, try verified IMDb ID on vidsrc.sh first before leaving Direct
+      if (
+        activeServer === "rabbittv-direct" &&
+        directIdMode === "tmdb" &&
+        resolvedImdbId &&
+        !triedImdbFallbackRef.current
+      ) {
+        triedImdbFallbackRef.current = true;
+        iframeLoadedRef.current = false;
+        setServerStatus("switching");
+        setDirectIdMode("imdb");
+        showToast(`⚡ ${reason} — retrying Rabbit TV Direct via IMDb ID`);
+        return;
+      }
+
       triedServersRef.current.add(activeServer);
       const nextId = getNextFailoverServer(activeServer, triedServersRef.current);
       if (!nextId) {
@@ -1551,10 +1638,59 @@ export function PlayerPage() {
       iframeLoadedRef.current = false;
       setServerStatus("switching");
       setActiveServer(nextId);
-      showToast(`⚡ ${reason} — auto-switched to ${nextId}`);
+      showToast(`⚡ ${reason} — auto-switched to ${getServerLabel(nextId)}`);
     },
-    [activeServer, showToast]
+    [activeServer, directIdMode, resolvedImdbId, showToast]
   );
+
+  // Pre-flight Rabbit TV Direct stream quality & availability probe (/info/...json)
+  useEffect(() => {
+    if (activeServer !== "rabbittv-direct" || !mediaId || loading) {
+      setDirectProbe(null);
+      return;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+
+    void probeVidsrcDirectInfo({
+      mediaType: inferredMediaType,
+      tmdbId: mediaId,
+      imdbId: resolvedImdbId,
+      idMode: directIdMode,
+      season,
+      episode,
+      signal: controller.signal,
+    }).then((result) => {
+      if (cancelled) return;
+      setDirectProbe(result);
+      if (
+        result.status === "unavailable" &&
+        directIdMode === "tmdb" &&
+        resolvedImdbId &&
+        !triedImdbFallbackRef.current
+      ) {
+        triedImdbFallbackRef.current = true;
+        setDirectIdMode("imdb");
+        showToast("⚡ Switching Rabbit TV Direct to IMDb ID match...");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [
+    activeServer,
+    inferredMediaType,
+    mediaId,
+    resolvedImdbId,
+    directIdMode,
+    season,
+    episode,
+    loading,
+    playerReloadNonce,
+    showToast,
+  ]);
 
   // Silent background failover watchdog: verifies mirror reachability + iframe load
   useEffect(() => {
@@ -1583,14 +1719,14 @@ export function PlayerPage() {
       .catch(() => {
         window.clearTimeout(probeTimer);
         if (!cancelled && !iframeLoadedRef.current) {
-          triggerBackgroundFailover(`${activeServer} unreachable`);
+          triggerBackgroundFailover(`${getServerLabel(activeServer)} unreachable`);
         }
       });
 
     // 2. Fallback iframe load watchdog in case host hangs silently
     const iframeWatchdog = window.setTimeout(() => {
       if (!cancelled && !iframeLoadedRef.current) {
-        triggerBackgroundFailover(`${activeServer} timed out`);
+        triggerBackgroundFailover(`${getServerLabel(activeServer)} timed out`);
       }
     }, FAILOVER_IFRAME_TIMEOUT_MS);
 
@@ -1601,6 +1737,115 @@ export function PlayerPage() {
       probeController.abort();
     };
   }, [embedUrl, activeServer, mediaId, loading, playerReloadNonce, triggerBackgroundFailover]);
+
+  // Secure origin-verified postMessage telemetry bridge (syncs Watch History progress & Auto-Next)
+  useEffect(() => {
+    if (!mediaDetails || !mediaId) return;
+
+    const handlePlayerMessage = (event: MessageEvent) => {
+      const normalized = parseVidsrcPlayerEvent(event);
+      if (!normalized) return;
+
+      if (normalized.status === "playing") {
+        iframeLoadedRef.current = true;
+        setServerStatus("ready");
+      }
+
+      if (normalized.progressPercent !== null) {
+        setLiveProgressPct(normalized.progressPercent);
+        const now = Date.now();
+        const prev = lastProgressSaveRef.current;
+        const deltaPct = Math.abs(normalized.progressPercent - prev.pct);
+        if (
+          now - prev.time >= PROGRESS_SAVE_THROTTLE_MS ||
+          deltaPct >= 5 ||
+          normalized.status === "ended"
+        ) {
+          lastProgressSaveRef.current = {
+            time: now,
+            pct: normalized.progressPercent,
+          };
+          try {
+            saveWatchProgress({
+              id: `${inferredMediaType}-${mediaId}`,
+              mediaId: String(mediaId),
+              title: mediaDetails.title || mediaDetails.name || "Untitled",
+              mediaType: inferredMediaType,
+              posterPath: mediaDetails.poster_path || null,
+              backdropPath: mediaDetails.backdrop_path || null,
+              progressPercent: normalized.progressPercent,
+              seasonNumber: inferredMediaType === "tv" ? season : undefined,
+              episodeNumber: inferredMediaType === "tv" ? episode : undefined,
+              episodeTitle:
+                inferredMediaType === "tv" ? currentEpisodeObj?.name : undefined,
+              totalEpisodes:
+                inferredMediaType === "tv"
+                  ? mediaDetails.number_of_episodes || undefined
+                  : 1,
+              genreIds: mediaDetails?.genres?.map((g: any) => g.id) || [],
+            });
+          } catch {
+            // ignore storage errors
+          }
+        }
+
+        // Auto-mark watched at >= 90% completion (once per item/episode)
+        const sessionKey =
+          inferredMediaType === "tv"
+            ? `${mediaId}-s${season}-e${episode}`
+            : `${mediaId}-s1-e1`;
+        if (
+          (normalized.progressPercent >= 90 || normalized.status === "ended") &&
+          autoMarkedWatchedRef.current !== sessionKey
+        ) {
+          autoMarkedWatchedRef.current = sessionKey;
+          markEpisodeCompleted(mediaId, sessionKey, true);
+          setWatchedMapTick((t) => t + 1);
+        }
+      }
+
+      // Trigger 10-second Auto-Play Next Episode countdown when TV episode ends
+      if (
+        normalized.status === "ended" &&
+        inferredMediaType === "tv" &&
+        autoPlayNext &&
+        canGoNextEpisode
+      ) {
+        setAutoNextCountdown((prev) => (prev === null ? 10 : prev));
+      }
+    };
+
+    window.addEventListener("message", handlePlayerMessage);
+    return () => window.removeEventListener("message", handlePlayerMessage);
+  }, [
+    mediaDetails,
+    mediaId,
+    inferredMediaType,
+    season,
+    episode,
+    currentEpisodeObj?.name,
+    autoPlayNext,
+    canGoNextEpisode,
+  ]);
+
+  // Countdown tick for Auto-Play Next Episode overlay
+  useEffect(() => {
+    if (autoNextCountdown === null) return;
+    if (autoNextCountdown <= 0) {
+      setAutoNextCountdown(null);
+      if (episode < currentSeasonMaxEp) {
+        setEpisode((prev) => prev + 1);
+      } else if (nextSeasonObj) {
+        setSeason(nextSeasonObj.season_number);
+        setEpisode(1);
+      }
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setAutoNextCountdown((c) => (c !== null ? c - 1 : null));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [autoNextCountdown, episode, currentSeasonMaxEp, nextSeasonObj]);
 
   if (loading) {
     return (
@@ -1654,6 +1899,7 @@ export function PlayerPage() {
 
   const handleSelectServer = (nextServer: PlayerServerId) => {
     triedServersRef.current = new Set([nextServer]);
+    triedImdbFallbackRef.current = false;
     iframeLoadedRef.current = false;
     setServerStatus("connecting");
     setActiveServer(nextServer);
@@ -1663,7 +1909,37 @@ export function PlayerPage() {
     } catch {
       // ignore storage errors
     }
-    showToast(`Switched stream to ${nextServer}`);
+    showToast(`Switched stream to ${getServerLabel(nextServer)}`);
+  };
+
+  const handleToggleDirectIdMode = () => {
+    if (!resolvedImdbId) return;
+    const nextMode: DirectIdMode = directIdMode === "tmdb" ? "imdb" : "tmdb";
+    iframeLoadedRef.current = false;
+    setServerStatus("connecting");
+    setDirectIdMode(nextMode);
+    showToast(
+      `⚡ Rabbit TV Direct switched to ${
+        nextMode === "imdb" ? `IMDb (${resolvedImdbId})` : `TMDB (${mediaId})`
+      }`
+    );
+  };
+
+  const handleToggleStrictLock = () => {
+    const nextLock = !strictIframeLock;
+    iframeLoadedRef.current = false;
+    setStrictIframeLock(nextLock);
+    setPlayerReloadNonce((n) => n + 1);
+    try {
+      localStorage.setItem(STRICT_IFRAME_LOCK_STORAGE_KEY, nextLock ? "1" : "0");
+    } catch {
+      // ignore storage errors
+    }
+    showToast(
+      nextLock
+        ? "🛡️ Clean Sandbox Lock ON — zero popups or redirects can escape."
+        : "🛡️ Clean Sandbox Lock OFF — standard ad-shield active."
+    );
   };
 
   const handleReturnToDetails = () => {
@@ -2254,7 +2530,7 @@ export function PlayerPage() {
                 title="Switch RABBiT TV Stream Mirror"
               >
                 <span className="truncate font-mono text-white">
-                  {activeServer}
+                  {getServerLabel(activeServer)}
                 </span>
                 <span className="shrink-0 opacity-80">▾</span>
               </button>
@@ -2289,29 +2565,113 @@ export function PlayerPage() {
                 </div>
               )}
             </div>
+
+            {/* Live Direct Quality & Telemetry Badges */}
+            {activeServer === "rabbittv-direct" && (
+              <span
+                className={`hidden md:inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider shrink-0 ${themeTokens.badge}`}
+                title="Direct TMDB/IMDb stream feed"
+              >
+                ⚡{" "}
+                {directProbe?.status === "verified" && directProbe.quality
+                  ? `DIRECT • ${directProbe.quality}`
+                  : "DIRECT HD"}
+              </span>
+            )}
+            {liveProgressPct !== null && liveProgressPct > 0 && (
+              <span
+                className={`hidden sm:inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold shrink-0 ${themeTokens.subtleBadge}`}
+                title="Synced Watch History progress"
+              >
+                ▶ {liveProgressPct}%
+              </span>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              iframeLoadedRef.current = false;
-              setServerStatus("connecting");
-              setPlayerReloadNonce((n) => n + 1);
-              showToast(`↻ Reloading ${activeServer}...`);
-            }}
-            className={`rabtv-plr-btn relative z-10 shrink-0 rounded-xl text-white ${
-              largeButtons ? "px-3.5 py-2 text-xs" : "px-3 py-1.5 text-[11px]"
-            } font-bold whitespace-nowrap transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
-            title="Reload current stream"
-          >
-            <span
-              className="rabtv-plr-btn-art rabtv-plr-btn-art--idle"
-              aria-hidden="true"
-              style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_IDLE_URL})` }}
-            />
-            <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
-            <span className="rabtv-plr-btn-label">↻ Reload</span>
-          </button>
+          <div className="relative z-10 flex items-center gap-1.5 shrink-0 flex-wrap">
+            {activeServer === "rabbittv-direct" && resolvedImdbId && (
+              <button
+                type="button"
+                onClick={handleToggleDirectIdMode}
+                className={`rabtv-plr-btn shrink-0 rounded-xl text-white ${
+                  largeButtons ? "px-3 py-2 text-xs" : "px-2.5 py-1.5 text-[11px]"
+                } font-bold whitespace-nowrap transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+                title="Toggle Rabbit TV Direct lookup between TMDB ID and IMDb ID"
+              >
+                <span
+                  className={`rabtv-plr-btn-art ${
+                    directIdMode === "imdb"
+                      ? "rabtv-plr-btn-art--active"
+                      : "rabtv-plr-btn-art--idle"
+                  }`}
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: `url(${
+                      directIdMode === "imdb"
+                        ? RABBIT_TV_PLAYER_ACTION_ACTIVE_URL
+                        : RABBIT_TV_PLAYER_ACTION_IDLE_URL
+                    })`,
+                  }}
+                />
+                <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                <span className="rabtv-plr-btn-label">
+                  ID: {directIdMode.toUpperCase()}
+                </span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleToggleStrictLock}
+              className={`rabtv-plr-btn shrink-0 rounded-xl text-white ${
+                largeButtons ? "px-3 py-2 text-xs" : "px-2.5 py-1.5 text-[11px]"
+              } font-bold whitespace-nowrap transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+              title="Toggle strict iframe sandbox lock (blocks all popups & redirects)"
+            >
+              <span
+                className={`rabtv-plr-btn-art ${
+                  strictIframeLock
+                    ? "rabtv-plr-btn-art--active"
+                    : "rabtv-plr-btn-art--idle"
+                }`}
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${
+                    strictIframeLock
+                      ? RABBIT_TV_PLAYER_ACTION_ACTIVE_URL
+                      : RABBIT_TV_PLAYER_ACTION_IDLE_URL
+                  })`,
+                }}
+              />
+              <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-plr-btn-label">
+                🛡️ {strictIframeLock ? "Lock ON" : "Clean Lock"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                iframeLoadedRef.current = false;
+                triedImdbFallbackRef.current = false;
+                setServerStatus("connecting");
+                setPlayerReloadNonce((n) => n + 1);
+                showToast(`↻ Reloading ${getServerLabel(activeServer)}...`);
+              }}
+              className={`rabtv-plr-btn shrink-0 rounded-xl text-white ${
+                largeButtons ? "px-3.5 py-2 text-xs" : "px-3 py-1.5 text-[11px]"
+              } font-bold whitespace-nowrap transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+              title="Reload current stream"
+            >
+              <span
+                className="rabtv-plr-btn-art rabtv-plr-btn-art--idle"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_IDLE_URL})` }}
+              />
+              <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-plr-btn-label">↻ Reload</span>
+            </button>
+          </div>
         </div>
 
         {/* Theater-Grade Video Player Container (Framed by rabbit-tv-player-overlay-frame.jpg) */}
@@ -2329,22 +2689,83 @@ export function PlayerPage() {
             style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_OVERLAY_FRAME_URL})` }}
           />
           <iframe
-            key={`stable-player-${activeServer}-${mediaId}-${season}-${episode}-${playerReloadNonce}`}
+            key={`stable-player-${activeServer}-${directIdMode}-${strictIframeLock ? "locked" : "open"}-${mediaId}-${season}-${episode}-${playerReloadNonce}`}
             src={embedUrl}
-            referrerPolicy="origin"
+            title={`${title} — ${getServerLabel(activeServer)}`}
+            loading="eager"
+            referrerPolicy={
+              activeServer === "rabbittv-direct" ? "no-referrer" : "origin"
+            }
+            {...(strictIframeLock
+              ? {
+                  sandbox:
+                    "allow-scripts allow-same-origin allow-forms allow-presentation allow-fullscreen",
+                }
+              : {})}
             onLoad={() => {
               iframeLoadedRef.current = true;
               setServerStatus("ready");
             }}
             onError={() => {
               if (!iframeLoadedRef.current) {
-                triggerBackgroundFailover(`${activeServer} failed`);
+                triggerBackgroundFailover(`${getServerLabel(activeServer)} failed`);
               }
             }}
             className="relative z-10 h-full w-full rounded-xl sm:rounded-2xl border-0 bg-black"
             allowFullScreen
-            allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
+            allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope; fullscreen"
           ></iframe>
+
+          {/* Auto-Play Next Episode Countdown Overlay (triggered by verified PLAYER_EVENT ended) */}
+          {autoNextCountdown !== null && inferredMediaType === "tv" && canGoNextEpisode && (
+            <div className="rabtv-vidsrc-protected absolute inset-0 z-30 flex items-center justify-center bg-black/82 backdrop-blur-md p-4">
+              <div
+                className={`max-w-sm w-full rounded-3xl border p-5 text-center space-y-3 shadow-2xl ${themeTokens.surfacePanel}`}
+              >
+                <span
+                  className={`inline-block rounded-full border px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-widest ${themeTokens.badge}`}
+                >
+                  Up Next in {autoNextCountdown}s
+                </span>
+                <p className="text-sm sm:text-base font-black text-white">
+                  {episode >= currentSeasonMaxEp && nextSeasonObj
+                    ? `Season ${nextSeasonObj.season_number} • Episode 1`
+                    : `Season ${season} • Episode ${episode + 1}`}
+                </p>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAutoNextCountdown(null);
+                      handleNextEpisode();
+                    }}
+                    className={`rabtv-plr-btn rounded-xl px-4 py-2 text-xs font-extrabold text-white cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+                  >
+                    <span
+                      className="rabtv-plr-btn-art rabtv-plr-btn-art--primary"
+                      aria-hidden="true"
+                      style={{ backgroundImage: `url(${RABBIT_TV_PLAY_PRIMARY_URL})` }}
+                    />
+                    <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                    <span className="rabtv-plr-btn-label">▶ Play Now</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAutoNextCountdown(null)}
+                    className={`rabtv-plr-btn rounded-xl px-4 py-2 text-xs font-bold text-white cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+                  >
+                    <span
+                      className="rabtv-plr-btn-art rabtv-plr-btn-art--idle"
+                      aria-hidden="true"
+                      style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_IDLE_URL})` }}
+                    />
+                    <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                    <span className="rabtv-plr-btn-label">✕ Stay Here</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Unified High-End Cinema Metadata, Quick Actions & Overview Panel (rabbit-tv-player-metadata-panel-background.jpg) */}
