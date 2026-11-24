@@ -263,7 +263,7 @@ const HOME_VIEWPORT_STYLES = `
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.72;
+    opacity: 0.64;
     filter: var(--rabtv-idx-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 88% 82% at 50% 50%,
@@ -298,7 +298,7 @@ const HOME_VIEWPORT_STYLES = `
   .rabtv-home-action-plate .rabtv-art-bg,
   .rabtv-home-section-plate .rabtv-art-bg {
     background-size: 100% 100%;
-    opacity: 0.84;
+    opacity: 0.74;
     filter: var(--rabtv-idx-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 86% 78% at 50% 50%,
@@ -356,7 +356,7 @@ const HOME_VIEWPORT_STYLES = `
   /* Recessed Scrollable Pill Track (rabbit-tv-pill-track-background.jpg) */
   .rabtv-home-pill-track {
     position: relative;
-    background-color: #0c0a09;
+    background-color: rgba(12, 10, 9, 0.74);
     overflow: hidden;
     contain: layout paint;
   }
@@ -367,7 +367,7 @@ const HOME_VIEWPORT_STYLES = `
     background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.78;
+    opacity: 0.68;
     filter: var(--rabtv-idx-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 94% 84% at 50% 50%,
@@ -2265,7 +2265,7 @@ function Home() {
         {/* Top Navigation Bar with Recessed Pill Track & Active/Inactive Pill Plates */}
         <div className="sticky top-0 z-30 mb-4 mt-1 px-2 sm:px-4 py-2 flex justify-center">
           <div
-            className={`rabtv-home-pill-track relative max-w-6xl w-full flex items-center gap-1.5 rounded-2xl border px-2 py-2 ${themeStyles.navShell}`}
+            className={`rabtv-home-pill-track relative max-w-7xl w-full flex items-center gap-1.5 rounded-2xl border px-2 py-2 ${themeStyles.navShell}`}
           >
             <div
               className="rabtv-home-pill-track-bg"
@@ -2430,7 +2430,7 @@ function Home() {
           {activeHeroItem && heroDetailsSearch && heroPlayerSearch ? (
             <div
               data-tour="hero-banner"
-              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] flex flex-col group ${themeStyles.heroContainer}`}
+              className={`mb-6 w-full max-w-7xl overflow-hidden rounded-[28px] flex flex-col group ${themeStyles.heroContainer}`}
             >
               <Link
                 to="/details"
@@ -2604,7 +2604,7 @@ function Home() {
             </div>
           ) : (
             <section
-              className={`mb-6 w-full max-w-6xl overflow-hidden rounded-[28px] bg-gradient-to-br ${themeStyles.cardGradient} border ${themeStyles.dividerBorder} shadow-2xl relative h-[280px] sm:h-[340px] flex flex-col items-center justify-center backdrop-blur-md`}
+              className={`mb-6 w-full max-w-7xl overflow-hidden rounded-[28px] bg-gradient-to-br ${themeStyles.cardGradient} border ${themeStyles.dividerBorder} shadow-2xl relative h-[280px] sm:h-[340px] flex flex-col items-center justify-center backdrop-blur-md`}
             >
               <div className={`text-center px-4 ${themeStyles.mutedText}`}>
                 {loading
