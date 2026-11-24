@@ -108,7 +108,7 @@ const SEARCH_PAGE_STYLES = `
   /* Main Search Control Deck (Female Rabbit Detective in Bottom-Right) */
   .rabtv-srch-deck {
     position: relative;
-    background-color: #0c0a09;
+    background-color: rgba(12, 10, 9, 0.74);
     overflow: visible;
     transition: box-shadow 260ms ease;
   }
@@ -124,7 +124,7 @@ const SEARCH_PAGE_STYLES = `
     background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.84;
+    opacity: 0.74;
     filter: var(--rabtv-srch-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 96% 94% at 50% 50%,
@@ -338,7 +338,7 @@ const SEARCH_PAGE_STYLES = `
     background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.92;
+    opacity: 0.82;
     filter: var(--rabtv-srch-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 96% 90% at 50% 50%,
@@ -1312,9 +1312,20 @@ function SearchPage() {
     () => getHardwareLimits().effectiveMode === "low"
   );
 
+  const noticeTimerRef = useRef<number | null>(null);
   const showNotice = useCallback((msg: string) => {
     setToastNotice(msg);
-    window.setTimeout(() => setToastNotice(null), 3200);
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => {
+      setToastNotice(null);
+      noticeTimerRef.current = null;
+    }, 3200);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
