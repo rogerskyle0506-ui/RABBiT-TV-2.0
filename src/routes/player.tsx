@@ -175,8 +175,8 @@ const RABBIT_TV_PLAYER_MIRROR_BAR_URL =
 const RABBIT_TV_PLAYER_OVERLAY_FRAME_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-overlay-frame.jpg";
 
-const BACK_TO_HOME_BTN_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
+const RABBIT_TV_HOME_BTN_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-home-primary.jpg";
 
 const TV_DETAILS_BTN_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/TvDetails.png";
@@ -219,10 +219,19 @@ const PLAYER_VIEWPORT_STYLES = `
     --rabtv-plr-play-filter: hue-rotate(-150deg) saturate(1.16) brightness(1.06);
   }
 
+  /* Landscape Full-Width Top Utility Wrapper */
+  @media (min-width: 640px) {
+    .rabtv-plr-action-plate {
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 0 3.5% !important;
+    }
+  }
+
   /* Top Dual-Wrapper Industrial Backplate (rabbit-tv-button-wrapper-background.jpg) */
   .rabtv-plr-action-plate .rabtv-art-bg {
     background-size: 100% 100%;
-    opacity: 0.84;
+    opacity: 0.74;
     filter: var(--rabtv-plr-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 86% 78% at 50% 50%,
@@ -241,7 +250,7 @@ const PLAYER_VIEWPORT_STYLES = `
   /* TV Control Deck & Mirror Switcher Bar (overflow: visible so dropdowns never clip) */
   .rabtv-plr-deck {
     position: relative;
-    background-color: #0c0a09;
+    background-color: rgba(12, 10, 9, 0.74);
     overflow: visible;
   }
 
@@ -252,7 +261,7 @@ const PLAYER_VIEWPORT_STYLES = `
     background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.82;
+    opacity: 0.72;
     filter: var(--rabtv-plr-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 95% 88% at 50% 50%,
@@ -304,7 +313,7 @@ const PLAYER_VIEWPORT_STYLES = `
   .rabtv-plr-meta-panel {
     position: relative;
     overflow: hidden;
-    background-color: #0c0a09;
+    background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
   }
 
@@ -314,7 +323,7 @@ const PLAYER_VIEWPORT_STYLES = `
     background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.80;
+    opacity: 0.70;
     filter: var(--rabtv-plr-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 96% 94% at 50% 50%,
@@ -449,7 +458,7 @@ const PLAYER_VIEWPORT_STYLES = `
     background-size: 100% 100%;
     background-repeat: no-repeat;
     background-position: center center;
-    opacity: 0.84;
+    opacity: 0.74;
     filter: var(--rabtv-plr-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 86% 78% at 50% 50%,
@@ -1030,9 +1039,20 @@ export function PlayerPage() {
   const seasonRef = useRef<HTMLDivElement>(null);
   const episodeRef = useRef<HTMLDivElement>(null);
 
+  const toastTimerRef = useRef<number | null>(null);
   const showToast = useCallback((msg: string) => {
     setActionToast(msg);
-    window.setTimeout(() => setActionToast(null), 3200);
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => {
+      setActionToast(null);
+      toastTimerRef.current = null;
+    }, 3200);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    };
   }, []);
 
   // Pause background lobby radio whenever entering or switching playback
@@ -1776,13 +1796,15 @@ export function PlayerPage() {
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-wrap-art-btn rabtv-wrap-art-btn--left rabtv-wrap-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+              className={`rabtv-wrap-pill-btn rabtv-plr-btn font-extrabold text-white transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
             >
-              <img
-                src={BACK_TO_HOME_BTN_URL}
-                alt="Back to Home"
-                decoding="async"
+              <span
+                className="rabtv-plr-btn-art rabtv-plr-btn-art--idle"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${RABBIT_TV_HOME_BTN_URL})` }}
               />
+              <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-plr-btn-label truncate">← Back to Home</span>
             </Link>
 
             {inferredMediaType === "tv" ? (
