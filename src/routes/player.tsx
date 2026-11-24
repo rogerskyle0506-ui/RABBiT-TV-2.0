@@ -139,8 +139,41 @@ function buildEmbedUrl(
   }
 }
 
-const BUTTON_WRAPPER_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
+const RABBIT_TV_BUTTON_WRAPPER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-wrapper-background.jpg";
+
+const RABBIT_TV_PLAY_PRIMARY_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-play-primary.jpg";
+
+const RABBIT_TV_PILL_INACTIVE_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-inactive-dark.jpg";
+
+const RABBIT_TV_PILL_ACTIVE_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-active-crimson.jpg";
+
+const RABBIT_TV_PLAYER_ACTION_ACTIVE_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-button-action-active.jpg";
+
+const RABBIT_TV_PLAYER_ACTION_DANGER_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-button-action-danger.jpg";
+
+const RABBIT_TV_PLAYER_ACTION_IDLE_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-button-action-idle.jpg";
+
+const RABBIT_TV_PLAYER_LIGHTS_OUT_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-button-lights-out.jpg";
+
+const RABBIT_TV_PLAYER_CONTROL_DECK_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-control-deck-bg.jpg";
+
+const RABBIT_TV_PLAYER_METADATA_PANEL_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-metadata-panel-background.jpg";
+
+const RABBIT_TV_PLAYER_MIRROR_BAR_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-mirror-bar-background.jpg";
+
+const RABBIT_TV_PLAYER_OVERLAY_FRAME_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-overlay-frame.jpg";
 
 const BACK_TO_HOME_BTN_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
@@ -154,6 +187,246 @@ const TV_DETAILS_BTN_URL =
  * and recommended catalog header across portrait, landscape, tablet, desktop & TV.
  */
 const PLAYER_VIEWPORT_STYLES = `
+  /* 6-Theme Hue-Shift Tokens Synced 1:1 with index.tsx & details.tsx */
+  :root,
+  html[data-theme="violet"] {
+    --rabtv-plr-plate-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02);
+    --rabtv-plr-play-filter: hue-rotate(-74deg) saturate(1.16) brightness(1.05);
+  }
+
+  html[data-theme="red"] {
+    --rabtv-plr-plate-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0);
+    --rabtv-plr-play-filter: hue-rotate(0deg) saturate(1.14) brightness(1.04);
+  }
+
+  html[data-theme="midnight"] {
+    --rabtv-plr-plate-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04);
+    --rabtv-plr-play-filter: hue-rotate(-128deg) saturate(1.18) brightness(1.06);
+  }
+
+  html[data-theme="emerald"] {
+    --rabtv-plr-plate-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02);
+    --rabtv-plr-play-filter: hue-rotate(150deg) saturate(1.15) brightness(1.04);
+  }
+
+  html[data-theme="amber"] {
+    --rabtv-plr-plate-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04);
+    --rabtv-plr-play-filter: hue-rotate(24deg) saturate(1.18) brightness(1.06);
+  }
+
+  html[data-theme="cyan"] {
+    --rabtv-plr-plate-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04);
+    --rabtv-plr-play-filter: hue-rotate(-150deg) saturate(1.16) brightness(1.06);
+  }
+
+  /* Top Dual-Wrapper Industrial Backplate (rabbit-tv-button-wrapper-background.jpg) */
+  .rabtv-plr-action-plate .rabtv-art-bg {
+    background-size: 100% 100%;
+    opacity: 0.84;
+    filter: var(--rabtv-plr-plate-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 86% 78% at 50% 50%,
+      rgba(12, 10, 9, 1) 66%,
+      rgba(12, 10, 9, 0.78) 88%,
+      rgba(12, 10, 9, 0.32) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 86% 78% at 50% 50%,
+      rgba(12, 10, 9, 1) 66%,
+      rgba(12, 10, 9, 0.78) 88%,
+      rgba(12, 10, 9, 0.32) 100%
+    );
+  }
+
+  /* TV Control Deck & Mirror Switcher Bar (overflow: visible so dropdowns never clip) */
+  .rabtv-plr-deck {
+    position: relative;
+    background-color: #0c0a09;
+    overflow: visible;
+  }
+
+  .rabtv-plr-deck-bg {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.82;
+    filter: var(--rabtv-plr-plate-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 95% 88% at 50% 50%,
+      rgba(12, 10, 9, 1) 74%,
+      rgba(12, 10, 9, 0.72) 93%,
+      rgba(12, 10, 9, 0.34) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 95% 88% at 50% 50%,
+      rgba(12, 10, 9, 1) 74%,
+      rgba(12, 10, 9, 0.72) 93%,
+      rgba(12, 10, 9, 0.34) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-plr-deck-scrim {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(12, 10, 9, 0.34) 0%, rgba(12, 10, 9, 0.50) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Video Player Decorative Frame Overlay (16:9 perimeter bezel, lighten-blended so center video is 100% unobstructed) */
+  .rabtv-plr-video-shell {
+    position: relative;
+    background-color: #0c0a09;
+    padding: clamp(6px, 1.4vw, 12px);
+    contain: layout paint;
+  }
+
+  .rabtv-plr-video-frame-art {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.92;
+    filter: var(--rabtv-plr-plate-filter);
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: lighten;
+  }
+
+  /* Cinema Metadata Panel (rabbit-tv-player-metadata-panel-background.jpg with bottom-right rabbit projector scene) */
+  .rabtv-plr-meta-panel {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+
+  .rabtv-plr-meta-panel-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.80;
+    filter: var(--rabtv-plr-plate-filter);
+    -webkit-mask-image: radial-gradient(
+      ellipse 96% 94% at 50% 50%,
+      rgba(12, 10, 9, 1) 74%,
+      rgba(12, 10, 9, 0.74) 93%,
+      rgba(12, 10, 9, 0.34) 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 96% 94% at 50% 50%,
+      rgba(12, 10, 9, 1) 74%,
+      rgba(12, 10, 9, 0.74) 93%,
+      rgba(12, 10, 9, 0.34) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-plr-meta-panel-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse 78% 76% at 38% 42%,
+      rgba(12, 10, 9, 0.56) 0%,
+      rgba(12, 10, 9, 0.36) 68%,
+      rgba(12, 10, 9, 0.24) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Tactical Action Buttons (Idle / Active / Danger / Lights-Out / Primary Play) */
+  .rabtv-plr-btn {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    box-shadow: none !important;
+    contain: layout paint;
+  }
+
+  .rabtv-plr-btn-art {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    z-index: 0;
+    transition: transform 160ms ease, filter 180ms ease, opacity 160ms ease;
+    -webkit-mask-image: radial-gradient(
+      ellipse 92% 82% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.60) 94%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 92% 82% at 50% 50%,
+      rgba(12, 10, 9, 1) 72%,
+      rgba(12, 10, 9, 0.60) 94%,
+      transparent 100%
+    );
+  }
+
+  .rabtv-plr-btn-art--idle {
+    opacity: 0.90;
+    filter: var(--rabtv-plr-plate-filter) brightness(0.96);
+  }
+
+  .rabtv-plr-btn-art--active {
+    opacity: 0.98;
+    filter: saturate(1.08) brightness(1.04);
+  }
+
+  .rabtv-plr-btn-art--danger {
+    opacity: 0.96;
+    filter: saturate(1.12) brightness(1.02);
+  }
+
+  .rabtv-plr-btn-art--lights {
+    opacity: 0.96;
+    filter: saturate(1.06) brightness(1.02);
+  }
+
+  .rabtv-plr-btn-art--primary {
+    opacity: 0.96;
+    filter: var(--rabtv-plr-play-filter);
+  }
+
+  .rabtv-plr-btn:hover .rabtv-plr-btn-art {
+    transform: scale(1.03);
+    filter: brightness(1.12) saturate(1.12);
+  }
+
+  .rabtv-plr-btn-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 76% 68% at 50% 50%, rgba(12, 10, 9, 0.44) 0%, rgba(12, 10, 9, 0.16) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-plr-btn-label {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+    text-shadow: 0 1px 4px rgba(12, 10, 9, 0.96), 0 0 10px rgba(12, 10, 9, 0.85);
+  }
+
   /* Self-contained, adblocker-safe (no "banner" keyword) blended heading ribbon for /player */
   .rabtv-plr-heading-ribbon {
     position: relative;
@@ -173,24 +446,22 @@ const PLAYER_VIEWPORT_STYLES = `
   .rabtv-plr-heading-bg {
     position: absolute;
     inset: 0;
-    background-size: 110% 188%;
+    background-size: 100% 100%;
     background-repeat: no-repeat;
     background-position: center center;
-    opacity: 0.64;
-    filter: var(--rabtv-wrap-filter, hue-rotate(-14deg) saturate(1.06));
+    opacity: 0.84;
+    filter: var(--rabtv-plr-plate-filter);
     -webkit-mask-image: radial-gradient(
-      ellipse 49% 51% at 50% 50%,
-      rgba(0, 0, 0, 0.96) 54%,
-      rgba(0, 0, 0, 0.72) 74%,
-      rgba(0, 0, 0, 0.20) 89%,
-      transparent 100%
+      ellipse 86% 78% at 50% 50%,
+      rgba(12, 10, 9, 1) 66%,
+      rgba(12, 10, 9, 0.78) 88%,
+      rgba(12, 10, 9, 0.32) 100%
     );
     mask-image: radial-gradient(
-      ellipse 49% 51% at 50% 50%,
-      rgba(0, 0, 0, 0.96) 54%,
-      rgba(0, 0, 0, 0.72) 74%,
-      rgba(0, 0, 0, 0.20) 89%,
-      transparent 100%
+      ellipse 86% 78% at 50% 50%,
+      rgba(12, 10, 9, 1) 66%,
+      rgba(12, 10, 9, 0.78) 88%,
+      rgba(12, 10, 9, 0.32) 100%
     );
     pointer-events: none;
     z-index: 0;
@@ -1477,21 +1748,27 @@ export function PlayerPage() {
         <button
           type="button"
           onClick={() => setCinemaDimMode(false)}
-          className={`rabtv-vidsrc-protected fixed top-4 right-4 z-50 rounded-full border px-4 py-2 text-xs font-extrabold shadow-2xl backdrop-blur-xl cursor-pointer transition ${themeTokens.lightsOnBtn}`}
+          className={`rabtv-vidsrc-protected rabtv-plr-btn fixed top-4 right-4 z-50 rounded-full px-4 py-2 text-xs font-extrabold text-white shadow-2xl cursor-pointer transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
         >
-          💡 Turn Lights On (Esc)
+          <span
+            className="rabtv-plr-btn-art rabtv-plr-btn-art--lights"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_LIGHTS_OUT_URL})` }}
+          />
+          <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+          <span className="rabtv-plr-btn-label">💡 Turn Lights On (Esc)</span>
         </button>
       )}
 
       <div className="relative z-10 max-w-6xl mx-auto flex flex-col gap-4 sm:gap-5 min-w-0">
         {/* Top Navigation Row: Compact Theme-Tuned Wrapper — Back to Home Left, Details Right */}
         <div className="rabtv-vidsrc-protected rabtv-page-top-bar">
-          <div className="rabtv-vidsrc-protected rabtv-dual-wrapper">
+          <div className="rabtv-vidsrc-protected rabtv-dual-wrapper rabtv-plr-action-plate">
             <div
               className="rabtv-art-bg"
               aria-hidden="true"
               style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                backgroundImage: `url(${RABBIT_TV_BUTTON_WRAPPER_URL})`,
               }}
             />
             <Link
@@ -1528,11 +1805,15 @@ export function PlayerPage() {
                 onClick={handleReturnToDetails}
                 aria-label="Back to Movie Details"
                 title="Back to Movie Details"
-                className={`rabtv-wrap-pill-btn border backdrop-blur-md font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.backCapsule} ${themeTokens.ring}`}
+                className={`rabtv-wrap-pill-btn rabtv-plr-btn font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
               >
-                <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                  Movie Details
-                </span>
+                <span
+                  className="rabtv-plr-btn-art rabtv-plr-btn-art--idle"
+                  aria-hidden="true"
+                  style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_IDLE_URL})` }}
+                />
+                <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                <span className="rabtv-plr-btn-label truncate">Movie Details</span>
               </button>
             )}
           </div>
@@ -1553,10 +1834,16 @@ export function PlayerPage() {
             <button
               type="button"
               onClick={() => setCinemaDimMode((d) => !d)}
-              className={`rounded-full border backdrop-blur-md ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
+              className={`rabtv-plr-btn rounded-full ${pillBtnPadding} font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
               title="Dim surroundings around the player (L)"
             >
-              💡 Lights Out
+              <span
+                className="rabtv-plr-btn-art rabtv-plr-btn-art--lights"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_LIGHTS_OUT_URL})` }}
+              />
+              <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-plr-btn-label">💡 Lights Out</span>
             </button>
           </div>
         </div>
@@ -1570,15 +1857,19 @@ export function PlayerPage() {
           </div>
         )}
 
-        {/* TV Season & Episode Control Deck */}
+        {/* TV Season & Episode Control Deck (rabbit-tv-player-control-deck-bg.jpg) */}
         {inferredMediaType === "tv" && (
           <div
             data-tour="player-controls"
-            className={`w-full flex flex-col gap-3 rounded-3xl border p-3.5 sm:p-5 ${
-              isLowRam ? "" : "backdrop-blur-md"
-            } relative z-20 ${themeTokens.surfacePanel}`}
+            className={`rabtv-plr-deck w-full flex flex-col gap-3 rounded-3xl border p-3.5 sm:p-5 relative z-20 ${themeTokens.surfacePanel}`}
           >
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3.5">
+            <div
+              className="rabtv-plr-deck-bg"
+              aria-hidden="true"
+              style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_CONTROL_DECK_URL})` }}
+            />
+            <div className="rabtv-plr-deck-scrim" aria-hidden="true" />
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-3.5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-semibold relative flex-1 min-w-0">
                 {/* Season Selector */}
                 <div
@@ -1597,18 +1888,32 @@ export function PlayerPage() {
                       setIsSeasonOpen(!isSeasonOpen);
                       setIsEpisodeOpen(false);
                     }}
-                    className={`flex items-center justify-between w-full gap-3 rounded-xl border px-3.5 ${
+                    className={`rabtv-plr-btn flex items-center justify-between w-full gap-3 rounded-xl px-3.5 text-white ${
                       largeButtons ? "py-3 text-sm" : "py-2.5 text-xs sm:text-sm"
                     } font-bold shadow-lg focus:outline-none focus:ring-4 ${
-                      themeTokens.selectBtn
-                    } ${themeTokens.ring} transition cursor-pointer`}
+                      themeTokens.ring
+                    } transition cursor-pointer`}
                   >
-                    <span className="truncate">
+                    <span
+                      className={`rabtv-plr-btn-art ${
+                        isSeasonOpen ? "rabtv-plr-btn-art--primary" : "rabtv-plr-btn-art--idle"
+                      }`}
+                      aria-hidden="true"
+                      style={{
+                        backgroundImage: `url(${
+                          isSeasonOpen
+                            ? RABBIT_TV_PILL_ACTIVE_URL
+                            : RABBIT_TV_PILL_INACTIVE_URL
+                        })`,
+                      }}
+                    />
+                    <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                    <span className="relative z-10 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                       {currentSeasonObj
                         ? currentSeasonObj.name
                         : `Season ${season}`}
                     </span>
-                    <span className="shrink-0">▾</span>
+                    <span className="relative z-10 shrink-0">▾</span>
                   </button>
                   {isSeasonOpen && (
                     <div
@@ -1649,18 +1954,32 @@ export function PlayerPage() {
                       setIsEpisodeOpen(!isEpisodeOpen);
                       setIsSeasonOpen(false);
                     }}
-                    className={`flex items-center justify-between w-full gap-3 rounded-xl border px-3.5 ${
+                    className={`rabtv-plr-btn flex items-center justify-between w-full gap-3 rounded-xl px-3.5 text-white ${
                       largeButtons ? "py-3 text-sm" : "py-2.5 text-xs sm:text-sm"
                     } font-bold shadow-lg focus:outline-none focus:ring-4 ${
-                      themeTokens.selectBtn
-                    } ${themeTokens.ring} transition cursor-pointer`}
+                      themeTokens.ring
+                    } transition cursor-pointer`}
                   >
-                    <span className="truncate">
+                    <span
+                      className={`rabtv-plr-btn-art ${
+                        isEpisodeOpen ? "rabtv-plr-btn-art--primary" : "rabtv-plr-btn-art--idle"
+                      }`}
+                      aria-hidden="true"
+                      style={{
+                        backgroundImage: `url(${
+                          isEpisodeOpen
+                            ? RABBIT_TV_PILL_ACTIVE_URL
+                            : RABBIT_TV_PILL_INACTIVE_URL
+                        })`,
+                      }}
+                    />
+                    <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                    <span className="relative z-10 truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                       {currentEpisodeObj
                         ? `Ep ${currentEpisodeObj.episode_number}: ${currentEpisodeObj.name}`
                         : `Episode ${episode}`}
                     </span>
-                    <span className="shrink-0">▾</span>
+                    <span className="relative z-10 shrink-0">▾</span>
                   </button>
                   {isEpisodeOpen && (
                     <div
@@ -1714,43 +2033,73 @@ export function PlayerPage() {
                   type="button"
                   onClick={handlePrevEpisode}
                   disabled={!canGoPrevEpisode}
-                  className={`rounded-xl border ${
+                  className={`rabtv-plr-btn rounded-xl text-white ${
                     largeButtons ? "px-4 py-3 text-sm" : "px-3.5 py-2.5 text-xs"
-                  } font-bold transition disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
-                    themeTokens.btnSecondary
-                  } ${themeTokens.ring}`}
+                  } font-bold transition hover:scale-[1.03] active:scale-95 disabled:opacity-40 disabled:pointer-events-none cursor-pointer focus:outline-none focus:ring-2 ${
+                    themeTokens.ring
+                  }`}
                 >
-                  ◀ Prev
+                  <span
+                    className="rabtv-plr-btn-art rabtv-plr-btn-art--idle"
+                    aria-hidden="true"
+                    style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_IDLE_URL})` }}
+                  />
+                  <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                  <span className="rabtv-plr-btn-label">◀ Prev</span>
                 </button>
                 <button
                   type="button"
                   data-tour="player-next-episode"
                   onClick={handleNextEpisode}
                   disabled={!canGoNextEpisode}
-                  className={`rounded-xl ${
+                  className={`rabtv-plr-btn rounded-xl text-white ${
                     largeButtons ? "px-5 py-3 text-sm" : "px-4 py-2.5 text-xs"
-                  } font-extrabold tracking-wide transition transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 ${
-                    themeTokens.nextBtn
-                  } ${themeTokens.ring}`}
+                  } font-extrabold tracking-wide transition transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-40 disabled:pointer-events-none cursor-pointer focus:outline-none focus:ring-2 ${
+                    themeTokens.ring
+                  }`}
                 >
-                  {episode >= currentSeasonMaxEp && nextSeasonObj
-                    ? `Season ${nextSeasonObj.season_number} Ep 1 ▶`
-                    : canGoNextEpisode
-                      ? "Next Episode ▶"
-                      : "Season Finale"}
+                  <span
+                    className="rabtv-plr-btn-art rabtv-plr-btn-art--primary"
+                    aria-hidden="true"
+                    style={{ backgroundImage: `url(${RABBIT_TV_PLAY_PRIMARY_URL})` }}
+                  />
+                  <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                  <span className="rabtv-plr-btn-label">
+                    {episode >= currentSeasonMaxEp && nextSeasonObj
+                      ? `Season ${nextSeasonObj.season_number} Ep 1 ▶`
+                      : canGoNextEpisode
+                        ? "Next Episode ▶"
+                        : "Season Finale"}
+                  </span>
                 </button>
 
                 {seasonEpisodes.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setShowEpisodeDrawer((v) => !v)}
-                    className={`rounded-xl border ${
+                    className={`rabtv-plr-btn rounded-xl text-white ${
                       largeButtons ? "px-4 py-3 text-sm" : "px-3 py-2.5 text-xs"
-                    } font-bold transition cursor-pointer focus:outline-none focus:ring-2 ${
-                      themeTokens.btnSecondary
-                    } ${themeTokens.ring}`}
+                    } font-bold transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${
+                      themeTokens.ring
+                    }`}
                   >
-                    📺 {showEpisodeDrawer ? "Hide Guide" : "Episodes"}
+                    <span
+                      className={`rabtv-plr-btn-art ${
+                        showEpisodeDrawer ? "rabtv-plr-btn-art--active" : "rabtv-plr-btn-art--idle"
+                      }`}
+                      aria-hidden="true"
+                      style={{
+                        backgroundImage: `url(${
+                          showEpisodeDrawer
+                            ? RABBIT_TV_PLAYER_ACTION_ACTIVE_URL
+                            : RABBIT_TV_PLAYER_ACTION_IDLE_URL
+                        })`,
+                      }}
+                    />
+                    <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                    <span className="rabtv-plr-btn-label">
+                      📺 {showEpisodeDrawer ? "Hide Guide" : "Episodes"}
+                    </span>
                   </button>
                 )}
 
@@ -1774,7 +2123,7 @@ export function PlayerPage() {
             {/* Expandable Visual Episode Guide Strip */}
             {showEpisodeDrawer && seasonEpisodes.length > 0 && (
               <div
-                className={`pt-3 border-t grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-none ${themeTokens.dividerBorder}`}
+                className={`relative z-10 pt-3 border-t grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-none ${themeTokens.dividerBorder}`}
               >
                 {seasonEpisodes.map((ep: any) => {
                   const isActive = ep.episode_number === episode;
@@ -1839,14 +2188,18 @@ export function PlayerPage() {
           </div>
         )}
 
-        {/* Background Auto-Failover Stream Mirror Bar + Manual Dropdown Menu */}
+        {/* Background Auto-Failover Stream Mirror Bar (rabbit-tv-player-mirror-bar-background.jpg) */}
         <div
           data-tour="server-switcher"
-          className={`relative z-30 w-full rounded-2xl border px-3 py-2 flex flex-wrap items-center justify-between gap-2 ${
-            isLowRam ? "" : "backdrop-blur-md"
-          } ${themeTokens.surfacePanel}`}
+          className={`rabtv-plr-deck relative z-30 w-full rounded-2xl border px-3 py-2 flex flex-wrap items-center justify-between gap-2 ${themeTokens.surfacePanel}`}
         >
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+          <div
+            className="rabtv-plr-deck-bg"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_MIRROR_BAR_URL})` }}
+          />
+          <div className="rabtv-plr-deck-scrim" aria-hidden="true" />
+          <div className="relative z-10 flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
             <span
               className={`h-2 w-2 rounded-full shrink-0 ${
                 serverStatus === "ready"
@@ -1924,24 +2277,35 @@ export function PlayerPage() {
               setPlayerReloadNonce((n) => n + 1);
               showToast(`↻ Reloading ${activeServer}...`);
             }}
-            className={`shrink-0 rounded-xl border ${
+            className={`rabtv-plr-btn relative z-10 shrink-0 rounded-xl text-white ${
               largeButtons ? "px-3.5 py-2 text-xs" : "px-3 py-1.5 text-[11px]"
-            } font-bold whitespace-nowrap transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
+            } font-bold whitespace-nowrap transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
             title="Reload current stream"
           >
-            ↻ Reload
+            <span
+              className="rabtv-plr-btn-art rabtv-plr-btn-art--idle"
+              aria-hidden="true"
+              style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_IDLE_URL})` }}
+            />
+            <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+            <span className="rabtv-plr-btn-label">↻ Reload</span>
           </button>
         </div>
 
-        {/* Theater-Grade Video Player Container */}
+        {/* Theater-Grade Video Player Container (Framed by rabbit-tv-player-overlay-frame.jpg) */}
         <div
           data-tour="video-player"
-          className={`video-player-container relative w-full mx-auto aspect-video max-h-[75dvh] overflow-hidden rounded-2xl sm:rounded-3xl bg-black border ${
+          className={`video-player-container rabtv-plr-video-shell relative w-full mx-auto aspect-video max-h-[75dvh] overflow-hidden rounded-2xl sm:rounded-3xl border ${
             themeTokens.playerFrame
           } ${cinemaDimMode ? "z-40" : "z-10"} ${
             glowOff ? "shadow-2xl" : themeTokens.playerGlow
           }`}
         >
+          <div
+            className="rabtv-plr-video-frame-art"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_OVERLAY_FRAME_URL})` }}
+          />
           <iframe
             key={`stable-player-${activeServer}-${mediaId}-${season}-${episode}-${playerReloadNonce}`}
             src={embedUrl}
@@ -1955,19 +2319,24 @@ export function PlayerPage() {
                 triggerBackgroundFailover(`${activeServer} failed`);
               }
             }}
-            className="h-full w-full border-0"
+            className="relative z-10 h-full w-full rounded-xl sm:rounded-2xl border-0 bg-black"
             allowFullScreen
             allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope"
           ></iframe>
         </div>
 
-        {/* Unified High-End Cinema Metadata, Quick Actions & Overview Panel */}
+        {/* Unified High-End Cinema Metadata, Quick Actions & Overview Panel (rabbit-tv-player-metadata-panel-background.jpg) */}
         <div
           data-tour="details-metadata"
-          className={`relative overflow-hidden w-full rounded-3xl border ${
-            isLowRam ? "" : "backdrop-blur-md"
-          } p-4 sm:p-7 flex flex-col gap-4 ${themeTokens.surfacePanel}`}
+          className={`rabtv-plr-meta-panel w-full rounded-3xl border p-4 sm:p-7 ${themeTokens.surfacePanel}`}
         >
+          <div
+            className="rabtv-plr-meta-panel-bg"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_METADATA_PANEL_URL})` }}
+          />
+          <div className="rabtv-plr-meta-panel-scrim" aria-hidden="true" />
+          <div className="relative z-10 flex flex-col gap-4">
           <div
             className={`flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-4 ${themeTokens.dividerBorder}`}
           >
@@ -2030,55 +2399,99 @@ export function PlayerPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-tour="imdb-link"
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition transform hover:scale-105 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
+                className={`rabtv-plr-btn inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-extrabold text-white transition transform hover:scale-105 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
                 title="View Official IMDb Listing"
               >
-                <span>⭐ IMDb</span>
+                <span
+                  className="rabtv-plr-btn-art rabtv-plr-btn-art--idle"
+                  aria-hidden="true"
+                  style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_IDLE_URL})` }}
+                />
+                <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+                <span className="rabtv-plr-btn-label">⭐ IMDb</span>
               </a>
             </div>
           </div>
 
-          {/* Cinema Quick Actions Toolbar (My List, Mark Watched, Report Broken, Dislike) */}
+          {/* Cinema Quick Actions Toolbar (Idle / Active / Danger Tactical Plates) */}
           <div className="flex flex-wrap items-center gap-2 pb-1">
             <button
               type="button"
               onClick={handleToggleMyList}
-              className={`rounded-xl border ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${
-                inMyList ? themeTokens.btnActivePill : themeTokens.btnSecondary
-              } ${themeTokens.ring}`}
+              className={`rabtv-plr-btn rounded-xl ${pillBtnPadding} font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
             >
-              {inMyList ? "✓ In My List" : "🔖 Add to My List"}
+              <span
+                className={`rabtv-plr-btn-art ${
+                  inMyList ? "rabtv-plr-btn-art--active" : "rabtv-plr-btn-art--idle"
+                }`}
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${
+                    inMyList
+                      ? RABBIT_TV_PLAYER_ACTION_ACTIVE_URL
+                      : RABBIT_TV_PLAYER_ACTION_IDLE_URL
+                  })`,
+                }}
+              />
+              <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-plr-btn-label">
+                {inMyList ? "✓ In My List" : "🔖 Add to My List"}
+              </span>
             </button>
 
             <button
               type="button"
               onClick={handleToggleWatched}
-              className={`rounded-xl border ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${
-                isCurrentItemWatched
-                  ? "bg-emerald-500/25 border-emerald-400/60 text-emerald-200"
-                  : themeTokens.btnSecondary
-              } ${themeTokens.ring}`}
+              className={`rabtv-plr-btn rounded-xl ${pillBtnPadding} font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
             >
-              {isCurrentItemWatched ? "👁️ ✓ Watched" : "👁️ Mark Watched"}
+              <span
+                className={`rabtv-plr-btn-art ${
+                  isCurrentItemWatched ? "rabtv-plr-btn-art--active" : "rabtv-plr-btn-art--idle"
+                }`}
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${
+                    isCurrentItemWatched
+                      ? RABBIT_TV_PLAYER_ACTION_ACTIVE_URL
+                      : RABBIT_TV_PLAYER_ACTION_IDLE_URL
+                  })`,
+                }}
+              />
+              <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-plr-btn-label">
+                {isCurrentItemWatched ? "👁️ ✓ Watched" : "👁️ Mark Watched"}
+              </span>
             </button>
 
             <button
               type="button"
               data-tour="report-broken"
               onClick={handleReportBrokenStream}
-              className={`rounded-xl border ${pillBtnPadding} font-extrabold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
+              className={`rabtv-plr-btn rounded-xl ${pillBtnPadding} font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
               title="Report if this stream fails to load"
             >
-              🚩 Report Broken Stream
+              <span
+                className="rabtv-plr-btn-art rabtv-plr-btn-art--danger"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_DANGER_URL})` }}
+              />
+              <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-plr-btn-label">🚩 Report Broken Stream</span>
             </button>
 
             <button
               type="button"
               onClick={handleDislikeTitle}
-              className={`rounded-xl border ${pillBtnPadding} font-bold transition cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.ring}`}
+              className={`rabtv-plr-btn rounded-xl ${pillBtnPadding} font-bold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
               title="Hide this title from catalogs"
             >
-              👎 Dislike
+              <span
+                className="rabtv-plr-btn-art rabtv-plr-btn-art--danger"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_DANGER_URL})` }}
+              />
+              <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-plr-btn-label">👎 Dislike</span>
             </button>
           </div>
 
@@ -2098,12 +2511,7 @@ export function PlayerPage() {
             </p>
           </div>
 
-          {/* Neon Bottom Laser Accent Line */}
-          {!glowOff && (
-            <div
-              className={`absolute inset-x-6 bottom-0 h-[2px] bg-gradient-to-r ${themeTokens.laserLine} opacity-85`}
-            />
-          )}
+          </div>
         </div>
 
         {/* Top Cast Strip (Zero Extra API Calls — Tap Any Actor for Filmography!) */}
@@ -2174,7 +2582,7 @@ export function PlayerPage() {
                 className="rabtv-vidsrc-protected rabtv-plr-heading-bg"
                 aria-hidden="true"
                 style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                  backgroundImage: `url(${RABBIT_TV_BUTTON_WRAPPER_URL})`,
                 }}
               />
               <h2 className="rabtv-vidsrc-protected rabtv-plr-heading-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
