@@ -52,11 +52,24 @@ import {
   type EpisodeRadarAlert,
 } from "@/lib/episode-radar";
 
-const BUTTON_WRAPPER_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png";
+const IMG_WH_TIMEMACHINE_BG =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-history-character-panel-timemachine.jpg";
+const IMG_WH_RADAR_PANEL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-history-radar-panel.jpg";
+const IMG_WH_CARD_FRAME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-history-card-frame.jpg";
+const IMG_WH_EMPTY_STATE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-history-empty-state.jpg";
 
-const BACK_TO_HOME_BTN_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png";
+// Reused Cross-Page Assets for 1:1 Consistency
+const IMG_BUTTON_WRAPPER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-wrapper-background.jpg";
+const IMG_BTN_HOME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-home-primary.jpg";
+const IMG_BTN_FILTER_IDLE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-filter-idle.jpg";
+const IMG_MODAL_PANEL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-details-panel-background.jpg";
 
 /**
  * Viewport-locked layout rules for Watch History top utility wrapper, Back to
@@ -64,7 +77,33 @@ const BACK_TO_HOME_BTN_URL =
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
 const WATCH_HISTORY_VIEWPORT_STYLES = `
-  /* Self-contained blended punk-neon wrappers & section ribbons — 1:1 synced with __root.tsx */
+  /* 6-Theme Hue-Shift Tokens Synced 1:1 with Index, Details, Player, and Search */
+  :root,
+  html[data-theme="violet"] {
+    --rabtv-wh-plate-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02);
+    --rabtv-wh-play-filter: hue-rotate(-74deg) saturate(1.16) brightness(1.05);
+  }
+  html[data-theme="red"] {
+    --rabtv-wh-plate-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0);
+    --rabtv-wh-play-filter: hue-rotate(0deg) saturate(1.14) brightness(1.04);
+  }
+  html[data-theme="midnight"] {
+    --rabtv-wh-plate-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04);
+    --rabtv-wh-play-filter: hue-rotate(-128deg) saturate(1.18) brightness(1.06);
+  }
+  html[data-theme="emerald"] {
+    --rabtv-wh-plate-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02);
+    --rabtv-wh-play-filter: hue-rotate(150deg) saturate(1.15) brightness(1.04);
+  }
+  html[data-theme="amber"] {
+    --rabtv-wh-plate-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04);
+    --rabtv-wh-play-filter: hue-rotate(24deg) saturate(1.18) brightness(1.06);
+  }
+  html[data-theme="cyan"] {
+    --rabtv-wh-plate-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04);
+    --rabtv-wh-play-filter: hue-rotate(-150deg) saturate(1.16) brightness(1.06);
+  }
+
   .rabtv-wh-top-bar {
     width: 100%;
     display: flex;
@@ -76,14 +115,14 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
 
   .rabtv-wh-dual-wrap {
     position: relative;
-    width: min(95%, 352px);
-    height: clamp(46px, 12.6vw, 56px);
-    padding: 0 9.8%;
+    width: 100%;
+    height: clamp(48px, 12.6vw, 58px);
+    padding: 0 4%;
     margin-inline: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: clamp(6px, 2vw, 14px);
+    gap: clamp(8px, 2vw, 16px);
     box-sizing: border-box;
     border-radius: 9999px;
     overflow: hidden;
@@ -93,82 +132,32 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
   .rabtv-wh-art-bg {
     position: absolute;
     inset: 0;
-    background-size: 110% 188%;
+    background-size: 100% 100%;
     background-repeat: no-repeat;
     background-position: center center;
-    opacity: 0.64;
-    filter: var(--rabtv-wrap-filter, hue-rotate(-14deg) saturate(1.06));
+    opacity: 0.74;
+    filter: var(--rabtv-wh-plate-filter);
     -webkit-mask-image: radial-gradient(
-      ellipse 49% 51% at 50% 50%,
-      rgba(0, 0, 0, 0.96) 54%,
-      rgba(0, 0, 0, 0.72) 74%,
-      rgba(0, 0, 0, 0.20) 89%,
-      transparent 100%
+      ellipse 88% 80% at 50% 50%,
+      rgba(12, 10, 9, 1) 66%,
+      rgba(12, 10, 9, 0.74) 88%,
+      rgba(12, 10, 9, 0.30) 100%
     );
     mask-image: radial-gradient(
-      ellipse 49% 51% at 50% 50%,
-      rgba(0, 0, 0, 0.96) 54%,
-      rgba(0, 0, 0, 0.72) 74%,
-      rgba(0, 0, 0, 0.20) 89%,
-      transparent 100%
+      ellipse 88% 80% at 50% 50%,
+      rgba(12, 10, 9, 1) 66%,
+      rgba(12, 10, 9, 0.74) 88%,
+      rgba(12, 10, 9, 0.30) 100%
     );
     pointer-events: none;
     z-index: 0;
   }
 
-  .rabtv-wh-home-btn {
-    position: relative;
-    z-index: 6;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    width: 47.5%;
-    height: 49%;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    overflow: hidden;
-    border-radius: 9999px;
-    transition: transform 150ms ease;
-  }
-
-  .rabtv-wh-home-btn img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: center center;
-    transform-origin: center center;
-    transform: translateX(-16%) scale(2.14);
-    display: block;
-  }
-
-  .rabtv-wh-mylist-pill {
-    position: relative;
-    z-index: 6;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    flex: 0 0 auto;
-    width: 46.5%;
-    height: 41%;
-    padding: 0 clamp(6px, 1.8vw, 11px);
-    border-radius: 9999px;
-    font-size: clamp(9.5px, 2.5vw, 12px);
-    line-height: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    box-sizing: border-box;
-    transition: transform 150ms ease;
-  }
-
   .rabtv-wh-section-ribbon {
     position: relative;
     width: 100%;
-    height: clamp(42px, 11vw, 52px);
-    padding: 0 clamp(26px, 11.5%, 56px);
+    height: clamp(44px, 11vw, 54px);
+    padding: 0 clamp(24px, 8%, 56px);
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -187,61 +176,74 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     text-align: center;
   }
 
-  @media (min-width: 640px) {
-    .rabtv-wh-dual-wrap {
-      width: min(82%, clamp(356px, 44vw, 460px));
-      height: clamp(50px, 5.2vw, 62px);
-      padding: 0 9.8%;
-    }
-
-    .rabtv-wh-home-btn {
-      width: 47.5%;
-      height: 49%;
-    }
-
-    .rabtv-wh-mylist-pill {
-      width: 46.5%;
-      height: 41%;
-      font-size: clamp(10.5px, 1.15vw, 13px);
-    }
-
-    .rabtv-wh-section-ribbon {
-      height: clamp(48px, 4.8vw, 60px);
-      padding: 0 clamp(38px, 11.5%, 72px);
-    }
-
-    .rabtv-wh-section-title {
-      font-size: clamp(15px, 1.6vw, 20.5px);
-    }
+  /* Translucent Armored Panels (Time Machine, Radar, Card Frame, Empty State, Modals) */
+  .rabtv-wh-plate {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(12, 10, 9, 0.74);
+    contain: layout paint;
   }
 
-  @media (min-width: 640px) and (max-height: 500px) {
-    .rabtv-wh-dual-wrap {
-      width: min(76%, 324px);
-      height: 42px;
-      padding: 0 9.8%;
-    }
-
-    .rabtv-wh-mylist-pill {
-      font-size: 9.5px;
-    }
-
-    .rabtv-wh-section-ribbon {
-      height: 40px;
-      padding: 0 11.5%;
-    }
+  .rabtv-wh-plate-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.72;
+    filter: var(--rabtv-wh-plate-filter);
+    pointer-events: none;
+    z-index: 0;
   }
 
-  @media (min-width: 1280px) {
-    .rabtv-wh-dual-wrap {
-      width: 472px;
-      height: 64px;
-      padding: 0 9.8%;
-    }
+  .rabtv-wh-plate-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 78% at 38% 36%, rgba(12, 10, 9, 0.56) 0%, rgba(12, 10, 9, 0.36) 72%, rgba(12, 10, 9, 0.22) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
 
-    .rabtv-wh-section-ribbon {
-      height: clamp(54px, 4vw, 64px);
-    }
+  /* Armored Image Buttons */
+  .rabtv-wh-img-btn {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    contain: layout paint;
+    transition: transform 150ms ease;
+  }
+
+  .rabtv-wh-img-btn:hover { transform: scale(1.03); }
+  .rabtv-wh-img-btn:active { transform: scale(0.97); }
+
+  .rabtv-wh-img-btn-art {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.92;
+  }
+
+  .rabtv-wh-img-btn-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 76% 68% at 50% 50%, rgba(12, 10, 9, 0.44) 0%, rgba(12, 10, 9, 0.16) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rabtv-wh-img-btn-label {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-shadow: 0 1px 4px rgba(12, 10, 9, 0.96);
   }
 `;
 
@@ -793,9 +795,20 @@ function WatchHistoryComponent() {
 
   const tickingRef = useRef(false);
 
+  const bannerTimerRef = useRef<number | null>(null);
   const showTempBanner = useCallback((msg: string) => {
     setStatusBanner(msg);
-    window.setTimeout(() => setStatusBanner(null), 3000);
+    if (bannerTimerRef.current) window.clearTimeout(bannerTimerRef.current);
+    bannerTimerRef.current = window.setTimeout(() => {
+      setStatusBanner(null);
+      bannerTimerRef.current = null;
+    }, 3000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (bannerTimerRef.current) window.clearTimeout(bannerTimerRef.current);
+    };
   }, []);
 
   const refreshData = useCallback(() => {
@@ -1132,14 +1145,14 @@ function WatchHistoryComponent() {
       )}
 
       <div className="relative z-10 max-w-7xl mx-auto space-y-5 sm:space-y-6 min-w-0">
-        {/* Top Utility Row: Compact Theme-Tuned Wrapper — Back to Home Left, My List Right */}
+        {/* Top Utility Row: Landscape Full-Width Wrapper — Back to Home Left, My List Right */}
         <div className="rabtv-wh-top-bar">
           <div className="rabtv-wh-dual-wrap">
             <div
               className="rabtv-wh-art-bg"
               aria-hidden="true"
               style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                backgroundImage: `url(${IMG_BUTTON_WRAPPER})`,
               }}
             />
             <Link
@@ -1147,23 +1160,29 @@ function WatchHistoryComponent() {
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-wh-home-btn rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
+              className={`rabtv-wh-img-btn relative z-10 rounded-full px-4 py-2 text-xs font-extrabold text-white focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
             >
-              <img
-                src={BACK_TO_HOME_BTN_URL}
-                alt="Back to Home"
-                decoding="async"
+              <span
+                className="rabtv-wh-img-btn-art"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${IMG_BTN_HOME})`, filter: "var(--rabtv-wh-plate-filter)" }}
               />
+              <span className="rabtv-wh-img-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-wh-img-btn-label">← Back to Home</span>
             </Link>
 
             <Link
               to="/"
               search={{ tab: "My List" }}
-              className={`rabtv-wh-mylist-pill border font-extrabold backdrop-blur-md transition hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${themeTokens.btnSecondary} ${themeTokens.focusRing}`}
+              className={`rabtv-wh-img-btn relative z-10 rounded-full px-4 py-2 text-xs font-extrabold text-white focus:outline-none focus:ring-2 ${themeTokens.focusRing}`}
             >
-              <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                🔖 My List
-              </span>
+              <span
+                className="rabtv-wh-img-btn-art"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${IMG_BTN_FILTER_IDLE})`, filter: "var(--rabtv-wh-plate-filter)" }}
+              />
+              <span className="rabtv-wh-img-btn-scrim" aria-hidden="true" />
+              <span className="rabtv-wh-img-btn-label">🔖 My List</span>
             </Link>
           </div>
 
@@ -1195,12 +1214,17 @@ function WatchHistoryComponent() {
           </div>
         )}
 
-        {/* Executive Watch Activity Dashboard & Filter Control Deck */}
+        {/* Executive Watch Activity Dashboard (Time Machine Character Panel) */}
         <div
-          className={`rounded-3xl border ${
-            isLowRam ? "" : "backdrop-blur-md"
-          } p-3.5 sm:p-6 space-y-4 sm:space-y-5 ${themeTokens.surfacePanel}`}
+          className={`rabtv-wh-plate rounded-3xl border p-3.5 sm:p-6 ${themeTokens.surfacePanel}`}
         >
+          <div
+            className="rabtv-wh-plate-bg"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${IMG_WH_TIMEMACHINE_BG})` }}
+          />
+          <div className="rabtv-wh-plate-scrim" aria-hidden="true" />
+          <div className="relative z-10 space-y-4 sm:space-y-5">
           {/* Header + Search & Sort Controls */}
           <div
             className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4 ${themeTokens.dividerBorder}`}
@@ -1471,16 +1495,22 @@ function WatchHistoryComponent() {
               )}
             </div>
           </div>
+          </div>
         </div>
 
-        {/* NEW EPISODE RADAR BANNER (Unseen Fresh Episodes from Your Tracked Shows) */}
+        {/* NEW EPISODE RADAR BANNER (rabbit-tv-history-radar-panel.jpg) */}
         {unseenEpisodeAlerts.length > 0 && (
           <section
             data-tour="episode-radar-banner"
-            className={`rounded-3xl border p-3.5 sm:p-5 space-y-3 ${
-              isLowRam ? "" : "backdrop-blur-md"
-            } ${themeTokens.surfacePanel}`}
+            className={`rabtv-wh-plate rounded-3xl border p-3.5 sm:p-5 ${themeTokens.surfacePanel}`}
           >
+            <div
+              className="rabtv-wh-plate-bg"
+              aria-hidden="true"
+              style={{ backgroundImage: `url(${IMG_WH_RADAR_PANEL})` }}
+            />
+            <div className="rabtv-wh-plate-scrim" aria-hidden="true" />
+            <div className="relative z-10 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
                 <span
@@ -1537,14 +1567,22 @@ function WatchHistoryComponent() {
                 </button>
               ))}
             </div>
+            </div>
           </section>
         )}
 
         {/* MAIN ACTIVITY CONTENT */}
         {!hasVisibleContent ? (
           <div
-            className={`rounded-3xl border p-10 sm:p-12 text-center backdrop-blur-sm shadow-2xl space-y-2.5 ${themeTokens.surfacePanel}`}
+            className={`rabtv-wh-plate rounded-3xl border p-10 sm:p-14 text-center shadow-2xl ${themeTokens.surfacePanel}`}
           >
+            <div
+              className="rabtv-wh-plate-bg"
+              aria-hidden="true"
+              style={{ backgroundImage: `url(${IMG_WH_EMPTY_STATE})` }}
+            />
+            <div className="rabtv-wh-plate-scrim" aria-hidden="true" />
+            <div className="relative z-10 space-y-2.5 pb-8">
             <div className="text-3xl mb-1">🎬</div>
             <p className="text-base font-bold text-white">
               {searchQuery.trim()
@@ -1557,6 +1595,7 @@ function WatchHistoryComponent() {
               Start watching movies, shows, or live broadcasts and your progress
               will appear here automatically.
             </p>
+            </div>
           </div>
         ) : (
           <div data-tour="history-list" className="space-y-8 sm:space-y-10">
@@ -1568,7 +1607,7 @@ function WatchHistoryComponent() {
                     className="rabtv-wh-art-bg"
                     aria-hidden="true"
                     style={{
-                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                      backgroundImage: `url(${IMG_BUTTON_WRAPPER})`,
                     }}
                   />
                   <h2 className="rabtv-wh-section-title font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
@@ -1583,15 +1622,19 @@ function WatchHistoryComponent() {
                       <div
                         key={channel.channelId}
                         data-tour="history-item"
-                        className={`group relative ${posterAppearance.radiusClass} border ${
+                        className={`rabtv-wh-plate group relative ${posterAppearance.radiusClass} border ${
                           pinned
                             ? themeTokens.liveCardPinned
                             : themeTokens.liveCard
-                        } ${
-                          isLowRam ? "" : "backdrop-blur-sm"
                         } p-3 shadow-xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center justify-between overflow-hidden`}
                       >
-                        <div className="w-full flex items-center justify-between gap-1 mb-2 z-10">
+                        <div
+                          className="rabtv-wh-plate-bg"
+                          aria-hidden="true"
+                          style={{ backgroundImage: `url(${IMG_WH_CARD_FRAME})` }}
+                        />
+                        <div className="rabtv-wh-plate-scrim" aria-hidden="true" />
+                        <div className="relative z-10 w-full flex items-center justify-between gap-1 mb-2">
                           <button
                             type="button"
                             onClick={() => handlePinLiveChannel(channel)}
@@ -1686,7 +1729,7 @@ function WatchHistoryComponent() {
                     className="rabtv-wh-art-bg"
                     aria-hidden="true"
                     style={{
-                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                      backgroundImage: `url(${IMG_BUTTON_WRAPPER})`,
                     }}
                   />
                   <h2 className="rabtv-wh-section-title font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
@@ -1726,7 +1769,7 @@ function WatchHistoryComponent() {
                     className="rabtv-wh-art-bg"
                     aria-hidden="true"
                     style={{
-                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                      backgroundImage: `url(${IMG_BUTTON_WRAPPER})`,
                     }}
                   />
                   <h2 className="rabtv-wh-section-title font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
@@ -1779,7 +1822,7 @@ function WatchHistoryComponent() {
                     className="rabtv-wh-art-bg"
                     aria-hidden="true"
                     style={{
-                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                      backgroundImage: `url(${IMG_BUTTON_WRAPPER})`,
                     }}
                   />
                   <h2 className="rabtv-wh-section-title font-black tracking-tight text-emerald-300 uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
@@ -1850,7 +1893,7 @@ function WatchHistoryComponent() {
                     className="rabtv-wh-art-bg"
                     aria-hidden="true"
                     style={{
-                      backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
+                      backgroundImage: `url(${IMG_BUTTON_WRAPPER})`,
                     }}
                   />
                   <h2 className="rabtv-wh-section-title font-black tracking-tight text-white uppercase truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
@@ -1864,13 +1907,17 @@ function WatchHistoryComponent() {
                   {filteredDisliked.map((item) => (
                     <div
                       key={item.id}
-                      className={`group relative ${posterAppearance.radiusClass} border ${
-                        isLowRam ? "" : "backdrop-blur-sm"
-                      } overflow-hidden shadow-lg flex flex-col justify-between p-3.5 transition ${
+                      className={`rabtv-wh-plate group relative ${posterAppearance.radiusClass} border overflow-hidden shadow-lg flex flex-col justify-between p-3.5 transition ${
                         themeTokens.surfacePanel
                       }`}
                     >
-                      <div className="space-y-2">
+                      <div
+                        className="rabtv-wh-plate-bg"
+                        aria-hidden="true"
+                        style={{ backgroundImage: `url(${IMG_WH_CARD_FRAME})` }}
+                      />
+                      <div className="rabtv-wh-plate-scrim" aria-hidden="true" />
+                      <div className="relative z-10 space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <span
                             className={`text-[10px] font-extrabold border px-2 py-0.5 rounded-md uppercase ${themeTokens.badgeBg}`}
@@ -1948,7 +1995,7 @@ function WatchHistoryComponent() {
         {verifyingTarget && (
           <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
             <div
-              className={`w-full max-w-sm max-h-[90dvh] overflow-y-auto space-y-4 rounded-3xl border p-6 text-center ${themeTokens.modalCard}`}
+              className={`rabtv-wh-plate w-full max-w-sm max-h-[90dvh] overflow-y-auto space-y-4 rounded-3xl border p-6 text-center ${themeTokens.modalCard}`} style={{ backgroundImage: `linear-gradient(rgba(12,10,9,0.78), rgba(12,10,9,0.84)), url(${IMG_MODAL_PANEL})`, backgroundSize: "100% 100%" }}
             >
               <div
                 className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border text-3xl shadow-inner ${themeTokens.subPanel}`}
@@ -1989,7 +2036,7 @@ function WatchHistoryComponent() {
         {confirmClearScope && (
           <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
             <div
-              className={`w-full max-w-sm max-h-[90dvh] overflow-y-auto space-y-4 rounded-3xl border-2 p-6 text-center ${themeTokens.modalCard}`}
+              className={`rabtv-wh-plate w-full max-w-sm max-h-[90dvh] overflow-y-auto space-y-4 rounded-3xl border-2 p-6 text-center ${themeTokens.modalCard}`} style={{ backgroundImage: `linear-gradient(rgba(12,10,9,0.78), rgba(12,10,9,0.84)), url(${IMG_MODAL_PANEL})`, backgroundSize: "100% 100%" }}
             >
               <div
                 className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border text-3xl ${themeTokens.subPanel}`}
