@@ -150,6 +150,8 @@ const DETAILS_VIEWPORT_STYLES = `
   .rabtv-dtl-panel {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: clamp(22px, 5.5vw, 38px) clamp(26px, 8.5%, 56px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
   }
@@ -249,6 +251,8 @@ const DETAILS_VIEWPORT_STYLES = `
   .rabtv-dtl-sec-cta {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding-inline: clamp(18px, 11.5%, 36px) !important;
     background-color: #0c0a09;
     border: 0 !important;
     box-shadow: none !important;
@@ -385,6 +389,8 @@ const DETAILS_VIEWPORT_STYLES = `
   .rabtv-dtl-stat-card {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: clamp(18px, 4.8vw, 24px) clamp(28px, 10%, 44px) !important;
     background-color: #0c0a09;
     border: 0 !important;
     contain: layout paint;
@@ -2453,7 +2459,7 @@ export function DetailsPage() {
                 type="button"
                 data-tour="report-broken"
                 onClick={handleReportBroken}
-                className={`rabtv-dtl-sec-cta group flex items-center justify-center px-2.5 sm:px-3 ${actionBtnHeight} rounded-2xl font-bold text-xs sm:text-sm tracking-wide text-white transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                className={`rabtv-dtl-sec-cta group flex items-center justify-center ${actionBtnHeight} rounded-2xl font-bold text-[10.5px] sm:text-sm tracking-tight sm:tracking-wide text-white transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
                 title="Report link as broken and hide globally"
               >
                 <span
@@ -2475,7 +2481,7 @@ export function DetailsPage() {
                 onClick={toggleFavorites}
                 className={`${
                   inFavorites ? "rabtv-dtl-play-cta" : "rabtv-dtl-sec-cta"
-                } group flex items-center justify-center px-2.5 sm:px-3 ${actionBtnHeight} rounded-2xl font-bold text-xs sm:text-sm tracking-wide text-white transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                } group flex items-center justify-center ${actionBtnHeight} rounded-2xl font-bold text-[10.5px] sm:text-sm tracking-tight sm:tracking-wide text-white transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
               >
                 <span
                   className={
@@ -2512,7 +2518,7 @@ export function DetailsPage() {
                 onClick={toggleMyList}
                 className={`${
                   inMyList ? "rabtv-dtl-play-cta" : "rabtv-dtl-sec-cta"
-                } group flex items-center justify-center px-2.5 sm:px-3 ${actionBtnHeight} rounded-2xl font-bold text-xs sm:text-sm tracking-wide text-white transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
+                } group flex items-center justify-center ${actionBtnHeight} rounded-2xl font-bold text-[10.5px] sm:text-sm tracking-tight sm:tracking-wide text-white transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 cursor-pointer focus:outline-none focus:ring-4 ${activeTheme.ring}`}
               >
                 <span
                   className={
@@ -2585,7 +2591,15 @@ export function DetailsPage() {
                     ? `Saved in ${itemShelfIds.length} Custom ${
                         itemShelfIds.length === 1 ? "Shelf" : "Shelves"
                       }`
-                    : "Add to Custom Shelf (e.g. Comfort Shows, Marathons)"}
+                    : (
+                        <>
+                          Add to Custom Shelf
+                          <span className="hidden sm:inline">
+                            {" "}
+                            (e.g. Comfort Shows, Marathons)
+                          </span>
+                        </>
+                      )}
                 </span>
               </span>
               <span className="relative z-10 text-[11px] font-extrabold shrink-0 opacity-90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
@@ -2723,7 +2737,7 @@ export function DetailsPage() {
                   Production
                 </span>
                 <span
-                  className="text-sm sm:text-lg font-black text-white truncate block drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]"
+                  className="text-xs sm:text-base font-black text-white leading-snug line-clamp-2 break-words block drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]"
                   title={productionCompanies}
                 >
                   {productionCompanies}
