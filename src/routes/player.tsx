@@ -723,6 +723,8 @@ const PLAYER_VIEWPORT_STYLES = `
   /* TV Control Deck & Mirror Switcher Bar (overflow: visible so dropdowns never clip) */
   .rabtv-plr-deck {
     position: relative;
+    box-sizing: border-box;
+    padding: clamp(14px, 3.8vw, 22px) clamp(30px, 11.5%, 68px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     overflow: visible;
   }
@@ -786,6 +788,8 @@ const PLAYER_VIEWPORT_STYLES = `
   .rabtv-plr-meta-panel {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: clamp(22px, 5.5vw, 38px) clamp(26px, 8.5%, 56px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
   }
@@ -831,6 +835,8 @@ const PLAYER_VIEWPORT_STYLES = `
   .rabtv-plr-btn {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding-inline: clamp(16px, 4.2vw, 26px);
     background-color: #0c0a09;
     border: 0 !important;
     box-shadow: none !important;
