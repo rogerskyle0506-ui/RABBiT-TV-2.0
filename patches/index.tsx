@@ -30,6 +30,14 @@ import {
   type ShowWatchHistory,
 } from "@/lib/watch-history";
 import { isTitleBroken } from "@/lib/broken-links";
+import {
+  ADMIN_STORE_UPDATED_EVENT,
+  getCachedSourcesManifest,
+  getCachedBrandingConfig,
+  isTitleGloballyQuarantined,
+  type SourcesManifest,
+  type BrandingAndFlagsConfig,
+} from "@/lib/admin-store";
 import { bgAudio } from "@/lib/background-audio";
 import {
   getCustomShelves,
@@ -1351,6 +1359,12 @@ function Home() {
   const [isLowRam, setIsLowRam] = useState<boolean>(
     () => getHardwareLimits().effectiveMode === "low"
   );
+  const [remoteManifest, setRemoteManifest] = useState<SourcesManifest>(() =>
+    getCachedSourcesManifest()
+  );
+  const [remoteBranding, setRemoteBranding] = useState<BrandingAndFlagsConfig>(
+    () => getCachedBrandingConfig()
+  );
 
   const [myListSubTab, setMyListSubTab] = useState<string>("all");
   const [savedMyList, setSavedMyList] = useState<MediaItem[]>([]);
@@ -1486,6 +1500,8 @@ function Home() {
       setKidsLocked(getKidsModeLocked());
       setProfileMascot(getActiveMascotBadge());
       setIsLowRam(getHardwareLimits().effectiveMode === "low");
+      setRemoteManifest(getCachedSourcesManifest());
+      setRemoteBranding(getCachedBrandingConfig());
       setGreetingText(
         savedName ? getPersonalizedGreeting(savedName, getGreetingStyle()) : ""
       );
@@ -1524,6 +1540,7 @@ function Home() {
     window.addEventListener(CUSTOM_SHELVES_EVENT, loadSavedListsAndTheme);
     window.addEventListener(EPISODE_RADAR_UPDATED_EVENT, loadSavedListsAndTheme);
     window.addEventListener(MASCOT_UPDATED_EVENT, loadSavedListsAndTheme);
+    window.addEventListener(ADMIN_STORE_UPDATED_EVENT, loadSavedListsAndTheme);
 
     return () => {
       window.removeEventListener(CUSTOM_SHELVES_EVENT, loadSavedListsAndTheme);
@@ -1532,6 +1549,7 @@ function Home() {
         loadSavedListsAndTheme
       );
       window.removeEventListener(MASCOT_UPDATED_EVENT, loadSavedListsAndTheme);
+      window.removeEventListener(ADMIN_STORE_UPDATED_EVENT, loadSavedListsAndTheme);
       window.removeEventListener(
         "rabtv_catalog_updated",
         loadSavedListsAndTheme
@@ -1771,7 +1789,15 @@ function Home() {
   const continueWatchingItems = useMemo(() => {
     return Object.values(structuredHistory)
       .filter((entry) => {
-        if (isTitleDisliked(entry.showId) || isTitleBroken(entry.showId)) {
+        if (
+          isTitleDisliked(entry.showId) ||
+          isTitleBroken(entry.showId) ||
+          isTitleGloballyQuarantined(
+            remoteManifest,
+            entry.mediaType === "tv" ? "tv" : "movie",
+            entry.showId
+          )
+        ) {
           return false;
         }
         const pct = calculateSeriesProgress(entry);
@@ -1803,7 +1829,7 @@ function Home() {
           posterUrl,
         };
       });
-  }, [structuredHistory, episodeAlerts, posterWidth, isLowRam]);
+  }, [structuredHistory, episodeAlerts, posterWidth, isLowRam, remoteManifest]);
 
   const inProgressHistory = useMemo(
     () =>
@@ -1841,7 +1867,17 @@ function Home() {
     const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
     for (const item of rawList) {
-      if (isTitleDisliked(item.id) || isTitleBroken(item.id)) continue;
+      const itemType: "movie" | "tv" =
+        item.mediaType === "tv" || String(item.id).startsWith("tv-")
+          ? "tv"
+          : "movie";
+      if (
+        isTitleDisliked(item.id) ||
+        isTitleBroken(item.id) ||
+        isTitleGloballyQuarantined(remoteManifest, itemType, String(item.id))
+      ) {
+        continue;
+      }
       if (!isAllowedForAge((item as any).certification, item.genre, userAge)) {
         continue;
       }
@@ -1881,7 +1917,17 @@ function Home() {
     const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
     return baseList.filter((item) => {
-      if (isTitleDisliked(item.id) || isTitleBroken(item.id)) return false;
+      const itemType: "movie" | "tv" =
+        item.mediaType === "tv" || String(item.id).startsWith("tv-")
+          ? "tv"
+          : "movie";
+      if (
+        isTitleDisliked(item.id) ||
+        isTitleBroken(item.id) ||
+        isTitleGloballyQuarantined(remoteManifest, itemType, String(item.id))
+      ) {
+        return false;
+      }
       if (!isAllowedForAge((item as any).certification, item.genre, userAge)) {
         return false;
       }
@@ -1899,7 +1945,7 @@ function Home() {
 
       return true;
     });
-  }, [items, activeTab, savedCatalogItems, userAge, kidsLocked]);
+  }, [items, activeTab, savedCatalogItems, userAge, kidsLocked, remoteManifest]);
 
   const heroSourceList = useMemo(() => {
     if (activeTab === "My List") {
@@ -1921,7 +1967,17 @@ function Home() {
       const cleanId = String(item.id).replace(/^(movie|tv)-/i, "");
       if (watchedIds.has(cleanId)) return false;
       if (isTitleDisliked(item.id) || isTitleDisliked(cleanId)) return false;
-      if (isTitleBroken(item.id) || isTitleBroken(cleanId)) return false;
+      const heroType: "movie" | "tv" =
+        item.mediaType === "tv" || String(item.id).startsWith("tv-")
+          ? "tv"
+          : "movie";
+      if (
+        isTitleBroken(item.id) ||
+        isTitleBroken(cleanId) ||
+        isTitleGloballyQuarantined(remoteManifest, heroType, cleanId)
+      ) {
+        return false;
+      }
       if (!isAllowedForAge((item as any).certification, item.genre, userAge)) {
         return false;
       }
@@ -1939,7 +1995,7 @@ function Home() {
 
       return true;
     });
-  }, [heroSourceList, historyItems, userAge, kidsLocked]);
+  }, [heroSourceList, historyItems, userAge, kidsLocked, remoteManifest]);
 
   useEffect(() => {
     setCurrentHeroIndex(0);
@@ -2297,7 +2353,17 @@ function Home() {
               className="relative z-10 flex-1 min-w-0 overflow-x-auto scrollbar-none px-2 py-0.5 flex items-center justify-start gap-2"
             >
               <div className="flex items-center gap-2 min-w-max mx-auto">
-                {navTabs.map((tab) => {
+                {navTabs
+                  .filter((tab) => {
+                    if (tab === "Live TV & Sports" && remoteBranding.liveTvEnabled === false) {
+                      return false;
+                    }
+                    if (tab === "Movie Club" && remoteBranding.movieClubEnabled === false) {
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map((tab) => {
                   const isActive = activeTab === tab;
                   return (
                     <button
