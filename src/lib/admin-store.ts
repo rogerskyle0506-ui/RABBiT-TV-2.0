@@ -1363,3 +1363,77 @@ export async function logInspectorAuditEvent(
     // non-blocking best-effort audit trail for inspector opens
   }
 }
+
+// =============================================================================
+// STEP 3: ENFORCEMENT, GLOBAL QUARANTINE & FEATURE FLAG HELPERS (ZERO SERVER)
+// =============================================================================
+export function getCachedUserEnforcement(): UserEnforcementRecord[] {
+  const hit = readLocalCache<UserEnforcementRecord[]>(
+    LOCAL_ENFORCEMENT_CACHE_KEY
+  );
+  if (!hit || !Array.isArray(hit.data)) return [];
+  const now = Date.now();
+  return hit.data.filter(
+    (rec) => rec && rec.active && (!rec.expiresAt || rec.expiresAt > now)
+  );
+}
+
+export function getActiveEnforcementForCurrentUser(
+  extraIdentifiers: string[] = []
+): UserEnforcementRecord | null {
+  if (typeof window === "undefined") return null;
+  // Never accidentally lock out an admin device from fixing rules
+  if (localStorage.getItem("rabtv_is_admin") === "true") return null;
+
+  const activeList = getCachedUserEnforcement();
+  if (activeList.length === 0) return null;
+
+  const candidates = new Set<string>();
+  const rawNames = [
+    localStorage.getItem("rabtv_profile_name") || "",
+    localStorage.getItem("rabtv_comm_public_handle") || "",
+    localStorage.getItem("rabtv_unlock_key") || "",
+    ...extraIdentifiers,
+  ];
+  for (const val of rawNames) {
+    const clean = val.trim().toLowerCase();
+    if (clean) candidates.add(clean);
+  }
+  if (candidates.size === 0) return null;
+
+  // Priority order: ban > suspend > shadow_ban > mute
+  const priority: Record<EnforcementType, number> = {
+    ban: 4,
+    suspend: 3,
+    shadow_ban: 2,
+    mute: 1,
+  };
+
+  let matched: UserEnforcementRecord | null = null;
+  for (const rec of activeList) {
+    const targetLower = String(rec.target || "").trim().toLowerCase();
+    if (!targetLower) continue;
+    let isMatch = false;
+    for (const c of candidates) {
+      if (c === targetLower || targetLower.startsWith(`${c} (`)) {
+        isMatch = true;
+        break;
+      }
+    }
+    if (isMatch) {
+      if (!matched || priority[rec.type] > priority[matched.type]) {
+        matched = rec;
+      }
+    }
+  }
+  return matched;
+}
+
+export function isTitleGloballyQuarantined(
+  manifest: SourcesManifest,
+  mediaType: "movie" | "tv",
+  mediaId: string
+): boolean {
+  const ov = getActiveTitleOverride(manifest, mediaType, mediaId);
+  return ov?.action === "quarantine_hide";
+}
