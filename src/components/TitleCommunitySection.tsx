@@ -4,6 +4,13 @@ import { useNavigate } from "@tanstack/react-router";
 import type { AppTheme } from "@/lib/settings";
 import { MascotAvatar } from "@/components/MascotAvatar";
 import {
+  ADMIN_STORE_UPDATED_EVENT,
+  getCachedBrandingConfig,
+  getActiveEnforcementForCurrentUser,
+  type BrandingAndFlagsConfig,
+  type UserEnforcementRecord,
+} from "@/lib/admin-store";
+import {
   isCommunityAccessLocked,
   isCommunityBackendConfigured,
   getLocalCommunityIdentity,
@@ -459,6 +466,12 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
 
   const [identity, setIdentity] = useState(() => getLocalCommunityIdentity());
   const [kidsLocked, setKidsLocked] = useState(() => isCommunityAccessLocked());
+  const [remoteBranding, setRemoteBranding] = useState<BrandingAndFlagsConfig>(
+    () => getCachedBrandingConfig()
+  );
+  const [enforcement, setEnforcement] = useState<UserEnforcementRecord | null>(
+    () => getActiveEnforcementForCurrentUser()
+  );
 
   // Composer state (uncontrolled refs keep Android WebView typing strictly LTR)
   const [starRating, setStarRating] = useState<number>(5);
@@ -550,15 +563,22 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
 
   useEffect(() => {
     const onUpdate = () => {
-      setIdentity(getLocalCommunityIdentity());
+      const nextId = getLocalCommunityIdentity();
+      setIdentity(nextId);
       setKidsLocked(isCommunityAccessLocked());
+      setRemoteBranding(getCachedBrandingConfig());
+      setEnforcement(
+        getActiveEnforcementForCurrentUser([nextId.publicHandle || ""])
+      );
       if (expanded) void loadSummary(false);
     };
     window.addEventListener(COMMUNITY_UPDATED_EVENT, onUpdate);
     window.addEventListener("rabtv_settings_updated", onUpdate);
+    window.addEventListener(ADMIN_STORE_UPDATED_EVENT, onUpdate);
     return () => {
       window.removeEventListener(COMMUNITY_UPDATED_EVENT, onUpdate);
       window.removeEventListener("rabtv_settings_updated", onUpdate);
+      window.removeEventListener(ADMIN_STORE_UPDATED_EVENT, onUpdate);
     };
   }, [expanded, loadSummary]);
 
@@ -589,8 +609,27 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
     }
   };
 
+  const isCommunityReadOnly = Boolean(remoteBranding.panicReadOnlyCommunity);
+  const isMuted = enforcement?.type === "mute";
+  const isShadowBanned = enforcement?.type === "shadow_ban";
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCommunityReadOnly) {
+      showFeedback(false, "🛡️ Community reviews are temporarily read-only.");
+      return;
+    }
+    if (isMuted) {
+      showFeedback(
+        false,
+        `🔇 Your account is muted from posting (${enforcement?.note || "Moderation"}).`
+      );
+      return;
+    }
+    if (isShadowBanned) {
+      showFeedback(true, "✓ Your RABBiT TV rating & review is live!");
+      return;
+    }
     setSubmitting(true);
     setFeedback(null);
     try {
@@ -668,6 +707,19 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
     handle: string;
     mascot: string;
   }) => {
+    if (remoteBranding.watchBuddiesEnabled === false || isCommunityReadOnly) {
+      showFeedback(false, "Watch Buddy invites are temporarily paused.");
+      return;
+    }
+    if (isMuted) {
+      showFeedback(false, "🔇 Your account is muted from sending invites.");
+      return;
+    }
+    if (isShadowBanned) {
+      showFeedback(true, `🤝 Sent Watch Buddy invite for "${title}" to ${target.handle}!`);
+      setInspectProfile(null);
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await sendWatchBuddyRequest({
@@ -690,7 +742,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
     }
   };
 
-  if (!isCommunityBackendConfigured()) return null;
+  if (!isCommunityBackendConfigured() || remoteBranding.movieClubEnabled === false) return null;
 
   return (
     <section
