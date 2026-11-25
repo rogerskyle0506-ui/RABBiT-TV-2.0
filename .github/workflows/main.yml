@@ -49,17 +49,24 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Non-Blocking Dependency Security Check
+        run: npm audit --audit-level=high || true
+
       - name: Install Capacitor CLI, Android & Assets Packages
         run: npm install @capacitor/cli@^6 @capacitor/android@^6 @capacitor/assets --save-dev
 
-      - name: Verify Capacitor Config & Icon Exists
+      - name: Verify Capacitor Config & V2 Brand Assets Exist
         run: |
           if [ ! -f capacitor.config.json ]; then
             echo "Error: capacitor.config.json is missing!"
             exit 1
           fi
-          if [ ! -f assets/icon.png ]; then
-            echo "Error: assets/icon.png is missing!"
+          if [ ! -f assets/RabbitIconV2.jpg ]; then
+            echo "Error: assets/RabbitIconV2.jpg is missing!"
+            exit 1
+          fi
+          if [ ! -f assets/RabbitTVBannerV2.jpg ]; then
+            echo "Error: assets/RabbitTVBannerV2.jpg is missing!"
             exit 1
           fi
 
@@ -142,16 +149,33 @@ jobs:
           </html>
           EOF
 
-      - name: Generate Dynamic Version File with Nightly Build Identifier
+      - name: Generate Dynamic Version File & Recent Changelog
         run: |
-          VERSION=$(node -p "require('./package.json').version")
           mkdir -p src/lib
-          cat << EOF > src/lib/version.ts
-          export const APP_VERSION = "${VERSION}";
-          export const BUILD_TYPE = "nightly";
-          export const IS_STABLE = false;
-          EOF
-          echo "Generated version.ts with version ${VERSION} (nightly)"
+          node -e '
+            const fs = require("fs");
+            const { execSync } = require("child_process");
+            const version = JSON.parse(fs.readFileSync("./package.json", "utf8")).version;
+            const buildDate = new Date().toISOString().split("T")[0];
+            let changes = [];
+            try {
+              changes = execSync("git log -n 8 --pretty=format:%s", { encoding: "utf8" })
+                .split("\n")
+                .map((s) => s.trim())
+                .filter((s) => s && !s.startsWith("chore: auto-bump"))
+                .slice(0, 5);
+            } catch {}
+            const content = [
+              `export const APP_VERSION = ${JSON.stringify(version)};`,
+              `export const BUILD_TYPE = "nightly";`,
+              `export const IS_STABLE = false;`,
+              `export const BUILD_DATE = ${JSON.stringify(buildDate)};`,
+              `export const RECENT_CHANGES: string[] = ${JSON.stringify(changes, null, 2)};`,
+              ""
+            ].join("\n");
+            fs.writeFileSync("src/lib/version.ts", content);
+            console.log("Generated src/lib/version.ts for", version, "on", buildDate);
+          '
 
       - name: Build Web Assets for Capacitor (Executes Version Bump)
         env:
@@ -161,6 +185,13 @@ jobs:
           VITE_GH_PAT: ${{ secrets.GH_PAT }}
           VITE_GIST_ID: ${{ secrets.VITE_GIST_ID }}
         run: npm run build
+
+      - name: Strip Debug Source Maps from Web Bundle
+        run: |
+          if [ -d dist/client ]; then
+            find dist/client -name "*.map" -delete || true
+            echo "Removed source map files from dist/client"
+          fi
 
       - name: Extract App Name & Bumped Version for Artifacts
         id: version-extractor
@@ -216,7 +247,7 @@ jobs:
             chmod +x android/gradlew
           fi
 
-      - name: Sync Package.json Version to Android Build.gradle
+      - name: Sync Version & Trim Unused Language Packs in build.gradle
         run: |
           VERSION=$(node -p "require('./package.json').version")
           CLEAN_VER="${VERSION%%-*}"
@@ -235,35 +266,97 @@ jobs:
           if [ -f android/app/build.gradle ]; then
             sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/g" android/app/build.gradle
             sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/g" android/app/build.gradle
+
+            python3 -c '
+          path = "android/app/build.gradle"
+          txt = open(path, encoding="utf-8").read()
+          if "resourceConfigurations" not in txt and "resConfigs" not in txt and "defaultConfig {" in txt:
+              txt = txt.replace("defaultConfig {", "defaultConfig {\n        resConfigs \"en\"", 1)
+              open(path, "w", encoding="utf-8").write(txt)
+              print("Added resConfigs \"en\" to defaultConfig")
+          '
           else
             echo "Error: android/app/build.gradle not found!"
             exit 1
           fi
 
-      - name: Generate App Icons and Splash Screens from Standard Assets
-        run: npx @capacitor/assets generate --android
-
-      - name: Install Pillow & Convert HeaderFamily.jpg to True PNG TV Banner
+      - name: Convert V2 Icon & TV Banner JPGs to Optimized PNGs
         run: |
           pip install --quiet --no-cache-dir Pillow
-          python3 -c "
+          python3 -c '
           import os
           from PIL import Image
 
-          if os.path.exists('assets/HeaderFamily.jpg'):
-              img = Image.open('assets/HeaderFamily.jpg').convert('RGBA')
-              img.save('assets/tv_banner.png', 'PNG')
-              print('Successfully converted HeaderFamily.jpg to true PNG tv_banner.png')
+          if os.path.exists("assets/RabbitIconV2.jpg"):
+              icon = Image.open("assets/RabbitIconV2.jpg").convert("RGBA")
+              icon.save("assets/icon.png", "PNG")
+              print("Converted RabbitIconV2.jpg -> assets/icon.png")
           else:
-              print('Error: assets/HeaderFamily.jpg not found!')
+              print("Error: assets/RabbitIconV2.jpg not found!")
               exit(1)
-          "
 
+          if os.path.exists("assets/RabbitTVBannerV2.jpg"):
+              banner = Image.open("assets/RabbitTVBannerV2.jpg").convert("RGBA")
+              banner_320 = banner.resize((320, 180), Image.Resampling.LANCZOS)
+              banner_320.save("assets/tv_banner_320.png", "PNG", optimize=True)
+              banner_hd = banner.resize((1280, 720), Image.Resampling.LANCZOS)
+              banner_hd.save("assets/tv_banner_hd.png", "PNG", optimize=True)
+              print("Converted RabbitTVBannerV2.jpg -> 320x180 & 1280x720 PNGs")
+          else:
+              print("Error: assets/RabbitTVBannerV2.jpg not found!")
+              exit(1)
+          '
+
+      - name: Generate App Icons and Splash Screens from V2 Assets
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#0c0a09' --iconBackgroundColorDark '#0c0a09'
+
+      - name: Bundle Fresh Offline Ad & Popup Blocklist (Safe Fallback)
+        run: |
+          mkdir -p android/app/src/main/assets
+          python3 -c '
+          import urllib.request, re
+
+          urls = [
+              "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/popupads.txt",
+              "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/adblock/popupads.txt",
+          ]
+          domains = set()
+          for url in urls:
+              try:
+                  req = urllib.request.Request(url, headers={"User-Agent": "RabbitTV-Build/1.0"})
+                  with urllib.request.urlopen(req, timeout=20) as resp:
+                      raw = resp.read().decode("utf-8", errors="ignore")
+                  for line in raw.splitlines():
+                      line = line.strip()
+                      if not line or line.startswith("!") or line.startswith("#"):
+                          continue
+                      m = re.match(r"^\|\|([a-z0-9.-]+\.[a-z]{2,})\^$", line, re.IGNORECASE)
+                      if m:
+                          domains.add(m.group(1).lower())
+                  if domains:
+                      print(f"Downloaded {len(domains)} popup/ad domains from {url}")
+                      break
+              except Exception as e:
+                  print(f"Warning: could not fetch {url}: {e}")
+
+          out_path = "android/app/src/main/assets/adblock_domains.txt"
+          with open(out_path, "w", encoding="utf-8") as f:
+              for d in sorted(domains):
+                  f.write(d + "\n")
+          print(f"Wrote {len(domains)} domains to {out_path}")
+          ' || true
+
+      - name: Install Native Android Files, TV Banners & Launch Theme
+        run: |
           mkdir -p android/app/src/main/java/com/rabbittv/app
           cp patches/MainActivity.java android/app/src/main/java/com/rabbittv/app/MainActivity.java
 
           mkdir -p android/app/src/main/res/drawable
-          cp assets/tv_banner.png android/app/src/main/res/drawable/tv_banner.png
+          mkdir -p android/app/src/main/res/drawable-xhdpi
+          mkdir -p android/app/src/main/res/drawable-xxxhdpi
+          cp assets/tv_banner_320.png android/app/src/main/res/drawable/tv_banner.png
+          cp assets/tv_banner_320.png android/app/src/main/res/drawable-xhdpi/tv_banner.png
+          cp assets/tv_banner_hd.png android/app/src/main/res/drawable-xxxhdpi/tv_banner.png
 
           cp patches/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
 
@@ -283,9 +376,9 @@ jobs:
               </style>
 
               <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
-                  <item name="android:windowBackground">#050b16</item>
+                  <item name="android:windowBackground">#0c0a09</item>
                   <item name="android:windowSplashScreenAnimatedIcon">@drawable/tv_banner</item>
-                  <item name="android:windowSplashScreenBackground">#050b16</item>
+                  <item name="android:windowSplashScreenBackground">#0c0a09</item>
               </style>
           </resources>
           EOF
@@ -310,11 +403,14 @@ jobs:
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS_NAME" \
             -Pandroid.injected.signing.key.password="$KEY_PASS"
 
-      - name: Save APK Artifact Locally for Workflow Run
+      - name: Save APK & SHA-256 Checksum Locally for Workflow Run
         run: |
           mkdir -p updates
-          cp android/app/build/outputs/apk/release/app-release.apk updates/${{ steps.version-extractor.outputs.apk_filename }}
-          echo "Successfully saved APK as updates/${{ steps.version-extractor.outputs.apk_filename }}"
+          APK_FILE="updates/${{ steps.version-extractor.outputs.apk_filename }}"
+          cp android/app/build/outputs/apk/release/app-release.apk "$APK_FILE"
+          sha256sum "$APK_FILE" > "${APK_FILE}.sha256"
+          cat "${APK_FILE}.sha256"
+          echo "Successfully saved APK as $APK_FILE"
 
       - name: Commit Version Bump & Manifest (Excluding APK Binary)
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
@@ -333,9 +429,23 @@ jobs:
             echo "No changes to commit"
           fi
 
+      - name: Publish Public Nightly Pre-Release (Preserves -nightly.apk Format)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ steps.version-extractor.outputs.version }}-nightly
+          name: RABBiT TV v${{ steps.version-extractor.outputs.version }} (Nightly)
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            updates/${{ steps.version-extractor.outputs.apk_filename }}
+            updates/${{ steps.version-extractor.outputs.apk_filename }}.sha256
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.version-extractor.outputs.artifact_name }}
-          path: updates/${{ steps.version-extractor.outputs.apk_filename }}
+          path: |
+            updates/${{ steps.version-extractor.outputs.apk_filename }}
+            updates/${{ steps.version-extractor.outputs.apk_filename }}.sha256
           retention-days: 14
