@@ -41,6 +41,7 @@ import {
 } from "@/lib/watch-history";
 import { isInMyList, toggleMyList } from "@/lib/storage";
 import { AppWallpaper } from "@/components/AppWallpaper";
+import { PlayerAdInspectorGate } from "@/components/PlayerAdInspector";
 import { bgAudio } from "@/lib/background-audio";
 import { initAdBlockerGlobalInterceptors } from "@/lib/adblocker";
 import {
@@ -48,6 +49,7 @@ import {
   getCachedSourcesManifest,
   getCachedBrandingConfig,
   refreshRemoteRuntimeConfig,
+  syncRemoteAdblockToNativeBridge,
   getActiveProvidersForPlayer,
   getActiveTitleOverride,
   buildProviderUrlFromTemplate,
@@ -1592,10 +1594,12 @@ export function PlayerPage() {
   useEffect(() => {
     let active = true;
     const syncRemoteConfig = (force = false) => {
+      syncRemoteAdblockToNativeBridge();
       void refreshRemoteRuntimeConfig(force).then(({ manifest, branding }) => {
         if (!active) return;
         setRemoteManifest(manifest);
         setRemoteBranding(branding);
+        syncRemoteAdblockToNativeBridge();
       });
     };
     syncRemoteConfig(false);
@@ -3527,6 +3531,26 @@ export function PlayerPage() {
           </div>
         )}
       </div>
+
+      {/* Step 2: Admin-Only Live Player Ad Inspector (Zero footprint for normal users) */}
+      <PlayerAdInspectorGate
+        mediaId={mediaId}
+        mediaType={inferredMediaType}
+        title={title}
+        activeProviderId={activeStream}
+        activeProviderName={
+          activeProviders.find((p) => p.id === activeStream)?.name
+        }
+        activeProviderOrigin={
+          activeProviders.find((p) => p.id === activeStream)?.origin
+        }
+        embedUrl={embedUrl}
+        onReloadPlayer={() => {
+          iframeLoadedRef.current = false;
+          setStreamPhase("tuning");
+          setPlayerReloadNonce((n) => n + 1);
+        }}
+      />
     </div>
   );
 }
