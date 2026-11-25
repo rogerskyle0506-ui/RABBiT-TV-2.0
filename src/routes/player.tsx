@@ -730,7 +730,7 @@ const PLAYER_VIEWPORT_STYLES = `
   .rabtv-plr-deck {
     position: relative;
     box-sizing: border-box;
-    padding: clamp(14px, 3.8vw, 22px) clamp(30px, 11.5%, 68px) !important;
+    padding: clamp(16px, 4.2vw, 24px) clamp(34px, 12.5%, 72px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     overflow: visible;
   }
@@ -813,7 +813,7 @@ const PLAYER_VIEWPORT_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: clamp(22px, 5.5vw, 38px) clamp(26px, 8.5%, 56px) !important;
+    padding: clamp(28px, 6.8vw, 44px) clamp(32px, 10%, 62px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
   }
@@ -845,11 +845,11 @@ const PLAYER_VIEWPORT_STYLES = `
   .rabtv-plr-meta-panel-scrim {
     position: absolute;
     inset: 0;
-    background: radial-gradient(
-      ellipse 78% 76% at 38% 42%,
-      rgba(12, 10, 9, 0.56) 0%,
-      rgba(12, 10, 9, 0.36) 68%,
-      rgba(12, 10, 9, 0.24) 100%
+    background: linear-gradient(
+      180deg,
+      rgba(12, 10, 9, 0.54) 0%,
+      rgba(12, 10, 9, 0.46) 55%,
+      rgba(12, 10, 9, 0.62) 100%
     );
     pointer-events: none;
     z-index: 1;
@@ -860,7 +860,7 @@ const PLAYER_VIEWPORT_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding-inline: clamp(16px, 4.2vw, 26px);
+    padding-inline: clamp(16px, 5vw, 26px) !important;
     background-color: #0c0a09;
     border: 0 !important;
     box-shadow: none !important;
@@ -3137,61 +3137,50 @@ export function PlayerPage() {
           />
           <div className="rabtv-plr-meta-panel-scrim" aria-hidden="true" />
           <div className="relative z-10 flex flex-col gap-4">
+          {/* Compact Organized Title & Metadata Header */}
           <div
-            className={`flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-4 ${themeTokens.dividerBorder}`}
+            className={`space-y-2.5 text-left border-b pb-4 ${themeTokens.dividerBorder}`}
           >
-            <div className="space-y-2 text-left min-w-0">
-              <div className="flex items-center flex-wrap gap-2">
+            <div className="flex items-center flex-wrap gap-1.5">
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider ${themeTokens.badge}`}
+              >
+                {genres}
+              </span>
+              {inferredMediaType === "tv" && (
                 <span
-                  className={`rounded-full border px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest ${themeTokens.badge}`}
+                  className={`rounded-full border px-2.5 py-0.5 text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-wider ${themeTokens.badge}`}
                 >
-                  {genres}
+                  S{season} • E{episode}
                 </span>
-                {inferredMediaType === "tv" && (
-                  <span
-                    className={`rounded-full border px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${themeTokens.badge}`}
-                  >
-                    Season {season} • Episode {episode}
-                  </span>
-                )}
-                {runtimeMinutes && (
-                  <span
-                    className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${themeTokens.subtleBadge}`}
-                  >
-                    {runtimeMinutes} min
-                  </span>
-                )}
-              </div>
-
-              <h1 className="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
-                {title}
-                {inferredMediaType === "tv" && currentEpisodeObj?.name
-                  ? ` — ${currentEpisodeObj.name}`
-                  : ""}
-              </h1>
+              )}
             </div>
 
-            {/* Right Metadata Pills & IMDb Quick Link */}
-            <div className="flex items-center flex-wrap gap-2 shrink-0">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
+              {title}
+              {inferredMediaType === "tv" && currentEpisodeObj?.name
+                ? ` — ${currentEpisodeObj.name}`
+                : ""}
+            </h1>
+
+            {/* Unified Compact Metadata Row (Clean & Scannable on Narrow Screens) */}
+            <div className="flex items-center flex-wrap gap-x-2 gap-y-1.5 text-[11px] sm:text-xs font-bold">
               {rating !== "N/A" && (
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-extrabold ${themeTokens.badge}`}
-                >
+                <span className={`font-extrabold ${themeTokens.text}`}>
                   ★ {rating}
                 </span>
               )}
               {releaseYear && (
-                <span
-                  className={`rounded-full border px-3 py-1.5 text-xs font-bold ${themeTokens.subtleBadge}`}
-                >
-                  {releaseYear}
-                </span>
+                <span className={themeTokens.mutedText}>• {releaseYear}</span>
+              )}
+              {runtimeMinutes && (
+                <span className={themeTokens.mutedText}>• {runtimeMinutes}m</span>
               )}
               <span
                 data-tour="finish-time"
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold ${themeTokens.badge}`}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold ${themeTokens.badge}`}
               >
-                <span>⏱️ Finish:</span>
+                <span>Ends</span>
                 <strong className="text-white">{estimatedCompletion}</strong>
               </span>
               <a
@@ -3199,26 +3188,22 @@ export function PlayerPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-tour="imdb-link"
-                className={`rabtv-plr-btn inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-extrabold text-white transition transform hover:scale-105 focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] sm:text-[11px] font-extrabold transition hover:brightness-110 focus:outline-none focus:ring-2 ${themeTokens.subtleBadge} ${themeTokens.ring}`}
                 title="View Official IMDb Listing"
               >
-                <span
-                  className="rabtv-plr-btn-art rabtv-plr-btn-art--idle"
-                  aria-hidden="true"
-                  style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_IDLE_URL})` }}
-                />
-                <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
-                <span className="rabtv-plr-btn-label">⭐ IMDb</span>
+                IMDb ↗
               </a>
             </div>
           </div>
 
-          {/* Cinema Quick Actions Toolbar (Idle / Active / Danger Tactical Plates) */}
-          <div className="flex flex-wrap items-center gap-2 pb-1">
+          {/* Symmetrical 2x2 Mobile / 4-Column Desktop Quick Actions Grid (Clean Labels, Zero Clutter) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full">
             <button
               type="button"
               onClick={handleToggleMyList}
-              className={`rabtv-plr-btn rounded-xl ${pillBtnPadding} font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+              className={`rabtv-plr-btn w-full flex items-center justify-center rounded-xl ${
+                largeButtons ? "py-3 text-xs" : "py-2.5 text-[11px] sm:text-xs"
+              } font-extrabold text-white whitespace-nowrap transition hover:scale-[1.02] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
             >
               <span
                 className={`rabtv-plr-btn-art ${
@@ -3235,14 +3220,16 @@ export function PlayerPage() {
               />
               <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
               <span className="rabtv-plr-btn-label">
-                {inMyList ? "✓ In My List" : "🔖 Add to My List"}
+                {inMyList ? "In My List" : "Add to My List"}
               </span>
             </button>
 
             <button
               type="button"
               onClick={handleToggleWatched}
-              className={`rabtv-plr-btn rounded-xl ${pillBtnPadding} font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+              className={`rabtv-plr-btn w-full flex items-center justify-center rounded-xl ${
+                largeButtons ? "py-3 text-xs" : "py-2.5 text-[11px] sm:text-xs"
+              } font-extrabold text-white whitespace-nowrap transition hover:scale-[1.02] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
             >
               <span
                 className={`rabtv-plr-btn-art ${
@@ -3259,7 +3246,7 @@ export function PlayerPage() {
               />
               <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
               <span className="rabtv-plr-btn-label">
-                {isCurrentItemWatched ? "👁️ ✓ Watched" : "👁️ Mark Watched"}
+                {isCurrentItemWatched ? "✓ Watched" : "Mark Watched"}
               </span>
             </button>
 
@@ -3267,7 +3254,9 @@ export function PlayerPage() {
               type="button"
               data-tour="report-broken"
               onClick={handleReportBrokenStream}
-              className={`rabtv-plr-btn rounded-xl ${pillBtnPadding} font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+              className={`rabtv-plr-btn w-full flex items-center justify-center rounded-xl ${
+                largeButtons ? "py-3 text-xs" : "py-2.5 text-[11px] sm:text-xs"
+              } font-extrabold text-white whitespace-nowrap transition hover:scale-[1.02] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
               title="Report if this stream fails to load"
             >
               <span
@@ -3276,13 +3265,15 @@ export function PlayerPage() {
                 style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_DANGER_URL})` }}
               />
               <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
-              <span className="rabtv-plr-btn-label">🚩 Report Broken Stream</span>
+              <span className="rabtv-plr-btn-label">Report Broken</span>
             </button>
 
             <button
               type="button"
               onClick={handleDislikeTitle}
-              className={`rabtv-plr-btn rounded-xl ${pillBtnPadding} font-bold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
+              className={`rabtv-plr-btn w-full flex items-center justify-center rounded-xl ${
+                largeButtons ? "py-3 text-xs" : "py-2.5 text-[11px] sm:text-xs"
+              } font-bold text-white whitespace-nowrap transition hover:scale-[1.02] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeTokens.ring}`}
               title="Hide this title from catalogs"
             >
               <span
@@ -3291,7 +3282,7 @@ export function PlayerPage() {
                 style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_ACTION_DANGER_URL})` }}
               />
               <span className="rabtv-plr-btn-scrim" aria-hidden="true" />
-              <span className="rabtv-plr-btn-label">👎 Dislike</span>
+              <span className="rabtv-plr-btn-label">Dislike</span>
             </button>
           </div>
 
