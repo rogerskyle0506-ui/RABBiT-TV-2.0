@@ -80,7 +80,7 @@ const COMMUNITY_SECTION_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: clamp(20px, 5vw, 34px) clamp(24px, 8%, 48px) !important;
+    padding: clamp(28px, 6.8vw, 42px) clamp(32px, 10%, 60px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
   }
@@ -161,7 +161,7 @@ const COMMUNITY_SECTION_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding-inline: clamp(16px, 4.2vw, 24px);
+    padding-inline: clamp(14px, 4vw, 22px) !important;
     background-color: #0c0a09;
     border: 0 !important;
     box-shadow: none !important;
@@ -713,54 +713,42 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
       <div className="rabtv-comm-plate-scrim" aria-hidden="true" />
 
       <div className="relative z-10 space-y-4">
-        {/* Panoramic Header Strip (rabbit-tv-community-reviews-banner.jpg) */}
-        <div
-          className={`rabtv-comm-banner rounded-2xl border p-3 sm:p-4 ${tokens.sub}`}
-        >
-          <div
-            className="rabtv-comm-banner-bg"
-            aria-hidden="true"
-            style={{ backgroundImage: `url(${IMG_COMM_REVIEWS_BANNER})` }}
-          />
-          <div className="rabtv-comm-banner-scrim" aria-hidden="true" />
-
-          <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 space-y-0.5 text-left">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm sm:text-lg font-black text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-                  🍿 RABBiT TV Community Ratings & Reviews
-                </h3>
-                {summary.totalRatings > 0 && (
-                  <span
-                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-extrabold ${tokens.badge}`}
-                  >
-                    ★ {summary.averageRating.toFixed(1)} / 5 (
-                    {summary.totalRatings})
-                  </span>
-                )}
-              </div>
-              <p className={`text-[11px] ${tokens.subMuted}`}>
-                Anonymous handles • Strictly moderated (zero profanity/hate
-                speech) • Async Watch Buddies
-              </p>
+        {/* Clean Un-Nested Community Header (Zero Double-Frame Clipping) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0 space-y-1 text-left">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base sm:text-lg font-black text-white leading-snug drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                RABBiT TV Community Ratings & Reviews
+              </h3>
+              {summary.totalRatings > 0 && (
+                <span
+                  className={`rounded-full border px-2.5 py-0.5 text-[11px] font-extrabold ${tokens.badge}`}
+                >
+                  ★ {summary.averageRating.toFixed(1)} / 5 (
+                  {summary.totalRatings})
+                </span>
+              )}
             </div>
+            <p className={`text-[11px] leading-relaxed ${tokens.subMuted}`}>
+              Anonymous handles • Strictly moderated • Async Watch Buddies
+            </p>
+          </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <CommArmoredBtn
-                variant="idle"
-                onClick={() => navigate({ to: "/community" as any })}
-                className="px-3.5 py-2 text-[11px]"
-              >
-                🎭 Movie Club
-              </CommArmoredBtn>
-              <CommArmoredBtn
-                variant="primary"
-                onClick={() => setExpanded((v) => !v)}
-                className="px-4 py-2 text-[11px]"
-              >
-                {expanded ? "Hide Reviews ▴" : "Rate & Reviews ▾"}
-              </CommArmoredBtn>
-            </div>
+          <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+            <CommArmoredBtn
+              variant="idle"
+              onClick={() => navigate({ to: "/community" as any })}
+              className="w-full sm:w-auto py-2.5 text-[11px] whitespace-nowrap"
+            >
+              Movie Club
+            </CommArmoredBtn>
+            <CommArmoredBtn
+              variant="primary"
+              onClick={() => setExpanded((v) => !v)}
+              className="w-full sm:w-auto py-2.5 text-[11px] whitespace-nowrap"
+            >
+              {expanded ? "Hide Reviews ▴" : "Rate & Reviews ▾"}
+            </CommArmoredBtn>
           </div>
         </div>
 
@@ -781,32 +769,18 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
             {/* Kids Safe Lockout */}
             {kidsLocked ? (
               <div
-                className={`rabtv-comm-plate rounded-2xl border p-4 text-center text-xs ${tokens.sub} ${tokens.muted}`}
+                className={`rounded-2xl border bg-black/65 p-4 text-center text-xs ${tokens.sub} ${tokens.muted}`}
               >
-                <div
-                  className="rabtv-comm-plate-bg"
-                  aria-hidden="true"
-                  style={{ backgroundImage: `url(${IMG_DETAILS_PANEL})` }}
-                />
-                <div className="rabtv-comm-plate-scrim" aria-hidden="true" />
-                <span className="relative z-10">
-                  🧒 Community ratings, comments, and Watch Buddy invites are
-                  locked while Kids Safe Mode is active.
-                </span>
+                🧒 Community ratings, comments, and Watch Buddy invites are
+                locked while Kids Safe Mode is active.
               </div>
             ) : !identity.publicHandle ? (
               /* Quick Anonymous Handle Setup (Protects real name!) */
               <form
                 onSubmit={handleQuickSetupHandle}
-                className={`rabtv-comm-plate rounded-2xl border p-4 text-left ${tokens.sub}`}
+                className={`rounded-2xl border bg-black/65 p-4 text-left ${tokens.sub}`}
               >
-                <div
-                  className="rabtv-comm-plate-bg"
-                  aria-hidden="true"
-                  style={{ backgroundImage: `url(${IMG_DETAILS_PANEL})` }}
-                />
-                <div className="rabtv-comm-plate-scrim" aria-hidden="true" />
-                <div className="relative z-10 space-y-2.5">
+                <div className="space-y-2.5">
                   <p className="text-xs font-extrabold text-white">
                     🛡️ Pick an Anonymous Public Handle to Rate & Comment
                   </p>
@@ -855,15 +829,9 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
               /* Rating & Review Composer */
               <form
                 onSubmit={handleSubmitReview}
-                className={`rabtv-comm-plate rounded-2xl border p-3.5 sm:p-4 text-left ${tokens.sub}`}
+                className={`rounded-2xl border bg-black/65 p-4 text-left ${tokens.sub}`}
               >
-                <div
-                  className="rabtv-comm-plate-bg"
-                  aria-hidden="true"
-                  style={{ backgroundImage: `url(${IMG_DETAILS_PANEL})` }}
-                />
-                <div className="rabtv-comm-plate-scrim" aria-hidden="true" />
-                <div className="relative z-10 space-y-3">
+                <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-extrabold text-white">
                       Posting anonymously as{" "}
@@ -897,19 +865,19 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
                   </div>
 
                   {/* Liked / Disliked + Spoiler Toggle */}
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
                       <CommArmoredBtn
                         variant={liked ? "active" : "idle"}
                         onClick={() => setLiked(true)}
-                        className="px-3.5 py-1.5 text-[11px]"
+                        className="w-full sm:w-auto py-2 text-[11px] whitespace-nowrap"
                       >
                         👍 Liked It
                       </CommArmoredBtn>
                       <CommArmoredBtn
                         variant={!liked ? "danger" : "idle"}
                         onClick={() => setLiked(false)}
-                        className="px-3.5 py-1.5 text-[11px]"
+                        className="w-full sm:w-auto py-2 text-[11px] whitespace-nowrap"
                       >
                         👎 Disliked It
                       </CommArmoredBtn>
@@ -963,7 +931,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
                       type="submit"
                       variant="primary"
                       disabled={submitting}
-                      className="px-4 py-2 text-xs"
+                      className="w-full sm:w-auto py-2.5 text-xs whitespace-nowrap"
                     >
                       {submitting
                         ? "Publishing..."
@@ -983,18 +951,10 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
               </p>
             ) : summary.reviews.length === 0 ? (
               <div
-                className={`rabtv-comm-plate rounded-2xl border p-5 text-center text-xs ${tokens.sub} ${tokens.subMuted}`}
+                className={`rounded-2xl border bg-black/65 p-4 text-center text-xs leading-relaxed ${tokens.sub} ${tokens.subMuted}`}
               >
-                <div
-                  className="rabtv-comm-plate-bg"
-                  aria-hidden="true"
-                  style={{ backgroundImage: `url(${IMG_DETAILS_PANEL})` }}
-                />
-                <div className="rabtv-comm-plate-scrim" aria-hidden="true" />
-                <span className="relative z-10">
-                  No RABBiT TV reviews for <strong>{title}</strong> yet. Be the
-                  first movie buff to rate it!
-                </span>
+                No RABBiT TV reviews for <strong>{title}</strong> yet. Be the
+                first movie buff to rate it!
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -1006,21 +966,9 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
                   return (
                     <div
                       key={rev.reviewId}
-                      className={`rabtv-comm-plate rounded-2xl border p-3.5 text-left ${tokens.sub}`}
+                      className={`rounded-2xl border bg-black/65 p-3.5 text-left ${tokens.sub}`}
                     >
-                      <div
-                        className="rabtv-comm-plate-bg"
-                        aria-hidden="true"
-                        style={{
-                          backgroundImage: `url(${IMG_COMM_MEMBER_CARD})`,
-                        }}
-                      />
-                      <div
-                        className="rabtv-comm-plate-scrim"
-                        aria-hidden="true"
-                      />
-
-                      <div className="relative z-10 space-y-2">
+                      <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <button
                             type="button"
