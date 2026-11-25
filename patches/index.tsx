@@ -318,6 +318,8 @@ const HOME_VIEWPORT_STYLES = `
   .rabtv-home-panel-plate {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: clamp(20px, 5vw, 34px) clamp(24px, 8%, 52px) !important;
     contain: layout paint;
   }
 
@@ -474,6 +476,8 @@ const HOME_VIEWPORT_STYLES = `
   .rabtv-home-play-cta {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding-inline: clamp(20px, 5.5vw, 34px);
     background-color: #0c0a09;
     border: 0 !important;
     box-shadow: none !important;
@@ -532,6 +536,8 @@ const HOME_VIEWPORT_STYLES = `
   .rabtv-home-sec-cta {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding-inline: clamp(18px, 4.8vw, 30px);
     background-color: #0c0a09;
     border: 0 !important;
     box-shadow: none !important;
