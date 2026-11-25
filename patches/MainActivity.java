@@ -70,7 +70,7 @@ public class MainActivity extends BridgeActivity {
 
     // Dynamic remote Gist adblock_overrides.json + Admin Session-Only Test Blocklist
     private static volatile Set<String> remoteOverrideAdDomains = Collections.emptySet();
-    private static final Set<String> sessionBlockedDomains = ConcurrentHashMap.newKeySet();
+    private static final Set<String> sessionBlockedDomains = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     // Admin Player Ad Inspector Native Telemetry Ring Buffer (0 overhead when inactive!)
     private static final int MAX_INSPECTOR_EVENTS = 400;
@@ -959,8 +959,14 @@ public class MainActivity extends BridgeActivity {
     private static String normalizeDomainInput(String raw) {
         if (raw == null) return "";
         String cleaned = raw.trim().toLowerCase(Locale.US);
-        cleaned = cleaned.replaceFirst("^https?://", "");
-        cleaned = cleaned.replaceFirst("^www\.", "");
+        if (cleaned.startsWith("https://")) {
+            cleaned = cleaned.substring(8);
+        } else if (cleaned.startsWith("http://")) {
+            cleaned = cleaned.substring(7);
+        }
+        if (cleaned.startsWith("www.")) {
+            cleaned = cleaned.substring(4);
+        }
         int slash = cleaned.indexOf('/');
         if (slash >= 0) cleaned = cleaned.substring(0, slash);
         int colon = cleaned.indexOf(':');
