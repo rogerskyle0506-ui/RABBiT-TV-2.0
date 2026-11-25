@@ -1,19 +1,23 @@
 package com.rabbittv.app;
 
+import android.app.PictureInPictureParams;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentCallbacks2;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Message;
+import android.util.Rational;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
 import android.webkit.PermissionRequest;
@@ -24,30 +28,73 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebChromeClient;
 import com.getcapacitor.BridgeWebViewClient;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MainActivity extends BridgeActivity {
+    private static final long DOUBLE_BACK_EXIT_WINDOW_MS = 2000L;
+
     private View customView;
     private FrameLayout fullscreenContainer;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private Bitmap transparentPoster;
+    private long lastHomeBackPressMs = 0L;
+
+    // Bundled offline HaGeZi popup/ad domain list loaded asynchronously from assets/adblock_domains.txt
+    private static final AtomicBoolean BUNDLED_ADBLOCK_INIT = new AtomicBoolean(false);
+    private static volatile Set<String> bundledAdDomains = Collections.emptySet();
+
+    // Dynamic remote Gist adblock_overrides.json + Admin Session-Only Test Blocklist
+    private static volatile Set<String> remoteOverrideAdDomains = Collections.emptySet();
+    private static final Set<String> sessionBlockedDomains = ConcurrentHashMap.newKeySet();
+
+    // Admin Player Ad Inspector Native Telemetry Ring Buffer (0 overhead when inactive!)
+    private static final int MAX_INSPECTOR_EVENTS = 400;
+    private static final AtomicBoolean inspectorCaptureEnabled = new AtomicBoolean(false);
+    private static final AtomicLong inspectorEventSeq = new AtomicLong(1L);
+    private static final Object inspectorLogLock = new Object();
+    private static final Deque<String> inspectorEventRing = new ArrayDeque<>(MAX_INSPECTOR_EVENTS);
 
     // Exact / root domains that must NEVER be blocked by the native ad firewall
+    // (Includes all 17 Rabbit Cinema streaming engines + TMDB, GitHub, YouTube, Radio & Live TV)
     private static final Set<String> SAFE_WHITELIST_DOMAINS = new HashSet<>(Arrays.asList(
         "localhost",
         "127.0.0.1",
+        "vidlink.pro",
+        "bingeapi.st",
+        "vidplus.to",
+        "vidnest.fun",
+        "vidking.net",
+        "vidfast.pro",
+        "vidify.top",
+        "vidcore.org",
+        "vidrock.net",
+        "smashy.stream",
+        "vidsrcme.ru",
         "vidsrc.to",
         "vidsrc.xyz",
         "vidsrc.me",
@@ -58,14 +105,15 @@ public class MainActivity extends BridgeActivity {
         "vidsrc.icu",
         "vidsrc.pro",
         "vidsrc.su",
-        "vidsrcme.ru",
         "vsembed.ru",
         "cloudnestra.com",
-        "vidlink.pro",
+        "autoembed.cc",
+        "embed.su",
+        "multiembed.mov",
+        "moviesapi.club",
+        "2embed.cc",
         "videasy.net",
         "player.videasy.net",
-        "autoembed.cc",
-        "vidfast.pro",
         "challenges.cloudflare.com",
         "cloudflare.com",
         "themoviedb.org",
@@ -99,8 +147,8 @@ public class MainActivity extends BridgeActivity {
         "mncdn.com"
     ));
 
-    // High-confidence ad, popunder, clickunder, push-scam, and overlay networks
-    // Intercepted natively even inside cross-origin vidsrc iframes
+    // Built-in baseline ad, popunder, clickunder, push-scam, and overlay networks
+    // Intercepted natively even inside cross-origin player iframes
     private static final Set<String> BLOCKED_AD_DOMAINS = new HashSet<>(Arrays.asList(
         "doubleclick.net",
         "googleadservices.com",
@@ -267,6 +315,9 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Load build-time bundled ad/popup blocklist in background without delaying app launch
+        loadBundledAdblockListAsync();
+
         // Keep the screen awake during playback across TVs, sticks, and projectors
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -276,12 +327,12 @@ public class MainActivity extends BridgeActivity {
 
         final WebView webView = this.bridge.getWebView();
 
-        // Dark launch background eliminates white flash on Android TV / Fire TV
-        webView.setBackgroundColor(Color.parseColor("#050b16"));
+        // Punk-Neon near-black launch background eliminates flash on Android TV / Fire TV
+        webView.setBackgroundColor(Color.parseColor("#0c0a09"));
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
-        // Ensure video CDNs & embed players (Vidsrc, VidLink, Videasy) can store third-party cookies
+        // Ensure video CDNs & embed players can store third-party cookies
         configureWebViewCookies(webView);
 
         // Hardened WebView settings tuned for streaming + low-RAM sticks
@@ -308,6 +359,9 @@ public class MainActivity extends BridgeActivity {
         // CRITICAL: Routes window.open() & target="_blank" to onCreateWindow instead of escaping to Chrome/Silk
         settings.setSupportMultipleWindows(true);
 
+        // Native Bridge for Step 2 Admin Player Ad Inspector & Live Remote Adblock Sync
+        webView.addJavascriptInterface(new RabbitAdInspectorBridge(webView), "RabbitAdInspector");
+
         // 1. Native Network & Redirect Ad Firewall (Extends Capacitor BridgeWebViewClient)
         webView.setWebViewClient(new BridgeWebViewClient(this.bridge) {
             @Override
@@ -325,24 +379,52 @@ public class MainActivity extends BridgeActivity {
                 String host = uri.getHost() != null ? uri.getHost().toLowerCase(Locale.US) : "";
                 String fullUrl = uri.toString().toLowerCase(Locale.US);
 
-                // Always allow our local Capacitor app and core whitelisted hosts immediately
-                if (host.isEmpty() || isHostWhitelisted(host)) {
+                String method = request.getMethod() != null ? request.getMethod() : "GET";
+                boolean isMainFrame = request.isForMainFrame();
+                boolean isMedia = isMediaStreamResource(fullUrl);
+
+                // Always allow our local Capacitor app immediately
+                if (host.isEmpty() || "localhost".equals(host) || "127.0.0.1".equals(host)) {
                     return super.shouldInterceptRequest(view, request);
                 }
 
-                // Block ad/popunder/overlay networks BEFORE they execute inside cross-origin iframes!
-                if (isBlockedAdHost(host)) {
+                // Admin Session-Only Test Blocks (checked before non-core whitelists so admins can test blocking any host except localhost/core)
+                if (!isCoreAppDomain(host) && hostMatchesDomainSet(host, sessionBlockedDomains)) {
+                    recordInspectorEvent(uri.toString(), host, method, isMainFrame, isMedia, "BLOCKED_SESSION", "Admin session test block");
+                    return createBlockedResponse(fullUrl);
+                }
+
+                // Core whitelisted streaming & app hosts
+                if (isHostWhitelisted(host)) {
+                    if (inspectorCaptureEnabled.get()) {
+                        recordInspectorEvent(uri.toString(), host, method, isMainFrame, isMedia, "ALLOWED_WHITELIST", "Whitelisted host");
+                    }
+                    return super.shouldInterceptRequest(view, request);
+                }
+
+                // Block baseline + bundled HaGeZi + remote GitHub Gist ad/popunder networks BEFORE they execute!
+                String blockReason = getBlockedAdHostReason(host);
+                if (blockReason != null) {
+                    recordInspectorEvent(uri.toString(), host, method, isMainFrame, isMedia, "BLOCKED_AD", blockReason);
                     return createBlockedResponse(fullUrl);
                 }
 
                 // Never interfere with actual video/audio/subtitle media streams on CDN hosts
-                if (isMediaStreamResource(fullUrl)) {
+                if (isMedia) {
+                    if (inspectorCaptureEnabled.get()) {
+                        recordInspectorEvent(uri.toString(), host, method, isMainFrame, true, "ALLOWED_MEDIA", "Media stream resource");
+                    }
                     return super.shouldInterceptRequest(view, request);
                 }
 
                 // Block high-confidence popunder/overlay script paths on unknown third-party hosts
                 if (hasBlockedScriptPath(fullUrl)) {
+                    recordInspectorEvent(uri.toString(), host, method, isMainFrame, false, "BLOCKED_PATH", "Blocked popunder/ad script path");
                     return createBlockedResponse(fullUrl);
+                }
+
+                if (inspectorCaptureEnabled.get()) {
+                    recordInspectorEvent(uri.toString(), host, method, isMainFrame, false, "ALLOWED_3P", "Third-party request");
                 }
 
                 return super.shouldInterceptRequest(view, request);
@@ -374,18 +456,19 @@ public class MainActivity extends BridgeActivity {
                     return super.shouldOverrideUrlLoading(view, request);
                 }
 
-                // Always kill ad-network redirect attempts on both main frame and iframes
-                if (isBlockedAdHost(host) || hasBlockedScriptPath(lowerUrl)) {
-                    return true;
-                }
-
                 // Allow intentional trusted external links (GitHub APK updates, IMDb, WhatsApp, tel/sms)
                 if (isTrustedExternalAction(lowerUrl)) {
                     openExternalSafely(rawUrl);
                     return true;
                 }
 
-                // Sub-frames (e.g. vidsrc cookie gate & internal player mirror hops):
+                // Kill ad-network redirect attempts on both main frame and non-whitelisted iframes
+                if (!isHostWhitelisted(host) && (isBlockedAdHost(host) || hasBlockedScriptPath(lowerUrl))) {
+                    recordInspectorEvent(rawUrl, host, "NAV", request.isForMainFrame(), false, "BLOCKED_REDIRECT", "Blocked ad redirect");
+                    return true;
+                }
+
+                // Sub-frames (e.g. player cookie gates & internal player hops):
                 // Return false directly so Android WebView loads inside the iframe instead of
                 // letting Capacitor's BridgeWebViewClient hijack it as an external Intent!
                 if (!request.isForMainFrame()) {
@@ -441,6 +524,22 @@ public class MainActivity extends BridgeActivity {
                             openExternalSafely(tappedUrl);
                         }
                     }
+                }
+
+                if (inspectorCaptureEnabled.get()) {
+                    String popExtra = "";
+                    try {
+                        WebView.HitTestResult hitInfo = view != null ? view.getHitTestResult() : null;
+                        if (hitInfo != null && hitInfo.getExtra() != null) {
+                            popExtra = hitInfo.getExtra();
+                        }
+                    } catch (Exception ignored) {}
+                    String popHost = "";
+                    try {
+                        Uri pu = Uri.parse(popExtra);
+                        if (pu != null && pu.getHost() != null) popHost = pu.getHost().toLowerCase(Locale.US);
+                    } catch (Exception ignored) {}
+                    recordInspectorEvent(popExtra.isEmpty() ? "window.open()" : popExtra, popHost.isEmpty() ? "popup-window" : popHost, "POPUP", false, false, "BLOCKED_POPUP", "Swallowed popup window");
                 }
 
                 // Swallow all ad popups / popunders completely so Chrome or Silk never launches
@@ -542,6 +641,7 @@ public class MainActivity extends BridgeActivity {
                 ));
 
                 webView.setVisibility(View.GONE);
+                updateAutoPipPreference(true);
             }
 
             @Override
@@ -549,6 +649,25 @@ public class MainActivity extends BridgeActivity {
                 cleanupCustomView();
             }
         });
+    }
+
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        // Smooth Picture-in-Picture on supported phones/tablets when leaving fullscreen video
+        if (customView != null && isPipAvailable()) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                    PictureInPictureParams params = new PictureInPictureParams.Builder()
+                        .setAspectRatio(new Rational(16, 9))
+                        .build();
+                    enterPictureInPictureMode(params);
+                }
+            } catch (Exception ignored) {
+                // Gracefully ignore on devices or launchers that restrict PiP
+            }
+        }
     }
 
     @Override
@@ -572,11 +691,22 @@ public class MainActivity extends BridgeActivity {
             return;
         }
 
-        // 2. Navigate back inside the SPA, suppressing accidental exit on Home ("/")
+        // 2. Navigate back inside the SPA; on Home ("/"), require double-press Back within 2s to exit
         if (this.bridge != null && this.bridge.getWebView() != null) {
             WebView webView = this.bridge.getWebView();
             webView.evaluateJavascript("window.location.pathname", path -> {
                 if (path != null && (path.equals("\"/\"") || path.equals("/"))) {
+                    long now = System.currentTimeMillis();
+                    if (now - lastHomeBackPressMs <= DOUBLE_BACK_EXIT_WINDOW_MS) {
+                        finish();
+                    } else {
+                        lastHomeBackPressMs = now;
+                        Toast.makeText(
+                            MainActivity.this,
+                            "Press Back again to exit RABBiT TV",
+                            Toast.LENGTH_SHORT
+                        ).show();
+                    }
                     return;
                 }
                 webView.evaluateJavascript("window.history.back()", null);
@@ -632,8 +762,60 @@ public class MainActivity extends BridgeActivity {
     }
 
     // ──────────────────────────────────────────────────────────────
-    // Helper Methods (Fast O(depth) Domain Matching & Safe Cleanup)
+    // Helper Methods (Async Offline Adblock, PiP, & Safe Cleanup)
     // ──────────────────────────────────────────────────────────────
+
+    private void loadBundledAdblockListAsync() {
+        if (!BUNDLED_ADBLOCK_INIT.compareAndSet(false, true)) {
+            return;
+        }
+        Thread loader = new Thread(() -> {
+            Set<String> loaded = new HashSet<>(8192);
+            try (InputStream is = getApplicationContext().getAssets().open("adblock_domains.txt");
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String domain = line.trim().toLowerCase(Locale.US);
+                    if (!domain.isEmpty() && !domain.startsWith("#") && !domain.startsWith("!")) {
+                        loaded.add(domain);
+                    }
+                }
+                if (!loaded.isEmpty()) {
+                    bundledAdDomains = Collections.unmodifiableSet(loaded);
+                }
+            } catch (Exception ignored) {
+                // Safe fallback: built-in BLOCKED_AD_DOMAINS remains active if asset file is absent
+            }
+        }, "rabtv-adblock-loader");
+        loader.setDaemon(true);
+        loader.start();
+    }
+
+    private boolean isPipAvailable() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return false;
+        }
+        try {
+            return getPackageManager().hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private void updateAutoPipPreference(boolean enabled) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !isPipAvailable()) {
+            return;
+        }
+        try {
+            PictureInPictureParams params = new PictureInPictureParams.Builder()
+                .setAspectRatio(new Rational(16, 9))
+                .setAutoEnterEnabled(enabled)
+                .build();
+            setPictureInPictureParams(params);
+        } catch (Exception ignored) {
+            // Ignore on devices without full Android 12+ auto-PiP support
+        }
+    }
 
     private void configureWebViewCookies(WebView webView) {
         if (webView == null) return;
@@ -675,7 +857,9 @@ public class MainActivity extends BridgeActivity {
     }
 
     private static boolean hostMatchesDomainSet(String host, Set<String> domainSet) {
-        if (host == null || host.isEmpty()) return false;
+        if (host == null || host.isEmpty() || domainSet == null || domainSet.isEmpty()) {
+            return false;
+        }
         String current = host;
         while (current != null && !current.isEmpty()) {
             if (domainSet.contains(current)) {
@@ -697,17 +881,223 @@ public class MainActivity extends BridgeActivity {
         return host.contains("vidsrc");
     }
 
-    private static boolean isBlockedAdHost(String host) {
-        if (host == null || host.isEmpty()) return false;
+    private static boolean isCoreAppDomain(String host) {
+        if (host == null || host.isEmpty()) return true;
+        return "localhost".equals(host) ||
+               "127.0.0.1".equals(host) ||
+               host.equals("themoviedb.org") || host.endsWith(".themoviedb.org") ||
+               host.equals("tmdb.org") || host.endsWith(".tmdb.org") ||
+               host.equals("github.com") || host.endsWith(".github.com") ||
+               host.equals("githubusercontent.com") || host.endsWith(".githubusercontent.com");
+    }
+
+    private static String getBlockedAdHostReason(String host) {
+        if (host == null || host.isEmpty()) return null;
+        if (hostMatchesDomainSet(host, sessionBlockedDomains)) {
+            return "Admin session block";
+        }
+        if (hostMatchesDomainSet(host, remoteOverrideAdDomains)) {
+            return "Global Gist adblock override";
+        }
         if (hostMatchesDomainSet(host, BLOCKED_AD_DOMAINS)) {
-            return true;
+            return "Built-in ad firewall";
+        }
+        if (hostMatchesDomainSet(host, bundledAdDomains)) {
+            return "Bundled HaGeZi popup list";
         }
         for (String kw : BLOCKED_HOST_KEYWORDS) {
             if (host.contains(kw)) {
-                return true;
+                return "Ad host keyword: " + kw;
             }
         }
-        return false;
+        return null;
+    }
+
+    private static boolean isBlockedAdHost(String host) {
+        return getBlockedAdHostReason(host) != null;
+    }
+
+    private static String scrubSensitiveUrl(String rawUrl) {
+        if (rawUrl == null) return "";
+        String trimmed = rawUrl.length() > 360 ? rawUrl.substring(0, 360) + "…" : rawUrl;
+        return trimmed.replaceAll("(?i)([?&](?:token|api_key|apikey|key|auth|sig|signature|access_token|pat)=)[^&]+", "$1[REDACTED]");
+    }
+
+    private static void recordInspectorEvent(
+        String rawUrl,
+        String host,
+        String method,
+        boolean isMainFrame,
+        boolean isMedia,
+        String action,
+        String reason
+    ) {
+        if (!inspectorCaptureEnabled.get()) return;
+        try {
+            JSONObject obj = new JSONObject();
+            obj.put("id", inspectorEventSeq.getAndIncrement());
+            obj.put("ts", System.currentTimeMillis());
+            obj.put("url", scrubSensitiveUrl(rawUrl));
+            obj.put("host", host != null ? host : "");
+            obj.put("method", method != null ? method : "GET");
+            obj.put("isMainFrame", isMainFrame);
+            obj.put("isMedia", isMedia);
+            obj.put("action", action);
+            obj.put("reason", reason);
+            String jsonLine = obj.toString();
+            synchronized (inspectorLogLock) {
+                while (inspectorEventRing.size() >= MAX_INSPECTOR_EVENTS) {
+                    inspectorEventRing.pollFirst();
+                }
+                inspectorEventRing.addLast(jsonLine);
+            }
+        } catch (Exception ignored) {
+            // Never disrupt network pipeline for diagnostic logging
+        }
+    }
+
+    private static String normalizeDomainInput(String raw) {
+        if (raw == null) return "";
+        String cleaned = raw.trim().toLowerCase(Locale.US);
+        cleaned = cleaned.replaceFirst("^https?://", "");
+        cleaned = cleaned.replaceFirst("^www\.", "");
+        int slash = cleaned.indexOf('/');
+        if (slash >= 0) cleaned = cleaned.substring(0, slash);
+        int colon = cleaned.indexOf(':');
+        if (colon >= 0) cleaned = cleaned.substring(0, colon);
+        cleaned = cleaned.trim();
+        if (cleaned.isEmpty() || cleaned.length() > 120 || !cleaned.contains(".")) return "";
+        return cleaned;
+    }
+
+    /**
+     * Native Android WebView Bridge for Admin Player Ad Inspector & Live Remote Adblock Overrides.
+     * Enforces local-origin verification before exposing capture telemetry.
+     */
+    private final class RabbitAdInspectorBridge {
+        private final WebView hostWebView;
+
+        RabbitAdInspectorBridge(WebView webView) {
+            this.hostWebView = webView;
+        }
+
+        private boolean isCallerLocalApp() {
+            if (hostWebView == null) return false;
+            final boolean[] allowed = new boolean[] { false };
+            final Object latch = new Object();
+            if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+                return isLocalAppOrigin(hostWebView.getUrl());
+            }
+            runOnUiThread(() -> {
+                synchronized (latch) {
+                    try {
+                        allowed[0] = isLocalAppOrigin(hostWebView.getUrl());
+                    } catch (Exception ignored) {
+                        allowed[0] = false;
+                    }
+                    latch.notifyAll();
+                }
+            });
+            synchronized (latch) {
+                try {
+                    latch.wait(250);
+                } catch (InterruptedException ignored) {}
+            }
+            return allowed[0];
+        }
+
+        @JavascriptInterface
+        public boolean isNativeBridgeAvailable() {
+            return isCallerLocalApp();
+        }
+
+        @JavascriptInterface
+        public void setCaptureEnabled(boolean enabled) {
+            if (!isCallerLocalApp()) return;
+            inspectorCaptureEnabled.set(enabled);
+        }
+
+        @JavascriptInterface
+        public void clearNetworkLog() {
+            if (!isCallerLocalApp()) return;
+            synchronized (inspectorLogLock) {
+                inspectorEventRing.clear();
+            }
+        }
+
+        @JavascriptInterface
+        public String getNetworkLogJson() {
+            if (!isCallerLocalApp()) return "[]";
+            StringBuilder sb = new StringBuilder("[");
+            synchronized (inspectorLogLock) {
+                boolean first = true;
+                for (String item : inspectorEventRing) {
+                    if (!first) sb.append(',');
+                    sb.append(item);
+                    first = false;
+                }
+            }
+            sb.append(']');
+            return sb.toString();
+        }
+
+        @JavascriptInterface
+        public int syncRemoteBlockedDomains(String domainsJsonArray) {
+            if (!isCallerLocalApp() || domainsJsonArray == null) return 0;
+            try {
+                JSONArray arr = new JSONArray(domainsJsonArray);
+                Set<String> next = new HashSet<>();
+                for (int i = 0; i < arr.length(); i++) {
+                    String d = normalizeDomainInput(arr.optString(i, ""));
+                    if (!d.isEmpty() && !isCoreAppDomain(d)) {
+                        next.add(d);
+                    }
+                }
+                remoteOverrideAdDomains = Collections.unmodifiableSet(next);
+                return next.size();
+            } catch (Exception ignored) {
+                return 0;
+            }
+        }
+
+        @JavascriptInterface
+        public boolean addSessionBlockedDomain(String rawDomain) {
+            if (!isCallerLocalApp()) return false;
+            String d = normalizeDomainInput(rawDomain);
+            if (d.isEmpty() || isCoreAppDomain(d)) return false;
+            sessionBlockedDomains.add(d);
+            return true;
+        }
+
+        @JavascriptInterface
+        public boolean removeSessionBlockedDomain(String rawDomain) {
+            if (!isCallerLocalApp()) return false;
+            String d = normalizeDomainInput(rawDomain);
+            if (d.isEmpty()) return false;
+            return sessionBlockedDomains.remove(d);
+        }
+
+        @JavascriptInterface
+        public void clearSessionBlockedDomains() {
+            if (!isCallerLocalApp()) return;
+            sessionBlockedDomains.clear();
+        }
+
+        @JavascriptInterface
+        public String getBlocklistStatsJson() {
+            if (!isCallerLocalApp()) return "{}";
+            try {
+                JSONObject o = new JSONObject();
+                o.put("baselineCount", BLOCKED_AD_DOMAINS.size());
+                o.put("bundledHageziCount", bundledAdDomains.size());
+                o.put("remoteOverrideCount", remoteOverrideAdDomains.size());
+                o.put("sessionBlockCount", sessionBlockedDomains.size());
+                o.put("capturing", inspectorCaptureEnabled.get());
+                return o.toString();
+            } catch (Exception ignored) {
+                return "{}";
+            }
+        }
     }
 
     private static boolean isMediaStreamResource(String lowerUrl) {
@@ -798,6 +1188,8 @@ public class MainActivity extends BridgeActivity {
 
     @SuppressWarnings("deprecation")
     private void cleanupCustomView() {
+        updateAutoPipPreference(false);
+
         if (customView == null) {
             return;
         }
