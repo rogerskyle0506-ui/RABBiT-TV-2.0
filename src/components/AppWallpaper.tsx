@@ -8,6 +8,11 @@ import {
   getWarmEyeCare,
   getGlowIntensity,
 } from "@/lib/settings";
+import {
+  ADMIN_STORE_UPDATED_EVENT,
+  getCachedBrandingConfig,
+  isSafeHttpsUrl,
+} from "@/lib/admin-store";
 
 const DEFAULT_WALLPAPER_URL =
   "https://i.postimg.cc/y6r1Fv8k/grok-image-1793587579614.jpg";
@@ -88,12 +93,21 @@ export const AppWallpaper = memo(function AppWallpaper({
   const [glowOff, setGlowOff] = useState<boolean>(
     () => getGlowIntensity() === "off"
   );
+  const [customWallpaperUrl, setCustomWallpaperUrl] = useState<string>(() => {
+    const url = getCachedBrandingConfig().customWallpaperUrl || "";
+    return isSafeHttpsUrl(url) ? url : "";
+  });
   const [imgFailed, setImgFailed] = useState<boolean>(false);
+  const [customFailed, setCustomFailed] = useState<boolean>(false);
 
-  // Reset image error state whenever backdropUrl changes
+  // Reset image error states whenever backdropUrl or OTA wallpaper changes
   useEffect(() => {
     setImgFailed(false);
   }, [backdropUrl]);
+
+  useEffect(() => {
+    setCustomFailed(false);
+  }, [customWallpaperUrl]);
 
   useEffect(() => {
     const syncWallpaperSettings = () => {
@@ -102,12 +116,15 @@ export const AppWallpaper = memo(function AppWallpaper({
       setReducedMotion(getReducedMotion());
       setWarmEyeCare(getWarmEyeCare());
       setGlowOff(getGlowIntensity() === "off");
+      const otaUrl = getCachedBrandingConfig().customWallpaperUrl || "";
+      setCustomWallpaperUrl(isSafeHttpsUrl(otaUrl) ? otaUrl : "");
     };
 
     syncWallpaperSettings();
     window.addEventListener("storage", syncWallpaperSettings);
     window.addEventListener("rabtv_settings_updated", syncWallpaperSettings);
     window.addEventListener("rabtv_ram_mode_updated", syncWallpaperSettings);
+    window.addEventListener(ADMIN_STORE_UPDATED_EVENT, syncWallpaperSettings);
 
     return () => {
       window.removeEventListener("storage", syncWallpaperSettings);
@@ -119,13 +136,22 @@ export const AppWallpaper = memo(function AppWallpaper({
         "rabtv_ram_mode_updated",
         syncWallpaperSettings
       );
+      window.removeEventListener(
+        ADMIN_STORE_UPDATED_EVENT,
+        syncWallpaperSettings
+      );
     };
   }, []);
 
   const activeWallpaper = useMemo(() => {
-    if (!backdropUrl || imgFailed) return DEFAULT_WALLPAPER_URL;
-    return optimizeBackdropUrl(backdropUrl, isLowRam);
-  }, [backdropUrl, imgFailed, isLowRam]);
+    if (backdropUrl && !imgFailed) {
+      return optimizeBackdropUrl(backdropUrl, isLowRam);
+    }
+    if (customWallpaperUrl && !customFailed) {
+      return customWallpaperUrl;
+    }
+    return DEFAULT_WALLPAPER_URL;
+  }, [backdropUrl, imgFailed, customWallpaperUrl, customFailed, isLowRam]);
 
   const themeTokens = useMemo(
     () => getWallpaperThemeTokens(appTheme),
@@ -144,6 +170,8 @@ export const AppWallpaper = memo(function AppWallpaper({
         onError={() => {
           if (backdropUrl && !imgFailed) {
             setImgFailed(true);
+          } else if (customWallpaperUrl && !customFailed) {
+            setCustomFailed(true);
           }
         }}
         className={`h-full w-full object-cover object-center ${
