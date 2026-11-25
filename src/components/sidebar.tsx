@@ -3,6 +3,11 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { createPortal } from "react-dom";
 import { Link } from "@tanstack/react-router";
 import { AdminPanel } from "@/components/AdminPanel";
+import {
+  ADMIN_STORE_UPDATED_EVENT,
+  getCachedBrandingConfig,
+  type BrandingAndFlagsConfig,
+} from "@/lib/admin-store";
 import { ReferralModal } from "@/components/ReferralModal";
 import {
   SIDEBAR_SECTION_EVENT,
@@ -154,11 +159,13 @@ export const globalFeedOptions = [
 
 export type GlobalFeedOption = (typeof globalFeedOptions)[number];
 
-// Original Neon Rabbit Console Assets (Outer Shell & Header Pills)
-const RABBIT_HEADER_PILL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
-const RABBIT_PANEL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
+// Unified Punk-Neon Console Assets (Reused from Index & Community Overhaul — Zero New Images)
+const RABBIT_PILL_ACTIVE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-active-crimson.jpg";
+const RABBIT_PILL_INACTIVE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-inactive-dark.jpg";
+const RABBIT_DRAWER_FRAME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-community-card-frame.jpg";
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
@@ -760,6 +767,9 @@ export function Sidebar({
   );
 
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
+  const [remoteBranding, setRemoteBranding] = useState<BrandingAndFlagsConfig>(
+    () => getCachedBrandingConfig()
+  );
 
   const tokens = useMemo(() => getSidebarThemeTokens(appTheme), [appTheme]);
 
@@ -795,6 +805,7 @@ export function Sidebar({
     setAutoPlayNextState(getAutoPlayNext());
     setDefaultPlayerVolumeState(getDefaultPlayerVolume());
     setStorageHealth(getStorageHealth());
+    setRemoteBranding(getCachedBrandingConfig());
   }, []);
 
   useEffect(() => {
@@ -812,11 +823,13 @@ export function Sidebar({
     window.addEventListener("rabtv_settings_updated", syncLocalControls);
     window.addEventListener("rabtv_holiday_updated", syncLocalControls);
     window.addEventListener(MASCOT_UPDATED_EVENT, syncLocalControls);
+    window.addEventListener(ADMIN_STORE_UPDATED_EVENT, syncLocalControls);
     return () => {
       controller.abort();
       window.removeEventListener("rabtv_settings_updated", syncLocalControls);
       window.removeEventListener("rabtv_holiday_updated", syncLocalControls);
       window.removeEventListener(MASCOT_UPDATED_EVENT, syncLocalControls);
+      window.removeEventListener(ADMIN_STORE_UPDATED_EVENT, syncLocalControls);
     };
   }, [isOpen, syncLocalControls]);
 
@@ -1367,17 +1380,16 @@ export function Sidebar({
         }`}
       >
         <div
-          className="absolute inset-0 pointer-events-none z-0 opacity-75"
+          className="rabtv-sb-pill-art absolute inset-0 pointer-events-none z-0"
           style={{
-            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-            backgroundSize: "115% 380%",
+            backgroundImage: `url(${isActive ? RABBIT_PILL_ACTIVE : RABBIT_PILL_INACTIVE})`,
+            backgroundSize: "100% 100%",
             backgroundRepeat: "no-repeat",
             backgroundPosition: "center center",
+            opacity: isActive ? 0.96 : 0.88,
           }}
         >
-          <div
-            className={`absolute inset-0 backdrop-blur-[3px] w-full h-full ${tokens.accordionOverlay}`}
-          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0c0a09]/35 to-[#0c0a09]/55 w-full h-full" />
         </div>
 
         <span className="relative z-10 flex items-center gap-2 min-w-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
@@ -1408,6 +1420,27 @@ export function Sidebar({
   return (
     <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex justify-end items-center sm:items-start p-2 sm:pt-[64px] sm:pr-4 sm:pb-3 pointer-events-none">
       <style>{`
+        :root, html[data-theme="violet"] { --rabtv-sb-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02); }
+        html[data-theme="red"] { --rabtv-sb-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0); }
+        html[data-theme="midnight"] { --rabtv-sb-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04); }
+        html[data-theme="emerald"] { --rabtv-sb-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02); }
+        html[data-theme="amber"] { --rabtv-sb-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04); }
+        html[data-theme="cyan"] { --rabtv-sb-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
+        .rabtv-sb-pill-art { filter: var(--rabtv-sb-filter); }
+        .rabtv-sb-9slice-shell {
+          position: absolute;
+          inset: 0;
+          box-sizing: border-box;
+          border-style: solid;
+          border-color: transparent;
+          border-width: 28px 24px;
+          border-image-source: url("${RABBIT_DRAWER_FRAME}");
+          border-image-slice: 13% 11% fill;
+          border-image-repeat: stretch;
+          filter: var(--rabtv-sb-filter);
+          pointer-events: none;
+          z-index: 0;
+        }
         @keyframes crystalBladeSwipeIn {
           0% {
             opacity: 0;
@@ -1430,20 +1463,13 @@ export function Sidebar({
         onClick={handleCloseSidebar}
       />
 
-      {/* Crystal Neon Console Blade Drawer (Strictly Inset Inside Glowing Frame on All Viewports) */}
+      {/* Armored Punk-Neon Console Blade Drawer (9-Sliced — Zero Border Stretch & 100% Safe Inner Bay) */}
       <div
         data-tour="sidebar"
-        className={`relative w-full max-w-[min(420px,calc(100vw-16px))] h-[calc(100dvh-16px)] sm:h-[calc(100dvh-78px)] max-h-[calc(100dvh-16px)] rounded-[28px] border flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-12 pb-12 px-[10.5%] sm:px-10 pointer-events-auto box-border backdrop-blur-2xl ${tokens.drawerShell}`}
+        className={`relative w-full max-w-[min(420px,calc(100vw-16px))] h-[calc(100dvh-16px)] sm:h-[calc(100dvh-78px)] max-h-[calc(100dvh-16px)] rounded-[28px] bg-[#0c0a09]/96 flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-12 pb-12 px-8 sm:px-9 pointer-events-auto box-border backdrop-blur-2xl ${tokens.drawerShell}`}
       >
-        {/* Translucent RABBIT_PANEL Neon Outer Frame Layer */}
-        <div
-          className="absolute inset-0 pointer-events-none z-0 opacity-55 mix-blend-lighten"
-          style={{
-            backgroundImage: `url(${RABBIT_PANEL})`,
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
-          }}
-        />
+        {/* 9-Sliced Punk-Neon Armored Outer Frame (Reused rabbit-tv-community-card-frame.jpg) */}
+        <div className="rabtv-sb-9slice-shell" aria-hidden="true" />
         <div
           className={`absolute inset-0 bg-gradient-to-b pointer-events-none z-0 ${tokens.drawerOverlay}`}
         />
@@ -1616,14 +1642,22 @@ export function Sidebar({
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <Link
-                          to="/live-tv"
-                          onClick={handleCloseSidebar}
-                          className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition hover:scale-[1.02] ${tokens.subtlePill}`}
-                        >
-                          <span>📡 Live TV</span>
-                        </Link>
+                      <div
+                        className={`grid gap-2 ${
+                          remoteBranding.liveTvEnabled !== false
+                            ? "grid-cols-2"
+                            : "grid-cols-1"
+                        }`}
+                      >
+                        {remoteBranding.liveTvEnabled !== false && (
+                          <Link
+                            to="/live-tv"
+                            onClick={handleCloseSidebar}
+                            className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition hover:scale-[1.02] ${tokens.subtlePill}`}
+                          >
+                            <span>📡 Live TV</span>
+                          </Link>
+                        )}
                         <Link
                           to="/watch-history"
                           onClick={handleCloseSidebar}
@@ -1631,7 +1665,7 @@ export function Sidebar({
                             appTheme
                           )}`}
                         >
-                          <span>🕒 History</span>
+                          <span>Watch History</span>
                         </Link>
                       </div>
                     </div>
