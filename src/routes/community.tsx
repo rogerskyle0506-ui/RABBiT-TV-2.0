@@ -11,6 +11,13 @@ import { AppWallpaper } from "@/components/AppWallpaper";
 import { MascotAvatar } from "@/components/MascotAvatar";
 import { getActiveMascotBadge, MASCOT_UPDATED_EVENT } from "@/lib/mascots";
 import {
+  ADMIN_STORE_UPDATED_EVENT,
+  getCachedBrandingConfig,
+  getActiveEnforcementForCurrentUser,
+  type BrandingAndFlagsConfig,
+  type UserEnforcementRecord,
+} from "@/lib/admin-store";
+import {
   isCommunityAccessLocked,
   isCommunityBackendConfigured,
   getCommunityBackendLabel,
@@ -830,6 +837,12 @@ function CommunityPage() {
   );
   const [largeButtons, setLargeButtons] = useState(() => getLargeButtons());
   const [kidsLocked, setKidsLocked] = useState(() => isCommunityAccessLocked());
+  const [remoteBranding, setRemoteBranding] = useState<BrandingAndFlagsConfig>(
+    () => getCachedBrandingConfig()
+  );
+  const [enforcement, setEnforcement] = useState<UserEnforcementRecord | null>(
+    () => getActiveEnforcementForCurrentUser()
+  );
   const [myMascot, setMyMascot] = useState(() => getActiveMascotBadge());
 
   const [activeTab, setActiveTab] = useState<ClubTab>("profile");
@@ -942,6 +955,12 @@ function CommunityPage() {
       setIdentity(getLocalCommunityIdentity());
       setVibePreview(computeMyPublicVibePreview());
       setBlockedIds(getBlockedPublicIds());
+      setRemoteBranding(getCachedBrandingConfig());
+      setEnforcement(
+        getActiveEnforcementForCurrentUser([
+          getLocalCommunityIdentity().publicHandle || "",
+        ])
+      );
     };
     syncSettings();
     void refreshAll(false);
@@ -950,17 +969,38 @@ function CommunityPage() {
     window.addEventListener("rabtv_ram_mode_updated", syncSettings);
     window.addEventListener(MASCOT_UPDATED_EVENT, syncSettings);
     window.addEventListener(COMMUNITY_UPDATED_EVENT, syncSettings);
+    window.addEventListener(ADMIN_STORE_UPDATED_EVENT, syncSettings);
     return () => {
       window.removeEventListener("rabtv_settings_updated", syncSettings);
       window.removeEventListener("rabtv_ram_mode_updated", syncSettings);
       window.removeEventListener(MASCOT_UPDATED_EVENT, syncSettings);
       window.removeEventListener(COMMUNITY_UPDATED_EVENT, syncSettings);
+      window.removeEventListener(ADMIN_STORE_UPDATED_EVENT, syncSettings);
     };
   }, [refreshAll]);
+
+  const isCommunityReadOnly = Boolean(remoteBranding.panicReadOnlyCommunity);
+  const isMuted = enforcement?.type === "mute";
+  const isShadowBanned = enforcement?.type === "shadow_ban";
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    if (isCommunityReadOnly) {
+      showToast(false, "🛡️ Community is temporarily in Read-Only mode.");
+      return;
+    }
+    if (isMuted) {
+      showToast(
+        false,
+        `🔇 Your account is muted from posting (${enforcement?.note || "Community guidelines"}).`
+      );
+      return;
+    }
+    if (isShadowBanned) {
+      showToast(true, "✓ Public Movie-Buff Card saved!");
+      return;
+    }
     setBusy(true);
     try {
       const cleanHandle = sanitizeInputText(
@@ -1020,6 +1060,19 @@ function CommunityPage() {
     }
   ) => {
     if (busy) return;
+    if (remoteBranding.watchBuddiesEnabled === false || isCommunityReadOnly) {
+      showToast(false, "Watch Buddy invites are temporarily paused.");
+      return;
+    }
+    if (isMuted) {
+      showToast(false, "🔇 Your account is muted from sending invites.");
+      return;
+    }
+    if (isShadowBanned) {
+      setInviteTarget(null);
+      showToast(true, `🤝 Sent Watch Buddy invite to ${target.handle}!`);
+      return;
+    }
     setBusy(true);
     try {
       const cleanNote = sanitizeInputText(
@@ -1086,9 +1139,22 @@ function CommunityPage() {
   ) => {
     if (e) e.preventDefault();
     if (busy) return;
+    if (isCommunityReadOnly || remoteBranding.watchBuddiesEnabled === false) {
+      showToast(false, "🛡️ Community chat is temporarily read-only.");
+      return;
+    }
+    if (isMuted) {
+      showToast(false, "🔇 Your account is currently muted from chatting.");
+      return;
+    }
     const raw = quickText ?? chatInputRef.current?.value ?? "";
     const clean = sanitizeInputText(raw, 360).trim();
     if (!clean) return;
+    if (isShadowBanned) {
+      if (!quickText && chatInputRef.current) chatInputRef.current.value = "";
+      showToast(true, "✓ Message sent!");
+      return;
+    }
     setBusy(true);
     try {
       const res = await sendBuddyThreadMessage(
@@ -1402,8 +1468,35 @@ function CommunityPage() {
           </div>
         )}
 
-        {/* Kids Safe Hard Guard / Unconfigured Relay */}
-        {kidsLocked ? (
+        {/* Admin Read-Only Panic or Active Mute Notice */}
+        {(isCommunityReadOnly || isMuted) && (
+          <div className="rounded-2xl border border-amber-400/50 bg-amber-950/85 px-4 py-2.5 text-center text-xs font-extrabold text-amber-200 shadow-lg">
+            {isCommunityReadOnly
+              ? "🛡️ Movie Club is temporarily in Read-Only Mode while administrators perform moderation."
+              : `🔇 Your account is muted from posting (${enforcement?.note || "Moderation policy"}).`}
+          </div>
+        )}
+
+        {/* Feature Flag Guard: Movie Club Disabled / Kids Safe / Unconfigured Relay */}
+        {remoteBranding.movieClubEnabled === false ? (
+          <div className={`rabtv-club-empty rounded-3xl border text-center ${tokens.panel}`}>
+            <div
+              className="rabtv-club-empty-bg"
+              aria-hidden="true"
+              style={{ backgroundImage: `url(${IMG_COMM_EMPTY_STATE})` }}
+            />
+            <div className="rabtv-club-empty-scrim" aria-hidden="true" />
+            <div className="relative z-10 space-y-2">
+              <p className="text-base font-black text-white">
+                🍿 Movie Club Temporarily Paused
+              </p>
+              <p className={`text-xs max-w-md mx-auto leading-relaxed ${tokens.muted}`}>
+                Administrators have temporarily paused the Movie Club tab. Your
+                saved profile and history are safe—check back soon!
+              </p>
+            </div>
+          </div>
+        ) : kidsLocked ? (
           <div className={`rabtv-club-empty rounded-3xl border text-center ${tokens.panel}`}>
             <div
               className="rabtv-club-empty-bg"
