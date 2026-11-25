@@ -181,27 +181,27 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: clamp(22px, 5.5vw, 38px) clamp(26px, 8.5%, 54px) !important;
+    padding: clamp(28px, 6.8vw, 44px) clamp(32px, 10%, 62px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
   }
 
   .rabtv-wh-plate--radar {
-    padding: clamp(18px, 4.5vw, 26px) clamp(32px, 11.5%, 68px) !important;
+    padding: clamp(24px, 5.8vw, 34px) clamp(34px, 12.5%, 74px) !important;
   }
 
   @media (min-width: 768px) {
     .rabtv-wh-plate--radar {
-      padding-right: clamp(140px, 24%, 240px) !important;
+      padding-right: clamp(150px, 25%, 248px) !important;
     }
   }
 
   .rabtv-wh-plate--card {
-    padding: clamp(16px, 4.2vw, 22px) clamp(18px, 9%, 28px) !important;
+    padding: clamp(18px, 4.8vw, 26px) clamp(22px, 10.5%, 34px) !important;
   }
 
   .rabtv-wh-plate--empty {
-    padding: clamp(32px, 8vw, 56px) clamp(28px, 9.5%, 64px) !important;
+    padding: clamp(36px, 9vw, 60px) clamp(34px, 11%, 70px) !important;
   }
 
   .rabtv-wh-plate-bg {
@@ -1249,31 +1249,24 @@ function WatchHistoryComponent() {
           <div
             className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4 ${themeTokens.dividerBorder}`}
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                className={`flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl border text-xl sm:text-2xl ${themeTokens.headerIconBox}`}
+            <div className="min-w-0 flex-1 text-left">
+              <h1 className="text-lg sm:text-2xl font-black tracking-tight text-white leading-tight">
+                Watch History & Activity
+              </h1>
+              <p
+                className={`text-[11px] sm:text-xs font-medium leading-relaxed mt-1 ${themeTokens.subMutedText}`}
               >
-                🕒
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-base sm:text-2xl font-black tracking-tight text-white leading-tight">
-                  Watch History & Activity
-                </h1>
-                <p
-                  className={`text-[11px] sm:text-xs font-medium leading-snug mt-0.5 ${themeTokens.subMutedText}`}
-                >
-                  Resume shows, track episodes & manage hidden titles
-                  {stats.topGenreName && (
-                    <>
-                      {" "}
-                      • Vibe:{" "}
-                      <strong className={themeTokens.accentText}>
-                        {stats.topGenreName}
-                      </strong>
-                    </>
-                  )}
-                </p>
-              </div>
+                Resume shows, track episodes & manage hidden titles
+                {stats.topGenreName && (
+                  <>
+                    {" "}
+                    • Vibe:{" "}
+                    <strong className={themeTokens.accentText}>
+                      {stats.topGenreName}
+                    </strong>
+                  </>
+                )}
+              </p>
             </div>
 
             {/* Portrait-Safe Search + Sort Row */}
@@ -1290,7 +1283,7 @@ function WatchHistoryComponent() {
                 className={`h-10 rounded-xl border px-3 text-xs font-bold focus:outline-none cursor-pointer shrink-0 ${themeTokens.inputClass}`}
               >
                 <option value="recent" className={themeTokens.optionBg}>
-                  🕒 Most Recent
+                  Most Recent
                 </option>
                 <option value="progress" className={themeTokens.optionBg}>
                   📊 Progress %
@@ -1302,35 +1295,35 @@ function WatchHistoryComponent() {
             </div>
           </div>
 
-          {/* Compact 4-Card KPI Activity Telemetry Strip (No Awkward Line Wraps) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          {/* Compact 4-Card KPI Activity Telemetry Strip (Zero Truncation on Portrait Phones) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             <div
-              className={`rounded-2xl border p-2.5 sm:p-3 flex flex-col justify-between gap-0.5 min-w-0 ${themeTokens.subPanel}`}
+              className={`rounded-2xl border p-3 sm:p-3.5 flex flex-col justify-between gap-1 min-w-0 ${themeTokens.subPanel}`}
             >
               <span
-                className={`text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap truncate ${themeTokens.subMutedText}`}
+                className={`text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap ${themeTokens.subMutedText}`}
               >
-                ⏳ In Progress
+                In Progress
               </span>
               <p className={`text-lg sm:text-xl font-black leading-tight ${themeTokens.accentText}`}>
                 {stats.inProgressMovies + stats.inProgressShows}
               </p>
-              <span className={`text-[10px] truncate ${themeTokens.subMutedText}`}>
+              <span className={`text-[9.5px] sm:text-[10px] leading-snug ${themeTokens.subMutedText}`}>
                 {stats.inProgressMovies} {stats.inProgressMovies === 1 ? "movie" : "movies"} •{" "}
                 {stats.inProgressShows} {stats.inProgressShows === 1 ? "show" : "shows"}
               </span>
             </div>
 
             <div
-              className={`rounded-2xl border p-2.5 sm:p-3 flex flex-col justify-between gap-1 min-w-0 ${themeTokens.subPanel}`}
+              className={`rounded-2xl border p-3 sm:p-3.5 flex flex-col justify-between gap-1 min-w-0 ${themeTokens.subPanel}`}
             >
               <div className="flex items-center justify-between gap-1 min-w-0">
                 <span
-                  className={`text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap truncate ${themeTokens.subMutedText}`}
+                  className={`text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap ${themeTokens.subMutedText}`}
                 >
-                  ✓ Completed
+                  Completed
                 </span>
-                <span className="text-[10px] font-black text-emerald-400 shrink-0">
+                <span className="text-[9.5px] sm:text-[10px] font-black text-emerald-400 shrink-0">
                   {stats.completionRatePct}%
                 </span>
               </div>
@@ -1348,33 +1341,33 @@ function WatchHistoryComponent() {
             </div>
 
             <div
-              className={`rounded-2xl border p-2.5 sm:p-3 flex flex-col justify-between gap-0.5 min-w-0 ${themeTokens.subPanel}`}
+              className={`rounded-2xl border p-3 sm:p-3.5 flex flex-col justify-between gap-1 min-w-0 ${themeTokens.subPanel}`}
             >
               <span
-                className={`text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap truncate ${themeTokens.subMutedText}`}
+                className={`text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap ${themeTokens.subMutedText}`}
               >
-                📡 Live TV
+                Live TV
               </span>
               <p className={`text-lg sm:text-xl font-black leading-tight ${themeTokens.accentText}`}>
                 {stats.recentLiveCount}
               </p>
-              <span className={`text-[10px] truncate ${themeTokens.subMutedText}`}>
+              <span className={`text-[9.5px] sm:text-[10px] leading-snug ${themeTokens.subMutedText}`}>
                 Recent channels
               </span>
             </div>
 
             <div
-              className={`rounded-2xl border p-2.5 sm:p-3 flex flex-col justify-between gap-0.5 min-w-0 ${themeTokens.subPanel}`}
+              className={`rounded-2xl border p-3 sm:p-3.5 flex flex-col justify-between gap-1 min-w-0 ${themeTokens.subPanel}`}
             >
               <span
-                className={`text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap truncate ${themeTokens.subMutedText}`}
+                className={`text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap ${themeTokens.subMutedText}`}
               >
-                👎 Hidden
+                Hidden
               </span>
               <p className="text-lg sm:text-xl font-black leading-tight text-white">
                 {stats.dislikedCount}
               </p>
-              <span className={`text-[10px] truncate ${themeTokens.subMutedText}`}>
+              <span className={`text-[9.5px] sm:text-[10px] leading-snug ${themeTokens.subMutedText}`}>
                 Skipped titles
               </span>
             </div>
@@ -1531,25 +1524,25 @@ function WatchHistoryComponent() {
             />
             <div className="rabtv-wh-plate-scrim" aria-hidden="true" />
             <div className="relative z-10 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span
-                  className={`w-1.5 h-6 rounded-full shrink-0 ${themeTokens.accentBar}`}
-                />
-                <div className="min-w-0">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`w-1.5 h-5 rounded-full shrink-0 ${themeTokens.accentBar}`}
+                  />
                   <h2 className="text-sm sm:text-base font-black text-white truncate">
-                    📡 New Episode Radar
+                    New Episode Radar
                   </h2>
-                  <p className={`text-[10px] sm:text-xs ${themeTokens.subMutedText}`}>
-                    Fresh episodes aired recently for shows you watch — tap to jump straight in!
-                  </p>
                 </div>
+                <span
+                  className={`rounded-full border px-2.5 py-0.5 text-[10px] sm:text-[11px] font-extrabold shrink-0 ${themeTokens.badgeBg}`}
+                >
+                  {unseenEpisodeAlerts.length} New
+                </span>
               </div>
-              <span
-                className={`rounded-full border px-3 py-1 text-[11px] font-extrabold shrink-0 ${themeTokens.badgeBg}`}
-              >
-                {unseenEpisodeAlerts.length} New
-              </span>
+              <p className={`text-[10px] sm:text-xs leading-relaxed ${themeTokens.subMutedText}`}>
+                Fresh episodes aired recently for shows you watch — tap to play.
+              </p>
             </div>
 
             <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
