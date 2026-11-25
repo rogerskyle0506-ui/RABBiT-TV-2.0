@@ -1,6 +1,7 @@
 // src/components/SplashIntro.tsx
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { AppTheme } from "@/lib/settings";
+import { getCachedBrandingConfig, isSafeHttpsUrl } from "@/lib/admin-store";
 
 // 1x1 transparent GIF prevents Android WebView from flashing a giant default play icon
 const TRANSPARENT_POSTER =
@@ -70,6 +71,14 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const finishedRef = useRef(false);
 
+  const videoSources = useMemo(() => {
+    const customUrl = getCachedBrandingConfig().customSplashUrl || "";
+    if (customUrl && isSafeHttpsUrl(customUrl)) {
+      return [customUrl, ...SPLASH_VIDEO_SOURCES];
+    }
+    return SPLASH_VIDEO_SOURCES;
+  }, []);
+
   const [sourceIndex, setSourceIndex] = useState(0);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -129,7 +138,7 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
           // If playback still fails on this source, try next fallback source
           if (!cancelled) {
             setSourceIndex((prev) => {
-              if (prev < SPLASH_VIDEO_SOURCES.length - 1) return prev + 1;
+              if (prev < videoSources.length - 1) return prev + 1;
               completeSplash();
               return prev;
             });
@@ -142,7 +151,7 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [sourceIndex, completeSplash]);
+  }, [sourceIndex, completeSplash, videoSources.length]);
 
   // Safety timeout: never trap the user on a black screen if offline and video isn't bundled locally
   useEffect(() => {
@@ -182,7 +191,7 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
 
   const handleVideoError = () => {
     setSourceIndex((prev) => {
-      if (prev < SPLASH_VIDEO_SOURCES.length - 1) {
+      if (prev < videoSources.length - 1) {
         return prev + 1;
       }
       completeSplash();
@@ -251,8 +260,8 @@ export const SplashIntro: React.FC<SplashIntroProps> = ({
       {/* Exact 100% Width x 100% Height Viewport Fill — Zero Cropping & Zero 16:9 Letterboxing */}
       <video
         ref={videoRef}
-        key={SPLASH_VIDEO_SOURCES[sourceIndex]}
-        src={SPLASH_VIDEO_SOURCES[sourceIndex]}
+        key={videoSources[sourceIndex]}
+        src={videoSources[sourceIndex]}
         poster={TRANSPARENT_POSTER}
         autoPlay
         playsInline
