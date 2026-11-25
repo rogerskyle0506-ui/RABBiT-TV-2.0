@@ -43,6 +43,18 @@ import { isInMyList, toggleMyList } from "@/lib/storage";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { bgAudio } from "@/lib/background-audio";
 import { initAdBlockerGlobalInterceptors } from "@/lib/adblocker";
+import {
+  ADMIN_STORE_UPDATED_EVENT,
+  getCachedSourcesManifest,
+  getCachedBrandingConfig,
+  refreshRemoteRuntimeConfig,
+  getActiveProvidersForPlayer,
+  getActiveTitleOverride,
+  buildProviderUrlFromTemplate,
+  type SourcesManifest,
+  type BrandingAndFlagsConfig,
+  type StreamProviderConfig,
+} from "@/lib/admin-store";
 
 // === Rabbit Cinema Invisible Multi-Provider Auto-Lock Engine (17 Independent Sources) ===
 
@@ -59,24 +71,7 @@ const SILENT_IFRAME_TIMEOUT_MS = 5600;
 const CURTAIN_SETTLE_MS = 350;
 const PROGRESS_SAVE_THROTTLE_MS = 15000;
 
-type CinemaStreamId =
-  | "rabbit-s1"
-  | "rabbit-s2"
-  | "rabbit-s3"
-  | "rabbit-s4"
-  | "rabbit-s5"
-  | "rabbit-s6"
-  | "rabbit-s7"
-  | "rabbit-s8"
-  | "rabbit-s9"
-  | "rabbit-s10"
-  | "rabbit-s11"
-  | "rabbit-s12"
-  | "rabbit-s13"
-  | "rabbit-s14"
-  | "rabbit-s15"
-  | "rabbit-s16"
-  | "rabbit-s17";
+type CinemaStreamId = string;
 
 interface CinemaStreamProfile {
   id: CinemaStreamId;
@@ -500,10 +495,16 @@ async function fetchTmdbMediaDetails(options: {
  * cinema providers (VidLink MEDIA_DATA, VidKing/BingeAPI/VidFast PLAYER_EVENT).
  */
 function parseCinemaTelemetryEvent(
-  event: MessageEvent
+  event: MessageEvent,
+  extraTrustedOrigins?: Set<string>
 ): NormalizedPlayerEvent | null {
   if (!event || typeof event.origin !== "string") return null;
-  if (!TRUSTED_EMBED_ORIGINS.has(event.origin)) return null;
+  if (
+    !TRUSTED_EMBED_ORIGINS.has(event.origin) &&
+    !(extraTrustedOrigins && extraTrustedOrigins.has(event.origin))
+  ) {
+    return null;
+  }
 
   let payload: any = event.data;
   if (typeof payload === "string") {
@@ -1494,6 +1495,14 @@ export function PlayerPage() {
     getKidsModeLocked()
   );
 
+  // Remote Admin Stream Manifest & Branding Flags (100% GitHub Gist, cached with offline fallback)
+  const [remoteManifest, setRemoteManifest] = useState<SourcesManifest>(() =>
+    getCachedSourcesManifest()
+  );
+  const [remoteBranding, setRemoteBranding] = useState<BrandingAndFlagsConfig>(
+    () => getCachedBrandingConfig()
+  );
+
   // Interactive Cinema UI States
   const [cinemaDimMode, setCinemaDimMode] = useState<boolean>(false);
   const [activeStream, setActiveStream] = useState<CinemaStreamId>(() =>
@@ -1576,6 +1585,25 @@ export function PlayerPage() {
     }
     return () => {
       nodes.forEach((n) => n.remove());
+    };
+  }, []);
+
+  // Background-refresh remote stream providers & title overrides from GitHub Gist
+  useEffect(() => {
+    let active = true;
+    const syncRemoteConfig = (force = false) => {
+      void refreshRemoteRuntimeConfig(force).then(({ manifest, branding }) => {
+        if (!active) return;
+        setRemoteManifest(manifest);
+        setRemoteBranding(branding);
+      });
+    };
+    syncRemoteConfig(false);
+    const onAdminUpdated = () => syncRemoteConfig(true);
+    window.addEventListener(ADMIN_STORE_UPDATED_EVENT, onAdminUpdated);
+    return () => {
+      active = false;
+      window.removeEventListener(ADMIN_STORE_UPDATED_EVENT, onAdminUpdated);
     };
   }, []);
 
@@ -2021,27 +2049,107 @@ export function PlayerPage() {
 
   const themeTokens = useMemo(() => getPlayerThemeTokens(appTheme), [appTheme]);
 
-  const embedUrl = useMemo(
+  // Active enabled providers ordered by Admin Command Center priority (+ Tier-1 panic filter)
+  const activeProviders = useMemo<StreamProviderConfig[]>(
+    () => getActiveProvidersForPlayer(remoteManifest, remoteBranding),
+    [remoteManifest, remoteBranding]
+  );
+
+  const dynamicTrustedOrigins = useMemo(() => {
+    const origins = new Set<string>();
+    for (const p of activeProviders) {
+      if (p.origin) origins.add(p.origin);
+    }
+    return origins;
+  }, [activeProviders]);
+
+  const activeTitleOverride = useMemo(
     () =>
-      buildCinemaEmbedUrl(
-        activeStream,
+      getActiveTitleOverride(
+        remoteManifest,
+        inferredMediaType,
+        mediaId,
+        season,
+        episode
+      ),
+    [remoteManifest, inferredMediaType, mediaId, season, episode]
+  );
+
+  const isGloballyQuarantined =
+    activeTitleOverride?.action === "quarantine_hide";
+
+  // Ensure activeStream always points to an enabled provider from the remote manifest
+  useEffect(() => {
+    if (activeProviders.length === 0) return;
+    if (!activeProviders.some((p) => p.id === activeStream)) {
+      setActiveStream(activeProviders[0].id);
+    }
+  }, [activeProviders, activeStream]);
+
+  const getNextDynamicStream = useCallback(
+    (current: CinemaStreamId, tried: Set<CinemaStreamId>): CinemaStreamId | null => {
+      const total = activeProviders.length;
+      if (total === 0) return getNextHealthyStream(current, tried);
+      const startIdx = activeProviders.findIndex((p) => p.id === current);
+
+      for (let offset = 1; offset < total; offset++) {
+        const cand = activeProviders[(Math.max(0, startIdx) + offset) % total];
+        if (cand && !tried.has(cand.id) && !sessionFailedStreams.has(cand.id)) {
+          return cand.id;
+        }
+      }
+      for (let offset = 1; offset < total; offset++) {
+        const cand = activeProviders[(Math.max(0, startIdx) + offset) % total];
+        if (cand && !tried.has(cand.id)) {
+          return cand.id;
+        }
+      }
+      return null;
+    },
+    [activeProviders]
+  );
+
+  const embedUrl = useMemo(() => {
+    if (isGloballyQuarantined) return "about:blank";
+    if (
+      activeTitleOverride?.action === "override_stream" &&
+      activeTitleOverride.directUrl
+    ) {
+      return activeTitleOverride.directUrl;
+    }
+    const matchedProvider = activeProviders.find((p) => p.id === activeStream);
+    if (matchedProvider) {
+      return buildProviderUrlFromTemplate(
+        matchedProvider,
         inferredMediaType,
         mediaId,
         season,
         episode,
         appTheme,
         autoPlayNext
-      ),
-    [
+      );
+    }
+    return buildCinemaEmbedUrl(
       activeStream,
       inferredMediaType,
       mediaId,
       season,
       episode,
       appTheme,
-      autoPlayNext,
-    ]
-  );
+      autoPlayNext
+    );
+  }, [
+    isGloballyQuarantined,
+    activeTitleOverride,
+    activeProviders,
+    activeStream,
+    inferredMediaType,
+    mediaId,
+    season,
+    episode,
+    appTheme,
+    autoPlayNext,
+  ]);
 
   // Completely invisible, silent auto-healing stream lock (zero notices, zero counts, zero visible hops)
   const silentHealStream = useCallback(() => {
@@ -2049,9 +2157,16 @@ export function PlayerPage() {
       window.clearTimeout(settleTimerRef.current);
       settleTimerRef.current = null;
     }
+    if (
+      isGloballyQuarantined ||
+      activeTitleOverride?.action === "override_stream"
+    ) {
+      setStreamPhase("ready");
+      return;
+    }
     sessionFailedStreams.add(activeStream);
     triedStreamsRef.current.add(activeStream);
-    const nextId = getNextHealthyStream(activeStream, triedStreamsRef.current);
+    const nextId = getNextDynamicStream(activeStream, triedStreamsRef.current);
     if (!nextId) {
       // All streams checked — lift loading curtain cleanly
       setStreamPhase("ready");
@@ -2061,7 +2176,7 @@ export function PlayerPage() {
     iframeLoadedRef.current = false;
     setStreamPhase("tuning");
     setActiveStream(nextId);
-  }, [activeStream]);
+  }, [activeStream, getNextDynamicStream, isGloballyQuarantined, activeTitleOverride]);
 
   // Silent background health watchdog behind the cinematic tuning curtain
   useEffect(() => {
@@ -2114,7 +2229,7 @@ export function PlayerPage() {
     if (!mediaDetails || !mediaId) return;
 
     const handlePlayerMessage = (event: MessageEvent) => {
-      const normalized = parseCinemaTelemetryEvent(event);
+      const normalized = parseCinemaTelemetryEvent(event, dynamicTrustedOrigins);
       if (!normalized) return;
 
       if (normalized.status === "playing") {
@@ -2205,6 +2320,7 @@ export function PlayerPage() {
     autoPlayNext,
     canGoNextEpisode,
     activeStream,
+    dynamicTrustedOrigins,
   ]);
 
   // Auto-play loading video while tuning & pause after fade-out to save GPU/RAM on TV sticks
@@ -2312,7 +2428,7 @@ export function PlayerPage() {
       settleTimerRef.current = null;
     }
     triedStreamsRef.current.add(activeStream);
-    const nextId = getNextHealthyStream(activeStream, triedStreamsRef.current);
+    const nextId = getNextDynamicStream(activeStream, triedStreamsRef.current);
     iframeLoadedRef.current = false;
     setLoadingVideoFailed(false);
     setStreamPhase("tuning");
@@ -2320,8 +2436,9 @@ export function PlayerPage() {
       triedStreamsRef.current.add(nextId);
       setActiveStream(nextId);
     } else {
-      triedStreamsRef.current = new Set(["rabbit-s1"]);
-      setActiveStream("rabbit-s1");
+      const firstId = activeProviders[0]?.id || "rabbit-s1";
+      triedStreamsRef.current = new Set([firstId]);
+      setActiveStream(firstId);
       setPlayerReloadNonce((n) => n + 1);
     }
   };
@@ -2983,6 +3100,18 @@ export function PlayerPage() {
             aria-hidden="true"
             style={{ backgroundImage: `url(${RABBIT_TV_PLAYER_OVERLAY_FRAME_URL})` }}
           />
+          {isGloballyQuarantined ? (
+            <div className="relative z-20 h-full w-full rounded-xl sm:rounded-2xl bg-[#0c0a09] flex flex-col items-center justify-center p-6 text-center gap-2.5">
+              <span className="text-3xl">🛡️</span>
+              <p className="text-sm sm:text-base font-black text-white">
+                Stream Temporarily Unavailable
+              </p>
+              <p className="text-xs text-zinc-400 max-w-sm leading-relaxed">
+                {activeTitleOverride?.reason ||
+                  "This title is currently under maintenance by RABBiT TV administrators. Please check back soon."}
+              </p>
+            </div>
+          ) : (
           <iframe
             key={`stable-player-${activeStream}-${strictIframeLock ? "locked" : "open"}-${mediaId}-${season}-${episode}-${playerReloadNonce}`}
             src={embedUrl}
@@ -3016,12 +3145,13 @@ export function PlayerPage() {
             allowFullScreen
             allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope; fullscreen"
           ></iframe>
+          )}
 
           {/* Cute Looping Loading Video Curtain — fills 100% of the player viewport until locked onto a working stream */}
           <div
-            aria-hidden={streamPhase === "ready"}
+            aria-hidden={streamPhase === "ready" || isGloballyQuarantined}
             className={`rabtv-vidsrc-protected rabtv-plr-loading-curtain rounded-xl sm:rounded-2xl transition-opacity duration-500 ${
-              streamPhase === "ready"
+              streamPhase === "ready" || isGloballyQuarantined
                 ? "opacity-0 pointer-events-none"
                 : "opacity-100 pointer-events-auto"
             }`}
