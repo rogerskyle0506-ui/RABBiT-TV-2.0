@@ -79,8 +79,14 @@ const COMMUNITY_SECTION_STYLES = `
   .rabtv-comm-plate {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: clamp(20px, 5vw, 34px) clamp(24px, 8%, 48px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
+  }
+
+  .rabtv-comm-plate--stat {
+    padding: clamp(16px, 4.2vw, 22px) clamp(20px, 9%, 34px) !important;
   }
 
   .rabtv-comm-plate-bg {
@@ -124,6 +130,8 @@ const COMMUNITY_SECTION_STYLES = `
   .rabtv-comm-banner {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: clamp(16px, 4.2vw, 24px) clamp(28px, 11.5%, 64px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
   }
@@ -152,6 +160,8 @@ const COMMUNITY_SECTION_STYLES = `
   .rabtv-comm-btn {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding-inline: clamp(16px, 4.2vw, 24px);
     background-color: #0c0a09;
     border: 0 !important;
     box-shadow: none !important;
@@ -684,7 +694,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
 
   return (
     <section
-      className={`rabtv-comm-plate mt-4 w-full rounded-3xl border p-4 sm:p-6 ${
+      className={`rabtv-comm-plate mt-4 w-full rounded-3xl border ${
         isLowRam ? "" : "backdrop-blur-md"
       } ${tokens.panel}`}
     >
@@ -1191,7 +1201,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
                   )}
 
                   <div className="grid grid-cols-2 gap-2.5 text-center">
-                    <div className="rabtv-comm-plate rounded-xl p-3">
+                    <div className="rabtv-comm-plate rabtv-comm-plate--stat rounded-xl">
                       <div
                         className="rabtv-comm-plate-bg"
                         aria-hidden="true"
@@ -1214,7 +1224,7 @@ export const TitleCommunitySection = memo(function TitleCommunitySection({
                         </strong>
                       </div>
                     </div>
-                    <div className="rabtv-comm-plate rounded-xl p-3">
+                    <div className="rabtv-comm-plate rabtv-comm-plate--stat rounded-xl">
                       <div
                         className="rabtv-comm-plate-bg"
                         aria-hidden="true"
