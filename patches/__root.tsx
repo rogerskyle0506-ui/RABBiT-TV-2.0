@@ -50,6 +50,15 @@ import "@/styles.css";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { checkForAppUpdates } from "@/lib/updater";
 import {
+  ADMIN_STORE_UPDATED_EVENT,
+  getCachedBrandingConfig,
+  refreshRemoteRuntimeConfig,
+  syncRemoteAdblockToNativeBridge,
+  getActiveEnforcementForCurrentUser,
+  type BrandingAndFlagsConfig,
+  type UserEnforcementRecord,
+} from "@/lib/admin-store";
+import {
   CardSize,
   StreamQuality,
   AppTheme,
@@ -117,6 +126,12 @@ export const TV_DETAILS_BTN_URL =
 
 export const REAL_SURPRISE_ME_BTN_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/real_surprisemmebutton.png";
+
+const ROOT_FOOTER_CARD_FRAME_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-community-card-frame.jpg";
+
+const ROOT_FOOTER_BTN_IDLE_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-action-secondary.jpg";
 
 /**
  * Viewport-locked header geometry so logo, search wrapper, search button, and
@@ -777,6 +792,46 @@ const VIEWPORT_HEADER_STYLES = `
       height: clamp(54px, 4vw, 64px);
     }
   }
+
+  /* 9-Sliced Punk-Neon Armored Footer Plate (Reuses rabbit-tv-community-card-frame.jpg) */
+  .rabtv-root-footer-plate {
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 28px 30px !important;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-root-footer-plate {
+      padding: 30px 38px !important;
+    }
+  }
+
+  .rabtv-root-footer-9slice {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 18px 20px;
+    border-image-source: url("${ROOT_FOOTER_CARD_FRAME_URL}");
+    border-image-slice: 13% 11% fill;
+    border-image-repeat: stretch;
+    filter: var(--rabtv-wrap-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rabtv-root-footer-btn {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    padding: 8px 18px !important;
+    contain: layout paint;
+  }
 `;
 
 const themeStatusBarMap: Record<AppTheme, string> = {
@@ -1264,6 +1319,14 @@ function RootComponent() {
   const [showCornerClock, setShowCornerClockState] = useState<boolean>(false);
   const [cornerClockText, setCornerClockText] = useState<string>("");
   const [isOffline, setIsOffline] = useState<boolean>(false);
+  const [remoteBranding, setRemoteBranding] = useState<BrandingAndFlagsConfig>(
+    () => getCachedBrandingConfig()
+  );
+  const [motdDismissed, setMotdDismissed] = useState<boolean>(false);
+  const [activeEnforcement, setActiveEnforcement] =
+    useState<UserEnforcementRecord | null>(() =>
+      getActiveEnforcementForCurrentUser()
+    );
 
   const [userAgeInput, setUserAgeInput] = useState<string>("");
   const [profileNameInput, setProfileNameInput] = useState<string>("");
@@ -1313,12 +1376,45 @@ function RootComponent() {
     }
   };
 
-  // Delayed app update check
+  // Delayed app update check & 100% GitHub Gist remote fleet sync (Adblock + Branding + Flags + Bans)
   useEffect(() => {
+    let active = true;
+    const applyRemote = (branding: BrandingAndFlagsConfig) => {
+      if (!active) return;
+      setRemoteBranding(branding);
+      setActiveEnforcement(getActiveEnforcementForCurrentUser());
+      syncRemoteAdblockToNativeBridge();
+      // Apply admin default theme override only if user has never picked a theme yet
+      if (
+        branding.forceDefaultTheme &&
+        typeof window !== "undefined" &&
+        !localStorage.getItem("rabtv_theme")
+      ) {
+        saveTheme(branding.forceDefaultTheme);
+        setAppTheme(branding.forceDefaultTheme);
+        void updateNativeStatusBar(branding.forceDefaultTheme);
+      }
+    };
+
+    const syncRemote = (force = false) => {
+      syncRemoteAdblockToNativeBridge();
+      void refreshRemoteRuntimeConfig(force).then(({ branding }) => {
+        applyRemote(branding);
+      });
+    };
+
+    syncRemote(false);
+    const onStoreUpdate = () => applyRemote(getCachedBrandingConfig());
+    window.addEventListener(ADMIN_STORE_UPDATED_EVENT, onStoreUpdate);
+
     const updateTimer = window.setTimeout(() => {
       void checkForAppUpdates(true);
     }, 3000);
-    return () => window.clearTimeout(updateTimer);
+    return () => {
+      active = false;
+      window.removeEventListener(ADMIN_STORE_UPDATED_EVENT, onStoreUpdate);
+      window.clearTimeout(updateTimer);
+    };
   }, []);
 
   // Ensure default radio station is Heartbeat Radio (2000s)
@@ -1700,15 +1796,66 @@ function RootComponent() {
           onClose={() => setShowProfileSwitcher(false)}
         />
         <PreviewHostBridge />
-        <HolidayOverlay />
+        {remoteBranding.holidayOverlayEnabled !== false && <HolidayOverlay />}
         <AppWallpaper />
         <Screensaver />
         <AuthProvider>
+          {/* Account Ban / Suspension Full-Screen Enforcement Lock (Never locks Admin devices) */}
+          {!isAdmin &&
+            activeEnforcement &&
+            (activeEnforcement.type === "ban" ||
+              activeEnforcement.type === "suspend") && (
+              <div className="rabtv-vidsrc-protected fixed inset-0 z-[100001] flex items-center justify-center bg-[#0c0a09]/96 p-5 backdrop-blur-xl">
+                <div className="max-w-md w-full rounded-3xl border border-[#C4282A]/60 bg-[#141210] p-7 text-center space-y-4 shadow-2xl">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#C4282A]/20 border border-[#C4282A]/50 text-3xl">
+                    🚫
+                  </div>
+                  <h2 className="text-lg font-black text-white uppercase tracking-wide">
+                    {activeEnforcement.type === "ban"
+                      ? "Account Terminated"
+                      : "Account Suspended"}
+                  </h2>
+                  <p className="text-xs text-[#E8DCC8] leading-relaxed">
+                    {activeEnforcement.note ||
+                      "Access to RABBiT TV has been restricted by an administrator."}
+                  </p>
+                  <p className="text-[11px] font-mono text-[#8C8175]">
+                    Reason Code: {activeEnforcement.reasonCode.toUpperCase()}
+                    {activeEnforcement.expiresAt
+                      ? ` • Lifts ${new Date(activeEnforcement.expiresAt).toLocaleString()}`
+                      : " • Permanent"}
+                  </p>
+                </div>
+              </div>
+            )}
+
           {/* Live Wi-Fi Offline Warning Banner (Semantic Alert) */}
           {isOffline && (
             <div className="rabtv-vidsrc-protected sticky top-0 z-50 w-full bg-red-700/95 border-b border-red-400/60 px-4 py-2 text-center text-xs font-extrabold text-white shadow-lg">
               📡 No Internet Connection — Waiting for Wi-Fi to reconnect...
             </div>
+          )}
+
+          {/* Admin Remote Maintenance Mode or Global MOTD Banner */}
+          {remoteBranding.maintenanceMode ? (
+            <div className="rabtv-vidsrc-protected sticky top-0 z-50 w-full bg-[#C4282A]/95 border-b border-red-300/45 px-4 py-2 text-center text-xs font-extrabold text-white shadow-lg">
+              🛠️ {remoteBranding.motdBanner || "RABBiT TV Maintenance in Progress — Some streams may momentarily refresh."}
+            </div>
+          ) : (
+            remoteBranding.motdBanner &&
+            !motdDismissed && (
+              <div className="rabtv-vidsrc-protected sticky top-0 z-50 w-full bg-[#141210]/95 border-b border-cyan-500/35 px-4 py-2 flex items-center justify-center gap-3 text-center text-xs font-bold text-[#E8DCC8] shadow-lg">
+                <span>📢 {remoteBranding.motdBanner}</span>
+                <button
+                  type="button"
+                  onClick={() => setMotdDismissed(true)}
+                  aria-label="Dismiss announcement"
+                  className="text-xs font-black text-cyan-300 hover:text-white cursor-pointer shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+            )
           )}
 
           {/* Viewport-Proportional Theme-Matched Glass Header */}
@@ -1884,59 +2031,82 @@ function RootComponent() {
                 data-tour="app-footer"
                 className="mx-auto max-w-7xl px-2.5 sm:px-6 pb-10"
               >
-                <div
-                  className={`rounded-2xl border backdrop-blur-md px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left ${tokens.footerShell}`}
-                >
-                  <div className="space-y-1 min-w-0">
-                    <p
-                      className={`text-[11px] sm:text-xs leading-relaxed ${tokens.footerText}`}
-                    >
-                      Metadata, posters & trailers powered by{" "}
-                      <a
-                        href="https://www.themoviedb.org"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        data-tour="tmdb-link"
-                        onClick={(e) =>
-                          void handleOpenExternal("https://www.themoviedb.org", e)
-                        }
-                        className={`inline-flex items-center gap-1 font-extrabold underline underline-offset-2 transition cursor-pointer ${tokens.footerLink}`}
+                <div className="rabtv-root-footer-plate rounded-3xl shadow-2xl">
+                  <div className="rabtv-root-footer-9slice" aria-hidden="true" />
+                  <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3.5 text-center sm:text-left">
+                    <div className="space-y-1 min-w-0">
+                      <p
+                        className={`text-[11px] sm:text-xs leading-relaxed ${tokens.footerText}`}
                       >
-                        TMDB (themoviedb.org) ↗
-                      </a>
-                    </p>
-                    <p className={`text-[10px] ${tokens.footerSubText}`}>
-                      This product uses the TMDB API but is not endorsed or
-                      certified by TMDB.
-                    </p>
-                  </div>
+                        Metadata, posters & trailers powered by{" "}
+                        <a
+                          href="https://www.themoviedb.org"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-tour="tmdb-link"
+                          onClick={(e) =>
+                            void handleOpenExternal("https://www.themoviedb.org", e)
+                          }
+                          className={`inline-flex items-center gap-1 font-extrabold underline underline-offset-2 transition cursor-pointer ${tokens.footerLink}`}
+                        >
+                          TMDB (themoviedb.org) ↗
+                        </a>
+                      </p>
+                      <p className={`text-[10px] ${tokens.footerSubText}`}>
+                        This product uses the TMDB API but is not endorsed or
+                        certified by TMDB.
+                      </p>
+                    </div>
 
-                  <div className="flex items-center justify-center gap-2 flex-wrap shrink-0">
-                    <button
-                      type="button"
-                      data-tour="footer-tos"
-                      onClick={() => {
-                        setTosRequireAccept(false);
-                        setShowTosModal(true);
-                      }}
-                      className={`rounded-xl border px-3 py-1.5 text-[11px] font-bold transition cursor-pointer ${tokens.footerBtn}`}
-                    >
-                      📜 Terms of Service
-                    </button>
-                    <button
-                      type="button"
-                      data-tour="footer-walkthrough"
-                      onClick={() => triggerRabbitWalkthrough(0)}
-                      className={`rounded-xl border px-3 py-1.5 text-[11px] font-bold transition cursor-pointer ${tokens.footerBtn}`}
-                    >
-                      🧭 App Tour
-                    </button>
-                    <span
-                      data-tour="app-version"
-                      className={`rounded-xl border px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider ${tokens.footerVersion}`}
-                    >
-                      RABBiT TV v2.8
-                    </span>
+                    <div className="flex items-center justify-center gap-2 flex-wrap shrink-0">
+                      <button
+                        type="button"
+                        data-tour="footer-tos"
+                        onClick={() => {
+                          setTosRequireAccept(false);
+                          setShowTosModal(true);
+                        }}
+                        className="rabtv-root-footer-btn rounded-xl text-[11px] font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-0 z-0 opacity-90"
+                          style={{
+                            backgroundImage: `url(${ROOT_FOOTER_BTN_IDLE_URL})`,
+                            backgroundSize: "100% 100%",
+                            filter: "var(--rabtv-wrap-filter)",
+                          }}
+                        />
+                        <span className="relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                          Terms of Service
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        data-tour="footer-walkthrough"
+                        onClick={() => triggerRabbitWalkthrough(0)}
+                        className="rabtv-root-footer-btn rounded-xl text-[11px] font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-0 z-0 opacity-90"
+                          style={{
+                            backgroundImage: `url(${ROOT_FOOTER_BTN_IDLE_URL})`,
+                            backgroundSize: "100% 100%",
+                            filter: "var(--rabtv-wrap-filter)",
+                          }}
+                        />
+                        <span className="relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                          App Tour
+                        </span>
+                      </button>
+                      <span
+                        data-tour="app-version"
+                        className={`rounded-xl border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider ${tokens.footerVersion}`}
+                      >
+                        RABBiT TV v2.8
+                      </span>
+                    </div>
                   </div>
                 </div>
               </footer>
