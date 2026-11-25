@@ -180,8 +180,28 @@ const WATCH_HISTORY_VIEWPORT_STYLES = `
   .rabtv-wh-plate {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: clamp(22px, 5.5vw, 38px) clamp(26px, 8.5%, 54px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
+  }
+
+  .rabtv-wh-plate--radar {
+    padding: clamp(18px, 4.5vw, 26px) clamp(32px, 11.5%, 68px) !important;
+  }
+
+  @media (min-width: 768px) {
+    .rabtv-wh-plate--radar {
+      padding-right: clamp(140px, 24%, 240px) !important;
+    }
+  }
+
+  .rabtv-wh-plate--card {
+    padding: clamp(16px, 4.2vw, 22px) clamp(18px, 9%, 28px) !important;
+  }
+
+  .rabtv-wh-plate--empty {
+    padding: clamp(32px, 8vw, 56px) clamp(28px, 9.5%, 64px) !important;
   }
 
   .rabtv-wh-plate-bg {
@@ -1502,7 +1522,7 @@ function WatchHistoryComponent() {
         {unseenEpisodeAlerts.length > 0 && (
           <section
             data-tour="episode-radar-banner"
-            className={`rabtv-wh-plate rounded-3xl border p-3.5 sm:p-5 ${themeTokens.surfacePanel}`}
+            className={`rabtv-wh-plate rabtv-wh-plate--radar rounded-3xl border ${themeTokens.surfacePanel}`}
           >
             <div
               className="rabtv-wh-plate-bg"
@@ -1574,7 +1594,7 @@ function WatchHistoryComponent() {
         {/* MAIN ACTIVITY CONTENT */}
         {!hasVisibleContent ? (
           <div
-            className={`rabtv-wh-plate rounded-3xl border p-10 sm:p-14 text-center shadow-2xl ${themeTokens.surfacePanel}`}
+            className={`rabtv-wh-plate rabtv-wh-plate--empty rounded-3xl border text-center shadow-2xl ${themeTokens.surfacePanel}`}
           >
             <div
               className="rabtv-wh-plate-bg"
@@ -1622,11 +1642,11 @@ function WatchHistoryComponent() {
                       <div
                         key={channel.channelId}
                         data-tour="history-item"
-                        className={`rabtv-wh-plate group relative ${posterAppearance.radiusClass} border ${
+                        className={`rabtv-wh-plate rabtv-wh-plate--card group relative ${posterAppearance.radiusClass} border ${
                           pinned
                             ? themeTokens.liveCardPinned
                             : themeTokens.liveCard
-                        } p-3 shadow-xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center justify-between overflow-hidden`}
+                        } shadow-xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center justify-between overflow-hidden`}
                       >
                         <div
                           className="rabtv-wh-plate-bg"
@@ -1907,7 +1927,7 @@ function WatchHistoryComponent() {
                   {filteredDisliked.map((item) => (
                     <div
                       key={item.id}
-                      className={`rabtv-wh-plate group relative ${posterAppearance.radiusClass} border overflow-hidden shadow-lg flex flex-col justify-between p-3.5 transition ${
+                      className={`rabtv-wh-plate rabtv-wh-plate--card group relative ${posterAppearance.radiusClass} border overflow-hidden shadow-lg flex flex-col justify-between transition ${
                         themeTokens.surfacePanel
                       }`}
                     >
