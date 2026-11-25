@@ -1,0 +1,112 @@
+name: Automated Stream Provider Health Monitor
+
+on:
+  schedule:
+    # Runs automatically every 6 hours on GitHub's free runners
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe Enabled Stream Providers & Update sources_manifest.json on Gist
+        env:
+          GIST_ID: ${{ secrets.VITE_GIST_ID }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          python3 - << 'PYEOF'
+          import json
+          import os
+          import time
+          import urllib.request
+          import urllib.error
+          from concurrent.futures import ThreadPoolExecutor
+
+          gist_id = os.environ.get("GIST_ID", "").strip()
+          gh_pat = os.environ.get("GH_PAT", "").strip()
+
+          if not gist_id or not gh_pat:
+              print("Skipping health check: VITE_GIST_ID or GH_PAT secret is missing.")
+              raise SystemExit(0)
+
+          gist_url = f"https://api.github.com/gists/{gist_id}"
+          headers = {
+              "Authorization": f"Bearer {gh_pat}",
+              "Accept": "application/vnd.github+json",
+              "User-Agent": "RabbitTV-HealthMonitor/1.0",
+          }
+
+          req = urllib.request.Request(gist_url, headers=headers)
+          with urllib.request.urlopen(req, timeout=20) as resp:
+              gist_data = json.loads(resp.read().decode("utf-8"))
+
+          raw_manifest = gist_data.get("files", {}).get("sources_manifest.json", {}).get("content")
+          if not raw_manifest:
+              print("No sources_manifest.json found in Gist yet. Open /admin -> Streams once to initialize.")
+              raise SystemExit(0)
+
+          manifest = json.loads(raw_manifest)
+          providers = manifest.get("providers", [])
+          if not isinstance(providers, list) or not providers:
+              print("No providers listed in sources_manifest.json.")
+              raise SystemExit(0)
+
+          def probe(p):
+              origin = str(p.get("origin", "")).strip()
+              if not origin.startswith("https://"):
+                  return p
+              start = time.monotonic()
+              status = "down"
+              try:
+                  preq = urllib.request.Request(
+                      origin,
+                      headers={"User-Agent": "Mozilla/5.0 (compatible; RabbitTV-Health/1.0)"},
+                      method="HEAD",
+                  )
+                  with urllib.request.urlopen(preq, timeout=6) as r:
+                      code = getattr(r, "status", 200)
+                      latency = int((time.monotonic() - start) * 1000)
+                      if code < 500:
+                          status = "degraded" if latency > 2500 else "healthy"
+              except urllib.error.HTTPError as he:
+                  latency = int((time.monotonic() - start) * 1000)
+                  # 403/405/404 on HEAD still proves origin TLS & edge are alive
+                  if he.code in (401, 403, 404, 405):
+                      status = "degraded" if latency > 2500 else "healthy"
+                  else:
+                      status = "down"
+              except Exception:
+                  latency = int((time.monotonic() - start) * 1000)
+                  status = "down"
+
+              p["healthStatus"] = status
+              p["lastLatencyMs"] = latency
+              p["lastCheckedAt"] = int(time.time() * 1000)
+              print(f"  [{status.upper():8s}] {p.get('name', p.get('id')):<16s} {latency:4d}ms  ({origin})")
+              return p
+
+          print(f"Probing {len(providers)} providers from sources_manifest.json...")
+          with ThreadPoolExecutor(max_workers=6) as pool:
+              updated_providers = list(pool.map(probe, providers))
+
+          manifest["providers"] = updated_providers
+          manifest["updatedAt"] = int(time.time() * 1000)
+
+          patch_body = json.dumps({
+              "files": {
+                  "sources_manifest.json": {
+                      "content": json.dumps(manifest, indent=2)
+                  }
+              }
+          }).encode("utf-8")
+
+          patch_req = urllib.request.Request(
+              gist_url,
+              data=patch_body,
+              headers={**headers, "Content-Type": "application/json"},
+              method="PATCH",
+          )
+          with urllib.request.urlopen(patch_req, timeout=20) as presp:
+              print(f"Updated sources_manifest.json cleanly (HTTP {presp.status}).")
+          PYEOF
