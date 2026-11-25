@@ -151,7 +151,7 @@ const DETAILS_VIEWPORT_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: clamp(22px, 5.5vw, 38px) clamp(26px, 8.5%, 56px) !important;
+    padding: clamp(28px, 6.8vw, 44px) clamp(32px, 10%, 62px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     contain: layout paint;
   }
@@ -252,7 +252,7 @@ const DETAILS_VIEWPORT_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding-inline: clamp(18px, 11.5%, 36px) !important;
+    padding-inline: clamp(18px, 10%, 34px) !important;
     background-color: #0c0a09;
     border: 0 !important;
     box-shadow: none !important;
@@ -390,7 +390,7 @@ const DETAILS_VIEWPORT_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: clamp(18px, 4.8vw, 24px) clamp(28px, 10%, 44px) !important;
+    padding: clamp(20px, 5.2vw, 26px) clamp(32px, 11%, 48px) !important;
     background-color: #0c0a09;
     border: 0 !important;
     contain: layout paint;
@@ -2469,8 +2469,7 @@ export function DetailsPage() {
                 />
                 <span className="rabtv-dtl-sec-cta-scrim" aria-hidden="true" />
                 <span className="rabtv-dtl-cta-content">
-                  <span className="text-sm sm:text-base shrink-0">🚩</span>
-                  <span className="truncate">Report Broken</span>
+                  <span className="whitespace-nowrap">Report Broken</span>
                 </span>
               </button>
 
@@ -2540,10 +2539,7 @@ export function DetailsPage() {
                   aria-hidden="true"
                 />
                 <span className="rabtv-dtl-cta-content">
-                  <span className="text-sm sm:text-base transition-transform group-hover:scale-110 shrink-0">
-                    {inMyList ? "✓" : "🔖"}
-                  </span>
-                  <span className="truncate">
+                  <span className="whitespace-nowrap">
                     {inMyList ? "Saved" : "Save for Later"}
                   </span>
                 </span>
@@ -2584,19 +2580,17 @@ export function DetailsPage() {
                 }
                 aria-hidden="true"
               />
-              <span className="relative z-10 flex items-center gap-2 truncate drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
-                <span className="text-base shrink-0">📚</span>
+              <span className="relative z-10 flex items-center gap-1.5 min-w-0 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
                 <span className="truncate">
                   {itemShelfIds.length > 0
-                    ? `Saved in ${itemShelfIds.length} Custom ${
+                    ? `In ${itemShelfIds.length} Custom ${
                         itemShelfIds.length === 1 ? "Shelf" : "Shelves"
                       }`
                     : (
                         <>
-                          Add to Custom Shelf
+                          <span className="sm:hidden">Custom Shelves</span>
                           <span className="hidden sm:inline">
-                            {" "}
-                            (e.g. Comfort Shows, Marathons)
+                            Add to Custom Shelf (e.g. Comfort Shows, Marathons)
                           </span>
                         </>
                       )}
