@@ -1,6 +1,7 @@
 // src/components/AdminPanel.tsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { AdminBugInbox } from "@/components/AdminBugInbox";
 import { AdminReferralModal } from "@/components/AdminReferralModal";
 import {
@@ -55,6 +56,7 @@ export function AdminPanel({
   void appTheme;
   void getPrimaryBgColor;
   void getPrimaryAccentColor;
+  const navigate = useNavigate();
 
   // Admin Security Vault Lock States
   const [isVaultLocked, setIsVaultLocked] = useState<boolean>(() => {
@@ -891,6 +893,35 @@ export function AdminPanel({
         </div>
       ) : (
         <div className="space-y-2.5 w-full box-border">
+          {/* FULL-SCREEN COMMAND CENTER LAUNCHER (/admin) */}
+          <button
+            type="button"
+            onClick={() => {
+              resetInactivityTimer();
+              navigate({ to: "/admin" as any });
+            }}
+            className="crystal-admin-pill w-full flex items-center justify-between gap-2 px-4 py-3 text-left text-xs font-black text-white relative overflow-hidden rounded-2xl border border-cyan-400/60 cursor-pointer box-border transition-all duration-200 ease-out hover:scale-[1.03] focus:scale-[1.04] hover:-translate-y-0.5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-cyan-400 shadow-[0_8px_24px_rgba(34,211,238,0.28)]"
+          >
+            <div
+              className="absolute inset-0 pointer-events-none z-0 opacity-90"
+              style={{
+                backgroundImage: `url(${RABBIT_HEADER_PILL})`,
+                backgroundSize: "130% 100%",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center center",
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#C4282A]/90 via-red-900/70 to-cyan-950/90 backdrop-blur-[3px] w-full h-full" />
+            </div>
+            <span className="relative z-10 flex items-center gap-2 min-w-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
+              <span className="text-sm shrink-0">⚡</span>
+              <span className="truncate">Full Command Center</span>
+            </span>
+            <span className="relative z-10 rounded-full bg-black/75 border border-cyan-400/50 px-2 py-0.5 text-[9px] font-black text-cyan-200 shrink-0">
+              OPEN ↗
+            </span>
+          </button>
+
           {/* 0. REFERRAL PAYOUTS & CONFIRMATIONS LEDGER (Full-Screen Portal Modal) */}
           <button
             type="button"
