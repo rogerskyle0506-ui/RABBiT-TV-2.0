@@ -108,6 +108,8 @@ const SEARCH_PAGE_STYLES = `
   /* Main Search Control Deck (Female Rabbit Detective in Bottom-Right) */
   .rabtv-srch-deck {
     position: relative;
+    box-sizing: border-box;
+    padding: clamp(22px, 5.5vw, 36px) clamp(26px, 8.5%, 54px) !important;
     background-color: rgba(12, 10, 9, 0.74);
     overflow: visible;
     transition: box-shadow 260ms ease;
@@ -275,6 +277,8 @@ const SEARCH_PAGE_STYLES = `
   .rabtv-srch-dd-trigger {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: 10px clamp(14px, 5.5%, 26px) 10px clamp(18px, 7.5%, 32px) !important;
     background-color: #0c0a09;
     border: 0 !important;
     contain: layout paint;
@@ -298,6 +302,8 @@ const SEARCH_PAGE_STYLES = `
     right: 0;
     top: calc(100% + 6px);
     z-index: 60;
+    box-sizing: border-box;
+    padding: clamp(14px, 4vw, 22px) clamp(16px, 7%, 28px) !important;
     border-radius: 18px;
     overflow: hidden;
     background-color: #0c0a09;
@@ -321,7 +327,8 @@ const SEARCH_PAGE_STYLES = `
     position: relative;
     width: 100%;
     min-height: clamp(58px, 16vw, 88px);
-    padding: 10px clamp(84px, 24%, 210px) 10px clamp(18px, 5%, 36px);
+    box-sizing: border-box;
+    padding: clamp(14px, 3.8vw, 22px) clamp(88px, 24%, 215px) clamp(14px, 3.8vw, 22px) clamp(32px, 11.5%, 68px);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1078,7 +1085,7 @@ const SearchInputDeck = memo(function SearchInputDeck({
           />
           <div className="rabtv-srch-input-scrim" aria-hidden="true" />
 
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-xs sm:text-sm pointer-events-none text-cyan-300">
+          <span className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 z-10 text-xs sm:text-sm pointer-events-none text-cyan-300">
             🔍
           </span>
 
@@ -1114,11 +1121,11 @@ const SearchInputDeck = memo(function SearchInputDeck({
               unicodeBidi: "plaintext",
               textAlign: "left",
             }}
-            className="relative z-10 w-full bg-transparent pl-10 pr-24 py-3.5 text-xs sm:text-sm font-bold text-white placeholder-zinc-400 focus:outline-none"
+            className="relative z-10 w-full bg-transparent pl-12 sm:pl-14 pr-28 py-3.5 text-xs sm:text-sm font-bold text-white placeholder-zinc-400 focus:outline-none"
           />
 
           {/* Inline Voice + Visual Search + Clear Triggers */}
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
+          <div className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
             {hasValue && (
               <ArmoredButton
                 variant="danger"
