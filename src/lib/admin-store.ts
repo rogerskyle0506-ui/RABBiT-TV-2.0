@@ -762,6 +762,11 @@ export async function fetchFullAdminSnapshot(): Promise<{
     writeLocalCache(LOCAL_BRANDING_CACHE_KEY, branding);
     writeLocalCache(LOCAL_ADBLOCK_CACHE_KEY, adblockRules);
     writeLocalCache(LOCAL_ENFORCEMENT_CACHE_KEY, enforcement);
+    syncRemoteAdblockToNativeBridge(
+      (Array.isArray(adblockRules) ? adblockRules : [])
+        .filter((r) => r.active)
+        .map((r) => r.domain)
+    );
 
     return {
       ok: true,
@@ -1130,5 +1135,231 @@ export async function triggerGithubApkRebuild(
     };
   } catch (err: any) {
     return { ok: false, error: err?.message || "Failed to dispatch workflow." };
+  }
+}
+
+// =============================================================================
+// STEP 2: NATIVE ANDROID AD-INSPECTOR BRIDGE & ONE-CLICK AD REMEDIATION HELPERS
+// =============================================================================
+export interface NativeInspectorBridge {
+  isNativeBridgeAvailable?: () => boolean;
+  setCaptureEnabled?: (enabled: boolean) => void;
+  clearNetworkLog?: () => void;
+  getNetworkLogJson?: () => string;
+  syncRemoteBlockedDomains?: (domainsJsonArray: string) => number;
+  addSessionBlockedDomain?: (domain: string) => boolean;
+  removeSessionBlockedDomain?: (domain: string) => boolean;
+  clearSessionBlockedDomains?: () => void;
+  getBlocklistStatsJson?: () => string;
+}
+
+export function getNativeInspectorBridge(): NativeInspectorBridge | null {
+  if (typeof window === "undefined") return null;
+  const bridge = (window as any).RabbitAdInspector as
+    | NativeInspectorBridge
+    | undefined;
+  if (!bridge) return null;
+  try {
+    if (
+      typeof bridge.isNativeBridgeAvailable === "function" &&
+      !bridge.isNativeBridgeAvailable()
+    ) {
+      return null;
+    }
+    return bridge;
+  } catch {
+    return null;
+  }
+}
+
+export function syncRemoteAdblockToNativeBridge(domains?: string[]): number {
+  const bridge = getNativeInspectorBridge();
+  if (!bridge || typeof bridge.syncRemoteBlockedDomains !== "function") {
+    return 0;
+  }
+  const activeDomains = domains ?? getCachedAdblockOverrideDomains();
+  try {
+    return bridge.syncRemoteBlockedDomains(JSON.stringify(activeDomains));
+  } catch {
+    return 0;
+  }
+}
+
+export async function addGlobalAdBlockDomain(options: {
+  domain: string;
+  reason: string;
+  source?: "manual" | "player_inspector";
+  providerId?: string;
+}): Promise<{ ok: boolean; domain?: string; error?: string }> {
+  const domain = normalizeBlockDomain(options.domain);
+  if (!domain) {
+    return { ok: false, error: "Invalid domain format." };
+  }
+  if (isDomainProtected(domain)) {
+    return {
+      ok: false,
+      error: `Protected core domain "${domain}" cannot be blocked.`,
+    };
+  }
+
+  const snapRes = await fetchFullAdminSnapshot();
+  const existing = snapRes.snapshot.adblockRules || [];
+  if (existing.some((r) => r.domain === domain && r.active)) {
+    syncRemoteAdblockToNativeBridge(
+      existing.filter((r) => r.active).map((r) => r.domain)
+    );
+    return { ok: true, domain };
+  }
+
+  const nextRule: AdBlockRule = {
+    id: `ad_${Date.now().toString(36)}`,
+    domain,
+    reason: sanitizeAdminText(options.reason, 140) || "Captured by Ad Inspector",
+    source: options.source || "player_inspector",
+    providerId: options.providerId,
+    active: true,
+    addedBy: getAdminActorName(),
+    addedAt: Date.now(),
+  };
+
+  const nextRules = [
+    nextRule,
+    ...existing.filter((r) => r.domain !== domain),
+  ];
+
+  const commitRes = await commitAdminGistFiles({
+    filesToUpdate: { "adblock_overrides.json": nextRules },
+    audit: {
+      action:
+        options.source === "player_inspector"
+          ? "INSPECTOR_GLOBAL_BLOCK"
+          : "ADBLOCK_DOMAIN_ADD",
+      target: domain,
+      reason: nextRule.reason,
+      afterSummary: options.providerId
+        ? `Blocked from ${options.providerId}`
+        : "Global adblock override",
+    },
+  });
+
+  if (commitRes.ok) {
+    syncRemoteAdblockToNativeBridge(
+      nextRules.filter((r) => r.active).map((r) => r.domain)
+    );
+    return { ok: true, domain };
+  }
+  return { ok: false, error: commitRes.error };
+}
+
+export async function submitAdInjectionTicket(payload: {
+  mediaId: string;
+  mediaType: "movie" | "tv";
+  title: string;
+  providerId: string;
+  domain: string;
+  selector: string;
+  originType: string;
+  notes?: string;
+}): Promise<{ ok: boolean; ticket?: AdInjectionTicket; error?: string }> {
+  const snapRes = await fetchFullAdminSnapshot();
+  const existing = snapRes.snapshot.adTickets || [];
+
+  const ticket: AdInjectionTicket = {
+    id: `adt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+    mediaId: sanitizeAdminText(payload.mediaId, 24),
+    mediaType: payload.mediaType,
+    title: sanitizeAdminText(payload.title, 80),
+    providerId: sanitizeAdminText(payload.providerId, 40),
+    domain: sanitizeAdminText(payload.domain, 120) || "unknown",
+    selector: sanitizeAdminText(payload.selector, 220) || "unknown",
+    originType: sanitizeAdminText(payload.originType, 60) || "third-party",
+    status: "open",
+    notes: payload.notes ? sanitizeAdminText(payload.notes, 200) : undefined,
+    createdBy: getAdminActorName(),
+    createdAt: Date.now(),
+  };
+
+  const nextTickets = [ticket, ...existing].slice(0, 100);
+  const res = await commitAdminGistFiles({
+    filesToUpdate: { "ad_tickets.json": nextTickets },
+    audit: {
+      action: "INSPECTOR_AD_TICKET",
+      target: `${ticket.domain} (${ticket.title})`,
+      reason: ticket.notes || `Reported ad element on ${ticket.providerId}`,
+      afterSummary: ticket.selector,
+    },
+  });
+
+  if (res.ok) return { ok: true, ticket };
+  return { ok: false, error: res.error };
+}
+
+export async function resolveAdInjectionTicket(
+  ticketId: string,
+  status: "blocked" | "dismissed",
+  blockDomainToo = false
+): Promise<{ ok: boolean; error?: string }> {
+  const snapRes = await fetchFullAdminSnapshot();
+  const existing = snapRes.snapshot.adTickets || [];
+  const target = existing.find((t) => t.id === ticketId);
+  if (!target) return { ok: false, error: "Ticket not found." };
+
+  const filesToUpdate: Record<string, unknown> = {
+    "ad_tickets.json": existing.map((t) =>
+      t.id === ticketId ? { ...t, status } : t
+    ),
+  };
+
+  if (blockDomainToo && target.domain) {
+    const cleanDomain = normalizeBlockDomain(target.domain);
+    if (cleanDomain && !isDomainProtected(cleanDomain)) {
+      const existingRules = snapRes.snapshot.adblockRules || [];
+      const nextRules: AdBlockRule[] = [
+        {
+          id: `ad_${Date.now().toString(36)}`,
+          domain: cleanDomain,
+          reason: `From Ad Ticket on ${target.title} (${target.providerId})`,
+          source: "player_inspector",
+          providerId: target.providerId,
+          active: true,
+          addedBy: getAdminActorName(),
+          addedAt: Date.now(),
+        },
+        ...existingRules.filter((r) => r.domain !== cleanDomain),
+      ];
+      filesToUpdate["adblock_overrides.json"] = nextRules;
+      syncRemoteAdblockToNativeBridge(
+        nextRules.filter((r) => r.active).map((r) => r.domain)
+      );
+    }
+  }
+
+  return commitAdminGistFiles({
+    filesToUpdate,
+    audit: {
+      action:
+        status === "blocked"
+          ? "AD_TICKET_BLOCK_RESOLVE"
+          : "AD_TICKET_DISMISS",
+      target: `${target.domain} (${target.title})`,
+      reason: blockDomainToo
+        ? `Blocked domain globally & closed ticket ${ticketId}`
+        : `Marked ticket ${ticketId} as ${status}`,
+    },
+  });
+}
+
+export async function logInspectorAuditEvent(
+  action: string,
+  target: string,
+  reason: string
+): Promise<void> {
+  try {
+    await commitAdminGistFiles({
+      filesToUpdate: {},
+      audit: { action, target, reason },
+    });
+  } catch {
+    // non-blocking best-effort audit trail for inspector opens
   }
 }
