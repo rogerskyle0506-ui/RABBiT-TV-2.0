@@ -36,6 +36,7 @@ import {
 import {
   fetchFullAdminSnapshot,
   commitAdminGistFiles,
+  resolveAdInjectionTicket,
   probeProviderHealth,
   triggerGithubApkRebuild,
   getLocalVaultCredentials,
@@ -2626,14 +2627,97 @@ function AdminCommandCenterPage() {
                       {snapshot.adTickets.map((tk) => (
                         <div
                           key={tk.id}
-                          className="rounded-xl border border-white/10 bg-black/65 p-3 text-xs space-y-1"
+                          className={`rounded-2xl border p-3.5 text-xs space-y-2 ${
+                            tk.status === "open"
+                              ? "border-cyan-500/35 bg-black/75"
+                              : "border-white/10 bg-black/45 opacity-65"
+                          }`}
                         >
-                          <p className="font-black text-white">
-                            {tk.domain} on {tk.title} ({tk.providerId})
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-black text-white">
+                              <span className="font-mono text-red-300">
+                                {tk.domain}
+                              </span>{" "}
+                              on {tk.title}
+                            </p>
+                            <span
+                              className={`rounded-md px-2 py-0.5 text-[9px] font-black uppercase ${
+                                tk.status === "open"
+                                  ? "bg-amber-500/25 text-amber-200"
+                                  : tk.status === "blocked"
+                                    ? "bg-emerald-500/25 text-emerald-200"
+                                    : "bg-white/10 text-[#8C8175]"
+                              }`}
+                            >
+                              {tk.status}
+                            </span>
+                          </div>
+                          <p className="text-[10.5px] text-[#8C8175]">
+                            Provider: <strong className="text-[#E8DCC8]">{tk.providerId}</strong> •{" "}
+                            {tk.originType} • By {tk.createdBy} • {formatDateTime(tk.createdAt)}
                           </p>
-                          <p className="font-mono text-[10px] text-cyan-300 truncate">
+                          <p className="font-mono text-[10px] text-cyan-300 break-all bg-black/60 rounded-lg px-2 py-1">
                             {tk.selector}
                           </p>
+                          {tk.notes && (
+                            <p className="text-[10.5px] text-[#E8DCC8]">{tk.notes}</p>
+                          )}
+                          {tk.status === "open" && (
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={async () => {
+                                  setBusy(true);
+                                  try {
+                                    const res = await resolveAdInjectionTicket(
+                                      tk.id,
+                                      "blocked",
+                                      true
+                                    );
+                                    showToast(
+                                      res.ok,
+                                      res.ok
+                                        ? `🛡️ Blocked ${tk.domain} globally & closed ticket!`
+                                        : res.error || "Failed to block"
+                                    );
+                                    await loadSnapshot();
+                                  } finally {
+                                    setBusy(false);
+                                  }
+                                }}
+                                className="rounded-lg bg-[#C4282A] hover:bg-red-600 px-3 py-1.5 text-[10.5px] font-extrabold text-white cursor-pointer disabled:opacity-45"
+                              >
+                                🛡️ Block Domain & Resolve
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={async () => {
+                                  setBusy(true);
+                                  try {
+                                    const res = await resolveAdInjectionTicket(
+                                      tk.id,
+                                      "dismissed",
+                                      false
+                                    );
+                                    showToast(
+                                      res.ok,
+                                      res.ok
+                                        ? "Ticket dismissed."
+                                        : res.error || "Failed"
+                                    );
+                                    await loadSnapshot();
+                                  } finally {
+                                    setBusy(false);
+                                  }
+                                }}
+                                className="rounded-lg border border-white/15 bg-white/5 hover:bg-white/15 px-3 py-1.5 text-[10.5px] font-bold text-[#E8DCC8] cursor-pointer"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
