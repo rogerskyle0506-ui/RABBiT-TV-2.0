@@ -654,6 +654,12 @@ const RABBIT_TV_HOME_BTN_URL =
 const TV_DETAILS_BTN_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/TvDetails.png";
 
+const RABBIT_TV_LOADING_VIDEO_RAW_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/gemini_generated_video_9e25e863.mp4";
+
+const RABBIT_TV_LOADING_VIDEO_FALLBACK_URL =
+  "https://github.com/rogerskyle0506-ui/RABBiT-TV-2.0/raw/refs/heads/main/assets/gemini_generated_video_9e25e863.mp4";
+
 /**
  * Viewport-locked layout rules for Player top utility wrapper (single
  * buttonwrapper.png holding BOTH Back to Home + TV/Movie Details side-by-side)
@@ -782,6 +788,24 @@ const PLAYER_VIEWPORT_STYLES = `
     pointer-events: none;
     z-index: 2;
     mix-blend-mode: lighten;
+  }
+
+  /* Full-Viewport Looping Loading Video Curtain (100% x 100% inside the armored player bezel, unstretched via object-fit: cover) */
+  .rabtv-plr-loading-curtain {
+    position: absolute;
+    inset: clamp(6px, 1.4vw, 12px);
+    z-index: 20;
+    overflow: hidden;
+    background-color: #000000;
+    contain: layout paint;
+  }
+
+  .rabtv-plr-loading-video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center center;
   }
 
   /* Cinema Metadata Panel (rabbit-tv-player-metadata-panel-background.jpg with bottom-right rabbit projector scene) */
@@ -1487,6 +1511,9 @@ export function PlayerPage() {
   const triedStreamsRef = useRef<Set<CinemaStreamId>>(new Set());
   const iframeLoadedRef = useRef<boolean>(false);
   const settleTimerRef = useRef<number | null>(null);
+  const loadingVideoRef = useRef<HTMLVideoElement>(null);
+  const [loadingVideoReady, setLoadingVideoReady] = useState<boolean>(false);
+  const [loadingVideoFailed, setLoadingVideoFailed] = useState<boolean>(false);
   const lastProgressSaveRef = useRef<{ time: number; pct: number }>({
     time: 0,
     pct: -1,
@@ -2180,6 +2207,35 @@ export function PlayerPage() {
     activeStream,
   ]);
 
+  // Auto-play loading video while tuning & pause after fade-out to save GPU/RAM on TV sticks
+  useEffect(() => {
+    if (loading || loadingVideoFailed) return;
+    const video = loadingVideoRef.current;
+    if (!video) return;
+
+    if (streamPhase !== "ready") {
+      video.muted = true;
+      video.defaultMuted = true;
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {
+          // Ignore WebView autoplay promise rejection; fallback backdrop/spinner stays visible
+        });
+      }
+      return;
+    }
+
+    const pauseTimer = window.setTimeout(() => {
+      try {
+        video.pause();
+      } catch {
+        // ignore pause errors on unmount
+      }
+    }, 520);
+
+    return () => window.clearTimeout(pauseTimer);
+  }, [streamPhase, loading, loadingVideoFailed]);
+
   // Countdown tick for Auto-Play Next Episode overlay
   useEffect(() => {
     if (autoNextCountdown === null) return;
@@ -2258,6 +2314,7 @@ export function PlayerPage() {
     triedStreamsRef.current.add(activeStream);
     const nextId = getNextHealthyStream(activeStream, triedStreamsRef.current);
     iframeLoadedRef.current = false;
+    setLoadingVideoFailed(false);
     setStreamPhase("tuning");
     if (nextId) {
       triedStreamsRef.current.add(nextId);
@@ -2960,29 +3017,60 @@ export function PlayerPage() {
             allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope; fullscreen"
           ></iframe>
 
-          {/* Pure Loading Curtain — stays smoothly over the player until locked onto a working stream */}
+          {/* Cute Looping Loading Video Curtain — fills 100% of the player viewport until locked onto a working stream */}
           <div
             aria-hidden={streamPhase === "ready"}
-            className={`rabtv-vidsrc-protected absolute inset-2 sm:inset-3 z-20 rounded-xl sm:rounded-2xl overflow-hidden flex flex-col items-center justify-center bg-black/92 backdrop-blur-md transition-opacity duration-500 ${
+            className={`rabtv-vidsrc-protected rabtv-plr-loading-curtain rounded-xl sm:rounded-2xl transition-opacity duration-500 ${
               streamPhase === "ready"
                 ? "opacity-0 pointer-events-none"
                 : "opacity-100 pointer-events-auto"
             }`}
           >
-            {backdropUrl && (
+            {backdropUrl && (!loadingVideoReady || loadingVideoFailed) && (
               <img
                 src={backdropUrl}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover opacity-20 blur-sm scale-105 pointer-events-none"
+                className="absolute inset-0 h-full w-full object-cover opacity-25 blur-sm scale-105 pointer-events-none"
               />
             )}
-            <div className="relative z-10 flex flex-col items-center justify-center gap-3">
-              <div
-                className={`h-12 w-12 rounded-full border-[3px] border-t-transparent animate-spin ${themeTokens.text}`}
-                role="status"
-                aria-label="Loading video"
-              />
-            </div>
+
+            {!loadingVideoFailed && (
+              <video
+                ref={loadingVideoRef}
+                className={`rabtv-plr-loading-video relative z-10 transition-opacity duration-300 ${
+                  loadingVideoReady ? "opacity-100" : "opacity-0"
+                }`}
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                controls={false}
+                disablePictureInPicture
+                disableRemotePlayback
+                poster={backdropUrl || undefined}
+                onPlaying={() => setLoadingVideoReady(true)}
+                onCanPlay={() => setLoadingVideoReady(true)}
+                onError={() => setLoadingVideoFailed(true)}
+              >
+                <source src={RABBIT_TV_LOADING_VIDEO_RAW_URL} type="video/mp4" />
+                <source
+                  src={RABBIT_TV_LOADING_VIDEO_FALLBACK_URL}
+                  type="video/mp4"
+                  onError={() => setLoadingVideoFailed(true)}
+                />
+              </video>
+            )}
+
+            {(!loadingVideoReady || loadingVideoFailed) && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                <div
+                  className={`h-11 w-11 rounded-full border-[3px] border-t-transparent animate-spin ${themeTokens.text}`}
+                  role="status"
+                  aria-label="Loading video"
+                />
+              </div>
+            )}
           </div>
 
           {/* Auto-Play Next Episode Countdown Overlay (triggered by verified PLAYER_EVENT ended) */}
