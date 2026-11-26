@@ -34,11 +34,20 @@ import { AppWallpaper } from '@/components/AppWallpaper';
 import { bgAudio } from '@/lib/background-audio';
 import { LiveMiniGuide, type MiniGuideMode } from '@/components/LiveMiniGuide';
 
-const BUTTON_WRAPPER_URL =
-  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png';
-
-const BACK_TO_HOME_BTN_URL =
-  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png';
+const IMG_LP_BUTTON_WRAPPER =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-wrapper-background.jpg';
+const IMG_LP_BTN_HOME =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-home-primary.jpg';
+const IMG_LP_BTN_PLAY =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-play-primary.jpg';
+const IMG_LP_BTN_IDLE =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-button-action-idle.jpg';
+const IMG_LP_BTN_ACTIVE =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-button-action-active.jpg';
+const IMG_LP_CONTROL_DECK =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-control-deck-bg.jpg';
+const IMG_LP_OVERLAY_FRAME =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-overlay-frame.jpg';
 
 /**
  * Viewport-locked layout rules for Live Player top utility bar (single
@@ -122,6 +131,117 @@ const LIVE_PLAYER_VIEWPORT_STYLES = `
     filter: var(--rabtv-lp-plate-filter);
     pointer-events: none;
     z-index: 0;
+  }
+
+  /* Armored Top Bar, Video Frame Bezel, Transport Deck & Section Banner */
+  .rabtv-lp-top-wrap {
+    position: relative;
+    width: 100%;
+    min-height: clamp(50px, 12.6vw, 60px);
+    padding: 6px clamp(14px, 4.5%, 28px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-radius: 9999px;
+    overflow: hidden;
+    contain: layout paint;
+  }
+  .rabtv-lp-top-wrap-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    opacity: 0.78;
+    filter: var(--rabtv-lp-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-lp-video-shell {
+    position: relative;
+    background-color: #0c0a09;
+    padding: clamp(5px, 1.2vw, 10px);
+    contain: layout paint;
+  }
+  .rabtv-lp-video-frame-art {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    opacity: 0.90;
+    filter: var(--rabtv-lp-plate-filter);
+    pointer-events: none;
+    z-index: 25;
+    mix-blend-mode: lighten;
+  }
+  .rabtv-lp-hud-deck {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(12, 10, 9, 0.88);
+    contain: layout paint;
+  }
+  .rabtv-lp-hud-deck-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    opacity: 0.74;
+    filter: var(--rabtv-lp-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-lp-btn {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    contain: layout paint;
+    transition: transform 140ms ease;
+  }
+  .rabtv-lp-btn:hover:not(:disabled) { transform: scale(1.03); }
+  .rabtv-lp-btn:active:not(:disabled) { transform: scale(0.96); }
+  .rabtv-lp-btn-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    filter: var(--rabtv-lp-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-lp-section-banner {
+    position: relative;
+    width: 100%;
+    min-height: clamp(54px, 14vw, 78px);
+    box-sizing: border-box;
+    padding: 12px clamp(84px, 26%, 200px) 12px clamp(20px, 6%, 44px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-radius: 18px;
+    overflow: hidden;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+  .rabtv-lp-section-banner-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: right center;
+    opacity: 0.84;
+    filter: var(--rabtv-lp-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  @media (min-width: 640px) {
+    .rabtv-lp-section-banner-bg {
+      background-size: 100% 100%;
+      background-position: center center;
+    }
+  }
+  .rabtv-lp-section-banner-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(12, 10, 9, 0.64) 0%, rgba(12, 10, 9, 0.36) 62%, rgba(12, 10, 9, 0.08) 100%);
+    pointer-events: none;
+    z-index: 1;
   }
 `;
 
@@ -647,12 +767,16 @@ function LivePlayerComponent() {
         if (cancelled) return;
 
         const seenUrls = new Set<string>();
+        const seenNames = new Set<string>();
         const unique: LiveChannel[] = [];
         for (const ch of rawList) {
           const u = (ch.streamUrl || ch.url || '').trim();
           const hay = `${ch.title || ''} ${ch.channelId || ''} ${u}`.toLowerCase();
           if (!u || seenUrls.has(u) || hay.includes('7flix') || hay.includes('sevenflix')) continue;
+          const normName = (ch.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (normName && seenNames.has(normName) && u !== streamUrl) continue;
           seenUrls.add(u);
+          if (normName) seenNames.add(normName);
           unique.push(ch);
         }
         setAllChannels(unique);
@@ -1516,12 +1640,17 @@ function LivePlayerComponent() {
   const renderControlsBar = (isFloatingOverlay: boolean) => (
     <div
       data-tour="player-controls"
-      className={`w-full max-w-full box-border overflow-hidden flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2 sm:px-3.5 py-2 ${
+      className={`rabtv-lp-hud-deck w-full max-w-full box-border overflow-hidden flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3 sm:px-4 py-2.5 ${
         isLowRam ? '' : 'backdrop-blur-md'
       } ${themeStyles.hudDock}`}
     >
+      <div
+        className="rabtv-lp-hud-deck-bg"
+        aria-hidden="true"
+        style={{ backgroundImage: `url(${IMG_LP_CONTROL_DECK})` }}
+      />
       {/* Left: Transport Controls (Prev / Play-Pause / Next) */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="relative z-10 flex items-center gap-1.5 shrink-0">
         {prevChannel && (
           <button
             type="button"
@@ -1572,7 +1701,7 @@ function LivePlayerComponent() {
       </div>
 
       {/* Right: Quality + Aspect + Volume + PiP + Fullscreen (Strict Zero-Overlap Wrapping) */}
-      <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0 max-w-full">
+      <div className="relative z-10 flex flex-wrap items-center justify-end gap-1.5 min-w-0 max-w-full">
         {qualityLevels.length > 0 && (
           <div
             data-tour="player-quality"
@@ -1795,49 +1924,44 @@ function LivePlayerComponent() {
       )}
 
       <div className="w-full max-w-6xl mx-auto space-y-3 sm:space-y-4 box-border relative z-10">
-        {/* Top Action Bar: Compact Theme-Tuned Wrapper — Back to Home Left, Live TV Right */}
+        {/* Armored Top Action Bar — Back to Home Left, Live TV Guide Right */}
         <div className="rabtv-page-top-bar min-w-0">
-          <div className="rabtv-dual-wrapper">
+          <div className="rabtv-lp-top-wrap">
             <div
-              className="rabtv-art-bg"
+              className="rabtv-lp-top-wrap-bg"
               aria-hidden="true"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
+              style={{ backgroundImage: `url(${IMG_LP_BUTTON_WRAPPER})` }}
             />
             <Link
               to="/"
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-wrap-art-btn rabtv-wrap-art-btn--left rabtv-wrap-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
+              className="rabtv-lp-btn relative z-10 rounded-full px-4 sm:px-5 py-2 text-xs font-extrabold text-white"
             >
-              <img
-                src={BACK_TO_HOME_BTN_URL}
-                alt="Back to Home"
-                decoding="async"
+              <span
+                className="rabtv-lp-btn-bg"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${IMG_LP_BTN_HOME})` }}
               />
+              <span className="relative z-10 whitespace-nowrap drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                ← Back to Home
+              </span>
             </Link>
 
             <Link
               to="/live-tv"
               aria-label="Back to Live TV Guide"
               title="Back to Live TV Guide"
-              className={`rabtv-wrap-pill-btn border backdrop-blur-md font-extrabold text-white transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.backCapsule} ${themeStyles.focusRing}`}
+              className="rabtv-lp-btn relative z-10 rounded-full px-4 sm:px-5 py-2 text-xs font-extrabold text-white"
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-2.5 h-2.5 shrink-0"
-              >
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-              <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                Live TV
+              <span
+                className="rabtv-lp-btn-bg"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${IMG_LP_BTN_IDLE})` }}
+              />
+              <span className="relative z-10 whitespace-nowrap drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                ‹ Live TV Guide
               </span>
             </Link>
           </div>
@@ -2039,7 +2163,7 @@ function LivePlayerComponent() {
             data-tour="video-player"
             onMouseMove={revealControlsTemporarily}
             onTouchStart={revealControlsTemporarily}
-            className={`w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border ${
+            className={`rabtv-lp-video-shell w-full relative flex items-center justify-center rounded-2xl overflow-hidden bg-black border ${
               isSplitActive
                 ? 'min-h-[300px] sm:min-h-[380px] md:aspect-[21/9]'
                 : 'aspect-video'
@@ -2047,6 +2171,11 @@ function LivePlayerComponent() {
               themeStyles.playerFrame
             } ${glowOff ? 'shadow-xl' : themeStyles.playerGlow}`}
           >
+            <div
+              className="rabtv-lp-video-frame-art"
+              aria-hidden="true"
+              style={{ backgroundImage: `url(${IMG_LP_OVERLAY_FRAME})` }}
+            />
             {safePrimaryUrl ? (
               <div
                 className={
@@ -2376,24 +2505,23 @@ function LivePlayerComponent() {
           </div>
         </div>
 
-        {/* Up Next / More Live Channels (Clean Minimal Cards) */}
+        {/* Up Next / More Live Channels (Armored Section Banner + 9-Sliced Cards) */}
         <div className="w-full pt-1 space-y-3">
-          <div className="rabtv-section-banner rabtv-section-banner--split">
+          <div className="rabtv-lp-section-banner shadow-xl">
             <div
-              className="rabtv-art-bg"
+              className="rabtv-lp-section-banner-bg"
               aria-hidden="true"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
+              style={{ backgroundImage: `url(${IMG_LP_SECTION_BANNER})` }}
             />
-            <h2 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
-              📡 More Live Channels
+            <div className="rabtv-lp-section-banner-scrim" aria-hidden="true" />
+            <h2 className="relative z-10 text-base sm:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+              More Live Channels
             </h2>
 
             <button
               type="button"
               onClick={() => navigate({ to: '/live-tv' })}
-              className={`rabtv-section-banner-action font-extrabold hover:underline cursor-pointer drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${themeStyles.accentText}`}
+              className="relative z-10 rounded-full bg-black/75 border border-white/20 px-3 py-1 text-xs font-extrabold text-cyan-300 hover:text-white cursor-pointer shrink-0"
             >
               All →
             </button>
@@ -2442,11 +2570,11 @@ function LivePlayerComponent() {
                       )}
                     </div>
 
-                    <span className="block text-xs font-extrabold line-clamp-1 text-white">
+                    <span className="relative z-10 block text-xs font-extrabold line-clamp-1 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                       {channel.title}
                     </span>
                     <p
-                      className={`text-[10px] line-clamp-1 mt-0.5 ${themeStyles.subMutedText}`}
+                      className={`relative z-10 text-[10px] line-clamp-1 mt-0.5 ${themeStyles.subMutedText}`}
                     >
                       {getChannelDescription(channel.title)}
                     </p>
