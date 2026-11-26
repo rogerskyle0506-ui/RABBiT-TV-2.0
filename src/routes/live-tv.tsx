@@ -59,8 +59,154 @@ const BACK_TO_HOME_BTN_URL =
  * artwork button, and buttonwrapper-backed section headers across portrait
  * phones, landscape phones, tablets, desktops, TVs, and projectors.
  */
+const IMG_LIVETV_CONTROL_DECK =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-livetv-control-deck-bg.jpg';
+const IMG_LIVETV_BROADCAST_DECK =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-livetv-broadcast-deck.jpg';
+const IMG_LIVETV_SECTION_BANNER =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-livetv-section-banner.jpg';
+const IMG_LIVETV_CHANNEL_FRAME =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-livetv-channel-card-frame.jpg';
+const IMG_LIVEPLAYER_STUDIO_BG =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-liveplayer-studio-bg.jpg';
+
 const LIVETV_VIEWPORT_STYLES = `
-  /* Uses shared global .rabtv-dual-wrapper & .rabtv-section-banner from __root.tsx */
+  /* 6-Theme Hue-Shift Sync Across All Live TV Broadcast Plates */
+  :root,
+  html[data-theme="violet"] {
+    --rabtv-ltv-plate-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02);
+  }
+  html[data-theme="red"] {
+    --rabtv-ltv-plate-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0);
+  }
+  html[data-theme="midnight"] {
+    --rabtv-ltv-plate-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04);
+  }
+  html[data-theme="emerald"] {
+    --rabtv-ltv-plate-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02);
+  }
+  html[data-theme="amber"] {
+    --rabtv-ltv-plate-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04);
+  }
+  html[data-theme="cyan"] {
+    --rabtv-ltv-plate-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04);
+  }
+
+  /* Broadcast Program Room Control Deck */
+  .rabtv-ltv-deck {
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 24px 20px !important;
+    background-color: rgba(12, 10, 9, 0.90);
+    contain: layout paint;
+  }
+  @media (min-width: 640px) {
+    .rabtv-ltv-deck {
+      padding: 28px 30px !important;
+    }
+  }
+  .rabtv-ltv-deck-9slice {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 20px 18px;
+    border-image-source: url("${IMG_LIVETV_CHANNEL_FRAME}");
+    border-image-slice: 13% 11% fill;
+    border-image-repeat: stretch;
+    filter: var(--rabtv-ltv-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-ltv-deck-bg {
+    position: absolute;
+    inset: 14px;
+    border-radius: 14px;
+    background-size: cover;
+    background-position: center bottom;
+    background-repeat: no-repeat;
+    opacity: 0.42;
+    filter: var(--rabtv-ltv-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-ltv-deck-scrim {
+    position: absolute;
+    inset: 14px;
+    border-radius: 14px;
+    background: linear-gradient(
+      180deg,
+      rgba(12, 10, 9, 0.84) 0%,
+      rgba(12, 10, 9, 0.68) 58%,
+      rgba(12, 10, 9, 0.46) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* 9-Sliced Armored Channel Card */
+  .rabtv-ltv-card-plate {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+  .rabtv-ltv-card-9slice {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 14px 12px;
+    border-image-source: url("${IMG_LIVETV_CHANNEL_FRAME}");
+    border-image-slice: 13% 11% fill;
+    border-image-repeat: stretch;
+    filter: var(--rabtv-ltv-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Panoramic Broadcast Section Banner (Right-Flank Mascot Protected) */
+  .rabtv-ltv-section-banner {
+    position: relative;
+    width: 100%;
+    min-height: clamp(54px, 14vw, 80px);
+    box-sizing: border-box;
+    padding: 12px clamp(84px, 26%, 200px) 12px clamp(20px, 6%, 44px);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    border-radius: 18px;
+    overflow: hidden;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+  .rabtv-ltv-section-banner-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: right center;
+    background-repeat: no-repeat;
+    opacity: 0.82;
+    filter: var(--rabtv-ltv-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  @media (min-width: 640px) {
+    .rabtv-ltv-section-banner-bg {
+      background-size: 100% 100%;
+      background-position: center center;
+    }
+  }
+  .rabtv-ltv-section-banner-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(12, 10, 9, 0.64) 0%, rgba(12, 10, 9, 0.36) 62%, rgba(12, 10, 9, 0.08) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
 `;
 
 export const Route = createFileRoute('/live-tv')({
@@ -139,6 +285,11 @@ function saveCachedHealthMap(statuses: Record<string, ExtendedHealthStatus>): vo
       // Ignore if device storage is critically full
     }
   }
+}
+
+function isRemovedSevenflixChannel(channel: LiveChannel): boolean {
+  const hay = `${channel.title || ''} ${channel.channelId || ''} ${channel.streamUrl || ''} ${channel.url || ''}`.toLowerCase();
+  return hay.includes('7flix') || hay.includes('sevenflix');
 }
 
 function getChannelKey(channel: LiveChannel): string {
@@ -686,16 +837,17 @@ const ChannelCard = memo(function ChannelCard({
 
   return (
     <div
-      className={`group relative flex flex-col justify-between w-full min-w-0 box-border ${radiusClass} ${
+      className={`rabtv-ltv-card-plate group relative flex flex-col justify-between w-full min-w-0 box-border ${radiusClass} ${
         isLowRam ? '' : 'backdrop-blur-sm'
       } border ${
         isPinned
           ? tokens.surfaceCardPinned
           : `${tokens.surfaceCard} ${tokens.borderHover}`
       } ${
-        compact ? 'p-2.5' : 'p-3 sm:p-3.5'
+        compact ? 'p-4' : 'p-4 sm:p-5'
       } hover:-translate-y-0.5 transition-all duration-200 text-center overflow-hidden`}
     >
+      <div className="rabtv-ltv-card-9slice" aria-hidden="true" />
       {/* Top Bar: Constrained Region / CH # + Status + Pin Button */}
       <div className="flex items-center justify-between gap-1 mb-2 z-20 min-w-0">
         <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
@@ -1459,7 +1611,7 @@ function LiveTvComponent() {
         const uniqueChannels: LiveChannel[] = [];
         for (const ch of fetched) {
           const streamTarget = ch.streamUrl || ch.url;
-          if (!isSafeHttpUrl(streamTarget)) continue;
+          if (!isSafeHttpUrl(streamTarget) || isRemovedSevenflixChannel(ch)) continue;
           const key = getChannelKey(ch);
           if (!seen.has(key)) {
             seen.add(key);
@@ -1556,10 +1708,11 @@ function LiveTvComponent() {
     [healthMap, probing]
   );
 
-  // Apply Kids Safe Mode Lock first
+  // Strip 7flix globally + apply Kids Safe Mode Lock first
   const ageSafeChannels = useMemo(() => {
-    if (!kidsSafeActive) return rawChannels;
-    return rawChannels.filter((ch) => isChannelKidsSafe(ch.title));
+    const base = rawChannels.filter((ch) => !isRemovedSevenflixChannel(ch));
+    if (!kidsSafeActive) return base;
+    return base.filter((ch) => isChannelKidsSafe(ch.title));
   }, [rawChannels, kidsSafeActive]);
 
   // Pinned Favorites shelf matching current loaded channels
@@ -1774,7 +1927,7 @@ function LiveTvComponent() {
       className={`min-h-screen ${tokens.bg} ${tokens.baseText} transition-colors duration-300 pb-16 px-2.5 sm:px-6 w-full max-w-full overflow-x-clip box-border relative rounded-3xl`}
     >
       <style>{LIVETV_VIEWPORT_STYLES}</style>
-      <AppWallpaper />
+      <AppWallpaper backdropUrl={IMG_LIVETV_BROADCAST_DECK} />
       {!isLowRam && !reducedMotion && !glowOff && (
         <div
           className={`absolute inset-x-0 -top-12 h-80 bg-gradient-to-b ${tokens.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
@@ -1859,36 +2012,25 @@ function LiveTvComponent() {
           </div>
         )}
 
-        {/* Theme-Matched Translucent Broadcast Console Control Deck */}
+        {/* Broadcast Program Room Control Deck */}
         <div
-          className={`w-full max-w-full box-border overflow-hidden rounded-3xl border ${
+          className={`rabtv-ltv-deck w-full max-w-full box-border overflow-hidden rounded-3xl border ${
             isLowRam ? '' : 'backdrop-blur-md'
-          } p-3.5 sm:p-6 space-y-4 sm:space-y-5 ${tokens.surfacePanel}`}
+          } space-y-4 sm:space-y-5 ${tokens.surfacePanel}`}
         >
+          <div className="rabtv-ltv-deck-9slice" aria-hidden="true" />
+          <div
+            className="rabtv-ltv-deck-bg"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${IMG_LIVETV_CONTROL_DECK})` }}
+          />
+          <div className="rabtv-ltv-deck-scrim" aria-hidden="true" />
           {/* Console Header + Responsive Search / Sort / Density / Refresh */}
           <div
-            className={`flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5 border-b pb-4 ${tokens.dividerBorder}`}
+            className={`relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5 border-b pb-4 ${tokens.dividerBorder}`}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div
-                className={`flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl border ${tokens.headerIconBox}`}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={`w-5 h-5 sm:w-6 sm:h-6 ${tokens.accentText}`}
-                >
-                  <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
-                  <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" />
-                  <circle cx="12" cy="12" r="2" fill="currentColor" />
-                  <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" />
-                  <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19" />
-                </svg>
-              </div>
+
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white">
@@ -1979,7 +2121,7 @@ function LiveTvComponent() {
           </div>
 
           {/* 1. STREAM HEALTH STATUS & PINNED FILTER BAR */}
-          <div className="space-y-2">
+          <div className="relative z-10 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
               <div className="flex flex-wrap items-center gap-2 min-w-0">
                 <p
@@ -2085,44 +2227,13 @@ function LiveTvComponent() {
             </div>
           </div>
 
-          {/* 2. REGIONS & FEEDS BAR */}
-          <div className="w-full space-y-1.5">
+          {/* 2. CATEGORIES & GENRES BAR (All Channels Unified by Genre) */}
+          <div className="relative z-10 w-full space-y-1.5">
             <div className="flex items-center justify-between gap-2 px-0.5">
               <p
                 className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest ${tokens.subMutedText}`}
               >
-                2. Regions & Feeds
-              </p>
-              {selectedCategory !== 'All' && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategory('All')}
-                  className={`text-[11px] font-bold hover:underline cursor-pointer shrink-0 ${tokens.accentText}`}
-                >
-                  Show All Regions
-                </button>
-              )}
-            </div>
-            <ScrollPillBar
-              options={categories.map((cat) => ({
-                id: cat,
-                label: cat === 'All' ? 'All Regions' : cat,
-              }))}
-              activeId={selectedCategory}
-              onSelect={handleCategorySelect}
-              appTheme={appTheme}
-              getPrimaryBgColor={getPrimaryBgColor}
-              ariaLabel="Live TV regions"
-            />
-          </div>
-
-          {/* 3. CATEGORIES & GENRES BAR */}
-          <div className="w-full space-y-1.5">
-            <div className="flex items-center justify-between gap-2 px-0.5">
-              <p
-                className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest ${tokens.subMutedText}`}
-              >
-                3. Categories & Genres
+                2. Categories & Genres
               </p>
               {selectedGenre !== 'All Genres' && (
                 <button
@@ -2209,14 +2320,14 @@ function LiveTvComponent() {
                   ? '★ My Pinned Channels'
                   : selectedGenre !== 'All Genres'
                     ? selectedGenre
-                    : selectedCategory}{' '}
+                    : 'All Channels'}{' '}
                 {statusFilter === 'online'
                   ? '• Online'
                   : statusFilter === 'timeout'
                     ? '• Slow / ?'
                     : statusFilter === 'offline'
                       ? '• Offline'
-                      : '• All Feeds'}
+                      : ''}
               </h3>
             </div>
 
