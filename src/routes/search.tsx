@@ -1156,7 +1156,7 @@ const SearchInputDeck = memo(function SearchInputDeck({
           <div className="rabtv-srch-input-bg" aria-hidden="true" />
           <div className="rabtv-srch-input-scrim" aria-hidden="true" />
 
-          <span className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 z-10 text-xs sm:text-sm pointer-events-none text-cyan-300">
+          <span className="absolute left-3.5 sm:left-5 top-1/2 -translate-y-1/2 z-10 text-xs sm:text-sm pointer-events-none text-cyan-300">
             🔍
           </span>
 
@@ -1186,19 +1186,19 @@ const SearchInputDeck = memo(function SearchInputDeck({
               setLiveTerm(val);
               setShowPredictions(val.trim().length >= 2);
             }}
-            placeholder="Search movies, TV, actors..."
+            placeholder="Search titles, actors..."
             style={{
               direction: "ltr",
               unicodeBidi: "plaintext",
               textAlign: "left",
             }}
-            className={`relative z-10 w-full bg-transparent pl-10 sm:pl-12 ${
-              hasValue ? "pr-[104px] sm:pr-[114px]" : "pr-[74px] sm:pr-[82px]"
+            className={`relative z-10 w-full bg-transparent pl-9 sm:pl-12 ${
+              hasValue ? "pr-[98px] sm:pr-[112px]" : "pr-[68px] sm:pr-[80px]"
             } py-3 text-xs sm:text-sm font-bold text-white placeholder-zinc-400 focus:outline-none`}
           />
 
           {/* Inline Voice + Visual Search + Clear Triggers */}
-          <div className="absolute right-3 sm:right-3.5 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
+          <div className="absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
             {hasValue && (
               <ArmoredButton
                 variant="danger"
@@ -1237,7 +1237,7 @@ const SearchInputDeck = memo(function SearchInputDeck({
           variant="primary"
           ariaLabel="Search and Filter"
           title="Search & Filter"
-          className={`w-full sm:w-auto sm:min-w-[132px] px-7 ${
+          className={`w-full max-w-[228px] mx-auto sm:w-auto sm:max-w-none sm:mx-0 sm:min-w-[136px] px-7 ${
             largeButtons ? "py-3.5 text-sm" : "py-3 text-xs sm:text-sm"
           } uppercase tracking-wider shrink-0`}
         >
