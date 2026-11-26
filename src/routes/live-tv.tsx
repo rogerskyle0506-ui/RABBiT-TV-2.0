@@ -48,11 +48,28 @@ import { AppWallpaper } from '@/components/AppWallpaper';
 import { recordWatchHistory } from '@/lib/watch-history';
 import { bgAudio } from '@/lib/background-audio';
 
-const BUTTON_WRAPPER_URL =
-  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/buttonwrapper.png';
-
-const BACK_TO_HOME_BTN_URL =
-  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Backtohome.png';
+const IMG_BUTTON_WRAPPER =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-wrapper-background.jpg';
+const IMG_BTN_HOME =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-button-home-primary.jpg';
+const IMG_BTN_PLAY =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-button-play-primary.jpg';
+const IMG_BTN_IDLE =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-button-action-idle.jpg';
+const IMG_BTN_ACTIVE =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-button-action-active.jpg';
+const IMG_BTN_DANGER =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-player-button-action-danger.jpg';
+const IMG_PILL_TRACK =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-track-background.jpg';
+const IMG_PILL_ACTIVE =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-active-crimson.jpg';
+const IMG_PILL_INACTIVE =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-inactive-dark.jpg';
+const IMG_INPUT_BAR =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-input-bar-background.jpg';
+const IMG_DROPDOWN_TRIGGER =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-dropdown-trigger-idle.jpg';
 
 /**
  * Viewport-locked layout rules for Live TV top utility wrapper, Back to Home
@@ -206,6 +223,132 @@ const LIVETV_VIEWPORT_STYLES = `
     background: linear-gradient(90deg, rgba(12, 10, 9, 0.64) 0%, rgba(12, 10, 9, 0.36) 62%, rgba(12, 10, 9, 0.08) 100%);
     pointer-events: none;
     z-index: 1;
+  }
+
+  /* Broadcast Program Room Mascot Showcase Banner Inside Control Deck */
+  .rabtv-ltv-studio-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    max-height: 220px;
+    border-radius: 16px;
+    overflow: hidden;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+  .rabtv-ltv-studio-stage img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center bottom;
+    display: block;
+    filter: var(--rabtv-ltv-plate-filter);
+  }
+
+  /* Armored Dual Top Bar */
+  .rabtv-ltv-top-wrap {
+    position: relative;
+    width: 100%;
+    min-height: clamp(50px, 12.6vw, 60px);
+    padding: 6px clamp(14px, 4.5%, 28px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-radius: 9999px;
+    overflow: hidden;
+    contain: layout paint;
+  }
+  .rabtv-ltv-top-wrap-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    opacity: 0.78;
+    filter: var(--rabtv-ltv-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* 9-Sliced Armored Search Input & Dropdown */
+  .rabtv-ltv-input-shell {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+  .rabtv-ltv-input-9slice {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 7px 16px;
+    border-image-source: url("${IMG_INPUT_BAR}");
+    border-image-slice: 22% 14% fill;
+    border-image-repeat: stretch;
+    filter: var(--rabtv-ltv-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-ltv-dd-shell {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+  .rabtv-ltv-dd-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    filter: var(--rabtv-ltv-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Armored Image Buttons & Pill Track */
+  .rabtv-ltv-btn {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    contain: layout paint;
+    transition: transform 140ms ease, opacity 140ms ease;
+  }
+  .rabtv-ltv-btn:hover:not(:disabled) { transform: scale(1.02); }
+  .rabtv-ltv-btn:active:not(:disabled) { transform: scale(0.97); }
+  .rabtv-ltv-btn-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    filter: var(--rabtv-ltv-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-ltv-btn-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 76% 68% at 50% 50%, rgba(12,10,9,0.42) 0%, rgba(12,10,9,0.16) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .rabtv-ltv-pill-track {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(12, 10, 9, 0.85);
+    contain: layout paint;
+  }
+  .rabtv-ltv-pill-track-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    opacity: 0.72;
+    filter: var(--rabtv-ltv-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-ltv-pill-scroll {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 14px, black calc(100% - 14px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 14px, black calc(100% - 14px), transparent 100%);
   }
 `;
 
@@ -694,7 +837,8 @@ const LiveSearchInput = memo(function LiveSearchInput({
   };
 
   return (
-    <div className="relative flex-1 min-w-0 w-full sm:w-52">
+    <div className="rabtv-ltv-input-shell relative flex-1 min-w-0 w-full sm:w-56 rounded-xl">
+      <div className="rabtv-ltv-input-9slice" aria-hidden="true" />
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -702,7 +846,7 @@ const LiveSearchInput = memo(function LiveSearchInput({
         strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${tokens.accentText}`}
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-3.5 h-3.5 pointer-events-none text-cyan-300"
       >
         <circle cx="11" cy="11" r="8" />
         <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -721,16 +865,16 @@ const LiveSearchInput = memo(function LiveSearchInput({
           setHasText(Boolean(val));
           onQueryChange(val);
         }}
-        placeholder="Search channel or CH #..."
+        placeholder="Search live channels..."
         style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
-        className={`w-full h-10 rounded-xl border pl-9 pr-8 text-xs font-bold focus:outline-none transition ${tokens.inputClass}`}
+        className="relative z-10 w-full h-10 bg-transparent pl-10 pr-8 text-xs font-bold text-white placeholder-zinc-400 focus:outline-none"
       />
       {hasText && (
         <button
           type="button"
           onClick={handleClear}
           aria-label="Clear channel search"
-          className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-xs hover:text-white cursor-pointer ${tokens.subMutedText}`}
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 z-20 text-xs font-black text-zinc-400 hover:text-white cursor-pointer"
         >
           ✕
         </button>
@@ -848,25 +992,13 @@ const ChannelCard = memo(function ChannelCard({
       } hover:-translate-y-0.5 transition-all duration-200 text-center overflow-hidden`}
     >
       <div className="rabtv-ltv-card-9slice" aria-hidden="true" />
-      {/* Top Bar: Constrained Region / CH # + Status + Pin Button */}
-      <div className="flex items-center justify-between gap-1 mb-2 z-20 min-w-0">
-        <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
-          {channel.channelNumber !== undefined && (
-            <span
-              className={`rounded-md border px-1.5 py-0.5 text-[9px] font-black shrink-0 ${tokens.badge}`}
-            >
-              #{channel.channelNumber}
-            </span>
-          )}
-          <span
-            className={`hidden sm:inline-block rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider truncate min-w-0 ${tokens.subtleBadge}`}
-          >
-            {displayRegion}
-          </span>
+      {/* Clean Unclipped Top Bar: Live Status Left + Pin & Hide Actions Right */}
+      <div className="relative flex items-center justify-between gap-1.5 mb-2 z-20 min-w-0">
+        <div className="flex items-center gap-1 min-w-0">
+          <StatusBadge status={status} tokens={tokens} />
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          <StatusBadge status={status} tokens={tokens} />
           <button
             type="button"
             onClick={() => onTogglePin(channelId, channel.title)}
@@ -939,7 +1071,7 @@ const ChannelCard = memo(function ChannelCard({
             type: 'livetv',
           });
         }}
-        className={`flex flex-col flex-1 justify-between min-w-0 focus:outline-none focus:ring-2 ${tokens.focusRing} rounded-2xl`}
+        className={`relative z-10 flex flex-col flex-1 justify-between min-w-0 focus:outline-none focus:ring-2 ${tokens.focusRing} rounded-2xl`}
       >
         {/* High-Contrast Logo Showcase Stage */}
         <div
@@ -997,18 +1129,24 @@ const ChannelCard = memo(function ChannelCard({
           </div>
 
           <div
-            className={`w-full ${
+            className={`rabtv-ltv-btn w-full ${
               largeButtons
-                ? 'py-2 text-xs'
+                ? 'py-2.5 text-xs'
                 : compact
                   ? 'py-1.5 text-[10px]'
-                  : 'py-1.5 sm:py-2 text-[10px] sm:text-[11px]'
-            } px-2.5 rounded-xl font-extrabold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${
-              tokens.playBtn
-            }`}
+                  : 'py-2 text-[10.5px] sm:text-[11px]'
+            } px-3 rounded-xl font-extrabold uppercase tracking-wider text-white flex items-center justify-center gap-1.5`}
           >
-            <span>▶</span>
-            <span>Watch</span>
+            <span
+              className="rabtv-ltv-btn-bg"
+              aria-hidden="true"
+              style={{ backgroundImage: `url(${IMG_BTN_PLAY})` }}
+            />
+            <span className="rabtv-ltv-btn-scrim" aria-hidden="true" />
+            <span className="relative z-10 inline-flex items-center gap-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+              <span>▶</span>
+              <span>Watch</span>
+            </span>
           </div>
         </div>
       </Link>
@@ -1413,6 +1551,7 @@ function LiveTvComponent() {
   const probeRunIdRef = useRef<number>(0);
   const probeAbortRef = useRef<AbortController | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+  const genreScrollRef = useRef<HTMLDivElement>(null);
 
   // Sync live settings whenever Sidebar changes anything
   useEffect(() => {
@@ -1607,17 +1746,28 @@ function LiveTvComponent() {
           });
         }
 
-        const seen = new Set<string>();
-        const uniqueChannels: LiveChannel[] = [];
+        const byTitle = new Map<string, LiveChannel>();
+        const seenKeys = new Set<string>();
         for (const ch of fetched) {
           const streamTarget = ch.streamUrl || ch.url;
           if (!isSafeHttpUrl(streamTarget) || isRemovedSevenflixChannel(ch)) continue;
           const key = getChannelKey(ch);
-          if (!seen.has(key)) {
-            seen.add(key);
-            uniqueChannels.push(ch);
+          if (seenKeys.has(key)) continue;
+          seenKeys.add(key);
+          const normTitle = normalizeMatchText(ch.title) || key;
+          const existing = byTitle.get(normTitle);
+          if (!existing) {
+            byTitle.set(normTitle, ch);
+          } else {
+            // Keep the healthier / higher-reliability regional mirror as the single card
+            const prevScore = getChannelReliabilityScore(getChannelKey(existing));
+            const nextScore = getChannelReliabilityScore(key);
+            if (nextScore > prevScore) {
+              byTitle.set(normTitle, ch);
+            }
           }
         }
+        const uniqueChannels = Array.from(byTitle.values());
 
         setRawChannels(uniqueChannels);
         setLoading(false);
@@ -1935,38 +2085,46 @@ function LiveTvComponent() {
       )}
 
       <header className="py-3.5 sm:py-5 max-w-7xl mx-auto space-y-3.5 sm:space-y-4 box-border relative z-10">
-        {/* Top Row: Compact Theme-Tuned Wrapper — Back to Home Left, Channel Surf Right */}
+        {/* Top Armored Utility Row — Back to Home Left, Channel Surf Right */}
         <div className="rabtv-page-top-bar">
-          <div className={finalFilteredChannels.length > 0 ? "rabtv-dual-wrapper" : "rabtv-single-wrapper"}>
+          <div className="rabtv-ltv-top-wrap">
             <div
-              className="rabtv-art-bg"
+              className="rabtv-ltv-top-wrap-bg"
               aria-hidden="true"
-              style={{
-                backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-              }}
+              style={{ backgroundImage: `url(${IMG_BUTTON_WRAPPER})` }}
             />
             <Link
               to="/"
               data-tour="back-to-home"
               aria-label="Back to Home"
               title="Back to Home"
-              className={`rabtv-wrap-art-btn ${finalFilteredChannels.length > 0 ? "rabtv-wrap-art-btn--left" : ""} rabtv-wrap-art-btn--home rounded-full hover:scale-[1.04] active:scale-95 focus:outline-none focus:ring-2 ${tokens.focusRing}`}
+              className="rabtv-ltv-btn relative z-10 rounded-full px-4 sm:px-5 py-2 text-xs font-extrabold text-white"
             >
-              <img
-                src={BACK_TO_HOME_BTN_URL}
-                alt="Back to Home"
-                decoding="async"
+              <span
+                className="rabtv-ltv-btn-bg"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${IMG_BTN_HOME})` }}
               />
+              <span className="rabtv-ltv-btn-scrim" aria-hidden="true" />
+              <span className="relative z-10 whitespace-nowrap drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                ← Back to Home
+              </span>
             </Link>
 
             {finalFilteredChannels.length > 0 && (
               <button
                 type="button"
                 onClick={handleSurpriseChannel}
-                className={`rabtv-wrap-pill-btn border font-extrabold backdrop-blur-md shadow transition hover:scale-[1.03] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnSecondary} ${tokens.focusRing}`}
+                className="rabtv-ltv-btn relative z-10 rounded-full px-4 sm:px-5 py-2 text-xs font-extrabold text-white cursor-pointer"
                 title="Jump into a random live broadcast"
               >
-                <span className="truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                <span
+                  className="rabtv-ltv-btn-bg"
+                  aria-hidden="true"
+                  style={{ backgroundImage: `url(${IMG_BTN_IDLE})` }}
+                />
+                <span className="rabtv-ltv-btn-scrim" aria-hidden="true" />
+                <span className="relative z-10 whitespace-nowrap drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
                   🎲 Channel Surf
                 </span>
               </button>
@@ -2025,28 +2183,39 @@ function LiveTvComponent() {
             style={{ backgroundImage: `url(${IMG_LIVETV_CONTROL_DECK})` }}
           />
           <div className="rabtv-ltv-deck-scrim" aria-hidden="true" />
-          {/* Console Header + Responsive Search / Sort / Density / Refresh */}
-          <div
-            className={`relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5 border-b pb-4 ${tokens.dividerBorder}`}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white">
-                    Live TV & Sports
-                  </h1>
-                  {kidsSafeActive && (
-                    <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 shrink-0">
-                      🧒 Kids Safe
-                    </span>
-                  )}
-                </div>
-                <p className={`text-xs leading-snug ${tokens.subMutedText}`}>
-                  Instant broadcast feeds with pinned favorites & real-time health radar
+          {/* Crisp Broadcast Program Room Showcase (Punk Rabbit & Raccoon at Mixing Console) */}
+          <div className="relative z-10 rabtv-ltv-studio-stage border border-white/10 shadow-xl">
+            <img
+              src={IMG_LIVETV_CONTROL_DECK}
+              alt="RABBiT TV Broadcast Control Room"
+              decoding="async"
+            />
+            <div
+              className="absolute inset-0 bg-gradient-to-t from-[#0c0a09]/85 via-transparent to-[#0c0a09]/35 pointer-events-none"
+              aria-hidden="true"
+            />
+            <div className="absolute top-3 left-3.5 right-3.5 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+                  Live TV & Sports
+                </h1>
+                <p className="text-[11px] sm:text-xs font-bold text-zinc-200/90 drop-shadow">
+                  Broadcast control room • Unified genres & instant failover
                 </p>
               </div>
+              {kidsSafeActive && (
+                <span className="rounded-full bg-emerald-950/90 border border-emerald-400/50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">
+                  🧒 Kids Safe
+                </span>
+              )}
             </div>
+          </div>
+
+          {/* Responsive Armored Search / Sort / Density / Add / Refresh Toolbar */}
+          <div
+            className={`relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b pb-4 ${tokens.dividerBorder}`}
+          >
+
 
             {/* Portrait & Landscape Safe Toolbar */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center gap-2 w-full lg:w-auto min-w-0">
@@ -2057,25 +2226,38 @@ function LiveTvComponent() {
               />
 
               <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as LiveSortOption)}
-                  aria-label="Sort Live Channels"
-                  className={`w-full sm:w-auto sm:min-w-[146px] h-10 rounded-xl border px-2.5 text-xs font-bold focus:outline-none cursor-pointer ${tokens.inputClass}`}
-                >
-                  <option value="status" className={tokens.optionBg}>
-                    Sort: Live First
-                  </option>
-                  <option value="reliability" className={tokens.optionBg}>
-                    Sort: Most Reliable
-                  </option>
-                  <option value="channelNumber" className={tokens.optionBg}>
-                    Sort: Channel #
-                  </option>
-                  <option value="az" className={tokens.optionBg}>
-                    Sort: A–Z
-                  </option>
-                </select>
+                <div className="rabtv-ltv-dd-shell w-full sm:w-auto sm:min-w-[164px] h-10 rounded-xl flex items-center">
+                  <div
+                    className="rabtv-ltv-dd-bg"
+                    aria-hidden="true"
+                    style={{ backgroundImage: `url(${IMG_DROPDOWN_TRIGGER})` }}
+                  />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as LiveSortOption)}
+                    aria-label="Sort Live Channels"
+                    className="relative z-10 w-full h-full bg-transparent pl-4 pr-10 text-xs font-extrabold text-white appearance-none focus:outline-none cursor-pointer"
+                  >
+                    <option value="status" className={tokens.optionBg}>
+                      Sort: Live First
+                    </option>
+                    <option value="reliability" className={tokens.optionBg}>
+                      Sort: Most Reliable
+                    </option>
+                    <option value="channelNumber" className={tokens.optionBg}>
+                      Sort: Channel #
+                    </option>
+                    <option value="az" className={tokens.optionBg}>
+                      Sort: A–Z
+                    </option>
+                  </select>
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-[83.8%] top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 text-xs font-black text-cyan-300"
+                  >
+                    ▾
+                  </span>
+                </div>
 
                 {!largeButtons && (
                   <button
@@ -2085,35 +2267,57 @@ function LiveTvComponent() {
                         d === 'comfort' ? 'compact' : 'comfort'
                       )
                     }
-                    className={`h-10 px-3 rounded-xl border text-xs font-bold whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnIdle} ${tokens.focusRing}`}
+                    className="rabtv-ltv-btn h-10 px-3.5 rounded-xl text-xs font-extrabold text-white whitespace-nowrap shrink-0 cursor-pointer"
                     title="Switch Card Layout Density"
                   >
-                    {density === 'comfort' ? '▦ Compact' : '▢ Comfort'}
+                    <span
+                      className="rabtv-ltv-btn-bg"
+                      aria-hidden="true"
+                      style={{ backgroundImage: `url(${IMG_BTN_IDLE})` }}
+                    />
+                    <span className="rabtv-ltv-btn-scrim" aria-hidden="true" />
+                    <span className="relative z-10">
+                      {density === 'comfort' ? '▦ Compact' : '▢ Comfort'}
+                    </span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => setCustomModalOpen(true)}
-                  className={`h-10 px-3 rounded-xl border text-xs font-extrabold whitespace-nowrap shrink-0 transition cursor-pointer focus:outline-none focus:ring-2 ${tokens.btnSecondary} ${tokens.focusRing}`}
+                  className="rabtv-ltv-btn h-10 px-3.5 rounded-xl text-xs font-extrabold text-white whitespace-nowrap shrink-0 cursor-pointer"
                   title="Add Custom Stream or Import/Export M3U Playlist"
                 >
-                  + Add / M3U
+                  <span
+                    className="rabtv-ltv-btn-bg"
+                    aria-hidden="true"
+                    style={{ backgroundImage: `url(${IMG_BTN_IDLE})` }}
+                  />
+                  <span className="rabtv-ltv-btn-scrim" aria-hidden="true" />
+                  <span className="relative z-10">+ Add / M3U</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => void handleRefreshHealth()}
                   disabled={probing}
-                  className={`w-full sm:w-auto h-10 px-3.5 rounded-xl text-xs font-extrabold tracking-wide whitespace-nowrap transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-60 focus:outline-none focus:ring-2 ${tokens.btnActive} ${tokens.focusRing}`}
+                  className="rabtv-ltv-btn w-full sm:w-auto h-10 px-4 rounded-xl text-xs font-extrabold text-white whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60 flex items-center justify-center"
                 >
-                  <span className={probing ? 'animate-spin inline-block' : ''}>
-                    ↻
-                  </span>
-                  <span>
-                    {probing
-                      ? `Scan (${probeProgress.done}/${probeProgress.total})`
-                      : 'Refresh'}
+                  <span
+                    className="rabtv-ltv-btn-bg"
+                    aria-hidden="true"
+                    style={{ backgroundImage: `url(${IMG_BTN_PLAY})` }}
+                  />
+                  <span className="rabtv-ltv-btn-scrim" aria-hidden="true" />
+                  <span className="relative z-10 inline-flex items-center gap-1.5">
+                    <span className={probing ? 'animate-spin inline-block' : ''}>
+                      ↻
+                    </span>
+                    <span>
+                      {probing
+                        ? `Scan (${probeProgress.done}/${probeProgress.total})`
+                        : 'Refresh'}
+                    </span>
                   </span>
                 </button>
               </div>
@@ -2149,81 +2353,63 @@ function LiveTvComponent() {
               </button>
             </div>
 
-            {/* 4 Collision-Proof Status Filter Pills (Never Clipping on Narrow Portrait Phones) */}
+            {/* 4 Armored Status Filter Pills (Collision-Proof in Portrait & Landscape) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
-              <button
-                type="button"
-                onClick={() => handleStatusSelect('all')}
-                className={`flex items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl border text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer min-w-0 overflow-hidden focus:outline-none focus:ring-2 ${
-                  tokens.focusRing
-                } ${
-                  statusFilter === 'all'
-                    ? `${tokens.btnActive} border-white/30`
-                    : tokens.btnIdle
-                }`}
-              >
-                <span className="flex items-center gap-1.5 min-w-0 truncate">
-                  <span className="sm:hidden truncate">All</span>
-                  <span className="hidden sm:inline truncate">All Channels</span>
-                </span>
-                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-white shrink-0">
-                  {statusCounts.all}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleStatusSelect('online')}
-                className={`flex items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl border text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer min-w-0 overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
-                  statusFilter === 'online'
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.4)]'
-                    : 'bg-emerald-950/35 hover:bg-emerald-950/60 border-emerald-500/30 text-emerald-300'
-                }`}
-              >
-                <span className="flex items-center gap-1.5 min-w-0 truncate">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-                  <span className="truncate">Online</span>
-                </span>
-                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-emerald-200 shrink-0">
-                  {statusCounts.online}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleStatusSelect('timeout')}
-                className={`flex items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl border text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer min-w-0 overflow-hidden focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                  statusFilter === 'timeout'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-300 shadow-[0_0_18px_rgba(245,158,11,0.4)]'
-                    : 'bg-amber-950/35 hover:bg-amber-950/60 border-amber-500/30 text-amber-300'
-                }`}
-              >
-                <span className="flex items-center gap-1.5 min-w-0 truncate">
-                  <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
-                  <span className="truncate">Slow / ?</span>
-                </span>
-                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-amber-200 shrink-0">
-                  {statusCounts.timeout + statusCounts.checking}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleStatusSelect('offline')}
-                className={`flex items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl border text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer min-w-0 overflow-hidden focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                  statusFilter === 'offline'
-                    ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white border-red-300 shadow-[0_0_18px_rgba(239,68,68,0.4)]'
-                    : 'bg-red-950/35 hover:bg-red-950/60 border-red-500/30 text-red-300'
-                }`}
-              >
-                <span className="flex items-center gap-1.5 min-w-0 truncate">
-                  <span className="h-2 w-2 rounded-full bg-red-500 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.9)]" />
-                  <span className="truncate">Offline</span>
-                </span>
-                <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-black text-red-200 shrink-0">
-                  {statusCounts.offline}
-                </span>
-              </button>
+              {(
+                [
+                  {
+                    id: 'all' as HealthFilterOption,
+                    label: 'All',
+                    dot: 'bg-cyan-400',
+                    count: statusCounts.all,
+                  },
+                  {
+                    id: 'online' as HealthFilterOption,
+                    label: 'Online',
+                    dot: 'bg-emerald-400',
+                    count: statusCounts.online,
+                  },
+                  {
+                    id: 'timeout' as HealthFilterOption,
+                    label: 'Slow / ?',
+                    dot: 'bg-amber-400',
+                    count: statusCounts.timeout + statusCounts.checking,
+                  },
+                  {
+                    id: 'offline' as HealthFilterOption,
+                    label: 'Offline',
+                    dot: 'bg-red-500',
+                    count: statusCounts.offline,
+                  },
+                ]
+              ).map((st) => {
+                const isSelected = statusFilter === st.id;
+                return (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => handleStatusSelect(st.id)}
+                    className="rabtv-ltv-btn flex items-center justify-between gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl text-[11px] sm:text-xs font-extrabold text-white cursor-pointer min-w-0"
+                  >
+                    <span
+                      className="rabtv-ltv-btn-bg"
+                      aria-hidden="true"
+                      style={{
+                        backgroundImage: `url(${isSelected ? IMG_PILL_ACTIVE : IMG_PILL_INACTIVE})`,
+                        opacity: isSelected ? 0.98 : 0.88,
+                      }}
+                    />
+                    <span className="rabtv-ltv-btn-scrim" aria-hidden="true" />
+                    <span className="relative z-10 flex items-center gap-1.5 min-w-0 truncate">
+                      <span className={`h-2 w-2 rounded-full shrink-0 ${st.dot}`} />
+                      <span className="truncate">{st.label}</span>
+                    </span>
+                    <span className="relative z-10 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-black text-white shrink-0">
+                      {st.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -2245,17 +2431,72 @@ function LiveTvComponent() {
                 </button>
               )}
             </div>
-            <ScrollPillBar
-              options={genreOptions.map((genre) => ({
-                id: genre,
-                label: genre === 'All Genres' ? 'All Genres' : genre,
-              }))}
-              activeId={selectedGenre}
-              onSelect={handleGenreSelect}
-              appTheme={appTheme}
-              getPrimaryBgColor={getPrimaryBgColor}
-              ariaLabel="Live TV genres"
-            />
+            <div className="rabtv-ltv-pill-track rounded-2xl border border-white/10 px-2 py-2 flex items-center gap-1.5">
+              <div
+                className="rabtv-ltv-pill-track-bg"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${IMG_PILL_TRACK})` }}
+              />
+              <button
+                type="button"
+                aria-label="Scroll genres left"
+                onClick={() =>
+                  genreScrollRef.current?.scrollBy({
+                    left: -220,
+                    behavior: reducedMotion ? 'auto' : 'smooth',
+                  })
+                }
+                className="rabtv-ltv-btn relative z-10 h-8 w-8 shrink-0 rounded-full text-xs font-black text-white cursor-pointer flex items-center justify-center"
+              >
+                <span className="rabtv-ltv-btn-bg" style={{ backgroundImage: `url(${IMG_BTN_IDLE})` }} />
+                <span className="relative z-10">‹</span>
+              </button>
+
+              <div
+                ref={genreScrollRef}
+                className="rabtv-ltv-pill-scroll relative z-10 flex-1 min-w-0 flex items-center gap-2 overflow-x-auto scrollbar-none px-3 py-0.5"
+              >
+                {genreOptions.map((genre) => {
+                  const isActive = selectedGenre === genre;
+                  return (
+                    <button
+                      key={genre}
+                      type="button"
+                      onClick={() => handleGenreSelect(genre)}
+                      className="rabtv-ltv-btn shrink-0 rounded-xl px-3.5 py-2 text-xs font-extrabold text-white whitespace-nowrap cursor-pointer"
+                    >
+                      <span
+                        className="rabtv-ltv-btn-bg"
+                        aria-hidden="true"
+                        style={{
+                          backgroundImage: `url(${isActive ? IMG_PILL_ACTIVE : IMG_PILL_INACTIVE})`,
+                          opacity: isActive ? 0.98 : 0.86,
+                        }}
+                      />
+                      <span className="rabtv-ltv-btn-scrim" aria-hidden="true" />
+                      <span className="relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">
+                        {genre}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                aria-label="Scroll genres right"
+                onClick={() =>
+                  genreScrollRef.current?.scrollBy({
+                    left: 220,
+                    behavior: reducedMotion ? 'auto' : 'smooth',
+                  })
+                }
+                className="rabtv-ltv-btn relative z-10 h-8 w-8 shrink-0 rounded-full text-xs font-black text-white cursor-pointer flex items-center justify-center"
+              >
+                <span className="rabtv-ltv-btn-bg" style={{ backgroundImage: `url(${IMG_BTN_IDLE})` }} />
+                <span className="relative z-10">›</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -2265,17 +2506,14 @@ function LiveTvComponent() {
         {/* DEDICATED PINNED FAVORITE CHANNELS SHELF (100% Theme-Matched) */}
         {pinnedChannels.length > 0 && !pinnedOnly && !searchQuery.trim() && (
           <section className="space-y-3">
-            <div className="rabtv-section-banner">
+            <div className="rabtv-ltv-section-banner shadow-xl">
               <div
-                className="rabtv-art-bg"
+                className="rabtv-ltv-section-banner-bg"
                 aria-hidden="true"
-                style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                }}
+                style={{ backgroundImage: `url(${IMG_LIVETV_SECTION_BANNER})` }}
               />
-              <h2
-                className={`rabtv-section-banner-title font-black tracking-tight truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)] ${tokens.accentText}`}
-              >
+              <div className="rabtv-ltv-section-banner-scrim" aria-hidden="true" />
+              <h2 className="relative z-10 text-base sm:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 ★ Pinned Favorites
               </h2>
             </div>
@@ -2307,15 +2545,14 @@ function LiveTvComponent() {
         {/* MAIN CHANNELS GRID SECTION */}
         <section className="space-y-3.5 sm:space-y-4">
           <div className="space-y-2.5">
-            <div className="rabtv-section-banner">
+            <div className="rabtv-ltv-section-banner shadow-xl">
               <div
-                className="rabtv-art-bg"
+                className="rabtv-ltv-section-banner-bg"
                 aria-hidden="true"
-                style={{
-                  backgroundImage: `url(${BUTTON_WRAPPER_URL})`,
-                }}
+                style={{ backgroundImage: `url(${IMG_LIVETV_SECTION_BANNER})` }}
               />
-              <h3 className="rabtv-section-banner-title font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+              <div className="rabtv-ltv-section-banner-scrim" aria-hidden="true" />
+              <h3 className="relative z-10 text-base sm:text-xl font-black tracking-tight text-white truncate drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
                 {pinnedOnly
                   ? '★ My Pinned Channels'
                   : selectedGenre !== 'All Genres'
