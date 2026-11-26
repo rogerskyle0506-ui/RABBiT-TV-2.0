@@ -29,6 +29,12 @@ import { MediaCard } from "@/routes/index";
 import { AppWallpaper } from "@/components/AppWallpaper";
 import { isTitleDisliked, recordWatchHistory } from "@/lib/watch-history";
 import { isTitleBroken } from "@/lib/broken-links";
+import {
+  ADMIN_STORE_UPDATED_EVENT,
+  getCachedSourcesManifest,
+  isTitleGloballyQuarantined,
+  type SourcesManifest,
+} from "@/lib/admin-store";
 import { searchLiveChannels, type LiveChannel } from "@/lib/live-feed-service";
 
 const TMDB_API_KEY =
@@ -42,6 +48,8 @@ const PREDICTIVE_DEBOUNCE_MS = 280;
 // =============================================================================
 // NEW PHASE-1 COMMITTED SEARCH PAGE IMAGE ASSETS (10 ISOLATED FILES)
 // =============================================================================
+const IMG_DECK_FRAME_9SLICE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-community-card-frame.jpg";
 const IMG_DECK_PANEL_BG =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-search-deck-panel-background.jpg";
 const IMG_CATALOG_BANNER_BG =
@@ -105,60 +113,76 @@ const SEARCH_PAGE_STYLES = `
     --rabtv-srch-ambient-ring: rgba(34, 211, 238, 0.36);
   }
 
-  /* Main Search Control Deck (Female Rabbit Detective in Bottom-Right) */
+  /* Main Search Control Deck (9-Sliced Armored Frame — Zero Stretch in Portrait OR Landscape!) */
   .rabtv-srch-deck {
     position: relative;
     box-sizing: border-box;
-    padding: clamp(22px, 5.5vw, 36px) clamp(26px, 8.5%, 54px) !important;
-    background-color: rgba(12, 10, 9, 0.74);
+    padding: 24px 18px !important;
+    background-color: rgba(12, 10, 9, 0.90);
     overflow: visible;
     transition: box-shadow 260ms ease;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-srch-deck {
+      padding: 28px 30px !important;
+    }
   }
 
   .rabtv-srch-deck--engaged {
     box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.32), 0 0 36px var(--rabtv-srch-ambient-ring);
   }
 
-  .rabtv-srch-deck-bg {
+  .rabtv-srch-deck-9slice {
     position: absolute;
     inset: 0;
-    border-radius: inherit;
-    background-size: 100% 100%;
-    background-position: center center;
-    background-repeat: no-repeat;
-    opacity: 0.74;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 22px 18px;
+    border-image-source: url("${IMG_DECK_FRAME_9SLICE}");
+    border-image-slice: 13% 11% fill;
+    border-image-repeat: stretch;
     filter: var(--rabtv-srch-plate-filter);
-    -webkit-mask-image: radial-gradient(
-      ellipse 96% 94% at 50% 50%,
-      rgba(12, 10, 9, 1) 74%,
-      rgba(12, 10, 9, 0.74) 93%,
-      rgba(12, 10, 9, 0.34) 100%
-    );
-    mask-image: radial-gradient(
-      ellipse 96% 94% at 50% 50%,
-      rgba(12, 10, 9, 1) 74%,
-      rgba(12, 10, 9, 0.74) 93%,
-      rgba(12, 10, 9, 0.34) 100%
-    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-srch-deck-9slice {
+      border-width: 26px 24px;
+    }
+  }
+
+  /* Unstretched Bottom-Right Detective Rabbit Accent Watermark (Never Distorts in Tall Portrait!) */
+  .rabtv-srch-deck-bg {
+    position: absolute;
+    inset: 16px 14px;
+    border-radius: 16px;
+    background-size: min(440px, 78%) auto;
+    background-position: right bottom;
+    background-repeat: no-repeat;
+    opacity: 0.28;
+    filter: var(--rabtv-srch-plate-filter);
     pointer-events: none;
     z-index: 0;
   }
 
   .rabtv-srch-deck-scrim {
     position: absolute;
-    inset: 0;
-    border-radius: inherit;
+    inset: 16px 14px;
+    border-radius: 16px;
     background: radial-gradient(
-      ellipse 78% 76% at 38% 36%,
-      rgba(12, 10, 9, 0.62) 0%,
-      rgba(12, 10, 9, 0.42) 66%,
-      rgba(12, 10, 9, 0.24) 100%
+      ellipse 84% 82% at 38% 36%,
+      rgba(12, 10, 9, 0.70) 0%,
+      rgba(12, 10, 9, 0.56) 68%,
+      rgba(12, 10, 9, 0.34) 100%
     );
     pointer-events: none;
     z-index: 1;
   }
 
-  /* Search Input Bar Housing (rabbit-tv-search-input-bar-background.jpg) */
+  /* 9-Sliced Search Input Bar Housing (Zero Clamp Squishing & Full Room for Text in Portrait!) */
   .rabtv-srch-input-shell {
     position: relative;
     background-color: #0c0a09;
@@ -169,9 +193,13 @@ const SEARCH_PAGE_STYLES = `
   .rabtv-srch-input-bg {
     position: absolute;
     inset: 0;
-    background-size: 100% 100%;
-    background-position: center center;
-    background-repeat: no-repeat;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 8px 18px;
+    border-image-source: url("${IMG_INPUT_BAR_BG}");
+    border-image-slice: 22% 14% fill;
+    border-image-repeat: stretch;
     opacity: 0.94;
     filter: var(--rabtv-srch-plate-filter);
     pointer-events: none;
@@ -180,10 +208,29 @@ const SEARCH_PAGE_STYLES = `
 
   .rabtv-srch-input-scrim {
     position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(12, 10, 9, 0.34) 0%, rgba(12, 10, 9, 0.52) 100%);
+    inset: 5px 14px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(12, 10, 9, 0.42) 0%, rgba(12, 10, 9, 0.58) 100%);
     pointer-events: none;
     z-index: 1;
+  }
+
+  /* Smooth Horizontal Scroll Track Mask (Eliminates Abrupt Hard-Clipped Pill Edges!) */
+  .rabtv-srch-pill-scroll {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 14px,
+      black calc(100% - 14px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 14px,
+      black calc(100% - 14px),
+      transparent 100%
+    );
   }
 
   /* Universal Image-Backed Armored Button */
@@ -273,15 +320,22 @@ const SEARCH_PAGE_STYLES = `
     text-shadow: 0 1px 4px rgba(12, 10, 9, 0.96), 0 0 10px rgba(12, 10, 9, 0.85);
   }
 
-  /* Custom Image-Backed Dropdown Trigger & Popover Menu Panel */
+  /* Pixel-Calibrated Dropdown Trigger: Cyan Chevron Locked Dead-Center Inside Black Square Socket (83.8%) */
   .rabtv-srch-dd-trigger {
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 10px clamp(14px, 5.5%, 26px) 10px clamp(18px, 7.5%, 32px) !important;
+    min-height: 54px;
+    padding: 9px 27% 9px 18px !important;
     background-color: #0c0a09;
     border: 0 !important;
     contain: layout paint;
+  }
+
+  @media (min-width: 640px) {
+    .rabtv-srch-dd-trigger {
+      padding: 9px 27% 9px 22px !important;
+    }
   }
 
   .rabtv-srch-dd-trigger-bg {
@@ -290,10 +344,24 @@ const SEARCH_PAGE_STYLES = `
     background-size: 100% 100%;
     background-position: center center;
     background-repeat: no-repeat;
-    opacity: 0.94;
+    opacity: 0.96;
     filter: var(--rabtv-srch-plate-filter);
     pointer-events: none;
     z-index: 0;
+  }
+
+  .rabtv-srch-dd-chevron {
+    position: absolute;
+    left: 83.8%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .rabtv-srch-dd-chevron--open {
+    transform: translate(-50%, -50%) rotate(180deg);
   }
 
   .rabtv-srch-dd-menu {
@@ -303,11 +371,11 @@ const SEARCH_PAGE_STYLES = `
     top: calc(100% + 6px);
     z-index: 60;
     box-sizing: border-box;
-    padding: clamp(14px, 4vw, 22px) clamp(16px, 7%, 28px) !important;
+    padding: clamp(14px, 4vw, 20px) clamp(14px, 5.5%, 24px) !important;
     border-radius: 18px;
     overflow: hidden;
     background-color: #0c0a09;
-    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.92), 0 0 22px var(--rabtv-srch-ambient-ring);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.94), 0 0 22px var(--rabtv-srch-ambient-ring);
   }
 
   .rabtv-srch-dd-menu-bg {
@@ -326,9 +394,9 @@ const SEARCH_PAGE_STYLES = `
   .rabtv-srch-banner {
     position: relative;
     width: 100%;
-    min-height: clamp(58px, 16vw, 88px);
+    min-height: clamp(56px, 14vw, 84px);
     box-sizing: border-box;
-    padding: clamp(14px, 3.8vw, 22px) clamp(88px, 24%, 215px) clamp(14px, 3.8vw, 22px) clamp(32px, 11.5%, 68px);
+    padding: clamp(12px, 3vw, 20px) clamp(92px, 28%, 215px) clamp(12px, 3vw, 20px) clamp(24px, 7%, 58px);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -342,10 +410,10 @@ const SEARCH_PAGE_STYLES = `
   .rabtv-srch-banner-bg {
     position: absolute;
     inset: 0;
-    background-size: 100% 100%;
-    background-position: center center;
+    background-size: cover;
+    background-position: right center;
     background-repeat: no-repeat;
-    opacity: 0.82;
+    opacity: 0.84;
     filter: var(--rabtv-srch-plate-filter);
     -webkit-mask-image: radial-gradient(
       ellipse 96% 90% at 50% 50%,
@@ -363,10 +431,17 @@ const SEARCH_PAGE_STYLES = `
     z-index: 0;
   }
 
+  @media (min-width: 640px) {
+    .rabtv-srch-banner-bg {
+      background-size: 100% 100%;
+      background-position: center center;
+    }
+  }
+
   .rabtv-srch-banner-scrim {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, rgba(12, 10, 9, 0.54) 0%, rgba(12, 10, 9, 0.34) 64%, rgba(12, 10, 9, 0.08) 100%);
+    background: linear-gradient(90deg, rgba(12, 10, 9, 0.62) 0%, rgba(12, 10, 9, 0.36) 62%, rgba(12, 10, 9, 0.08) 100%);
     pointer-events: none;
     z-index: 1;
   }
@@ -803,15 +878,15 @@ const ArmoredDropdown = memo(function ArmoredDropdown({
         onClick={onToggle}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className="rabtv-srch-dd-trigger w-full rounded-xl px-3 py-2 text-left flex items-center justify-between gap-2 cursor-pointer disabled:opacity-45 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-cyan-400 transition hover:brightness-110"
+        className="rabtv-srch-dd-trigger w-full rounded-xl text-left flex items-center cursor-pointer disabled:opacity-45 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-cyan-400 transition hover:brightness-110"
       >
         <span
           className="rabtv-srch-dd-trigger-bg"
           aria-hidden="true"
           style={{ backgroundImage: `url(${IMG_DROPDOWN_TRIGGER})` }}
         />
-        <span className="relative z-10 flex flex-col min-w-0 pr-2">
-          <span className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 leading-none mb-0.5">
+        <span className="relative z-10 flex flex-col min-w-0 w-full">
+          <span className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400 leading-none mb-0.5 truncate">
             {label}
           </span>
           <span className="text-xs font-extrabold text-white truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
@@ -819,8 +894,8 @@ const ArmoredDropdown = memo(function ArmoredDropdown({
           </span>
         </span>
         <span
-          className={`relative z-10 w-6 text-center text-xs font-black text-cyan-300 shrink-0 transition-transform duration-150 ${
-            isOpen ? "rotate-180" : ""
+          className={`rabtv-srch-dd-chevron text-sm font-black text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.85)] transition-transform duration-150 ${
+            isOpen ? "rabtv-srch-dd-chevron--open" : ""
           }`}
           aria-hidden="true"
         >
@@ -1076,16 +1151,12 @@ const SearchInputDeck = memo(function SearchInputDeck({
   return (
     <form onSubmit={handleSubmit} className="relative w-full space-y-2.5">
       <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center w-full">
-        {/* Armored Search Input Bar */}
+        {/* 9-Sliced Armored Search Input Bar (Full Unclipped Text Room in Portrait & Landscape) */}
         <div className="rabtv-srch-input-shell relative flex-1 min-w-0 rounded-2xl">
-          <div
-            className="rabtv-srch-input-bg"
-            aria-hidden="true"
-            style={{ backgroundImage: `url(${IMG_INPUT_BAR_BG})` }}
-          />
+          <div className="rabtv-srch-input-bg" aria-hidden="true" />
           <div className="rabtv-srch-input-scrim" aria-hidden="true" />
 
-          <span className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 z-10 text-xs sm:text-sm pointer-events-none text-cyan-300">
+          <span className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 z-10 text-xs sm:text-sm pointer-events-none text-cyan-300">
             🔍
           </span>
 
@@ -1115,17 +1186,19 @@ const SearchInputDeck = memo(function SearchInputDeck({
               setLiveTerm(val);
               setShowPredictions(val.trim().length >= 2);
             }}
-            placeholder="Search movies, TV, actors... (Press /)"
+            placeholder="Search movies, TV, actors..."
             style={{
               direction: "ltr",
               unicodeBidi: "plaintext",
               textAlign: "left",
             }}
-            className="relative z-10 w-full bg-transparent pl-12 sm:pl-14 pr-28 py-3.5 text-xs sm:text-sm font-bold text-white placeholder-zinc-400 focus:outline-none"
+            className={`relative z-10 w-full bg-transparent pl-10 sm:pl-12 ${
+              hasValue ? "pr-[104px] sm:pr-[114px]" : "pr-[74px] sm:pr-[82px]"
+            } py-3 text-xs sm:text-sm font-bold text-white placeholder-zinc-400 focus:outline-none`}
           />
 
           {/* Inline Voice + Visual Search + Clear Triggers */}
-          <div className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
+          <div className="absolute right-3 sm:right-3.5 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
             {hasValue && (
               <ArmoredButton
                 variant="danger"
@@ -1164,7 +1237,7 @@ const SearchInputDeck = memo(function SearchInputDeck({
           variant="primary"
           ariaLabel="Search and Filter"
           title="Search & Filter"
-          className={`self-center sm:self-stretch px-7 ${
+          className={`w-full sm:w-auto sm:min-w-[132px] px-7 ${
             largeButtons ? "py-3.5 text-sm" : "py-3 text-xs sm:text-sm"
           } uppercase tracking-wider shrink-0`}
         >
@@ -1257,6 +1330,8 @@ export const Route = createFileRoute("/search")({
 function SearchPage() {
   const navigate = useNavigate();
   const searchParams = Route.useSearch();
+  const presetScrollRef = useRef<HTMLDivElement>(null);
+  const moodScrollRef = useRef<HTMLDivElement>(null);
   const genreScrollRef = useRef<HTMLDivElement>(null);
 
   // Filter States (Multi-Select Genres + Mood + Presets + 5 Custom Dropdowns)
@@ -1318,6 +1393,9 @@ function SearchPage() {
   const [isLowRam, setIsLowRam] = useState<boolean>(
     () => getHardwareLimits().effectiveMode === "low"
   );
+  const [remoteManifest, setRemoteManifest] = useState<SourcesManifest>(() =>
+    getCachedSourcesManifest()
+  );
 
   const noticeTimerRef = useRef<number | null>(null);
   const showNotice = useCallback((msg: string) => {
@@ -1358,11 +1436,14 @@ function SearchPage() {
       setIsLowRam(getHardwareLimits().effectiveMode === "low");
     };
     syncSettings();
+    const syncManifest = () => setRemoteManifest(getCachedSourcesManifest());
     window.addEventListener("rabtv_settings_updated", syncSettings);
     window.addEventListener("rabtv_ram_mode_updated", syncSettings);
+    window.addEventListener(ADMIN_STORE_UPDATED_EVENT, syncManifest);
     return () => {
       window.removeEventListener("rabtv_settings_updated", syncSettings);
       window.removeEventListener("rabtv_ram_mode_updated", syncSettings);
+      window.removeEventListener(ADMIN_STORE_UPDATED_EVENT, syncManifest);
     };
   }, []);
 
@@ -1764,10 +1845,20 @@ function SearchPage() {
 
   const filteredResults = useMemo(() => {
     return results.filter((item) => {
-      if (isTitleDisliked(item.id) || isTitleBroken(item.id)) return false;
+      const mType: "movie" | "tv" =
+        item.mediaType === "tv" || String(item.id).startsWith("tv-")
+          ? "tv"
+          : "movie";
+      if (
+        isTitleDisliked(item.id) ||
+        isTitleBroken(item.id) ||
+        isTitleGloballyQuarantined(remoteManifest, mType, String(item.id))
+      ) {
+        return false;
+      }
       return isAllowedForAge(item.certification, item.genre, userAge);
     });
-  }, [results, userAge, kidsLocked]);
+  }, [results, userAge, kidsLocked, remoteManifest]);
 
   const handleSearchSubmitQuery = useCallback(
     (raw: string) => {
@@ -2004,12 +2095,13 @@ function SearchPage() {
           </div>
         )}
 
-        {/* MAIN SEARCH & DISCOVERY CONTROL DECK (Female Rabbit Detective in Bottom-Right) */}
+        {/* MAIN SEARCH & DISCOVERY CONTROL DECK (9-Sliced Armored Frame + Unstretched Detective Accent) */}
         <div
-          className={`rabtv-srch-deck rounded-3xl border border-white/10 p-4 sm:p-6 ${
+          className={`rabtv-srch-deck rounded-3xl ${
             isEngaged && !glowOff ? "rabtv-srch-deck--engaged" : ""
           }`}
         >
+          <div className="rabtv-srch-deck-9slice" aria-hidden="true" />
           <div
             className="rabtv-srch-deck-bg"
             aria-hidden="true"
@@ -2029,67 +2121,129 @@ function SearchPage() {
               onNotice={showNotice}
             />
 
-            {/* 6 Curated Discovery Presets (Every Preset Uses Image Plates) */}
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
-              {(
-                [
-                  { id: "trending", label: "🔥 Trending Hits" },
-                  {
-                    id: "masterpieces",
-                    label: `⭐ ${
-                      activePreset === "masterpieces" && minRating > 0
-                        ? minRating
-                        : 8
-                    }+ Masterpieces`,
-                  },
-                  { id: "new", label: "🆕 2025–2026 New" },
-                  { id: "90s", label: "📼 90s Classics" },
-                  { id: "family", label: "👨‍👩‍👧 Family Night" },
-                  { id: "hiddenGems", label: "💎 Hidden Gems" },
-                ] as const
-              ).map((preset) => (
-                <ArmoredButton
-                  key={preset.id}
-                  variant={activePreset === preset.id ? "active" : "idle"}
-                  ariaPressed={activePreset === preset.id}
-                  onClick={() => applyDiscoveryPreset(preset.id)}
-                  className="shrink-0 px-3.5 py-2 text-[11px] whitespace-nowrap"
-                >
-                  {preset.label}
-                </ArmoredButton>
-              ))}
+            {/* 6 Curated Discovery Presets (Smooth Edge-Fade + Arrows — Zero Abrupt Pill Clipping!) */}
+            <div className="flex items-center gap-1.5">
+              <ArmoredButton
+                variant="idle"
+                ariaLabel="Scroll presets left"
+                onClick={() =>
+                  presetScrollRef.current?.scrollBy({
+                    left: -200,
+                    behavior: reducedMotion ? "auto" : "smooth",
+                  })
+                }
+                className="h-8 w-7 sm:w-8 shrink-0 text-xs"
+              >
+                ‹
+              </ArmoredButton>
+              <div
+                ref={presetScrollRef}
+                className="rabtv-srch-pill-scroll flex-1 min-w-0 flex items-center gap-2 overflow-x-auto scrollbar-none px-3 py-0.5"
+              >
+                {(
+                  [
+                    { id: "trending", label: "🔥 Trending Hits" },
+                    {
+                      id: "masterpieces",
+                      label: `⭐ ${
+                        activePreset === "masterpieces" && minRating > 0
+                          ? minRating
+                          : 8
+                      }+ Masterpieces`,
+                    },
+                    { id: "new", label: "🆕 2025–2026 New" },
+                    { id: "90s", label: "📼 90s Classics" },
+                    { id: "family", label: "👨‍👩‍👧 Family Night" },
+                    { id: "hiddenGems", label: "💎 Hidden Gems" },
+                  ] as const
+                ).map((preset) => (
+                  <ArmoredButton
+                    key={preset.id}
+                    variant={activePreset === preset.id ? "active" : "idle"}
+                    ariaPressed={activePreset === preset.id}
+                    onClick={() => applyDiscoveryPreset(preset.id)}
+                    className="shrink-0 px-3.5 py-2 text-[11px] whitespace-nowrap"
+                  >
+                    {preset.label}
+                  </ArmoredButton>
+                ))}
+              </div>
+              <ArmoredButton
+                variant="idle"
+                ariaLabel="Scroll presets right"
+                onClick={() =>
+                  presetScrollRef.current?.scrollBy({
+                    left: 200,
+                    behavior: reducedMotion ? "auto" : "smooth",
+                  })
+                }
+                className="h-8 w-7 sm:w-8 shrink-0 text-xs"
+              >
+                ›
+              </ArmoredButton>
             </div>
 
-            {/* Contextual Mood / Vibe Selector + Auto-Built Smart Collection */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 shrink-0 mr-1">
+            {/* Contextual Mood / Vibe Selector (Smooth Edge-Fade + Arrows) */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 shrink-0">
                 Vibe:
               </span>
-              {MOOD_VIBES.map((mood) => (
-                <ArmoredButton
-                  key={mood.id}
-                  variant={activeMood === mood.id ? "active" : "idle"}
-                  ariaPressed={activeMood === mood.id}
-                  onClick={() => applyMoodVibe(mood)}
-                  className="shrink-0 px-3 py-1.5 text-[11px] whitespace-nowrap"
-                >
-                  {mood.label}
-                </ArmoredButton>
-              ))}
-              {smartTopGenres.length > 0 && (
-                <ArmoredButton
-                  variant="active"
-                  onClick={() => {
-                    setSelectedGenres(smartTopGenres);
-                    setActivePreset(null);
-                    setActiveMood(null);
-                  }}
-                  className="shrink-0 px-3 py-1.5 text-[11px] whitespace-nowrap"
-                  title="Auto-built from your search history"
-                >
-                  ✨ For You: {smartTopGenres.join(" + ")}
-                </ArmoredButton>
-              )}
+              <ArmoredButton
+                variant="idle"
+                ariaLabel="Scroll vibes left"
+                onClick={() =>
+                  moodScrollRef.current?.scrollBy({
+                    left: -180,
+                    behavior: reducedMotion ? "auto" : "smooth",
+                  })
+                }
+                className="h-7 w-7 shrink-0 text-xs"
+              >
+                ‹
+              </ArmoredButton>
+              <div
+                ref={moodScrollRef}
+                className="rabtv-srch-pill-scroll flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto scrollbar-none px-3 py-0.5"
+              >
+                {MOOD_VIBES.map((mood) => (
+                  <ArmoredButton
+                    key={mood.id}
+                    variant={activeMood === mood.id ? "active" : "idle"}
+                    ariaPressed={activeMood === mood.id}
+                    onClick={() => applyMoodVibe(mood)}
+                    className="shrink-0 px-3 py-1.5 text-[11px] whitespace-nowrap"
+                  >
+                    {mood.label}
+                  </ArmoredButton>
+                ))}
+                {smartTopGenres.length > 0 && (
+                  <ArmoredButton
+                    variant="active"
+                    onClick={() => {
+                      setSelectedGenres(smartTopGenres);
+                      setActivePreset(null);
+                      setActiveMood(null);
+                    }}
+                    className="shrink-0 px-3 py-1.5 text-[11px] whitespace-nowrap"
+                    title="Auto-built from your search history"
+                  >
+                    ✨ For You: {smartTopGenres.join(" + ")}
+                  </ArmoredButton>
+                )}
+              </div>
+              <ArmoredButton
+                variant="idle"
+                ariaLabel="Scroll vibes right"
+                onClick={() =>
+                  moodScrollRef.current?.scrollBy({
+                    left: 180,
+                    behavior: reducedMotion ? "auto" : "smooth",
+                  })
+                }
+                className="h-7 w-7 shrink-0 text-xs"
+              >
+                ›
+              </ArmoredButton>
             </div>
 
             {/* Recent Search History Chips */}
@@ -2246,14 +2400,17 @@ function SearchPage() {
               />
             </div>
 
-            {/* MULTI-SELECT GENRE FILTER BAR (Every Genre Pill Is an Image Button) */}
-            <div className="space-y-1.5">
+            {/* MULTI-SELECT GENRE FILTER BAR (Clean Single-Line Header + Edge-Fade Rail) */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between gap-2 px-1">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-400">
-                  Genre Filter (Multi-Select up to 3):
+                <span className="text-[10.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-zinc-400 truncate">
+                  <span className="sm:hidden">Genres (Up to 3)</span>
+                  <span className="hidden sm:inline">
+                    Genre Filter (Multi-Select up to 3)
+                  </span>
                 </span>
                 {!loading && filteredResults.length > 0 && (
-                  <span className="rounded-full bg-black/75 border border-cyan-400/35 px-2.5 py-0.5 text-[10px] font-extrabold text-cyan-200">
+                  <span className="rounded-full bg-black/80 border border-cyan-400/35 px-2.5 py-0.5 text-[10px] font-extrabold text-cyan-200 whitespace-nowrap shrink-0">
                     {filteredResults.length} matches
                     {totalPages > 1 && !selectedPerson
                       ? ` • Pg ${page}/${totalPages}`
@@ -2272,14 +2429,14 @@ function SearchPage() {
                       behavior: reducedMotion ? "auto" : "smooth",
                     })
                   }
-                  className="h-8 w-8 shrink-0 text-xs"
+                  className="h-8 w-7 sm:w-8 shrink-0 text-xs"
                 >
                   ‹
                 </ArmoredButton>
 
                 <div
                   ref={genreScrollRef}
-                  className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5"
+                  className="rabtv-srch-pill-scroll flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto scrollbar-none px-3 py-0.5"
                 >
                   <ArmoredButton
                     variant={selectedGenres.length === 0 ? "active" : "idle"}
