@@ -1403,9 +1403,19 @@ function RootComponent() {
       });
     };
 
-    syncRemote(false);
-    const onStoreUpdate = () => applyRemote(getCachedBrandingConfig());
+    // Always do a fresh non-blocking Gist check on boot so banner/flag changes appear immediately
+    syncRemote(true);
+    const onStoreUpdate = () => {
+      setMotdDismissed(false);
+      applyRemote(getCachedBrandingConfig());
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        syncRemote(true);
+      }
+    };
     window.addEventListener(ADMIN_STORE_UPDATED_EVENT, onStoreUpdate);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     const updateTimer = window.setTimeout(() => {
       void checkForAppUpdates(true);
@@ -1413,6 +1423,7 @@ function RootComponent() {
     return () => {
       active = false;
       window.removeEventListener(ADMIN_STORE_UPDATED_EVENT, onStoreUpdate);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.clearTimeout(updateTimer);
     };
   }, []);
