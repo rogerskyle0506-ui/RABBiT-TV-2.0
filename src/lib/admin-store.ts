@@ -734,11 +734,21 @@ export async function fetchFullAdminSnapshot(): Promise<{
       files["branding_config.json"]?.content,
       {}
     );
-    const branding: BrandingAndFlagsConfig = {
-      ...DEFAULT_BRANDING_CONFIG,
-      ...parsedAdminCfg,
-      ...parsedBrandingCfg,
-    };
+    const adminTs = Number(parsedAdminCfg?.updatedAt) || 0;
+    const brandingTs = Number(parsedBrandingCfg?.updatedAt) || 0;
+    // Whichever config file was saved more recently wins for shared fleet policy fields
+    const branding: BrandingAndFlagsConfig =
+      adminTs > brandingTs
+        ? {
+            ...DEFAULT_BRANDING_CONFIG,
+            ...parsedBrandingCfg,
+            ...parsedAdminCfg,
+          }
+        : {
+            ...DEFAULT_BRANDING_CONFIG,
+            ...parsedAdminCfg,
+            ...parsedBrandingCfg,
+          };
 
     const enforcement = safeJsonParse<UserEnforcementRecord[]>(
       files["user_enforcement.json"]?.content,
