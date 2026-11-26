@@ -45,8 +45,84 @@ const BACK_TO_HOME_BTN_URL =
  * buttonwrapper.png holding Back to Home + Live TV Guide side-by-side) and
  * More Live Channels section banner across portrait, landscape, tablet & TV.
  */
+const IMG_LP_STUDIO_BG =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-liveplayer-studio-bg.jpg';
+const IMG_LP_STUDIO_BG2 =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-liveplayer-studio-bg2.jpg';
+const IMG_LP_INFO_PANEL =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-liveplayer-info-panel-bg.jpg';
+const IMG_LP_CARD_FRAME =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-livetv-channel-card-frame.jpg';
+const IMG_LP_SECTION_BANNER =
+  'https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-livetv-section-banner.jpg';
+
 const LIVE_PLAYER_VIEWPORT_STYLES = `
-  /* Uses shared global .rabtv-dual-wrapper & .rabtv-section-banner from __root.tsx */
+  :root,
+  html[data-theme="violet"] {
+    --rabtv-lp-plate-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02);
+  }
+  html[data-theme="red"] {
+    --rabtv-lp-plate-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0);
+  }
+  html[data-theme="midnight"] {
+    --rabtv-lp-plate-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04);
+  }
+  html[data-theme="emerald"] {
+    --rabtv-lp-plate-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02);
+  }
+  html[data-theme="amber"] {
+    --rabtv-lp-plate-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04);
+  }
+  html[data-theme="cyan"] {
+    --rabtv-lp-plate-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04);
+  }
+
+  /* Broadcast Studio Info Card Plate */
+  .rabtv-lp-info-plate {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(12, 10, 9, 0.90);
+    contain: layout paint;
+  }
+  .rabtv-lp-info-plate-bg {
+    position: absolute;
+    inset: 0;
+    background-size: 100% 100%;
+    background-position: center center;
+    opacity: 0.78;
+    filter: var(--rabtv-lp-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-lp-info-plate-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(12, 10, 9, 0.72) 0%, rgba(12, 10, 9, 0.56) 65%, rgba(12, 10, 9, 0.32) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* 9-Sliced Channel Suggestion Card */
+  .rabtv-lp-ch-card {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+  .rabtv-lp-ch-9slice {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 14px 12px;
+    border-image-source: url("${IMG_LP_CARD_FRAME}");
+    border-image-slice: 13% 11% fill;
+    border-image-repeat: stretch;
+    filter: var(--rabtv-lp-plate-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
 `;
 
 function isSafeHttpUrl(raw: string): boolean {
@@ -574,7 +650,8 @@ function LivePlayerComponent() {
         const unique: LiveChannel[] = [];
         for (const ch of rawList) {
           const u = (ch.streamUrl || ch.url || '').trim();
-          if (!u || seenUrls.has(u)) continue;
+          const hay = `${ch.title || ''} ${ch.channelId || ''} ${u}`.toLowerCase();
+          if (!u || seenUrls.has(u) || hay.includes('7flix') || hay.includes('sevenflix')) continue;
           seenUrls.add(u);
           unique.push(ch);
         }
@@ -787,7 +864,7 @@ function LivePlayerComponent() {
         setActiveMirrorLabel(nextMirror.groupTitle || nextMirror.name);
         setReliabilityScore(getChannelReliabilityScore(nextMirror.channelId));
         showTempBanner(
-          `⚡ ${reason} — auto-switched to ${nextMirror.groupTitle || 'Backup'} mirror`
+          `✨ ${reason} — tuning alternative feed automatically`
         );
         return true;
       }
@@ -1710,7 +1787,7 @@ function LivePlayerComponent() {
         }
       `}</style>
 
-      <AppWallpaper />
+      <AppWallpaper backdropUrl={isLowRam ? IMG_LP_STUDIO_BG2 : IMG_LP_STUDIO_BG} />
       {!isLowRam && !reducedMotion && !glowOff && (
         <div
           className={`absolute inset-x-0 -top-10 h-[24rem] bg-gradient-to-b ${themeStyles.ambient} blur-3xl z-0 pointer-events-none rounded-t-3xl`}
@@ -2195,13 +2272,13 @@ function LivePlayerComponent() {
                           handleSelectManualMirror(
                             alt.url,
                             alt.channelId,
-                            alt.groupTitle || alt.name
+                            null
                           );
                         }
                       }}
                       className={`rounded-lg border px-4 py-2 text-xs font-bold transition cursor-pointer ${themeStyles.btnSecondary}`}
                     >
-                      📡 Try Backup Mirror
+                      ✨ Switch Feed
                     </button>
                   )}
                   {nextChannel && (
@@ -2233,14 +2310,18 @@ function LivePlayerComponent() {
           )}
         </div>
 
-        {/* Compact Horizontal Broadcast Info Bar (Strictly Constrained) */}
+        {/* Broadcast Info Card (Studio Camera & Mic Plate) */}
         <div
-          className={`w-full max-w-full overflow-hidden box-border rounded-2xl border ${
-            isLowRam ? '' : 'backdrop-blur-sm'
-          } p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ${themeStyles.surfacePanel}`}
+          className={`rabtv-lp-info-plate w-full max-w-full overflow-hidden box-border rounded-2xl border p-3.5 sm:p-5 flex items-center gap-3 sm:gap-4 ${themeStyles.surfacePanel}`}
         >
           <div
-            className={`w-16 h-12 sm:w-20 sm:h-14 shrink-0 rounded-xl border flex items-center justify-center p-2 overflow-hidden ${themeStyles.logoStage}`}
+            className="rabtv-lp-info-plate-bg"
+            aria-hidden="true"
+            style={{ backgroundImage: `url(${IMG_LP_INFO_PANEL})` }}
+          />
+          <div className="rabtv-lp-info-plate-scrim" aria-hidden="true" />
+          <div
+            className={`relative z-10 w-16 h-12 sm:w-20 sm:h-14 shrink-0 rounded-xl border flex items-center justify-center p-2 overflow-hidden ${themeStyles.logoStage}`}
           >
             {logo ? (
               <img
@@ -2255,7 +2336,7 @@ function LivePlayerComponent() {
             )}
           </div>
 
-          <div className="flex-1 min-w-0 space-y-1 text-left">
+          <div className="relative z-10 flex-1 min-w-0 space-y-1 text-left">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap min-w-0">
                 <h1 className="text-base sm:text-xl font-black tracking-tight text-white truncate">
@@ -2287,41 +2368,7 @@ function LivePlayerComponent() {
                 )}
               </div>
 
-              {backupMirrors.length > 0 && (
-                <select
-                  aria-label="Select regional backup mirror"
-                  value={activeStreamUrl}
-                  onChange={(e) => {
-                    const nextUrl = e.target.value;
-                    if (nextUrl === streamUrl) {
-                      handleSelectManualMirror(streamUrl, resolvedChannelId, null);
-                    } else {
-                      const found = backupMirrors.find((m) => m.url === nextUrl);
-                      if (found) {
-                        handleSelectManualMirror(
-                          found.url,
-                          found.channelId,
-                          found.groupTitle || found.name
-                        );
-                      }
-                    }
-                  }}
-                  className={`h-7 sm:h-8 rounded-lg border px-2 text-[10px] sm:text-[11px] font-bold text-white cursor-pointer focus:outline-none focus:ring-2 ${themeStyles.hudSelectBox} ${themeStyles.focusRing}`}
-                >
-                  <option value={streamUrl} className={themeStyles.optionBg}>
-                    Mirror: Primary Feed
-                  </option>
-                  {backupMirrors.map((m) => (
-                    <option
-                      key={m.channelId}
-                      value={m.url}
-                      className={themeStyles.optionBg}
-                    >
-                      Mirror: {m.groupTitle} ({m.reliabilityScore ?? 60}%)
-                    </option>
-                  ))}
-                </select>
-              )}
+
             </div>
             <p className={`text-xs leading-relaxed line-clamp-2 ${themeStyles.mutedText}`}>
               {channelDescription}
@@ -2372,10 +2419,11 @@ function LivePlayerComponent() {
                       logo: channel.logo || '',
                       channelId: channel.channelId || '',
                     }}
-                    className={`group flex flex-col w-full min-w-0 box-border rounded-2xl border ${themeStyles.surfaceCard} ${themeStyles.borderHover} p-2.5 transition-all duration-200 hover:-translate-y-0.5 overflow-hidden text-left focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
+                    className={`rabtv-lp-ch-card group flex flex-col w-full min-w-0 box-border rounded-2xl border ${themeStyles.surfaceCard} ${themeStyles.borderHover} p-4 transition-all duration-200 hover:-translate-y-0.5 overflow-hidden text-left focus:outline-none focus:ring-2 ${themeStyles.focusRing}`}
                   >
+                    <div className="rabtv-lp-ch-9slice" aria-hidden="true" />
                     <div
-                      className={`w-full h-16 sm:h-20 rounded-xl border mb-2 p-2.5 flex items-center justify-center overflow-hidden ${themeStyles.logoStage}`}
+                      className={`relative z-10 w-full h-16 sm:h-20 rounded-xl border mb-2 p-2.5 flex items-center justify-center overflow-hidden ${themeStyles.logoStage}`}
                     >
                       {channel.logo ? (
                         <img
