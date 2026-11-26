@@ -22,6 +22,13 @@ import {
   type FleetReferralTotals,
   type ReferralSystemData,
 } from "@/lib/referrals";
+import {
+  ADMIN_STORE_UPDATED_EVENT,
+  commitAdminGistFiles,
+  fetchFullAdminSnapshot,
+  getCachedBrandingConfig,
+  sanitizeAdminText,
+} from "@/lib/admin-store";
 
 interface AdminPanelProps {
   appTheme: AppTheme;
@@ -195,16 +202,42 @@ export function AdminPanel({
           }
         }
 
-        const rawConfig = gistData.files?.["admin_config.json"]?.content;
-        if (rawConfig) {
-          try {
-            const parsedConfig = JSON.parse(rawConfig);
-            if (parsedConfig && typeof parsedConfig === "object") {
-              setFleetConfig((prev) => ({ ...prev, ...parsedConfig }));
-            }
-          } catch {
-            // ignore
+        const rawAdminCfg = gistData.files?.["admin_config.json"]?.content;
+        const rawBrandCfg = gistData.files?.["branding_config.json"]?.content;
+        try {
+          const parsedAdmin = rawAdminCfg ? JSON.parse(rawAdminCfg) : {};
+          const parsedBrand = rawBrandCfg ? JSON.parse(rawBrandCfg) : {};
+          const adminTs = Number(parsedAdmin?.updatedAt) || 0;
+          const brandTs = Number(parsedBrand?.updatedAt) || 0;
+          const merged =
+            adminTs > brandTs
+              ? { ...parsedBrand, ...parsedAdmin }
+              : { ...parsedAdmin, ...parsedBrand };
+          if (merged && typeof merged === "object") {
+            setFleetConfig((prev) => ({
+              ...prev,
+              allowTrials:
+                typeof merged.allowTrials === "boolean"
+                  ? merged.allowTrials
+                  : prev.allowTrials,
+              maintenanceMode:
+                typeof merged.maintenanceMode === "boolean"
+                  ? merged.maintenanceMode
+                  : prev.maintenanceMode,
+              motdBanner:
+                typeof merged.motdBanner === "string"
+                  ? merged.motdBanner
+                  : prev.motdBanner,
+              minAppVersion:
+                typeof merged.minAppVersion === "string" &&
+                merged.minAppVersion.trim()
+                  ? merged.minAppVersion
+                  : prev.minAppVersion,
+              updatedAt: Number(merged.updatedAt) || prev.updatedAt,
+            }));
           }
+        } catch {
+          // ignore
         }
 
         const rawReferrals = gistData.files?.["referrals.json"]?.content;
@@ -251,11 +284,24 @@ export function AdminPanel({
       );
     };
 
+    const onAdminStoreUpdated = () => {
+      const latest = getCachedBrandingConfig();
+      setFleetConfig({
+        allowTrials: latest.allowTrials,
+        maintenanceMode: latest.maintenanceMode,
+        motdBanner: latest.motdBanner,
+        minAppVersion: latest.minAppVersion,
+        updatedAt: latest.updatedAt,
+      });
+    };
+
     window.addEventListener("rabtv_broken_links_updated", onBrokenUpdated);
     window.addEventListener("rabtv_referrals_updated", onReferralsUpdated);
+    window.addEventListener(ADMIN_STORE_UPDATED_EVENT, onAdminStoreUpdated);
     return () => {
       window.removeEventListener("rabtv_broken_links_updated", onBrokenUpdated);
       window.removeEventListener("rabtv_referrals_updated", onReferralsUpdated);
+      window.removeEventListener(ADMIN_STORE_UPDATED_EVENT, onAdminStoreUpdated);
     };
   }, []);
 
@@ -693,41 +739,49 @@ export function AdminPanel({
   const handleSyncFleetConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     resetInactivityTimer();
-    const { GIST_ID, GITHUB_TOKEN, GIST_API_URL } = getGistCredentials();
-    if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
-      setFleetSyncStatus("⚠️ Gist credentials missing.");
-      return;
-    }
-
     setFleetSyncStatus("Syncing remote fleet config to Gist...");
     try {
-      const payload: RemoteFleetConfig = {
-        ...fleetConfig,
-        updatedAt: Date.now(),
+      const snapRes = await fetchFullAdminSnapshot();
+      const baseBranding = snapRes.ok
+        ? snapRes.snapshot.branding
+        : getCachedBrandingConfig();
+
+      const now = Date.now();
+      const cleanMotd = sanitizeAdminText(fleetConfig.motdBanner, 180);
+      const cleanMinVer =
+        sanitizeAdminText(fleetConfig.minAppVersion, 20) || "1.2.0";
+
+      const legacyPayload: RemoteFleetConfig = {
+        allowTrials: fleetConfig.allowTrials,
+        maintenanceMode: fleetConfig.maintenanceMode,
+        motdBanner: cleanMotd,
+        minAppVersion: cleanMinVer,
+        updatedAt: now,
       };
 
-      const patchRes = await fetch(GIST_API_URL, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: "application/vnd.github+json",
-          "Content-Type": "application/json",
-          "User-Agent": "RabbitTV-App",
+      const fullBrandingPayload = {
+        ...baseBranding,
+        ...legacyPayload,
+      };
+
+      const res = await commitAdminGistFiles({
+        filesToUpdate: {
+          "branding_config.json": fullBrandingPayload,
+          "admin_config.json": legacyPayload,
         },
-        body: JSON.stringify({
-          files: {
-            "admin_config.json": {
-              content: JSON.stringify(payload, null, 2),
-            },
-          },
-        }),
+        audit: {
+          action: "SIDEBAR_FLEET_SYNC",
+          target: "branding_config.json + admin_config.json",
+          reason: `Maintenance=${legacyPayload.maintenanceMode ? "ON" : "OFF"}, Trials=${legacyPayload.allowTrials ? "ON" : "OFF"}${cleanMotd ? `, MOTD="${cleanMotd}"` : ""}`,
+        },
       });
 
-      if (patchRes.ok) {
+      if (res.ok) {
+        setFleetConfig(legacyPayload);
         setFleetSyncStatus("✅ Fleet Policies Synced to Gist!");
         window.setTimeout(() => setFleetSyncStatus(null), 3500);
       } else {
-        setFleetSyncStatus("⚠️ Failed to sync fleet config.");
+        setFleetSyncStatus(`⚠️ ${res.error || "Failed to sync fleet config."}`);
       }
     } catch (err: any) {
       setFleetSyncStatus(`⚠️ Error: ${err.message || err}`);
@@ -1428,25 +1482,45 @@ export function AdminPanel({
                     </button>
                   </div>
 
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      placeholder="Global MOTD Banner Message..."
-                      value={fleetConfig.motdBanner}
-                      onChange={(e) =>
-                        setFleetConfig((prev) => ({
-                          ...prev,
-                          motdBanner: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-xl border border-red-500/35 bg-black/80 px-3 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-red-400"
-                    />
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-2 w-full min-w-0">
+                    <div className="relative w-full min-w-0">
+                      <input
+                        type="text"
+                        dir="ltr"
+                        placeholder="Global MOTD Banner Message..."
+                        value={fleetConfig.motdBanner}
+                        onChange={(e) =>
+                          setFleetConfig((prev) => ({
+                            ...prev,
+                            motdBanner: e.target.value,
+                          }))
+                        }
+                        className="w-full box-border rounded-xl border border-red-500/35 bg-black/80 pl-3 pr-8 py-2 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-red-400"
+                      />
+                      {fleetConfig.motdBanner && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFleetConfig((prev) => ({
+                              ...prev,
+                              motdBanner: "",
+                            }))
+                          }
+                          title="Clear banner message"
+                          aria-label="Clear banner message"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 hover:text-white cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 w-full min-w-0">
                       <span className="text-[10px] font-bold text-slate-300 shrink-0">
                         Min App Ver:
                       </span>
                       <input
                         type="text"
+                        dir="ltr"
                         placeholder="1.2.0"
                         value={fleetConfig.minAppVersion}
                         onChange={(e) =>
@@ -1455,7 +1529,7 @@ export function AdminPanel({
                             minAppVersion: e.target.value,
                           }))
                         }
-                        className="flex-1 rounded-xl border border-red-500/35 bg-black/80 px-3 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-400"
+                        className="flex-1 min-w-0 w-full box-border rounded-xl border border-red-500/35 bg-black/80 px-3 py-1.5 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-400"
                       />
                     </div>
                   </div>
