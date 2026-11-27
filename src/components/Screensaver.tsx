@@ -221,8 +221,8 @@ export function Screensaver() {
       return;
     }
 
-    const logoWidth = 100%;
-    const logoHeight = 100%;
+    const logoWidth = 100;
+    const logoHeight = 100;
 
     const placeRandomly = () => {
       const maxX = Math.max(20, window.innerWidth - logoWidth - 50);
