@@ -18,7 +18,7 @@ import {
 export const TIMEOUT_OPTIONS = SCREENSAVER_TIMEOUT_OPTIONS;
 
 const LOGO_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-screensaver-card.jpg";
 
 export function Screensaver() {
   const [isActive, setIsActive] = useState(false);
@@ -221,12 +221,12 @@ export function Screensaver() {
       return;
     }
 
-    const logoWidth = 290;
-    const logoHeight = 185;
+    const logoWidth = 100%;
+    const logoHeight = 100%;
 
     const placeRandomly = () => {
-      const maxX = Math.max(20, window.innerWidth - logoWidth - 20);
-      const maxY = Math.max(20, window.innerHeight - logoHeight - 20);
+      const maxX = Math.max(20, window.innerWidth - logoWidth - 50);
+      const maxY = Math.max(20, window.innerHeight - logoHeight - 50);
       posRef.current = {
         x: Math.round(Math.random() * maxX),
         y: Math.round(Math.random() * maxY),
