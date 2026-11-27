@@ -8,18 +8,23 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 
-/* ============================================================================
- * RABBiT TV — Complete Interactive App Walkthrough (InteractiveWalkthrough.tsx)
- *
- * Wired directly to:
- *  - src/routes/__root.tsx (Header, Search, Profile Pill, Corner Clock, Footer & TMDB)
- *  - src/components/sidebar.tsx (Right-Docked Crystal Console + all 6 Accordions)
- *  - src/components/TermsOfServiceModal.tsx (ToS & Legal)
- *  - Movies, TV Shows, Details, Ad-Free Video Player, Trailers, Live TV, Search,
- *    My List / Favorites & Watch History Hub
- *
- * Zero extra npm dependencies — pure React + TypeScript + react-dom portal.
- * ========================================================================== */
+// =============================================================================
+// COMMITTED WALKTHROUGH GRAPHIC UI ASSETS (7 FILES)
+// =============================================================================
+const IMG_WT_WELCOME_BANNER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-tour-welcome-banner.jpg";
+const IMG_WT_CARD_FRAME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-tour-card-frame.jpg";
+const IMG_WT_HINT_CARD =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-tour-hint-card.jpg";
+const IMG_WT_BTN_PRIMARY =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-tour-btn-primary.jpg";
+const IMG_WT_BTN_IDLE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-tour-btn-idle.jpg";
+const IMG_WT_CHAPTER_ACTIVE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-tour-chapter-active.jpg";
+const IMG_WT_PROGRESS_TRACK =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-tour-progress-track.jpg";
 
 export const WALKTHROUGH_COMPLETED_KEY = "rabtv_walkthrough_completed";
 export const WALKTHROUGH_STEP_KEY = "rabtv_walkthrough_step";
@@ -1153,8 +1158,8 @@ export const InteractiveWalkthrough: React.FC<InteractiveWalkthroughProps> = ({
         .rabtv-wt-root {
           --wt-accent: var(--accent-color, var(--primary-color, #a855f7));
           --wt-accent-glow: rgba(168, 85, 247, 0.55);
-          --wt-glass-bg: rgba(12, 15, 28, 0.92);
-          --wt-glass-border: rgba(255, 255, 255, 0.18);
+          --wt-glass-bg: rgba(12, 10, 9, 0.94);
+          --wt-glass-border: rgba(255, 255, 255, 0.16);
           --wt-text: #f8fafc;
           --wt-muted: #cbd5e1;
           position: fixed;
@@ -1167,7 +1172,7 @@ export const InteractiveWalkthrough: React.FC<InteractiveWalkthroughProps> = ({
         .rabtv-wt-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(5, 7, 15, 0.72);
+          background: rgba(5, 7, 15, 0.74);
           backdrop-filter: blur(3px);
           -webkit-backdrop-filter: blur(3px);
           pointer-events: auto;
@@ -1200,83 +1205,227 @@ export const InteractiveWalkthrough: React.FC<InteractiveWalkthroughProps> = ({
               0 0 34px 10px var(--wt-accent-glow);
           }
         }
+
+        /* 9-Sliced Armored Floating Card Shell */
         .rabtv-wt-card {
           position: fixed;
           pointer-events: auto;
-          background: var(--wt-glass-bg);
-          border: 1px solid var(--wt-glass-border);
-          border-radius: 20px;
-          backdrop-filter: blur(18px);
-          -webkit-backdrop-filter: blur(18px);
+          background-color: #0c0a09;
+          border-radius: 22px;
           box-shadow:
-            0 24px 60px rgba(0, 0, 0, 0.68),
-            0 0 0 1px rgba(255, 255, 255, 0.06) inset,
-            0 0 32px rgba(168, 85, 247, 0.24);
-          padding: 18px 20px 16px;
+            0 24px 64px rgba(0, 0, 0, 0.85),
+            0 0 32px rgba(168, 85, 247, 0.26);
+          padding: 20px 18px 18px;
           box-sizing: border-box;
           transition: top 0.28s cubic-bezier(0.22, 1, 0.36, 1),
                       left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
           max-height: calc(100vh - 32px);
           overflow-y: auto;
+          scrollbar-width: none;
         }
+        .rabtv-wt-card::-webkit-scrollbar { display: none; }
+        .rabtv-wt-card-9slice {
+          position: absolute;
+          inset: 0;
+          box-sizing: border-box;
+          border-style: solid;
+          border-color: transparent;
+          border-width: 18px 16px;
+          border-image-source: url("${IMG_WT_CARD_FRAME}");
+          border-image-slice: 13% 11% fill;
+          border-image-repeat: stretch;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        /* Welcome Gate Mascot Tour Banner */
+        .rabtv-wt-welcome-banner {
+          position: relative;
+          overflow: hidden;
+          border-radius: 16px;
+          background-color: #0c0a09;
+          min-height: 148px;
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          margin-bottom: 12px;
+        }
+        .rabtv-wt-welcome-banner-bg {
+          position: absolute;
+          inset: 0;
+          background-size: cover;
+          background-position: center 32%;
+          background-repeat: no-repeat;
+          opacity: 0.92;
+          pointer-events: none;
+          z-index: 0;
+        }
+        .rabtv-wt-welcome-banner-scrim {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            180deg,
+            rgba(12, 10, 9, 0.84) 0%,
+            rgba(12, 10, 9, 0.22) 48%,
+            rgba(12, 10, 9, 0.72) 100%
+          );
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        /* 9-Sliced Hint & Pro Tip Callout Frame */
+        .rabtv-wt-hint-box {
+          position: relative;
+          overflow: hidden;
+          border-radius: 14px;
+          background-color: #0c0a09;
+          padding: 12px 14px;
+          box-sizing: border-box;
+        }
+        .rabtv-wt-hint-box-9slice {
+          position: absolute;
+          inset: 0;
+          box-sizing: border-box;
+          border-style: solid;
+          border-color: transparent;
+          border-width: 10px 12px;
+          border-image-source: url("${IMG_WT_HINT_CARD}");
+          border-image-slice: 14% 11% fill;
+          border-image-repeat: stretch;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        /* Riveted Progress Gauge Track */
+        .rabtv-wt-progress-housing {
+          position: relative;
+          height: 22px;
+          width: 100%;
+          border-radius: 8px;
+          overflow: hidden;
+          background-color: #0c0a09;
+          margin-bottom: 12px;
+        }
+        .rabtv-wt-progress-track-art {
+          position: absolute;
+          inset: 0;
+          background-size: 100% 100%;
+          background-position: center center;
+          pointer-events: none;
+          z-index: 0;
+        }
+        .rabtv-wt-progress-channel {
+          position: absolute;
+          inset: 22% 3.5%;
+          border-radius: 4px;
+          overflow: hidden;
+          background: rgba(12, 10, 9, 0.85);
+          z-index: 2;
+        }
+
+        /* Die-Cut Chamfered Armored Buttons */
         .rabtv-wt-btn {
+          position: relative;
+          overflow: hidden;
           appearance: none;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          background: rgba(255, 255, 255, 0.08);
+          border: 0 !important;
+          background-color: #0c0a09;
           color: #ffffff;
           border-radius: 12px;
           padding: 9px 14px;
-          font-size: 13.5px;
-          font-weight: 700;
+          font-size: 13px;
+          font-weight: 800;
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
-          transition: transform 0.14s ease, background 0.15s ease;
+          clip-path: polygon(
+            8px 0%,
+            calc(100% - 8px) 0%,
+            100% 8px,
+            100% calc(100% - 8px),
+            calc(100% - 8px) 100%,
+            8px 100%,
+            0% calc(100% - 8px),
+            0% 8px
+          );
+          transition: transform 0.14s ease, filter 0.15s ease;
         }
-        .rabtv-wt-btn:hover,
+        .rabtv-wt-btn-art {
+          position: absolute;
+          inset: -2px;
+          background-size: 100% 100%;
+          background-position: center center;
+          pointer-events: none;
+          z-index: 0;
+        }
+        .rabtv-wt-btn-scrim {
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(ellipse 78% 72% at 50% 50%, rgba(12,10,9,0.38) 0%, rgba(12,10,9,0.14) 100%);
+          pointer-events: none;
+          z-index: 1;
+        }
+        .rabtv-wt-btn-label {
+          position: relative;
+          z-index: 2;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          text-shadow: 0 1px 4px rgba(12, 10, 9, 0.96);
+        }
+        .rabtv-wt-btn:hover:not(:disabled),
         .rabtv-wt-btn:focus-visible {
-          background: rgba(255, 255, 255, 0.18);
+          filter: brightness(1.1);
           outline: 2px solid #ffffff;
           outline-offset: 2px;
           transform: translateY(-1px);
-        }
-        .rabtv-wt-btn-primary {
-          background: linear-gradient(135deg, var(--wt-accent), #6366f1);
-          border-color: rgba(255, 255, 255, 0.28);
-          box-shadow: 0 6px 20px rgba(168, 85, 247, 0.42);
         }
         .rabtv-wt-btn:disabled {
           opacity: 0.38;
           cursor: not-allowed;
           transform: none;
         }
+
+        /* Armored Chapter List Rows */
         .rabtv-wt-chapter-item {
+          position: relative;
+          overflow: hidden;
           width: 100%;
           text-align: left;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background-color: #0c0a09;
+          border: 0 !important;
           color: #f8fafc;
           border-radius: 12px;
-          padding: 9px 12px;
+          padding: 10px 13px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 10px;
-          font-size: 13px;
+          font-size: 12.5px;
+          font-weight: 700;
+          clip-path: polygon(
+            8px 0%,
+            calc(100% - 8px) 0%,
+            100% 8px,
+            100% calc(100% - 8px),
+            calc(100% - 8px) 100%,
+            8px 100%,
+            0% calc(100% - 8px),
+            0% 8px
+          );
+          transition: transform 0.14s ease, filter 0.15s ease;
         }
         .rabtv-wt-chapter-item:hover,
         .rabtv-wt-chapter-item:focus-visible {
-          background: rgba(168, 85, 247, 0.22);
-          border-color: var(--wt-accent);
-          outline: none;
-        }
-        .rabtv-wt-chapter-item.is-current {
-          background: rgba(168, 85, 247, 0.28);
-          border-color: var(--wt-accent);
-          font-weight: 700;
+          filter: brightness(1.12);
+          outline: 2px solid #ffffff;
+          outline-offset: 1px;
         }
       `}</style>
 
@@ -1299,66 +1448,84 @@ export const InteractiveWalkthrough: React.FC<InteractiveWalkthroughProps> = ({
           ref={cardRef}
           className="rabtv-wt-card"
           style={{
-            width: Math.min(500, vw - 32),
+            width: Math.min(510, vw - 32),
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "#d8b4fe",
-                background: "rgba(168, 85, 247, 0.2)",
-                border: "1px solid rgba(168, 85, 247, 0.45)",
-                padding: "4px 10px",
-                borderRadius: 999,
-              }}
-            >
-              RABBiT TV Interactive Tour
-            </span>
-            <button
-              type="button"
-              className="rabtv-wt-btn"
-              style={{ padding: "6px 10px", fontSize: 12 }}
-              onClick={() => finishWalkthrough(false)}
-            >
-              Skip
-            </button>
-          </div>
+          <div className="rabtv-wt-card-9slice" aria-hidden="true" />
+          <div className="relative z-10">
+            <div className="rabtv-wt-welcome-banner">
+              <div
+                className="rabtv-wt-welcome-banner-bg"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${IMG_WT_WELCOME_BANNER})` }}
+              />
+              <div className="rabtv-wt-welcome-banner-scrim" aria-hidden="true" />
 
-          <h2 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 800, lineHeight: 1.2 }}>
-            Tour Every Feature of RABBiT TV
-          </h2>
+              <div className="relative z-10 flex items-center justify-between gap-2">
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "#e9d5ff",
+                    background: "rgba(12, 10, 9, 0.8)",
+                    border: "1px solid rgba(168, 85, 247, 0.5)",
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                  }}
+                >
+                  RABBiT TV Interactive Tour
+                </span>
+                <button
+                  type="button"
+                  className="rabtv-wt-btn"
+                  style={{ padding: "5px 11px", fontSize: 11.5 }}
+                  onClick={() => finishWalkthrough(false)}
+                >
+                  <span className="rabtv-wt-btn-art" style={{ backgroundImage: `url(${IMG_WT_BTN_IDLE})` }} />
+                  <span className="rabtv-wt-btn-scrim" />
+                  <span className="rabtv-wt-btn-label">Skip</span>
+                </button>
+              </div>
+            </div>
 
-          <p style={{ margin: "0 0 14px", fontSize: 14.5, lineHeight: 1.55, color: "var(--wt-muted)" }}>
-            Walk step-by-step through all{" "}
-            <strong style={{ color: "#fff" }}>{WALKTHROUGH_CHAPTERS.length} sections</strong> ({totalSteps}{" "}
-            guided stops) — including the full <strong style={{ color: "#fff" }}>Crystal Sidebar</strong>,
-            Themes, Lobby Radio, Senior Easy Mode, RAM Modes, Movies, 284+ Live TV channels, Terms of Service,
-            and the <strong style={{ color: "#fff" }}>TMDB link</strong> at the bottom of pages.
-          </p>
+            <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>
+              Tour Every Feature of RABBiT TV
+            </h2>
 
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="rabtv-wt-btn"
-              onClick={() => finishWalkthrough(false)}
-            >
-              Skip for Now
-            </button>
-            <button
-              type="button"
-              className="rabtv-wt-btn rabtv-wt-btn-primary"
-              onClick={() => setShowWelcomeGate(false)}
-              autoFocus
-            >
-              Start Full Walkthrough →
-            </button>
+            <p style={{ margin: "0 0 14px", fontSize: 14, lineHeight: 1.55, color: "var(--wt-muted)" }}>
+              Walk step-by-step through all{" "}
+              <strong style={{ color: "#fff" }}>{WALKTHROUGH_CHAPTERS.length} sections</strong> ({totalSteps}{" "}
+              guided stops) — including the full <strong style={{ color: "#fff" }}>Crystal Sidebar</strong>,
+              Themes, Lobby Radio, Senior Easy Mode, RAM Modes, Movies, 284+ Live TV channels, Terms of Service,
+              and the <strong style={{ color: "#fff" }}>TMDB link</strong> at the bottom of pages.
+            </p>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="rabtv-wt-btn"
+                onClick={() => finishWalkthrough(false)}
+              >
+                <span className="rabtv-wt-btn-art" style={{ backgroundImage: `url(${IMG_WT_BTN_IDLE})` }} />
+                <span className="rabtv-wt-btn-scrim" />
+                <span className="rabtv-wt-btn-label">Skip for Now</span>
+              </button>
+              <button
+                type="button"
+                className="rabtv-wt-btn"
+                onClick={() => setShowWelcomeGate(false)}
+                autoFocus
+              >
+                <span className="rabtv-wt-btn-art" style={{ backgroundImage: `url(${IMG_WT_BTN_PRIMARY})` }} />
+                <span className="rabtv-wt-btn-scrim" />
+                <span className="rabtv-wt-btn-label">Start Full Walkthrough →</span>
+              </button>
+            </div>
           </div>
         </div>
       ) : (
@@ -1371,221 +1538,234 @@ export const InteractiveWalkthrough: React.FC<InteractiveWalkthroughProps> = ({
             left: pos.left,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
-            <button
-              type="button"
-              className="rabtv-wt-btn"
-              style={{
-                padding: "5px 10px",
-                fontSize: 12,
-                borderRadius: 999,
-                background: "rgba(168, 85, 247, 0.22)",
-                borderColor: "rgba(168, 85, 247, 0.5)",
-                color: "#e9d5ff",
-              }}
-              onClick={() => setShowChapterMenu((prev) => !prev)}
-            >
-              <span>
-                Ch {currentChapter.number}/{WALKTHROUGH_CHAPTERS.length}: {currentChapter.shortTitle}
-              </span>
-              <span aria-hidden="true">{showChapterMenu ? "▲" : "▼"}</span>
-            </button>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--wt-muted)" }}>
-                {stepIndex + 1} / {totalSteps}
-              </span>
+          <div className="rabtv-wt-card-9slice" aria-hidden="true" />
+          <div className="relative z-10">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
               <button
                 type="button"
                 className="rabtv-wt-btn"
-                style={{ padding: "5px 9px", fontSize: 12 }}
-                onClick={() => finishWalkthrough(false)}
-                aria-label="Close walkthrough"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          <div
-            style={{
-              height: 5,
-              width: "100%",
-              background: "rgba(255, 255, 255, 0.1)",
-              borderRadius: 999,
-              overflow: "hidden",
-              marginBottom: 14,
-            }}
-          >
-            <div
-              style={{
-                width: `${progressPercent}%`,
-                height: "100%",
-                background: "linear-gradient(90deg, var(--wt-accent), #38bdf8)",
-                borderRadius: 999,
-                transition: "width 0.25s ease",
-              }}
-            />
-          </div>
-
-          {showChapterMenu ? (
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: "#e2e8f0" }}>
-                Jump to Any Section ({WALKTHROUGH_CHAPTERS.length} Chapters)
-              </div>
-              <div
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                  maxHeight: 280,
-                  overflowY: "auto",
-                  paddingRight: 4,
-                  marginBottom: 14,
+                  padding: "6px 12px",
+                  fontSize: 11.5,
                 }}
+                onClick={() => setShowChapterMenu((prev) => !prev)}
               >
-                {chapterStepCounts.map((ch) => (
-                  <button
-                    key={ch.id}
-                    type="button"
-                    className={`rabtv-wt-chapter-item ${ch.isCurrent ? "is-current" : ""}`}
-                    onClick={() => jumpToChapter(ch.id)}
-                  >
-                    <span>
-                      {ch.isDone ? "✓ " : `${ch.number}. `}
-                      {ch.title}
-                    </span>
-                    <span style={{ fontSize: 11, color: "#cbd5e1", whiteSpace: "nowrap" }}>
-                      {ch.count} {ch.count === 1 ? "step" : "steps"}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <span className="rabtv-wt-btn-art" style={{ backgroundImage: `url(${IMG_WT_CHAPTER_ACTIVE})` }} />
+                <span className="rabtv-wt-btn-scrim" />
+                <span className="rabtv-wt-btn-label">
+                  <span>
+                    Ch {currentChapter.number}/{WALKTHROUGH_CHAPTERS.length}: {currentChapter.shortTitle}
+                  </span>
+                  <span aria-hidden="true">{showChapterMenu ? "▲" : "▼"}</span>
+                </span>
+              </button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--wt-muted)" }}>
+                  {stepIndex + 1} / {totalSteps}
+                </span>
                 <button
                   type="button"
                   className="rabtv-wt-btn"
-                  onClick={() => setShowChapterMenu(false)}
+                  style={{ padding: "5px 10px", fontSize: 12 }}
+                  onClick={() => finishWalkthrough(false)}
+                  aria-label="Close walkthrough"
                 >
-                  Back to Current Step
+                  <span className="rabtv-wt-btn-art" style={{ backgroundImage: `url(${IMG_WT_BTN_IDLE})` }} />
+                  <span className="rabtv-wt-btn-scrim" />
+                  <span className="rabtv-wt-btn-label">✕</span>
                 </button>
               </div>
             </div>
-          ) : (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: "3px 8px",
-                    borderRadius: 999,
-                    background: targetFound
-                      ? "rgba(34, 197, 94, 0.2)"
-                      : "rgba(148, 163, 184, 0.16)",
-                    border: targetFound
-                      ? "1px solid rgba(34, 197, 94, 0.45)"
-                      : "1px solid rgba(148, 163, 184, 0.3)",
-                    color: targetFound ? "#86efac" : "#cbd5e1",
-                  }}
-                >
-                  {targetFound ? "● Highlighted on Screen" : "○ Feature Overview"}
-                </span>
 
-                {currentStep.needsSidebar && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: "3px 8px",
-                      borderRadius: 999,
-                      background: "rgba(56, 189, 248, 0.18)",
-                      border: "1px solid rgba(56, 189, 248, 0.4)",
-                      color: "#bae6fd",
-                    }}
-                  >
-                    Crystal Sidebar
-                  </span>
-                )}
-              </div>
-
-              <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, lineHeight: 1.25, color: "#ffffff" }}>
-                {currentStep.title}
-              </h3>
-
-              <p style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.55, color: "var(--wt-muted)" }}>
-                {currentStep.description}
-              </p>
-
+            {/* Riveted Metallic Progress Bar Track */}
+            <div
+              className="rabtv-wt-progress-housing"
+              role="progressbar"
+              aria-valuenow={progressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
               <div
-                style={{
-                  background: "rgba(168, 85, 247, 0.14)",
-                  border: "1px solid rgba(168, 85, 247, 0.35)",
-                  borderRadius: 12,
-                  padding: "9px 12px",
-                  fontSize: 13,
-                  lineHeight: 1.45,
-                  color: "#f3e8ff",
-                  marginBottom: currentStep.proTip ? 10 : 14,
-                }}
-              >
-                <strong>Try it: </strong>
-                {currentStep.actionHint}
-              </div>
-
-              {currentStep.proTip && (
+                className="rabtv-wt-progress-track-art"
+                aria-hidden="true"
+                style={{ backgroundImage: `url(${IMG_WT_PROGRESS_TRACK})` }}
+              />
+              <div className="rabtv-wt-progress-channel">
                 <div
                   style={{
-                    background: "rgba(255, 255, 255, 0.05)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: 10,
-                    padding: "8px 11px",
-                    fontSize: 12.5,
-                    lineHeight: 1.45,
-                    color: "#cbd5e1",
+                    width: `${progressPercent}%`,
+                    height: "100%",
+                    background: "linear-gradient(90deg, var(--wt-accent), #38bdf8)",
+                    borderRadius: 4,
+                    transition: "width 0.25s ease",
+                  }}
+                />
+              </div>
+            </div>
+
+            {showChapterMenu ? (
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: "#e2e8f0" }}>
+                  Jump to Any Section ({WALKTHROUGH_CHAPTERS.length} Chapters)
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                    maxHeight: 280,
+                    overflowY: "auto",
+                    paddingRight: 4,
                     marginBottom: 14,
                   }}
                 >
-                  <strong style={{ color: "#fde68a" }}>Tip: </strong>
-                  {currentStep.proTip}
+                  {chapterStepCounts.map((ch) => (
+                    <button
+                      key={ch.id}
+                      type="button"
+                      className="rabtv-wt-chapter-item"
+                      onClick={() => jumpToChapter(ch.id)}
+                    >
+                      <span
+                        className="rabtv-wt-btn-art"
+                        style={{
+                          backgroundImage: `url(${ch.isCurrent ? IMG_WT_CHAPTER_ACTIVE : IMG_WT_BTN_IDLE})`,
+                        }}
+                      />
+                      <span className="rabtv-wt-btn-scrim" />
+                      <span className="rabtv-wt-btn-label" style={{ width: "100%", justifyContent: "space-between" }}>
+                        <span>
+                          {ch.isDone ? "✓ " : `${ch.number}. `}
+                          {ch.title}
+                        </span>
+                        <span style={{ fontSize: 11, color: "#cbd5e1", whiteSpace: "nowrap" }}>
+                          {ch.count} {ch.count === 1 ? "step" : "steps"}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              )}
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="rabtv-wt-btn"
-                  style={{ padding: "8px 12px", fontSize: 13 }}
-                  onClick={() => finishWalkthrough(false)}
-                >
-                  Skip Tour
-                </button>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
                   <button
                     type="button"
                     className="rabtv-wt-btn"
-                    onClick={goPrev}
-                    disabled={stepIndex === 0}
+                    onClick={() => setShowChapterMenu(false)}
                   >
-                    ← Back
-                  </button>
-                  <button
-                    ref={nextBtnRef}
-                    type="button"
-                    className="rabtv-wt-btn rabtv-wt-btn-primary"
-                    onClick={goNext}
-                  >
-                    {stepIndex === totalSteps - 1 ? "Finish Tour ✓" : "Next →"}
+                    <span className="rabtv-wt-btn-art" style={{ backgroundImage: `url(${IMG_WT_BTN_IDLE})` }} />
+                    <span className="rabtv-wt-btn-scrim" />
+                    <span className="rabtv-wt-btn-label">Back to Current Step</span>
                   </button>
                 </div>
               </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "3px 8px",
+                      borderRadius: 999,
+                      background: targetFound
+                        ? "rgba(34, 197, 94, 0.2)"
+                        : "rgba(148, 163, 184, 0.16)",
+                      border: targetFound
+                        ? "1px solid rgba(34, 197, 94, 0.45)"
+                        : "1px solid rgba(148, 163, 184, 0.3)",
+                      color: targetFound ? "#86efac" : "#cbd5e1",
+                    }}
+                  >
+                    {targetFound ? "● Highlighted on Screen" : "○ Feature Overview"}
+                  </span>
 
-              <div style={{ marginTop: 10, textAlign: "center", fontSize: 11, color: "rgba(203, 213, 225, 0.72)" }}>
-                Remote / Keys: ← Back • → Next • Esc Exit
-              </div>
-            </>
-          )}
+                  {currentStep.needsSidebar && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: "3px 8px",
+                        borderRadius: 999,
+                        background: "rgba(56, 189, 248, 0.18)",
+                        border: "1px solid rgba(56, 189, 248, 0.4)",
+                        color: "#bae6fd",
+                      }}
+                    >
+                      Crystal Sidebar
+                    </span>
+                  )}
+                </div>
+
+                <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, lineHeight: 1.25, color: "#ffffff" }}>
+                  {currentStep.title}
+                </h3>
+
+                <p style={{ margin: "0 0 12px", fontSize: 13.5, lineHeight: 1.55, color: "var(--wt-muted)" }}>
+                  {currentStep.description}
+                </p>
+
+                <div className="rabtv-wt-hint-box" style={{ marginBottom: currentStep.proTip ? 10 : 14 }}>
+                  <div className="rabtv-wt-hint-box-9slice" aria-hidden="true" />
+                  <div className="relative z-10" style={{ fontSize: 12.5, lineHeight: 1.45, color: "#f3e8ff" }}>
+                    <strong style={{ color: "#67e8f9" }}>Try it: </strong>
+                    {currentStep.actionHint}
+                  </div>
+                </div>
+
+                {currentStep.proTip && (
+                  <div className="rabtv-wt-hint-box" style={{ marginBottom: 14 }}>
+                    <div className="rabtv-wt-hint-box-9slice" aria-hidden="true" />
+                    <div className="relative z-10" style={{ fontSize: 12, lineHeight: 1.45, color: "#cbd5e1" }}>
+                      <strong style={{ color: "#fde68a" }}>Tip: </strong>
+                      {currentStep.proTip}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="rabtv-wt-btn"
+                    style={{ padding: "8px 12px", fontSize: 12.5 }}
+                    onClick={() => finishWalkthrough(false)}
+                  >
+                    <span className="rabtv-wt-btn-art" style={{ backgroundImage: `url(${IMG_WT_BTN_IDLE})` }} />
+                    <span className="rabtv-wt-btn-scrim" />
+                    <span className="rabtv-wt-btn-label">Skip Tour</span>
+                  </button>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button
+                      type="button"
+                      className="rabtv-wt-btn"
+                      onClick={goPrev}
+                      disabled={stepIndex === 0}
+                    >
+                      <span className="rabtv-wt-btn-art" style={{ backgroundImage: `url(${IMG_WT_BTN_IDLE})` }} />
+                      <span className="rabtv-wt-btn-scrim" />
+                      <span className="rabtv-wt-btn-label">← Back</span>
+                    </button>
+                    <button
+                      ref={nextBtnRef}
+                      type="button"
+                      className="rabtv-wt-btn"
+                      onClick={goNext}
+                    >
+                      <span className="rabtv-wt-btn-art" style={{ backgroundImage: `url(${IMG_WT_BTN_PRIMARY})` }} />
+                      <span className="rabtv-wt-btn-scrim" />
+                      <span className="rabtv-wt-btn-label">
+                        {stepIndex === totalSteps - 1 ? "Finish Tour ✓" : "Next →"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 10, textAlign: "center", fontSize: 11, color: "rgba(203, 213, 225, 0.72)" }}>
+                  Remote / Keys: ← Back • → Next • Esc Exit
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
