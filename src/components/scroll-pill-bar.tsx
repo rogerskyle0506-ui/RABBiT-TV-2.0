@@ -4,7 +4,6 @@ import {
   type AppTheme,
   getLargeButtons,
   getReducedMotion,
-  getGlowIntensity,
   getHardwareLimits,
 } from "@/lib/settings";
 
@@ -16,12 +15,12 @@ const IMG_SPB_IDLE =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-inactive-dark.jpg";
 
 const SCROLL_PILL_STYLES = `
-  :root, html[data-theme="violet"] { --rabtv-spb-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02); }
-  html[data-theme="red"] { --rabtv-spb-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0); }
-  html[data-theme="midnight"] { --rabtv-spb-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04); }
-  html[data-theme="emerald"] { --rabtv-spb-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02); }
-  html[data-theme="amber"] { --rabtv-spb-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04); }
-  html[data-theme="cyan"] { --rabtv-spb-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
+  .rabtv-spb-shell[data-theme="violet"], :root { --rabtv-spb-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02); }
+  .rabtv-spb-shell[data-theme="red"] { --rabtv-spb-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0); }
+  .rabtv-spb-shell[data-theme="midnight"] { --rabtv-spb-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04); }
+  .rabtv-spb-shell[data-theme="emerald"] { --rabtv-spb-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02); }
+  .rabtv-spb-shell[data-theme="amber"] { --rabtv-spb-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04); }
+  .rabtv-spb-shell[data-theme="cyan"] { --rabtv-spb-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
 
   .rabtv-spb-shell { position: relative; overflow: hidden; background-color: #0c0a09; contain: layout paint; }
   .rabtv-spb-track-bg { position: absolute; inset: 0; background-size: 100% 100%; opacity: 0.78; filter: var(--rabtv-spb-filter); pointer-events: none; z-index: 0; }
@@ -69,9 +68,6 @@ export const ScrollPillBar = memo(function ScrollPillBar({
   const [reducedMotion, setReducedMotion] = useState<boolean>(() =>
     getReducedMotion()
   );
-  const [glowOff, setGlowOff] = useState<boolean>(
-    () => getGlowIntensity() === "off"
-  );
   const [isLowRam, setIsLowRam] = useState<boolean>(
     () => getHardwareLimits().effectiveMode === "low"
   );
@@ -81,7 +77,6 @@ export const ScrollPillBar = memo(function ScrollPillBar({
     const syncPrefs = () => {
       setLargeButtons(getLargeButtons());
       setReducedMotion(getReducedMotion());
-      setGlowOff(getGlowIntensity() === "off");
       setIsLowRam(getHardwareLimits().effectiveMode === "low");
     };
     syncPrefs();
@@ -270,6 +265,7 @@ export const ScrollPillBar = memo(function ScrollPillBar({
 
   return (
     <div
+      data-theme={appTheme}
       role="tablist"
       aria-label={ariaLabel}
       className={`rabtv-spb-shell relative w-full max-w-full sm:max-w-fit mx-auto rounded-2xl border ${themeAccent.border} ${
