@@ -22,6 +22,27 @@ import {
 } from "@/lib/referrals";
 import { getClockFormat, formatAppTime } from "@/lib/settings";
 
+const IMG_ARM_MODAL_FRAME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-modal-frame.jpg";
+const IMG_ARM_BANNER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-header-banner.jpg";
+const IMG_ARM_CARD =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-section-card.jpg";
+const IMG_ARM_TAB_ACTIVE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-active.jpg";
+const IMG_ARM_TAB_IDLE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-idle.jpg";
+
+const ADMIN_REFERRAL_STYLES = `
+  .rabtv-arm-shell { position: relative; overflow: hidden; box-sizing: border-box; padding: 18px 14px !important; background-color: #0c0a09; contain: layout paint; }
+  @media (min-width: 640px) { .rabtv-arm-shell { padding: 24px 22px !important; } }
+  .rabtv-arm-shell-9slice { position: absolute; inset: 0; box-sizing: border-box; border-style: solid; border-color: transparent; border-width: 24px 20px; border-image-source: url("${IMG_ARM_MODAL_FRAME}"); border-image-slice: 12% 11% fill; border-image-repeat: stretch; pointer-events: none; z-index: 0; }
+  .rabtv-arm-card { position: relative; overflow: hidden; box-sizing: border-box; padding: 16px 15px !important; background-color: #0c0a09; contain: layout paint; }
+  .rabtv-arm-card-9slice { position: absolute; inset: 0; box-sizing: border-box; border-style: solid; border-color: transparent; border-width: 14px 14px; border-image-source: url("${IMG_ARM_CARD}"); border-image-slice: 14% 11% fill; border-image-repeat: stretch; pointer-events: none; z-index: 0; }
+  .rabtv-arm-tab { position: relative; overflow: hidden; background-color: #0c0a09; border: 0 !important; clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px); contain: layout paint; }
+  .rabtv-arm-tab-bg { position: absolute; inset: -2px; background-size: 100% 100%; pointer-events: none; z-index: 0; }
+`;
+
 interface AdminReferralModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -728,9 +749,16 @@ export function AdminReferralModal({
     <div className="rabtv-vidsrc-protected fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-3 sm:p-5 backdrop-blur-xl overflow-y-auto">
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative z-10 w-full max-w-4xl rounded-[28px] border-2 border-amber-500/45 bg-slate-950/95 text-white shadow-[0_25px_80px_rgba(0,0,0,0.95)] max-h-[90dvh] flex flex-col overflow-hidden">
+      <style>{ADMIN_REFERRAL_STYLES}</style>
+      <div className="rabtv-arm-shell relative z-10 w-full max-w-4xl rounded-[26px] text-white shadow-[0_25px_80px_rgba(0,0,0,0.96)] max-h-[92dvh] flex flex-col">
+        <div className="rabtv-arm-shell-9slice" aria-hidden="true" />
         {/* Top Header */}
-        <div className="p-4 sm:p-5 border-b border-white/10 space-y-3">
+        <div className="relative z-10 p-3 sm:p-4 border-b border-white/10 space-y-3 rounded-2xl overflow-hidden bg-[#0c0a09]/80">
+          <div
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-22"
+            style={{ backgroundImage: `url(${IMG_ARM_BANNER})` }}
+            aria-hidden="true"
+          />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-lg font-black text-amber-300">
@@ -901,20 +929,21 @@ export function AdminReferralModal({
                 key={t.id}
                 type="button"
                 onClick={() => setActiveTab(t.id)}
-                className={`rounded-xl py-2 text-xs font-extrabold cursor-pointer transition ${
-                  activeTab === t.id
-                    ? "bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 shadow"
-                    : "bg-black/60 border border-white/10 text-slate-300 hover:bg-white/10"
-                }`}
+                className="rabtv-arm-tab py-2.5 text-xs font-extrabold text-white cursor-pointer transition hover:brightness-110"
               >
-                {t.label}
+                <span
+                  className="rabtv-arm-tab-bg"
+                  style={{ backgroundImage: `url(${activeTab === t.id ? IMG_ARM_TAB_ACTIVE : IMG_ARM_TAB_IDLE})` }}
+                  aria-hidden="true"
+                />
+                <span className="relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">{t.label}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 scrollbar-none">
+        <div className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 scrollbar-none">
           {loading ? (
             <p className="py-12 text-center text-xs text-slate-400">
               Syncing live referral ledger…
