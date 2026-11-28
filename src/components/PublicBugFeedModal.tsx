@@ -46,21 +46,19 @@ const PUBLIC_BUG_FEED_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 18px 14px !important;
+    padding: clamp(20px, 5%, 30px) clamp(20px, 6.2%, 38px) !important;
     background-color: #0c0a09;
-    contain: layout paint;
   }
-  @media (min-width: 640px) { .rabtv-pbf-shell { padding: 24px 22px !important; } }
   .rabtv-pbf-shell-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 24px 20px;
-    border-image-source: url("${IMG_PBF_MODAL_FRAME}");
-    border-image-slice: 12% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_PBF_MODAL_FRAME}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-pbf-filter);
     pointer-events: none;
     z-index: 0;
@@ -69,23 +67,34 @@ const PUBLIC_BUG_FEED_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 15px 15px !important;
+    padding: clamp(14px, 4.2%, 22px) clamp(16px, 5.2%, 26px) !important;
     background-color: #0c0a09;
-    contain: layout paint;
   }
   .rabtv-pbf-card-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 14px 14px;
-    border-image-source: url("${IMG_PBF_CARD}");
-    border-image-slice: 14% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_PBF_CARD}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-pbf-filter);
     pointer-events: none;
     z-index: 0;
+  }
+  @media (max-height: 540px) {
+    .rabtv-pbf-shell {
+      padding: 16px 24px !important;
+    }
+    .rabtv-pbf-hero {
+      min-height: 76px !important;
+      padding: 10px 12px !important;
+    }
+    .rabtv-pbf-hero-title-wrap {
+      padding-top: 8px !important;
+    }
   }
   .rabtv-pbf-btn {
     position: relative;
@@ -129,14 +138,14 @@ const PUBLIC_BUG_FEED_STYLES = `
   }
   .rabtv-pbf-input-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 7px 16px;
-    border-image-source: url("${IMG_PBF_INPUT}");
-    border-image-slice: 22% 14% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_PBF_INPUT}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-pbf-filter);
     pointer-events: none;
     z-index: 0;
@@ -323,9 +332,9 @@ export function PublicBugFeedModal({
       <div className="rabtv-pbf-shell relative z-10 w-full max-w-2xl rounded-[26px] text-white max-h-[92dvh] flex flex-col shadow-2xl">
         <div className="rabtv-pbf-shell-9slice" aria-hidden="true" />
 
-        <div className="relative z-10 flex flex-col max-h-full overflow-hidden gap-3">
+        <div className="relative z-10 flex flex-col flex-1 min-h-0 overflow-y-auto scrollbar-none gap-2.5">
           {/* Tech Repair Workbench Header Banner */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 min-h-[150px] sm:min-h-[176px] p-3.5 sm:p-4 flex flex-col justify-between bg-[#0c0a09] shrink-0">
+          <div className="rabtv-pbf-hero relative overflow-hidden rounded-2xl border border-white/10 min-h-[132px] sm:min-h-[164px] p-3 sm:p-4 flex flex-col justify-between bg-[#0c0a09] shrink-0">
             <div
               className="absolute inset-0 bg-cover bg-center opacity-92 pointer-events-none"
               style={{ backgroundImage: `url(${IMG_PBF_BANNER})` }}
@@ -337,7 +346,7 @@ export function PublicBugFeedModal({
             />
 
             <div className="relative z-10 flex items-center justify-between gap-2">
-              <span className="rounded-full bg-black/80 border border-white/15 px-2.5 py-1 text-[9.5px] font-black uppercase tracking-widest text-amber-300">
+              <span className="rounded-full bg-black/80 border border-white/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 text-amber-300">
                 📋 Live Issue Feed
               </span>
               <div className="flex items-center gap-1.5 shrink-0">
@@ -370,7 +379,7 @@ export function PublicBugFeedModal({
               </div>
             </div>
 
-            <div className="relative z-10 pt-8">
+            <div className="rabtv-pbf-hero-title-wrap relative z-10 pt-6">
               <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight text-amber-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.98)]">
                 Community Bug Tracker
               </h3>
@@ -425,7 +434,7 @@ export function PublicBugFeedModal({
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pb-0.5">
               {(
                 [
                   { id: "all", label: `All (${stats.total})` },
@@ -441,7 +450,7 @@ export function PublicBugFeedModal({
                   key={pill.id}
                   type="button"
                   onClick={() => setActiveFilter(pill.id)}
-                  className={`rabtv-pbf-btn shrink-0 ${
+                  className={`rabtv-pbf-btn w-full ${
                     largeButtons ? "px-3.5 py-2 text-xs" : "px-3 py-1.5 text-[11px]"
                   } font-extrabold text-white whitespace-nowrap cursor-pointer`}
                 >
@@ -461,7 +470,7 @@ export function PublicBugFeedModal({
           </div>
 
           {/* Scrollable 9-Sliced Ticket Feed */}
-          <div className="flex-1 overflow-y-auto space-y-2.5 pr-0.5 scrollbar-none">
+          <div className="flex-1 min-h-[120px] space-y-2.5">
             {loading ? (
               <div className="py-12 flex flex-col items-center justify-center gap-2.5 text-center">
                 <div className="h-7 w-7 rounded-full border-2 border-t-transparent border-amber-400 animate-spin" />
