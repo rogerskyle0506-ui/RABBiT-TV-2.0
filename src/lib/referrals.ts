@@ -1,5 +1,12 @@
 // src/lib/referrals.ts
 import { getOrCreateDeviceId, purgeOldTmdbCaches } from "./settings";
+import {
+  isGistConfigured,
+  readGistJsonFile,
+  patchGistFilesSerialized,
+  runSerializedGistTransaction,
+  generateSecureId,
+} from "./gist-client";
 
 // ──────────────────────────────────────────────────────────────
 // Referral Program Configuration (Unlimited Referrals + Step-Up)
@@ -147,17 +154,12 @@ export interface FleetReferralTotals {
 // ──────────────────────────────────────────────────────────────
 // Storage & Gist Constants
 // ──────────────────────────────────────────────────────────────
-const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
-const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
-const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
-
 const MY_REFERRAL_CODE_KEY = "rabtv_my_referral_code_v1";
 const MY_PAYOUT_METHOD_KEY = "rabtv_my_payout_method_v1";
 const MY_PAYOUT_INFO_KEY = "rabtv_my_payout_info_v1";
 const CLAIMED_REFERRAL_CODE_KEY = "rabtv_claimed_referral_code_v1";
 const REFERRAL_CACHE_KEY = "rabtv_cache_referrals_v1";
 const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
-const FETCH_TIMEOUT_MS = 6500;
 
 let memoryCache: { fetchedAt: number; data: ReferralSystemData } | null = null;
 
@@ -203,28 +205,6 @@ function safeWriteJson(key: string, payload: unknown): void {
       localStorage.setItem(key, serialized);
     } catch {
       // Ignore storage quota errors on low-storage sticks
-    }
-  }
-}
-
-async function fetchWithTimeout(
-  url: string,
-  init: RequestInit = {},
-  timeoutMs = FETCH_TIMEOUT_MS
-): Promise<Response> {
-  const controller = new AbortController();
-  const timer =
-    typeof window !== "undefined"
-      ? window.setTimeout(() => controller.abort(), timeoutMs)
-      : setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    if (typeof window !== "undefined") {
-      window.clearTimeout(timer as number);
-    } else {
-      clearTimeout(timer);
     }
   }
 }
@@ -727,39 +707,28 @@ export async function fetchReferralSystemData(
     if (cached) return cached;
   }
 
-  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
+  if (!isGistConfigured()) {
     return loadCachedData() || emptySystemData();
   }
 
   try {
-    const res = await fetchWithTimeout(`${GIST_API_URL}?t=${Date.now()}`, {
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": "RabbitTV-App",
-      },
-      cache: "no-store",
-    });
+    const parsed = await readGistJsonFile<Partial<ReferralSystemData> | null>(
+      "referrals.json",
+      null,
+      { force: forceRefresh, maxAgeMs: CACHE_TTL_MS }
+    );
 
-    if (!res.ok) {
-      return loadCachedData() || emptySystemData();
+    if (!parsed) {
+      const fallback = loadCachedData() || emptySystemData();
+      return fallback;
     }
 
-    const gist = await res.json();
-    const rawContent = gist.files?.["referrals.json"]?.content;
-    if (!rawContent) {
-      const fresh = emptySystemData();
-      saveCachedData(fresh);
-      return fresh;
-    }
-
-    const parsed = JSON.parse(rawContent);
     const normalized: ReferralSystemData = {
       profiles:
         parsed &&
         typeof parsed.profiles === "object" &&
         !Array.isArray(parsed.profiles)
-          ? parsed.profiles
+          ? (parsed.profiles as Record<string, ReferrerProfile>)
           : {},
       referrals: Array.isArray(parsed?.referrals) ? parsed.referrals : [],
       payouts: Array.isArray(parsed?.payouts) ? parsed.payouts : [],
@@ -777,7 +746,7 @@ export async function fetchReferralSystemData(
 async function saveReferralSystemData(
   data: ReferralSystemData
 ): Promise<boolean> {
-  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
+  if (!isGistConfigured()) {
     saveCachedData(data);
     emitReferralUpdate();
     return false;
@@ -788,32 +757,16 @@ async function saveReferralSystemData(
     updatedAt: Date.now(),
   };
 
-  try {
-    const res = await fetchWithTimeout(GIST_API_URL, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "Content-Type": "application/json",
-        "User-Agent": "RabbitTV-App",
-      },
-      body: JSON.stringify({
-        files: {
-          "referrals.json": {
-            content: JSON.stringify(nextData, null, 2),
-          },
-        },
-      }),
-    });
+  const ok = await patchGistFilesSerialized({
+    "referrals.json": {
+      content: JSON.stringify(nextData, null, 2),
+    },
+  });
 
-    if (!res.ok) return false;
-    saveCachedData(nextData);
-    emitReferralUpdate();
-    return true;
-  } catch (err) {
-    console.error("Failed to save referrals.json to Gist:", err);
-    return false;
-  }
+  if (!ok) return false;
+  saveCachedData(nextData);
+  emitReferralUpdate();
+  return true;
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -929,7 +882,7 @@ export async function submitReferralClaim(params: {
   }
 
   const newEntry: ReferralEntry = {
-    id: `ref-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    id: generateSecureId("ref", 5),
     referrerCode: normCode,
     referrerName: referrerProfile.name,
     referrerDeviceId: referrerProfile.deviceId,
@@ -1073,7 +1026,7 @@ export async function adminAddManualReferral(params: {
 
   const isPaid = params.markPaidImmediately !== false;
   const entry: ReferralEntry = {
-    id: `ref-adm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+    id: generateSecureId("ref_adm", 5),
     referrerCode: normCode,
     referrerName: profile.name,
     referrerDeviceId: profile.deviceId,
@@ -1127,6 +1080,7 @@ export async function adminRecordPayout(params: {
     };
   }
 
+  return runSerializedGistTransaction(async () => {
   const latest = await fetchReferralSystemData(true);
   const summary = computeReferrerSummary(normCode, latest);
   const preview = previewPayoutAllocation(summary, cleanAmount);
@@ -1143,9 +1097,7 @@ export async function adminRecordPayout(params: {
     };
   }
 
-  const payoutId = `pay-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
+  const payoutId = generateSecureId("pay", 5);
   const now = Date.now();
   const reimbursedIds: string[] = [];
 
@@ -1193,4 +1145,5 @@ export async function adminRecordPayout(params: {
       : "Failed to save payout to cloud.",
     data: latest,
   };
+  });
 }
