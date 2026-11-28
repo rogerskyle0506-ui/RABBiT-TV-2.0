@@ -19,11 +19,6 @@ interface PublicBugFeedModalProps {
 
 type FeedFilter = "all" | "pending" | "in_progress" | "completed" | "mine";
 
-const RABBIT_HEADER_PILL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
-const RABBIT_DIVIDER =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
-
 const IMG_PBF_MODAL_FRAME =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-modal-frame.jpg";
 const IMG_PBF_BANNER =
@@ -307,72 +302,6 @@ export function PublicBugFeedModal({
     });
   }, [reports, activeFilter, searchQuery, isMyReport]);
 
-  const themeTokens = useMemo(() => {
-    switch (appTheme) {
-      case "red":
-        return {
-          borderGlow:
-            "border-red-500/45 shadow-[0_25px_75px_rgba(0,0,0,0.95),0_0_35px_rgba(239,68,68,0.28)]",
-          accentText: "text-red-300",
-          activePill:
-            "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-md",
-          laser: "from-red-500 via-amber-400 to-rose-500",
-          ring: "focus:ring-red-400",
-        };
-      case "midnight":
-        return {
-          borderGlow:
-            "border-sky-500/45 shadow-[0_25px_75px_rgba(0,0,0,0.95),0_0_35px_rgba(56,189,248,0.28)]",
-          accentText: "text-sky-300",
-          activePill:
-            "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-500 text-white shadow-md",
-          laser: "from-sky-400 via-cyan-300 to-blue-500",
-          ring: "focus:ring-sky-400",
-        };
-      case "emerald":
-        return {
-          borderGlow:
-            "border-emerald-500/45 shadow-[0_25px_75px_rgba(0,0,0,0.95),0_0_35px_rgba(16,185,129,0.28)]",
-          accentText: "text-emerald-300",
-          activePill:
-            "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-500 text-white shadow-md",
-          laser: "from-emerald-400 via-teal-300 to-cyan-400",
-          ring: "focus:ring-emerald-400",
-        };
-      case "amber":
-        return {
-          borderGlow:
-            "border-amber-500/45 shadow-[0_25px_75px_rgba(0,0,0,0.95),0_0_35px_rgba(245,158,11,0.28)]",
-          accentText: "text-amber-300",
-          activePill:
-            "bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 text-slate-950 shadow-md",
-          laser: "from-amber-400 via-yellow-300 to-orange-500",
-          ring: "focus:ring-amber-400",
-        };
-      case "cyan":
-        return {
-          borderGlow:
-            "border-cyan-500/45 shadow-[0_25px_75px_rgba(0,0,0,0.95),0_0_35px_rgba(34,211,238,0.28)]",
-          accentText: "text-cyan-300",
-          activePill:
-            "bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 text-white shadow-md",
-          laser: "from-cyan-400 via-sky-300 to-blue-500",
-          ring: "focus:ring-cyan-400",
-        };
-      case "violet":
-      default:
-        return {
-          borderGlow:
-            "border-violet-500/45 shadow-[0_25px_75px_rgba(0,0,0,0.95),0_0_35px_rgba(168,85,247,0.28)]",
-          accentText: "text-violet-300",
-          activePill:
-            "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-md",
-          laser: "from-cyan-400 via-violet-400 to-pink-500",
-          ring: "focus:ring-violet-400",
-        };
-    }
-  }, [appTheme]);
-
   if (!isOpen) return null;
 
   const handleManualSync = () => {
@@ -383,6 +312,7 @@ export function PublicBugFeedModal({
 
   return (
     <div
+      data-theme={appTheme}
       className={`rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/84 p-2.5 sm:p-5 ${
         isLowRam ? "" : "backdrop-blur-xl"
       } overflow-y-auto`}
