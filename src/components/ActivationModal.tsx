@@ -18,6 +18,7 @@ import {
   getOrCreateDeviceId,
   getLargeButtons,
   setLargeButtons,
+  getHardwareLimits,
   getAutoPlayNext,
   setAutoPlayNext,
 } from "@/lib/settings";
@@ -68,10 +69,6 @@ const IMG_ACT_TAB_ACTIVE =
 const IMG_ACT_TAB_IDLE =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-idle.jpg";
 
-const BANNER_IMAGE_URL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/HeaderFamily.jpg";
-const RABBIT_HEADER_PILL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
@@ -982,6 +979,9 @@ function AdminActivationAlertToast({ appTheme }: { appTheme: AppTheme }) {
   );
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const tokens = useMemo(() => getModalThemeTokens(appTheme), [appTheme]);
+  const isLowRam = useMemo(() => getHardwareLimits().effectiveMode === "low", [effectiveOpen]);
+  void getCardBackground;
+  void getPrimaryAccentColor;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1096,7 +1096,7 @@ function AdminActivationAlertToast({ appTheme }: { appTheme: AppTheme }) {
       {activeAlerts.map((req) => (
         <div
           key={req.id}
-          className={`rounded-2xl border-2 p-3.5 text-white backdrop-blur-2xl space-y-2 animate-pulse ${tokens.alertToastBg}`}
+          className={`rounded-2xl border-2 p-3.5 text-white ${getHardwareLimits().effectiveMode === "low" ? "" : "backdrop-blur-xl"} space-y-2 animate-pulse ${tokens.alertToastBg}`}
           style={{ animationIterationCount: 3 }}
         >
           <div className="flex items-start justify-between gap-2">
@@ -2018,7 +2018,8 @@ export function ActivationModal({
       role="dialog"
       aria-modal="true"
       aria-label="RABBiT TV Activation & Setup"
-      className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/88 p-2.5 sm:p-5 backdrop-blur-xl overflow-hidden"
+      data-theme={appTheme}
+      className={`rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/88 p-2.5 sm:p-5 ${isLowRam ? "" : "backdrop-blur-xl"} overflow-hidden`}
     >
       <style>{`
         :root, html[data-theme="violet"] { --rabtv-act-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02); }
@@ -2150,7 +2151,7 @@ export function ActivationModal({
           </div>
 
           {/* Hardened Trial Notice Banner */}
-          <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-500/15 via-black/70 to-amber-500/15 p-2.5 sm:p-3 text-xs text-amber-200 shadow-inner text-center backdrop-blur-md">
+          <div className={`rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-500/15 via-black/70 to-amber-500/15 p-2.5 sm:p-3 text-xs text-amber-200 shadow-inner text-center ${isLowRam ? "" : "backdrop-blur-md"}`}>
             <p>
               <strong>⏳ One-Time 7-Day Trial:</strong> Enter{" "}
               <strong className="text-white font-mono bg-black/70 px-1.5 py-0.5 rounded border border-amber-400/40">
@@ -2603,7 +2604,7 @@ export function ActivationModal({
             </button>
 
             {/* Built-in Message Admin for Activation Code (Auto-Fills Name & Age -> High Alert Toast) */}
-            <div className="rounded-2xl border border-white/15 bg-black/65 p-3 space-y-2.5 backdrop-blur-md">
+            <div className={`rounded-2xl border border-white/15 bg-black/65 p-3 space-y-2.5 ${isLowRam ? "" : "backdrop-blur-md"}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-extrabold text-white">
                   Need an activation code?
