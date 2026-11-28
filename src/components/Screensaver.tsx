@@ -22,33 +22,28 @@ const IMG_SCREENSAVER_SLEEP =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-screensaver-sleep.jpg";
 
 const SCREENSAVER_STYLES = `
-  :root, html[data-theme="violet"] {
-    --rabtv-ss-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02);
+  .rabtv-ss-root[data-theme="violet"],
+  :root {
     --rabtv-ss-eq-a: #a855f7;
     --rabtv-ss-eq-b: #22d3ee;
   }
-  html[data-theme="red"] {
-    --rabtv-ss-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0);
+  .rabtv-ss-root[data-theme="red"] {
     --rabtv-ss-eq-a: #ef4444;
     --rabtv-ss-eq-b: #22d3ee;
   }
-  html[data-theme="midnight"] {
-    --rabtv-ss-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04);
+  .rabtv-ss-root[data-theme="midnight"] {
     --rabtv-ss-eq-a: #38bdf8;
     --rabtv-ss-eq-b: #818cf8;
   }
-  html[data-theme="emerald"] {
-    --rabtv-ss-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02);
+  .rabtv-ss-root[data-theme="emerald"] {
     --rabtv-ss-eq-a: #10b981;
     --rabtv-ss-eq-b: #22d3ee;
   }
-  html[data-theme="amber"] {
-    --rabtv-ss-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04);
+  .rabtv-ss-root[data-theme="amber"] {
     --rabtv-ss-eq-a: #f59e0b;
     --rabtv-ss-eq-b: #fde047;
   }
-  html[data-theme="cyan"] {
-    --rabtv-ss-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04);
+  .rabtv-ss-root[data-theme="cyan"] {
     --rabtv-ss-eq-a: #22d3ee;
     --rabtv-ss-eq-b: #38bdf8;
   }
@@ -99,11 +94,24 @@ const EQ_BAR_PROFILES = [
   { anim: "rabtvEqPulseB", dur: "0.74s", delay: "-0.19s" },
 ];
 
+/**
+ * Normalizes saved screensaver timeouts safely:
+ * - 0 / negative / non-finite / "never" => disabled (0)
+ * - Small legacy minute values (1..120) => converted to ms
+ * - Standard millisecond values (>= 10000) => kept as-is
+ */
+function normalizeTimeoutMs(raw: unknown): number {
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num <= 0) return 0;
+  if (num > 0 && num <= 120) return num * 60 * 1000;
+  return Math.max(10_000, num);
+}
+
 export function Screensaver() {
   const [isActive, setIsActive] = useState(false);
   const [sleepReason, setSleepReason] = useState<string | null>(null);
   const [timeoutMs, setTimeoutMs] = useState<number>(() =>
-    getSavedScreensaverTimeout()
+    normalizeTimeoutMs(getSavedScreensaverTimeout())
   );
   const [appTheme, setAppTheme] = useState<AppTheme>(() => getSavedTheme());
   const [lowPowerMode, setLowPowerMode] = useState<boolean>(
@@ -117,13 +125,25 @@ export function Screensaver() {
   );
   const [currentStationName, setCurrentStationName] = useState<string>("");
 
-  const idleTimerRef = useRef<number | null>(null);
-  const animFrameRef = useRef<number | null>(null);
+  // Timestamp-based idle tracking (immune to Android WebView long setTimeout throttling!)
+  const lastActivityAtRef = useRef<number>(Date.now());
+  const activatedAtRef = useRef<number>(0);
+  const isActiveRef = useRef<boolean>(false);
+  const lastPointerRef = useRef<{ x: number; y: number }>({ x: -1, y: -1 });
+  const lastScrollYRef = useRef<number>(
+    typeof window !== "undefined" ? window.scrollY || 0 : 0
+  );
 
-  // Position & velocity for burn-in-safe floating emblem
+  // Cached card dimensions & motion state (eliminates 60fps synchronous layout thrashing!)
+  const animFrameRef = useRef<number | null>(null);
   const posRef = useRef({ x: 40, y: 60 });
-  const velRef = useRef({ vx: 0.6, vy: 0.6 });
+  const velRef = useRef({ vx: 0.55, vy: 0.55 });
+  const cardDimRef = useRef({ w: 420, h: 256 });
   const logoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
 
   const readLiveStation = useCallback((): string => {
     try {
@@ -139,9 +159,32 @@ export function Screensaver() {
     return "";
   }, []);
 
+  const activateScreensaver = useCallback(
+    (reason: string | null = null) => {
+      activatedAtRef.current = Date.now();
+      setSleepReason(reason);
+      setCurrentStationName(reason ? "" : readLiveStation());
+      setClockText(formatAppTime(new Date(), getClockFormat()));
+      setIsActive(true);
+    },
+    [readLiveStation]
+  );
+
+  const dismissScreensaver = useCallback(() => {
+    lastActivityAtRef.current = Date.now();
+    setIsActive(false);
+    setSleepReason(null);
+  }, []);
+
   useEffect(() => {
     const syncSettings = () => {
-      setTimeoutMs(getSavedScreensaverTimeout());
+      const nextMs = normalizeTimeoutMs(getSavedScreensaverTimeout());
+      setTimeoutMs((prev) => {
+        if (prev !== nextMs) {
+          lastActivityAtRef.current = Date.now();
+        }
+        return nextMs;
+      });
       setAppTheme(getSavedTheme());
       setReducedMotion(getReducedMotion());
       setLowPowerMode(
@@ -165,10 +208,7 @@ export function Screensaver() {
   // Listen for Couch Sleep Timer trigger from __root.tsx
   useEffect(() => {
     const handleSleepTrigger = () => {
-      setSleepReason("Sleep Timer Activated");
-      setCurrentStationName("");
-      setClockText(formatAppTime(new Date(), getClockFormat()));
-      setIsActive(true);
+      activateScreensaver("Sleep Timer Activated");
     };
 
     window.addEventListener("rabtv_sleep_timer_triggered", handleSleepTrigger);
@@ -177,7 +217,7 @@ export function Screensaver() {
         "rabtv_sleep_timer_triggered",
         handleSleepTrigger
       );
-  }, []);
+  }, [activateScreensaver]);
 
   // Keep clock & station readout live while screensaver is visible
   useEffect(() => {
@@ -196,113 +236,174 @@ export function Screensaver() {
   }, [isActive, sleepReason, readLiveStation]);
 
   const updateTimeout = (newMs: number) => {
-    setTimeoutMs(newMs);
+    setTimeoutMs(normalizeTimeoutMs(newMs));
     saveScreensaverTimeout(newMs);
   };
   void updateTimeout;
 
-  // Never interrupt active video playback or fullscreen
-  const isMediaActive = useCallback(() => {
+  /**
+   * Accurate foreground playback detector:
+   * - Never false-positives on muted looping wallpaper <video> elements or lobby radio <audio>!
+   * - Never false-positives on /details simply because the page exists; only blocks if a
+   *   foreground video is actively playing OR user is inside a live playback route (/player,
+   *   /live-player, /watch) or has a visible active trailer/stream iframe open.
+   */
+  const isForegroundMediaPlaying = useCallback(() => {
     if (typeof window === "undefined") return false;
     if (document.fullscreenElement) return true;
 
-    const mediaElements = document.querySelectorAll("video, audio");
-    for (const el of mediaElements) {
-      const media = el as HTMLMediaElement;
-      if (!media.paused && !media.ended && media.readyState > 2) {
-        if (media.dataset && media.dataset.bgAudio === "true") continue;
-        return true;
+    const path = (window.location.pathname || "").toLowerCase();
+    const isDedicatedPlayerRoute =
+      path.includes("/player") ||
+      path.includes("/live-player") ||
+      path.includes("/watch");
+
+    // 1. Check foreground <video> elements (explicitly ignore decorative muted/looping wallpapers)
+    const videos = document.querySelectorAll("video");
+    for (const video of videos) {
+      if (video.paused || video.ended || video.readyState <= 2) continue;
+      if (video.dataset?.bgAudio === "true" || video.dataset?.wallpaper === "true") {
+        continue;
       }
+      if (video.getAttribute("aria-hidden") === "true") continue;
+      // Muted looping ambient background videos (e.g., AppWallpaper) must never block screensaver
+      if (video.muted && video.loop) continue;
+      const rect = video.getBoundingClientRect();
+      if (rect.width < 120 || rect.height < 80) continue;
+      return true;
     }
 
-    const path = window.location.pathname || "";
-    if (
-      path.includes("/details") ||
-      path.includes("/live") ||
-      path.includes("/watch") ||
-      path.includes("/player")
-    ) {
-      const iframes = document.querySelectorAll("iframe");
-      for (const iframe of iframes) {
-        const src = iframe.src || "";
-        if (
-          src.includes("vidsrc") ||
-          src.includes("embed") ||
-          src.includes("live") ||
-          src.includes("player")
-        ) {
-          return true;
-        }
+    // 2. Check visible active stream/trailer iframes (strictly ignore hidden/0px iframes)
+    const iframes = document.querySelectorAll("iframe");
+    for (const iframe of iframes) {
+      const src = (iframe.src || "").toLowerCase();
+      if (!src || src === "about:blank") continue;
+      const isStreamEmbed =
+        src.includes("vidsrc") ||
+        src.includes("youtube.com/embed") ||
+        src.includes("youtube-nocookie.com/embed") ||
+        src.includes("player") ||
+        src.includes("embed");
+      if (!isStreamEmbed && !isDedicatedPlayerRoute) continue;
+
+      const style = window.getComputedStyle(iframe);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        parseFloat(style.opacity || "1") < 0.05
+      ) {
+        continue;
+      }
+      const rect = iframe.getBoundingClientRect();
+      if (rect.width >= 160 && rect.height >= 100) {
+        return true;
       }
     }
 
     return false;
   }, []);
 
-  const resetIdleTimer = useCallback(() => {
-    if (typeof window === "undefined" || isActive) return;
-    if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
-
-    idleTimerRef.current = window.setTimeout(() => {
-      if (!isMediaActive()) {
-        setCurrentStationName(readLiveStation());
-        setSleepReason(null);
-        setClockText(formatAppTime(new Date(), getClockFormat()));
-        setIsActive(true);
-      } else {
-        resetIdleTimer();
-      }
-    }, timeoutMs);
-  }, [isActive, timeoutMs, isMediaActive, readLiveStation]);
-
+  // Drift-proof Idle Monitor: Date.now() delta checked every 2s + visibilitychange wake check
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const events = [
-      "mousedown",
-      "mousemove",
-      "keydown",
+    const wakeOrReset = () => {
+      const now = Date.now();
+      if (isActiveRef.current) {
+        // 650ms grace window prevents synthetic mount/touch events from closing immediately
+        if (now - activatedAtRef.current < 650) return;
+        dismissScreensaver();
+        return;
+      }
+      lastActivityAtRef.current = now;
+    };
+
+    const handlePointerMove = (e: MouseEvent) => {
+      const prev = lastPointerRef.current;
+      const dx = Math.abs(e.clientX - prev.x);
+      const dy = Math.abs(e.clientY - prev.y);
+      // Ignore tiny < 8px sensor/air-mouse jitter
+      if (prev.x !== -1 && dx < 8 && dy < 8) return;
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
+      wakeOrReset();
+    };
+
+    const handleScroll = () => {
+      const curY = window.scrollY || document.documentElement.scrollTop || 0;
+      if (Math.abs(curY - lastScrollYRef.current) < 12) return;
+      lastScrollYRef.current = curY;
+      wakeOrReset();
+    };
+
+    const directEvents: (keyof WindowEventMap)[] = [
+      "pointerdown",
       "touchstart",
-      "scroll",
+      "keydown",
+      "wheel",
       "click",
     ];
-    const handleActivity = () => {
-      if (isActive) {
-        setIsActive(false);
-        setSleepReason(null);
+
+    directEvents.forEach((evt) => {
+      window.addEventListener(evt, wakeOrReset, { passive: true, capture: true });
+    });
+    window.addEventListener("mousemove", handlePointerMove, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    const checkIdle = () => {
+      if (isActiveRef.current) return;
+      if (!timeoutMs || timeoutMs <= 0) return;
+      if (document.hidden) return;
+
+      const elapsed = Date.now() - lastActivityAtRef.current;
+      if (elapsed >= timeoutMs) {
+        if (!isForegroundMediaPlaying()) {
+          activateScreensaver(null);
+        } else {
+          // Foreground movie/live TV is playing — keep pushing deadline forward
+          lastActivityAtRef.current = Date.now();
+        }
       }
-      resetIdleTimer();
     };
 
-    events.forEach((event) => {
-      window.addEventListener(event, handleActivity, { passive: true });
-    });
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        checkIdle();
+      }
+    };
 
-    resetIdleTimer();
+    document.addEventListener("visibilitychange", handleVisibility);
+    const heartbeat = window.setInterval(checkIdle, 2000);
 
     return () => {
-      if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
-      events.forEach((event) => {
-        window.removeEventListener(event, handleActivity);
+      window.clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      directEvents.forEach((evt) => {
+        window.removeEventListener(evt, wakeOrReset, { capture: true } as EventListenerOptions);
       });
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("scroll", handleScroll);
     };
-  }, [isActive, resetIdleTimer]);
+  }, [timeoutMs, isForegroundMediaPlaying, activateScreensaver, dismissScreensaver]);
 
-  // Burn-in-safe movement loop (Low-RAM/Reduced Motion uses 8s step jumps; High-RAM glides)
+  // Burn-in-safe movement loop (Caches card dimensions — zero 60fps reflow!)
   useEffect(() => {
     if (!isActive || typeof window === "undefined") {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       return;
     }
 
-    const measureCard = () => {
-      const w = logoRef.current?.offsetWidth || Math.min(480, window.innerWidth * 0.88);
-      const h = logoRef.current?.offsetHeight || Math.round((w * 9) / 16) + 24;
-      return { w, h };
+    const updateCachedDims = () => {
+      const w =
+        logoRef.current?.offsetWidth ||
+        Math.min(480, Math.round(window.innerWidth * 0.88));
+      const h =
+        logoRef.current?.offsetHeight || Math.round((w * 9) / 16) + 24;
+      cardDimRef.current = { w, h };
     };
 
     const placeRandomly = () => {
-      const { w, h } = measureCard();
+      updateCachedDims();
+      const { w, h } = cardDimRef.current;
       const maxX = Math.max(12, window.innerWidth - w - 12);
       const maxY = Math.max(12, window.innerHeight - h - 12);
       posRef.current = {
@@ -315,10 +416,14 @@ export function Screensaver() {
     };
 
     placeRandomly();
+    window.addEventListener("resize", updateCachedDims, { passive: true });
 
     if (lowPowerMode) {
       const jumpInterval = window.setInterval(placeRandomly, 8000);
-      return () => window.clearInterval(jumpInterval);
+      return () => {
+        window.clearInterval(jumpInterval);
+        window.removeEventListener("resize", updateCachedDims);
+      };
     }
 
     const angle = Math.random() * Math.PI * 2;
@@ -330,7 +435,7 @@ export function Screensaver() {
 
     const animate = () => {
       if (!logoRef.current) return;
-      const { w, h } = measureCard();
+      const { w, h } = cardDimRef.current;
 
       posRef.current.x += velRef.current.vx;
       posRef.current.y += velRef.current.vy;
@@ -362,6 +467,7 @@ export function Screensaver() {
 
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      window.removeEventListener("resize", updateCachedDims);
     };
   }, [isActive, lowPowerMode]);
 
@@ -394,15 +500,10 @@ export function Screensaver() {
 
   return (
     <div
-      className="rabtv-vidsrc-protected fixed inset-0 z-[99999] bg-black overflow-hidden cursor-none select-none"
-      onClick={() => {
-        setIsActive(false);
-        setSleepReason(null);
-      }}
-      onKeyDown={() => {
-        setIsActive(false);
-        setSleepReason(null);
-      }}
+      data-theme={appTheme}
+      className="rabtv-ss-root rabtv-vidsrc-protected fixed inset-0 z-[99999] bg-black overflow-hidden cursor-none select-none"
+      onClick={dismissScreensaver}
+      onKeyDown={dismissScreensaver}
     >
       <style>{SCREENSAVER_STYLES}</style>
 
@@ -416,7 +517,6 @@ export function Screensaver() {
         }}
       >
         <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-[0_0_40px_rgba(0,0,0,0.95)]">
-          {/* Card Artwork: 3-Bay Radio/Clock Card OR Sleep-Mode Snoozing Rabbit Card */}
           <img
             src={sleepReason ? IMG_SCREENSAVER_SLEEP : IMG_SCREENSAVER_CARD}
             alt="RABBiT TV Screensaver"
@@ -445,7 +545,7 @@ export function Screensaver() {
               </span>
             </div>
           ) : (
-            /* 3-BAY RADIO / CLOCK / EQUALIZER OVERLAY (Pixel-Aligned to rabbit-tv-screensaver-card.jpg) */
+            /* 3-BAY RADIO / CLOCK / EQUALIZER OVERLAY */
             <>
               {/* BAY 1 (TOP): Digital Clock Readout */}
               <div
