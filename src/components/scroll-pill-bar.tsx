@@ -8,6 +8,29 @@ import {
   getHardwareLimits,
 } from "@/lib/settings";
 
+const IMG_SPB_TRACK =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-track-background.jpg";
+const IMG_SPB_ACTIVE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-active-crimson.jpg";
+const IMG_SPB_IDLE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-pill-inactive-dark.jpg";
+
+const SCROLL_PILL_STYLES = `
+  :root, html[data-theme="violet"] { --rabtv-spb-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02); }
+  html[data-theme="red"] { --rabtv-spb-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0); }
+  html[data-theme="midnight"] { --rabtv-spb-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04); }
+  html[data-theme="emerald"] { --rabtv-spb-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02); }
+  html[data-theme="amber"] { --rabtv-spb-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04); }
+  html[data-theme="cyan"] { --rabtv-spb-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
+
+  .rabtv-spb-shell { position: relative; overflow: hidden; background-color: #0c0a09; contain: layout paint; }
+  .rabtv-spb-track-bg { position: absolute; inset: 0; background-size: 100% 100%; opacity: 0.78; filter: var(--rabtv-spb-filter); pointer-events: none; z-index: 0; }
+  .rabtv-spb-scroll { -webkit-mask-image: linear-gradient(to right, transparent 0%, black 18px, black calc(100% - 18px), transparent 100%); mask-image: linear-gradient(to right, transparent 0%, black 18px, black calc(100% - 18px), transparent 100%); }
+  .rabtv-spb-pill { position: relative; overflow: hidden; background-color: #0c0a09; border: 0 !important; contain: layout paint; transition: transform 140ms ease, filter 140ms ease; }
+  .rabtv-spb-pill:hover { filter: brightness(1.1); }
+  .rabtv-spb-pill-art { position: absolute; inset: 0; background-size: 100% 100%; filter: var(--rabtv-spb-filter); pointer-events: none; z-index: 0; }
+`;
+
 export interface PillOption {
   id: string;
   label: string;
@@ -249,44 +272,34 @@ export const ScrollPillBar = memo(function ScrollPillBar({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`relative w-full max-w-full sm:max-w-fit mx-auto overflow-hidden rounded-2xl border ${
-        themeAccent.border
-      } bg-slate-950/75 ${
+      className={`rabtv-spb-shell relative w-full max-w-full sm:max-w-fit mx-auto rounded-2xl border ${themeAccent.border} ${
         isLowRam ? "" : "backdrop-blur-xl"
-      } shadow-[0_12px_32px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.16)] p-1.5 flex justify-center`}
+      } shadow-xl p-1.5 flex justify-center`}
     >
-      {/* Couture Top Specular Laser Accent */}
-      {!glowOff && (
-        <div
-          className={`absolute inset-x-8 top-0 h-[1.5px] bg-gradient-to-r ${themeAccent.laser} opacity-80 pointer-events-none z-20`}
-        />
-      )}
-
-      {/* Left Edge Fade + Elevated Glass Chevron */}
+      <style>{SCROLL_PILL_STYLES}</style>
       <div
-        className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent z-20 flex items-center justify-start pl-1.5 transition-opacity duration-200 ${
-          canScrollLeft
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
+        className="rabtv-spb-track-bg"
+        aria-hidden="true"
+        style={{ backgroundImage: `url(${IMG_SPB_TRACK})` }}
+      />
+
+      {/* Left Chevron */}
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-[#0c0a09] via-[#0c0a09]/80 to-transparent z-20 flex items-center justify-start pl-1.5 transition-opacity duration-200 ${
+          canScrollLeft ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
       >
         <button
           type="button"
           onClick={() => scrollByAmount(-220)}
           aria-label="Scroll left"
-          className={`flex h-7 w-7 items-center justify-center rounded-full bg-black/80 hover:bg-black border border-white/15 shadow-lg focus:outline-none focus:ring-2 ${themeAccent.ring} transition hover:scale-110 active:scale-95 cursor-pointer`}
+          className={`flex h-7 w-7 items-center justify-center rounded-full bg-black/85 hover:bg-black border border-white/15 shadow-lg focus:outline-none focus:ring-2 ${themeAccent.ring} transition hover:scale-110 active:scale-95 cursor-pointer`}
         >
-          <span
-            className={`text-sm font-black ${themeAccent.arrow} ${
-              !reducedMotion && !glowOff ? "animate-slow-glow" : ""
-            }`}
-          >
-            ‹
-          </span>
+          <span className={`text-sm font-black ${themeAccent.arrow}`}>‹</span>
         </button>
       </div>
 
-      {/* Scrollable Pill Track */}
+      {/* Armored Scrollable Pill Track */}
       <div
         ref={scrollContainerRef}
         onWheel={handleWheel}
@@ -294,10 +307,11 @@ export const ScrollPillBar = memo(function ScrollPillBar({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseEnd}
         onMouseLeave={handleMouseEnd}
-        className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto scrollbar-none px-7 py-1 min-w-full sm:min-w-0 select-none"
+        className="rabtv-spb-scroll relative z-10 flex items-center justify-start sm:justify-center gap-2 overflow-x-auto scrollbar-none px-7 py-1 min-w-full sm:min-w-0 select-none"
       >
         {options.map((item, index) => {
           const isActive = activeId === item.id;
+          void getPrimaryBgColor;
           return (
             <button
               key={item.id}
@@ -314,45 +328,41 @@ export const ScrollPillBar = memo(function ScrollPillBar({
                 onSelect(item.id);
               }}
               onKeyDown={(e) => handleKeyDown(e, index)}
-              className={`relative rounded-xl ${
+              className={`rabtv-spb-pill rounded-xl ${
                 largeButtons ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-xs"
-              } font-extrabold tracking-wide whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 ${
+              } font-extrabold tracking-wide text-white whitespace-nowrap shrink-0 cursor-pointer focus:outline-none focus:ring-2 ${
                 themeAccent.ring
-              } ${
-                isActive
-                  ? `${getPrimaryBgColor(
-                      appTheme
-                    )} text-white shadow-[0_6px_18px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.35)] scale-[1.03]`
-                  : "bg-white/[0.05] text-slate-300 border border-white/10 hover:bg-white/[0.12] hover:text-white hover:border-white/25"
-              }`}
+              } ${isActive ? "scale-[1.03]" : "opacity-90 hover:opacity-100"}`}
             >
-              {item.label}
+              <span
+                className="rabtv-spb-pill-art"
+                aria-hidden="true"
+                style={{
+                  backgroundImage: `url(${isActive ? IMG_SPB_ACTIVE : IMG_SPB_IDLE})`,
+                  opacity: isActive ? 0.98 : 0.88,
+                }}
+              />
+              <span className="relative z-10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.96)]">
+                {item.label}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* Right Edge Fade + Elevated Glass Chevron */}
+      {/* Right Chevron */}
       <div
-        className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-slate-950 via-slate-950/80 to-transparent z-20 flex items-center justify-end pr-1.5 transition-opacity duration-200 ${
-          canScrollRight
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
+        className={`absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[#0c0a09] via-[#0c0a09]/80 to-transparent z-20 flex items-center justify-end pr-1.5 transition-opacity duration-200 ${
+          canScrollRight ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
       >
         <button
           type="button"
           onClick={() => scrollByAmount(220)}
           aria-label="Scroll right"
-          className={`flex h-7 w-7 items-center justify-center rounded-full bg-black/80 hover:bg-black border border-white/15 shadow-lg focus:outline-none focus:ring-2 ${themeAccent.ring} transition hover:scale-110 active:scale-95 cursor-pointer`}
+          className={`flex h-7 w-7 items-center justify-center rounded-full bg-black/85 hover:bg-black border border-white/15 shadow-lg focus:outline-none focus:ring-2 ${themeAccent.ring} transition hover:scale-110 active:scale-95 cursor-pointer`}
         >
-          <span
-            className={`text-sm font-black ${themeAccent.arrow} ${
-              !reducedMotion && !glowOff ? "animate-slow-glow" : ""
-            }`}
-          >
-            ›
-          </span>
+          <span className={`text-sm font-black ${themeAccent.arrow}`}>›</span>
         </button>
       </div>
     </div>
