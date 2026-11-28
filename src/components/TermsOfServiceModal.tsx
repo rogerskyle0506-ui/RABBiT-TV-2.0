@@ -49,12 +49,18 @@ const TOS_STYLES = `
   .rabtv-tos-root[data-theme="amber"] { --rabtv-tos-filter: hue-rotate(0deg) saturate(1.10) brightness(1.03); }
   .rabtv-tos-root[data-theme="cyan"] { --rabtv-tos-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
 
-  .rabtv-tos-shell { position: relative; overflow: hidden; box-sizing: border-box; padding: 18px 14px !important; background-color: #0c0a09; contain: layout paint; }
-  @media (min-width: 640px) { .rabtv-tos-shell { padding: 24px 22px !important; } }
-  .rabtv-tos-shell-9slice { position: absolute; inset: 0; box-sizing: border-box; border-style: solid; border-color: transparent; border-width: 24px 20px; border-image-source: url("${IMG_TOS_MODAL_FRAME}"); border-image-slice: 12% 11% fill; border-image-repeat: stretch; filter: var(--rabtv-tos-filter); pointer-events: none; z-index: 0; }
-  .rabtv-tos-card { position: relative; overflow: hidden; box-sizing: border-box; padding: 16px 16px !important; background-color: #0c0a09; contain: layout paint; }
-  .rabtv-tos-card-9slice { position: absolute; inset: 0; box-sizing: border-box; border-style: solid; border-color: transparent; border-width: 14px 14px; border-image-source: url("${IMG_TOS_CLAUSE_CARD}"); border-image-slice: 14% 11% fill; border-image-repeat: stretch; filter: var(--rabtv-tos-filter); pointer-events: none; z-index: 0; }
-  .rabtv-tos-card-9slice--hi { border-image-source: url("${IMG_TOS_HIGHLIGHT_CARD}"); filter: none; }
+  .rabtv-tos-shell { position: relative; overflow: hidden; box-sizing: border-box; padding: clamp(22px, 5%, 32px) clamp(22px, 6.2%, 38px) !important; background-color: #0c0a09; }
+  .rabtv-tos-shell-9slice { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url("${IMG_TOS_MODAL_FRAME}"); background-size: 100% 100%; background-position: center center; background-repeat: no-repeat; filter: var(--rabtv-tos-filter); pointer-events: none; z-index: 0; }
+  .rabtv-tos-card { position: relative; overflow: hidden; box-sizing: border-box; padding: clamp(16px, 4.4%, 24px) clamp(18px, 5.4%, 28px) !important; background-color: #0c0a09; }
+  .rabtv-tos-card-9slice { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url("${IMG_TOS_CLAUSE_CARD}"); background-size: 100% 100%; background-position: center center; background-repeat: no-repeat; filter: var(--rabtv-tos-filter); pointer-events: none; z-index: 0; }
+  .rabtv-tos-card-9slice--hi { background-image: url("${IMG_TOS_HIGHLIGHT_CARD}"); filter: none; }
+  @media (max-height: 540px) {
+    .rabtv-tos-shell { padding: 16px 26px !important; }
+    .rabtv-tos-inner { overflow-y: auto !important; }
+    .rabtv-tos-hero { min-height: 68px !important; padding: 10px 12px !important; }
+    .rabtv-tos-hero-title { padding-top: 6px !important; }
+    .rabtv-tos-clauses { overflow-y: visible !important; flex: none !important; }
+  }
   .rabtv-tos-btn { position: relative; overflow: hidden; background-color: #0c0a09; border: 0 !important; clip-path: polygon(9px 0%, calc(100% - 9px) 0%, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0% calc(100% - 9px), 0% 9px); contain: layout paint; transition: transform 140ms ease, filter 140ms ease; }
   .rabtv-tos-btn:hover:not(:disabled) { transform: scale(1.02); filter: brightness(1.09); }
   .rabtv-tos-btn-art { position: absolute; inset: -2px; background-size: 100% 100%; filter: var(--rabtv-tos-filter); pointer-events: none; z-index: 0; }
@@ -148,9 +154,9 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
       <div className="rabtv-tos-shell relative w-full max-w-2xl max-h-[90dvh] flex flex-col rounded-[26px] text-slate-100 shadow-2xl">
         <div className="rabtv-tos-shell-9slice" aria-hidden="true" />
 
-        <div className="relative z-10 flex flex-col max-h-full overflow-hidden gap-3">
+        <div className="rabtv-tos-inner relative z-10 flex flex-col flex-1 min-h-0 overflow-hidden gap-3 scrollbar-none">
           {/* Courtroom Mascot Hero Header */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 min-h-[154px] sm:min-h-[180px] p-3.5 sm:p-4 flex flex-col justify-between bg-[#0c0a09] shrink-0">
+          <div className="rabtv-tos-hero relative overflow-hidden rounded-2xl border border-white/10 min-h-[136px] sm:min-h-[168px] p-3.5 sm:p-4 flex flex-col justify-between bg-[#0c0a09] shrink-0">
             <div
               className="absolute inset-0 bg-cover bg-center opacity-92 pointer-events-none"
               style={{
@@ -182,7 +188,7 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
               )}
             </div>
 
-            <div className="relative z-10 pt-8 text-center sm:text-left">
+            <div className="rabtv-tos-hero-title relative z-10 pt-6 text-center sm:text-left">
               <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-amber-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.98)]">
                 RABBiT TV Terms of Service &amp; Disclaimer
               </h2>
@@ -196,7 +202,7 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
           </div>
 
           {/* Scrollable 9-Sliced Legal Clauses */}
-          <div className="flex-1 overflow-y-auto space-y-3 pr-0.5 text-xs sm:text-sm leading-relaxed text-slate-200 scrollbar-none">
+          <div className="rabtv-tos-clauses flex-1 min-h-[110px] overflow-y-auto space-y-3 pr-0.5 text-xs sm:text-sm leading-relaxed text-slate-200 scrollbar-none">
             {[
               {
                 title: "1. Authorized Access & Acceptance",
@@ -334,11 +340,11 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
                     type="button"
                     disabled={!agreedChecked}
                     onClick={handleConfirmAccept}
-                    className="rabtv-tos-btn w-full py-3 text-xs sm:text-sm font-black uppercase tracking-wider text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="rabtv-tos-btn w-full py-3 px-6 sm:px-8 text-[11px] sm:text-xs font-black uppercase tracking-wide text-white whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <span className="rabtv-tos-btn-art" style={{ backgroundImage: `url(${IMG_TOS_BTN_ACCEPT})` }} />
                     <span className="rabtv-tos-btn-scrim" />
-                    <span className="rabtv-tos-btn-label">✅ I Agree &amp; Continue to RABBiT TV</span>
+                    <span className="rabtv-tos-btn-label">✅ I Agree &amp; Continue</span>
                   </button>
                 </>
               ) : (
