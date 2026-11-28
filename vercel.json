@@ -1,9 +1,0 @@
-{
-  "installCommand": "npm install --omit=dev --no-audit --no-fund",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
