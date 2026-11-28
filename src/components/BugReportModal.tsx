@@ -22,6 +22,107 @@ const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
 // TV-remote friendly presets (safe from media-request strike keywords)
+const IMG_BUG_MODAL_FRAME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-modal-frame.jpg";
+const IMG_BUG_BANNER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-bugs-banner.jpg";
+const IMG_BUG_CARD =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-section-card.jpg";
+const IMG_BUG_BTN_PRIMARY =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-btn-primary.jpg";
+const IMG_BUG_BTN_IDLE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-idle.jpg";
+
+const BUG_MODAL_STYLES = `
+  :root, html[data-theme="violet"] { --rabtv-bug-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02); }
+  html[data-theme="red"] { --rabtv-bug-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0); }
+  html[data-theme="midnight"] { --rabtv-bug-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04); }
+  html[data-theme="emerald"] { --rabtv-bug-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02); }
+  html[data-theme="amber"] { --rabtv-bug-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04); }
+  html[data-theme="cyan"] { --rabtv-bug-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
+
+  .rabtv-bug-shell {
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 18px 14px !important;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+  @media (min-width: 640px) { .rabtv-bug-shell { padding: 22px 20px !important; } }
+  .rabtv-bug-shell-9slice {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 24px 20px;
+    border-image-source: url("${IMG_BUG_MODAL_FRAME}");
+    border-image-slice: 12% 11% fill;
+    border-image-repeat: stretch;
+    filter: var(--rabtv-bug-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-bug-card {
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 14px 14px !important;
+    background-color: #0c0a09;
+    contain: layout paint;
+  }
+  .rabtv-bug-card-9slice {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 14px 14px;
+    border-image-source: url("${IMG_BUG_CARD}");
+    border-image-slice: 14% 11% fill;
+    border-image-repeat: stretch;
+    filter: var(--rabtv-bug-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-bug-btn {
+    position: relative;
+    overflow: hidden;
+    background-color: #0c0a09;
+    border: 0 !important;
+    clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
+    contain: layout paint;
+    transition: transform 140ms ease, filter 140ms ease;
+  }
+  .rabtv-bug-btn:hover:not(:disabled) { transform: scale(1.02); filter: brightness(1.09); }
+  .rabtv-bug-btn:active:not(:disabled) { transform: scale(0.97); }
+  .rabtv-bug-btn-art {
+    position: absolute;
+    inset: -2px;
+    background-size: 100% 100%;
+    filter: var(--rabtv-bug-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-bug-btn-scrim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 78% 72% at 50% 50%, rgba(12,10,9,0.38) 0%, rgba(12,10,9,0.14) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .rabtv-bug-btn-label {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-shadow: 0 1px 4px rgba(12,10,9,0.96);
+  }
+`;
+
 const QUICK_ISSUE_PRESETS = [
   { label: "🎬 Player Froze", text: "Player froze during playback" },
   { label: "🔊 Audio Glitch", text: "Audio cut out or out of sync" },
@@ -287,98 +388,67 @@ export function BugReportModal({
   };
 
   return (
-    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-5 backdrop-blur-xl overflow-y-auto">
-      <style>{`
-        @keyframes modalCrystalIn {
-          0% { opacity: 0; transform: scale(0.95) translateY(10px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .animate-modal-crystal-in {
-          animation: modalCrystalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-      `}</style>
+    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/84 p-2.5 sm:p-5 backdrop-blur-xl overflow-y-auto">
+      <style>{BUG_MODAL_STYLES}</style>
+      <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
-      {/* Click-outside backdrop */}
-      <div
-        className="fixed inset-0"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="rabtv-bug-shell relative z-10 w-full max-w-md rounded-[26px] text-white max-h-[92dvh] flex flex-col shadow-2xl">
+        <div className="rabtv-bug-shell-9slice" aria-hidden="true" />
 
-      {/* Crystal Neon Glass Modal Card */}
-      <div
-        className={`relative z-10 w-full max-w-md rounded-[28px] border bg-slate-950/85 backdrop-blur-2xl text-white overflow-hidden animate-modal-crystal-in ${themeTokens.borderGlow}`}
-      >
-        {/* Translucent Neon Panel Frame Layer */}
-        <div
-          className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-          style={{
-            backgroundImage: `url(${RABBIT_PANEL})`,
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
-          }}
-        />
-        <div
-          className={`absolute inset-x-8 top-0 h-[2px] bg-gradient-to-r ${themeTokens.laser} opacity-90 z-10`}
-        />
+        <div className="relative z-10 flex flex-col max-h-full overflow-y-auto scrollbar-none space-y-3.5">
+          {/* Tech Repair Workbench Mascot Header Banner */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 min-h-[146px] p-3.5 flex flex-col justify-between bg-[#0c0a09] shrink-0">
+            <div
+              className="absolute inset-0 bg-cover bg-center opacity-92 pointer-events-none"
+              style={{ backgroundImage: `url(${IMG_BUG_BANNER})` }}
+              aria-hidden="true"
+            />
+            <div
+              className="absolute inset-0 bg-gradient-to-b from-[#0c0a09]/86 via-[#0c0a09]/26 to-[#0c0a09]/92 pointer-events-none"
+              aria-hidden="true"
+            />
 
-        <div className="relative z-10 p-5 sm:p-6 space-y-4">
-          {/* Header Bar */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="relative inline-flex items-center gap-2 px-4 py-1.5 rounded-xl overflow-hidden border border-white/15">
-              <div
-                className="absolute inset-0 pointer-events-none opacity-80"
-                style={{
-                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "120% 340%",
-                  backgroundPosition: "center center",
-                }}
-              />
-              <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" />
-              <span className="relative z-10 text-base">🐞</span>
-              <h3 className="relative z-10 text-sm sm:text-base font-black tracking-wide text-amber-300 drop-shadow">
-                Report a Bug / Issue
-              </h3>
+            <div className="relative z-10 flex items-center justify-between gap-2">
+              <span className="rounded-full bg-black/80 border border-white/15 px-2.5 py-1 text-[9.5px] font-black uppercase tracking-widest text-amber-300">
+                🐞 Repair Bench
+              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close Bug Report Modal"
+                className="rabtv-bug-btn px-3 py-1.5 text-[11px] font-extrabold text-white cursor-pointer"
+              >
+                <span className="rabtv-bug-btn-art" style={{ backgroundImage: `url(${IMG_BUG_BTN_IDLE})` }} />
+                <span className="rabtv-bug-btn-scrim" />
+                <span className="rabtv-bug-btn-label">✕</span>
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl bg-white/10 hover:bg-red-600/80 border border-white/15 hover:border-red-400 px-3 py-1.5 text-xs font-extrabold text-slate-200 hover:text-white transition hover:scale-105 active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400"
-              aria-label="Close Bug Report Modal"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Reporter Identity Pill */}
-          <div className="flex items-center justify-between rounded-xl bg-black/55 border border-white/10 px-3 py-2 text-[11px]">
-            <span className="text-slate-300 font-semibold truncate">
-              Reporting as:{" "}
-              <strong className={themeTokens.accentText}>
-                {userName || "Anonymous"}
-              </strong>
-            </span>
-            <span className="font-mono text-[10px] text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/10 shrink-0">
-              ID: ...{codeSuffixDisplay}
-            </span>
+            <div className="relative z-10 pt-8">
+              <h3 className="text-lg font-black uppercase tracking-tight text-amber-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.98)]">
+                Report a Bug / Issue
+              </h3>
+              <p className="text-[10.5px] font-bold text-zinc-200 drop-shadow">
+                Reporting as <strong className="text-cyan-300">{userName || "Anonymous"}</strong> • ID ...{codeSuffixDisplay}
+              </p>
+            </div>
           </div>
 
           {/* Rules Warning Box */}
-          <div className="rounded-xl bg-red-950/35 border border-red-500/30 p-3 text-[11px] text-slate-200 leading-relaxed">
+          <div className="rounded-xl bg-red-950/55 border border-red-500/40 p-3 text-[11px] text-zinc-200 leading-relaxed">
             Describe technical bugs below (max {MAX_MESSAGE_LENGTH} chars).{" "}
             <span className="text-red-300 font-extrabold">
-              Movie & TV requests are strictly forbidden (2 strikes = auto-ban).
+              Movie &amp; TV requests are strictly forbidden (2 strikes = auto-ban).
             </span>
           </div>
 
           {/* Feedback Alert */}
           {feedback && (
             <div
-              className={`rounded-xl p-3 text-xs font-bold text-center border backdrop-blur-md ${
+              className={`rounded-xl p-3 text-xs font-bold text-center border ${
                 feedback.isError
-                  ? "bg-red-950/75 border-red-500/50 text-red-200"
-                  : "bg-emerald-950/75 border-emerald-400/50 text-emerald-300"
+                  ? "bg-red-950/85 border-red-500/55 text-red-200"
+                  : "bg-emerald-950/85 border-emerald-400/55 text-emerald-300"
               }`}
             >
               {feedback.text}
@@ -388,17 +458,17 @@ export function BugReportModal({
           {checkingAccess ? (
             <div className="py-8 flex flex-col items-center justify-center gap-2 text-center">
               <div className="h-6 w-6 rounded-full border-2 border-t-transparent border-amber-400 animate-spin" />
-              <span className="text-xs font-bold text-slate-300">
+              <span className="text-xs font-bold text-zinc-300">
                 Verifying report access...
               </span>
             </div>
           ) : isBanned ? (
-            <div className="rounded-2xl bg-red-950/60 border border-red-500/50 p-4 text-center space-y-2.5">
+            <div className="rounded-2xl bg-red-950/70 border border-red-500/55 p-4 text-center space-y-2.5">
               <div className="text-2xl">🚫</div>
               <h4 className="text-sm font-black text-red-300 uppercase tracking-wider">
                 Reporting Access Revoked
               </h4>
-              <p className="text-xs text-slate-200 leading-relaxed">
+              <p className="text-xs text-zinc-200 leading-relaxed">
                 Your reporting rights have been disabled due to spam or media
                 request strikes. Message Rabbit directly if you believe this was
                 a mistake.
@@ -406,17 +476,19 @@ export function BugReportModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-1 w-full rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 py-2.5 text-xs font-extrabold text-white transition cursor-pointer"
+                className="rabtv-bug-btn w-full py-2.5 text-xs font-extrabold text-white cursor-pointer"
               >
-                Close Window
+                <span className="rabtv-bug-btn-art" style={{ backgroundImage: `url(${IMG_BUG_BTN_IDLE})` }} />
+                <span className="rabtv-bug-btn-scrim" />
+                <span className="rabtv-bug-btn-label">Close Window</span>
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              {/* TV Remote / One-Tap Quick Issue Chips */}
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {/* Quick Issue Chips */}
               <div className="space-y-1.5">
-                <span className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                  Quick-Tap Common Issues (TV Remote Friendly):
+                <span className="block text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
+                  Quick-Tap Common Issues:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {QUICK_ISSUE_PRESETS.map((preset) => (
@@ -425,84 +497,86 @@ export function BugReportModal({
                       type="button"
                       disabled={submitting || cooldownSeconds > 0}
                       onClick={() => handlePresetClick(preset.text)}
-                      className="rounded-xl bg-black/65 hover:bg-white/15 border border-white/15 hover:border-amber-400/50 px-2.5 py-1.5 text-[10px] font-bold text-slate-200 hover:text-white transition-all hover:scale-105 active:scale-95 disabled:opacity-40 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      className="rabtv-bug-btn px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-40 cursor-pointer"
                     >
-                      {preset.label}
+                      <span className="rabtv-bug-btn-art" style={{ backgroundImage: `url(${IMG_BUG_BTN_IDLE})` }} />
+                      <span className="rabtv-bug-btn-scrim" />
+                      <span className="rabtv-bug-btn-label">{preset.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Message Input & Character Progress Bar */}
-              <div className="space-y-1.5">
-                <textarea
-                  ref={textareaRef}
-                  rows={2}
-                  maxLength={MAX_MESSAGE_LENGTH}
-                  disabled={submitting || cooldownSeconds > 0}
-                  value={message}
-                  onChange={(e) => {
-                    setMessage(
-                      sanitizeBugText(e.target.value).slice(
-                        0,
-                        MAX_MESSAGE_LENGTH
-                      )
-                    );
-                    if (feedback) setFeedback(null);
-                  }}
-                  placeholder="Describe technical bug (No movie/TV requests)..."
-                  className={`w-full rounded-2xl border border-white/15 bg-black/75 p-3 text-sm font-semibold text-white placeholder-slate-500 focus:outline-none focus:ring-2 ${themeTokens.ring} resize-none disabled:opacity-50 transition`}
-                />
+              {/* Message Input Card */}
+              <div className="rabtv-bug-card rounded-2xl">
+                <div className="rabtv-bug-card-9slice" aria-hidden="true" />
+                <div className="relative z-10 space-y-2">
+                  <textarea
+                    ref={textareaRef}
+                    rows={2}
+                    maxLength={MAX_MESSAGE_LENGTH}
+                    disabled={submitting || cooldownSeconds > 0}
+                    value={message}
+                    onChange={(e) => {
+                      setMessage(
+                        sanitizeBugText(e.target.value).slice(
+                          0,
+                          MAX_MESSAGE_LENGTH
+                        )
+                      );
+                      if (feedback) setFeedback(null);
+                    }}
+                    placeholder="Describe technical bug (No movie/TV requests)..."
+                    className="w-full bg-transparent text-sm font-semibold text-white placeholder-zinc-400 focus:outline-none resize-none disabled:opacity-50"
+                  />
 
-                {/* Progress Bar & Counter */}
-                <div className="space-y-1">
-                  <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-200 ${
-                        charPercent >= 95
-                          ? "bg-red-500"
-                          : charPercent >= 75
-                            ? "bg-amber-400"
-                            : "bg-cyan-400"
-                      }`}
-                      style={{ width: `${charPercent}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-slate-400">
-                      {cooldownSeconds > 0
-                        ? `⏳ Next report ready in ${cooldownSeconds}s`
-                        : "Short technical note only"}
-                    </span>
-                    <span
-                      className={
-                        charPercent >= 95 ? "text-red-400" : "text-slate-300"
-                      }
-                    >
-                      {message.length}/{MAX_MESSAGE_LENGTH} chars
-                    </span>
+                  <div className="space-y-1">
+                    <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-200 ${
+                          charPercent >= 95
+                            ? "bg-red-500"
+                            : charPercent >= 75
+                              ? "bg-amber-400"
+                              : "bg-cyan-400"
+                        }`}
+                        style={{ width: `${charPercent}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[10.5px] font-bold">
+                      <span className="text-zinc-400">
+                        {cooldownSeconds > 0
+                          ? `⏳ Next report ready in ${cooldownSeconds}s`
+                          : "Short technical note only"}
+                      </span>
+                      <span
+                        className={
+                          charPercent >= 95 ? "text-red-400" : "text-zinc-300"
+                        }
+                      >
+                        {message.length}/{MAX_MESSAGE_LENGTH}
+                      </span>
+                    </div>
                   </div>
                 </div>
-
-                {/* Live Pre-Submit Strike Filter Guardrail */}
-                {liveKeywordWarning && (
-                  <div className="rounded-xl bg-amber-950/65 border border-amber-400/50 px-3 py-2 text-[11px] font-bold text-amber-200">
-                    ⚠️ Heads up: Words like &ldquo;movie&rdquo;,
-                    &ldquo;show&rdquo;, or &ldquo;add&rdquo; trigger the
-                    anti-request strike filter. Rephrase as a technical bug (e.g.
-                    &ldquo;player froze&rdquo;).
-                  </div>
-                )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              {liveKeywordWarning && (
+                <div className="rounded-xl bg-amber-950/75 border border-amber-400/50 px-3 py-2 text-[11px] font-bold text-amber-200">
+                  ⚠️ Heads up: Words like &ldquo;movie&rdquo;, &ldquo;show&rdquo;, or &ldquo;add&rdquo; trigger the anti-request strike filter. Rephrase as a technical bug.
+                </div>
+              )}
+
+              {/* Armored Action Buttons */}
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl bg-black/65 hover:bg-white/15 border border-white/15 py-2.5 text-xs font-extrabold text-slate-200 hover:text-white transition hover:scale-[1.02] active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/40"
+                  className="rabtv-bug-btn py-2.5 text-xs font-extrabold text-white cursor-pointer"
                 >
-                  Cancel
+                  <span className="rabtv-bug-btn-art" style={{ backgroundImage: `url(${IMG_BUG_BTN_IDLE})` }} />
+                  <span className="rabtv-bug-btn-scrim" />
+                  <span className="rabtv-bug-btn-label">Cancel</span>
                 </button>
                 <button
                   type="submit"
@@ -511,26 +585,21 @@ export function BugReportModal({
                     cooldownSeconds > 0 ||
                     message.trim().length < 4
                   }
-                  className={`rounded-xl py-2.5 text-xs font-black tracking-wide transition hover:scale-[1.02] active:scale-95 disabled:opacity-45 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400 ${themeTokens.primaryBtn}`}
+                  className="rabtv-bug-btn py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-45 cursor-pointer"
                 >
-                  {submitting
-                    ? "⚡ Sending..."
-                    : cooldownSeconds > 0
-                      ? `Wait ${cooldownSeconds}s`
-                      : "🚀 Submit Report"}
+                  <span className="rabtv-bug-btn-art" style={{ backgroundImage: `url(${IMG_BUG_BTN_PRIMARY})` }} />
+                  <span className="rabtv-bug-btn-scrim" />
+                  <span className="rabtv-bug-btn-label">
+                    {submitting
+                      ? "⚡ Sending..."
+                      : cooldownSeconds > 0
+                        ? `Wait ${cooldownSeconds}s`
+                        : "🚀 Submit Report"}
+                  </span>
                 </button>
               </div>
             </form>
           )}
-
-          {/* Neon Divider Footer */}
-          <div className="pt-1 text-center">
-            <img
-              src={RABBIT_DIVIDER}
-              alt=""
-              className="w-1/2 mx-auto h-1.5 object-contain opacity-75"
-            />
-          </div>
         </div>
       </div>
     </div>
