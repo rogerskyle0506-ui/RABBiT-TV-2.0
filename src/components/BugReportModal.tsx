@@ -38,21 +38,19 @@ const BUG_MODAL_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 18px 14px !important;
+    padding: clamp(22px, 5.2%, 32px) clamp(22px, 6.4%, 34px) !important;
     background-color: #0c0a09;
-    contain: layout paint;
   }
-  @media (min-width: 640px) { .rabtv-bug-shell { padding: 22px 20px !important; } }
   .rabtv-bug-shell-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 24px 20px;
-    border-image-source: url("${IMG_BUG_MODAL_FRAME}");
-    border-image-slice: 12% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_BUG_MODAL_FRAME}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-bug-filter);
     pointer-events: none;
     z-index: 0;
@@ -61,23 +59,31 @@ const BUG_MODAL_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 14px 14px !important;
+    padding: 14px 18px !important;
     background-color: #0c0a09;
-    contain: layout paint;
   }
   .rabtv-bug-card-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 14px 14px;
-    border-image-source: url("${IMG_BUG_CARD}");
-    border-image-slice: 14% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_BUG_CARD}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-bug-filter);
     pointer-events: none;
     z-index: 0;
+  }
+  @media (max-height: 540px) {
+    .rabtv-bug-shell {
+      padding: 16px 24px !important;
+    }
+    .rabtv-bug-hero {
+      min-height: 76px !important;
+      padding: 10px 12px !important;
+    }
   }
   .rabtv-bug-btn {
     position: relative;
@@ -325,7 +331,7 @@ export function BugReportModal({
 
         <div className="relative z-10 flex flex-col max-h-full overflow-y-auto scrollbar-none space-y-3.5">
           {/* Tech Repair Workbench Mascot Header Banner */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 min-h-[146px] p-3.5 flex flex-col justify-between bg-[#0c0a09] shrink-0">
+          <div className="rabtv-bug-hero relative overflow-hidden rounded-2xl border border-white/10 min-h-[132px] p-3.5 flex flex-col justify-between bg-[#0c0a09] shrink-0">
             <div
               className="absolute inset-0 bg-cover bg-center opacity-92 pointer-events-none"
               style={{ backgroundImage: `url(${IMG_BUG_BANNER})` }}
@@ -500,7 +506,7 @@ export function BugReportModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rabtv-bug-btn py-2.5 text-xs font-extrabold text-white cursor-pointer"
+                  className="rabtv-bug-btn py-2.5 px-4 text-[11px] sm:text-xs font-extrabold text-white whitespace-nowrap cursor-pointer"
                 >
                   <span className="rabtv-bug-btn-art" style={{ backgroundImage: `url(${IMG_BUG_BTN_IDLE})` }} />
                   <span className="rabtv-bug-btn-scrim" />
@@ -513,7 +519,7 @@ export function BugReportModal({
                     cooldownSeconds > 0 ||
                     message.trim().length < 4
                   }
-                  className="rabtv-bug-btn py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-45 cursor-pointer"
+                  className="rabtv-bug-btn py-2.5 px-5 text-[10.5px] sm:text-xs font-black uppercase tracking-normal text-white whitespace-nowrap disabled:opacity-45 cursor-pointer"
                 >
                   <span className="rabtv-bug-btn-art" style={{ backgroundImage: `url(${IMG_BUG_BTN_PRIMARY})` }} />
                   <span className="rabtv-bug-btn-scrim" />
@@ -522,7 +528,7 @@ export function BugReportModal({
                       ? "⚡ Sending..."
                       : cooldownSeconds > 0
                         ? `Wait ${cooldownSeconds}s`
-                        : "🚀 Submit Report"}
+                        : "🚀 Submit"}
                   </span>
                 </button>
               </div>
