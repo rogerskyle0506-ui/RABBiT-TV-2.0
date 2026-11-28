@@ -111,23 +111,22 @@ const LIVE_PLAYER_VIEWPORT_STYLES = `
     z-index: 1;
   }
 
-  /* 9-Sliced Channel Suggestion Card */
+  /* GPU-Safe Channel Suggestion Card (Zero Projector Skia Border Shrink) */
   .rabtv-lp-ch-card {
     position: relative;
     overflow: hidden;
     background-color: #0c0a09;
-    contain: layout paint;
   }
   .rabtv-lp-ch-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 14px 12px;
-    border-image-source: url("${IMG_LP_CARD_FRAME}");
-    border-image-slice: 13% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_LP_CARD_FRAME}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-lp-plate-filter);
     pointer-events: none;
     z-index: 0;
