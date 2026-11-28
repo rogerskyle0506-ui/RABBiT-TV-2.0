@@ -793,32 +793,25 @@ const VIEWPORT_HEADER_STYLES = `
     }
   }
 
-  /* 9-Sliced Punk-Neon Armored Footer Plate (Reuses rabbit-tv-community-card-frame.jpg) */
+  /* GPU-Safe Punk-Neon Armored Footer Plate (Zero Android TV / Projector Rail Bleed) */
   .rabtv-root-footer-plate {
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 28px 30px !important;
+    padding: clamp(24px, 5%, 36px) clamp(24px, 6.2%, 46px) !important;
     background-color: #0c0a09;
-    contain: layout paint;
-  }
-
-  @media (min-width: 640px) {
-    .rabtv-root-footer-plate {
-      padding: 30px 38px !important;
-    }
   }
 
   .rabtv-root-footer-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 18px 20px;
-    border-image-source: url("${ROOT_FOOTER_CARD_FRAME_URL}");
-    border-image-slice: 13% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${ROOT_FOOTER_CARD_FRAME_URL}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-wrap-filter);
     pointer-events: none;
     z-index: 0;
@@ -829,7 +822,7 @@ const VIEWPORT_HEADER_STYLES = `
     overflow: hidden;
     background-color: #0c0a09;
     border: 0 !important;
-    padding: 8px 18px !important;
+    padding: 9px 22px !important;
     contain: layout paint;
   }
 `;
