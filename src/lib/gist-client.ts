@@ -41,6 +41,7 @@ interface GistCacheSlot {
   snapshot: GistSnapshot | null;
   inFlightGet: Promise<GistSnapshot | null> | null;
   writeChain: Promise<unknown>;
+  inTransactionDepth: number;
   lastMutationAt: number;
   rateLimitedUntil: number;
 }
@@ -54,6 +55,7 @@ function getSlot(gistId: string): GistCacheSlot {
       snapshot: null,
       inFlightGet: null,
       writeChain: Promise.resolve(),
+      inTransactionDepth: 0,
       lastMutationAt: 0,
       rateLimitedUntil: 0,
     };
@@ -410,6 +412,12 @@ export function patchGistFilesSerialized(
     }
   };
 
+  // Re-entrancy guard: if already executing inside runSerializedGistTransaction,
+  // run the PATCH directly so we never deadlock waiting on our own writeChain!
+  if (slot.inTransactionDepth > 0) {
+    return runWrite();
+  }
+
   const resultPromise = slot.writeChain.then(runWrite, runWrite);
   slot.writeChain = resultPromise.catch(() => false);
   return resultPromise;
@@ -425,7 +433,21 @@ export function runSerializedGistTransaction<T>(
 ): Promise<T> {
   const cleanId = (gistId || DEFAULT_GIST_ID).trim() || "default";
   const slot = getSlot(cleanId);
-  const txPromise = slot.writeChain.then(work, work);
+
+  const runTx = async (): Promise<T> => {
+    slot.inTransactionDepth++;
+    try {
+      return await work();
+    } finally {
+      slot.inTransactionDepth = Math.max(0, slot.inTransactionDepth - 1);
+    }
+  };
+
+  if (slot.inTransactionDepth > 0) {
+    return runTx();
+  }
+
+  const txPromise = slot.writeChain.then(runTx, runTx);
   slot.writeChain = txPromise.catch(() => undefined);
   return txPromise;
 }
