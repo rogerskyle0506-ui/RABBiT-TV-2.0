@@ -1,4 +1,4 @@
-name: Build Global Android APK & Publish Nightly
+name: RABBiT-TV
 
 on:
   push:
@@ -420,7 +420,7 @@ jobs:
           mkdir -p updates
           APK_FILE="updates/${{ steps.version-extractor.outputs.apk_filename }}"
           cp android/app/build/outputs/apk/release/app-release.apk "$APK_FILE"
-          APK_SIZE_MB=$(python3 -c "import os; print(f'{os.path.getsize("$APK_FILE") / (1024 * 1024):.1f} MB')")
+          APK_SIZE_MB=$(python3 -c 'import os, sys; print(f"{os.path.getsize(sys.argv[1]) / (1024 * 1024):.1f} MB")' "$APK_FILE")
           echo "apk_size=${APK_SIZE_MB}" >> $GITHUB_OUTPUT
           echo "Successfully saved APK as $APK_FILE ($APK_SIZE_MB)"
 
