@@ -1,5 +1,6 @@
 // src/components/ActivationModal.tsx
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   CardSize,
   StreamQuality,
@@ -23,6 +24,13 @@ import {
   setAutoPlayNext,
 } from "@/lib/settings";
 import { sendPermanentActivationAlert } from "@/lib/report";
+import {
+  isGistConfigured,
+  readGistJsonFile,
+  patchGistFilesSerialized,
+  runSerializedGistTransaction,
+  generateSecureId,
+} from "@/lib/gist-client";
 import { bgAudio } from "@/lib/background-audio";
 import { getDefaultHeartbeatStationUrl } from "@/components/sidebar";
 
@@ -38,7 +46,12 @@ const ADMIN_BIRTH_YEAR = 1988;
 const TRIAL_CODE = "9654";
 const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 const GIST_TIMEOUT_MS = 9000;
-const REQUEST_COOLDOWN_MS = 5 * 60 * 1000; // 5-minute anti-spam cooldown
+const CHAT_SEND_COOLDOWN_MS = 2500; // 2.5s anti-spam spacing between live chat messages
+const ADMIN_ALERT_SOUND_URL =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/Notification-sounds/Soviet%20Power%20Supreme.mp3";
+const ADMIN_LAST_ALERTED_MAP_KEY = "rabtv_admin_last_alerted_msg_map_v2";
+const MAX_CHAT_THREADS = 60;
+const MAX_CHAT_MESSAGES_PER_THREAD = 40;
 
 const SUPPORT_PHONE_RAW = "17058093865";
 const SUPPORT_PHONE_DISPLAY = "(705) 809-3865";
@@ -79,6 +92,14 @@ interface RadioPreset {
   url: string;
 }
 
+interface ActivationChatMessage {
+  id: string;
+  sender: "user" | "admin";
+  text: string;
+  sentAt: string;
+  deliveredKey?: string;
+}
+
 interface ActivationRequestRecord {
   id: string;
   priority: "HIGH";
@@ -88,7 +109,11 @@ interface ActivationRequestRecord {
   hwFingerprint: string;
   note: string;
   requestedAt: string;
+  updatedAt?: string;
   seenByAdmin?: boolean;
+  unreadByAdmin?: boolean;
+  closed?: boolean;
+  messages?: ActivationChatMessage[];
 }
 
 interface TrialRegistryEntry {
@@ -803,93 +828,392 @@ async function verifyUnlockCodeWithGitHub(
   }
 }
 
+// ——— 2-Way Activation Chat Storage Helpers (ETag-Cached & Serialized via gist-client) ———
+
+function normalizeActivationThread(raw: any): ActivationRequestRecord | null {
+  if (!raw || typeof raw !== "object" || !raw.id) return null;
+  const requestedAt =
+    typeof raw.requestedAt === "string" && raw.requestedAt
+      ? raw.requestedAt
+      : new Date().toISOString();
+  const baseNote = sanitizeText(String(raw.note || ""), 220);
+
+  let messages: ActivationChatMessage[] = Array.isArray(raw.messages)
+    ? raw.messages
+        .filter((m: any) => m && typeof m === "object" && typeof m.text === "string")
+        .map((m: any) => ({
+          id: String(m.id || generateSecureId("msg", 4)),
+          sender: m.sender === "admin" ? "admin" : "user",
+          text: sanitizeText(m.text, 280),
+          sentAt:
+            typeof m.sentAt === "string" && m.sentAt ? m.sentAt : requestedAt,
+          deliveredKey:
+            typeof m.deliveredKey === "string" && m.deliveredKey.trim()
+              ? sanitizeText(m.deliveredKey, 32)
+              : undefined,
+        }))
+        .slice(-MAX_CHAT_MESSAGES_PER_THREAD)
+    : [];
+
+  // Upgrade legacy single-note requests into a clean chat thread seamlessly
+  if (messages.length === 0 && baseNote) {
+    messages = [
+      {
+        id: `${raw.id}-init`,
+        sender: "user",
+        text: baseNote,
+        sentAt: requestedAt,
+      },
+    ];
+  }
+
+  return {
+    id: String(raw.id),
+    priority: "HIGH",
+    name: sanitizeText(String(raw.name || "Guest"), 30) || "Guest",
+    age: Number(raw.age) || 0,
+    deviceId: sanitizeText(String(raw.deviceId || ""), 48),
+    hwFingerprint: sanitizeText(String(raw.hwFingerprint || ""), 32),
+    note: baseNote || messages[messages.length - 1]?.text || "",
+    requestedAt,
+    updatedAt:
+      typeof raw.updatedAt === "string" && raw.updatedAt
+        ? raw.updatedAt
+        : messages[messages.length - 1]?.sentAt || requestedAt,
+    seenByAdmin: Boolean(raw.seenByAdmin),
+    unreadByAdmin:
+      typeof raw.unreadByAdmin === "boolean"
+        ? raw.unreadByAdmin
+        : !raw.seenByAdmin,
+    closed: Boolean(raw.closed),
+    messages,
+  };
+}
+
+async function fetchActivationThreads(
+  options?: { force?: boolean; maxAgeMs?: number }
+): Promise<ActivationRequestRecord[]> {
+  if (!isGistConfigured()) return [];
+  const raw = await readGistJsonFile<unknown[]>("activation_requests.json", [], {
+    force: options?.force ?? false,
+    maxAgeMs: options?.maxAgeMs ?? 5000,
+    timeoutMs: GIST_TIMEOUT_MS,
+  });
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeActivationThread)
+    .filter((r): r is ActivationRequestRecord => Boolean(r));
+}
+
+function getLatestUserMessage(
+  thread: ActivationRequestRecord
+): ActivationChatMessage | null {
+  const msgs = thread.messages || [];
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].sender === "user") return msgs[i];
+  }
+  return null;
+}
+
 /**
- * Posts a HIGH-PRIORITY activation request to `activation_requests.json` on the
- * private Gist so Admin devices pop a live high-alert toast notification.
+ * Customer sends a live chat message from the Activation Modal ONLY to Admin.
+ * Appends to their device-isolated thread so Admin replies route back exclusively
+ * to this user's activation window.
  */
-async function sendHighAlertAdminRequest(
+async function sendUserActivationChatMessage(
   name: string,
   age: number,
-  note: string,
+  messageText: string,
   deviceId: string,
   hwFingerprint: string
-): Promise<{ ok: boolean; errorMsg?: string }> {
-  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) {
+): Promise<{ ok: boolean; thread?: ActivationRequestRecord; errorMsg?: string }> {
+  if (!isGistConfigured()) {
     return {
       ok: false,
       errorMsg:
-        "⚠️ Direct admin alert service is offline. Please use WhatsApp or Text below.",
+        "⚠️ Direct admin chat is offline. Please use WhatsApp or Text below.",
     };
   }
 
-  try {
-    const bundle = await fetchGistBundle();
-    if (!bundle.ok || !bundle.files) {
-      return {
-        ok: false,
-        errorMsg:
-          "⚠️ Could not reach admin alert server. Please try WhatsApp or Text below.",
-      };
-    }
+  const cleanText = sanitizeText(messageText, 240);
+  if (!cleanText) {
+    return { ok: false, errorMsg: "⚠️ Type a message before sending." };
+  }
 
-    let existing: ActivationRequestRecord[] = [];
-    const raw = bundle.files["activation_requests.json"]?.content;
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) existing = parsed;
-      } catch {
-        existing = [];
-      }
-    }
-
-    const newReq: ActivationRequestRecord = {
-      id: `req-${bundle.serverTimeMs}-${Math.random().toString(36).slice(2, 7)}`,
-      priority: "HIGH",
-      name,
-      age,
-      deviceId,
-      hwFingerprint: hwFingerprint.slice(0, 12),
-      note: sanitizeText(note, 140),
-      requestedAt: new Date(bundle.serverTimeMs).toISOString(),
-      seenByAdmin: false,
-    };
-
-    const updated = [newReq, ...existing].slice(0, 60);
-    const saved = await patchGistFiles({
-      "activation_requests.json": {
-        content: JSON.stringify(updated, null, 2),
-      },
-    });
-
-    if (!saved) {
-      return {
-        ok: false,
-        errorMsg:
-          "⚠️ Failed to deliver admin alert. Try again or use WhatsApp/Text.",
-      };
-    }
-
-    // Also fire existing alert webhook/report bridge non-blockingly
+  return runSerializedGistTransaction(async () => {
     try {
-      sendPermanentActivationAlert(
-        `HIGH ALERT REQUEST: ${name} (Age ${age})${newReq.note ? ` - ${newReq.note}` : ""}`
-      );
-    } catch {
-      // ignore secondary bridge errors
-    }
+      const existing = await fetchActivationThreads({ force: true });
+      const nowIso = new Date().toISOString();
+      const shortFp = hwFingerprint.slice(0, 12);
 
-    return { ok: true };
-  } catch {
-    return {
-      ok: false,
-      errorMsg: "⚠️ Network error while notifying admin. Try WhatsApp/Text.",
-    };
-  }
+      const newMsg: ActivationChatMessage = {
+        id: generateSecureId("umsg", 5),
+        sender: "user",
+        text: cleanText,
+        sentAt: nowIso,
+      };
+
+      const existingIdx = existing.findIndex(
+        (t) =>
+          (t.deviceId && t.deviceId === deviceId) ||
+          (shortFp && t.hwFingerprint && t.hwFingerprint === shortFp)
+      );
+
+      let updatedThread: ActivationRequestRecord;
+      let nextList: ActivationRequestRecord[];
+
+      if (existingIdx !== -1) {
+        const prev = existing[existingIdx];
+        const prevMsgs = Array.isArray(prev.messages) ? prev.messages : [];
+        updatedThread = {
+          ...prev,
+          name,
+          age,
+          deviceId,
+          hwFingerprint: shortFp || prev.hwFingerprint,
+          note: cleanText,
+          updatedAt: nowIso,
+          seenByAdmin: false,
+          unreadByAdmin: true,
+          closed: false,
+          messages: [...prevMsgs, newMsg].slice(-MAX_CHAT_MESSAGES_PER_THREAD),
+        };
+        nextList = [
+          updatedThread,
+          ...existing.filter((_, i) => i !== existingIdx),
+        ].slice(0, MAX_CHAT_THREADS);
+      } else {
+        updatedThread = {
+          id: generateSecureId("req", 5),
+          priority: "HIGH",
+          name,
+          age,
+          deviceId,
+          hwFingerprint: shortFp,
+          note: cleanText,
+          requestedAt: nowIso,
+          updatedAt: nowIso,
+          seenByAdmin: false,
+          unreadByAdmin: true,
+          closed: false,
+          messages: [newMsg],
+        };
+        nextList = [updatedThread, ...existing].slice(0, MAX_CHAT_THREADS);
+      }
+
+      const saved = await patchGistFilesSerialized({
+        "activation_requests.json": {
+          content: JSON.stringify(nextList, null, 2),
+        },
+      });
+
+      if (!saved) {
+        return {
+          ok: false,
+          errorMsg:
+            "⚠️ Could not deliver message right now. Retry or use WhatsApp/Text.",
+        };
+      }
+
+      // Notify secondary telemetry bridge only on brand-new threads
+      if (existingIdx === -1) {
+        try {
+          void sendPermanentActivationAlert(
+            `LIVE ACTIVATION CHAT: ${name} (Age ${age}) - ${cleanText}`
+          );
+        } catch {
+          // ignore
+        }
+      }
+
+      return { ok: true, thread: updatedThread };
+    } catch {
+      return {
+        ok: false,
+        errorMsg: "⚠️ Network error while sending message. Try WhatsApp/Text.",
+      };
+    }
+  });
 }
 
-/** Plays a crisp double-beep high-alert sound on Admin devices */
-function playAdminHighAlertChime(): void {
+/**
+ * Admin replies straight back to a specific user's Activation Modal chat window.
+ * Optionally attaches a freshly generated key (`deliveredKey`) and commits it
+ * atomically into `keys.json` in the exact same Gist PATCH!
+ */
+async function sendAdminActivationReply(params: {
+  threadId: string;
+  replyText: string;
+  generateKeyForUser?: boolean;
+}): Promise<{
+  ok: boolean;
+  thread?: ActivationRequestRecord;
+  generatedKey?: string;
+  errorMsg?: string;
+}> {
+  if (!isGistConfigured()) {
+    return { ok: false, errorMsg: "Gist credentials unavailable." };
+  }
+
+  return runSerializedGistTransaction(async () => {
+    try {
+      const existing = await fetchActivationThreads({ force: true });
+      const idx = existing.findIndex((t) => t.id === params.threadId);
+      if (idx === -1) {
+        return { ok: false, errorMsg: "Chat thread no longer exists." };
+      }
+
+      const target = existing[idx];
+      const nowIso = new Date().toISOString();
+      const filesToPatch: Record<string, { content: string }> = {};
+      let createdKey: string | undefined;
+
+      if (params.generateKeyForUser) {
+        const randomEntropy =
+          typeof window !== "undefined" && window.crypto?.getRandomValues
+            ? window.crypto.getRandomValues(new Uint32Array(1))[0]
+            : Math.floor(Math.random() * 1_000_000);
+        const rawKeyStr = `${target.name.trim().toLowerCase()}-${target.age}-${Date.now()}-${randomEntropy}`;
+        createdKey = Math.abs(
+          rawKeyStr
+            .split("")
+            .reduce((acc, ch) => (acc << 5) - acc + ch.charCodeAt(0), 0)
+        ).toString();
+
+        const rawKeys = await readGistJsonFile<any[]>("keys.json", [], {
+          force: true,
+        });
+        const keysList = Array.isArray(rawKeys) ? [...rawKeys] : [];
+        keysList.push({
+          key: createdKey,
+          active: true,
+          owner: `${target.name.trim()} (${target.age})`,
+          createdAt: nowIso,
+        });
+        filesToPatch["keys.json"] = {
+          content: JSON.stringify(keysList, null, 2),
+        };
+      }
+
+      const cleanReply =
+        sanitizeText(params.replyText, 260) ||
+        (createdKey
+          ? `Here is your lifetime unlock key for ${target.name} (Age ${target.age}): ${createdKey}. Tap "Fill Key" below and hit Enter!`
+          : "");
+
+      if (!cleanReply) {
+        return { ok: false, errorMsg: "Reply cannot be empty." };
+      }
+
+      const adminMsg: ActivationChatMessage = {
+        id: generateSecureId("amsg", 5),
+        sender: "admin",
+        text: cleanReply,
+        sentAt: nowIso,
+        deliveredKey: createdKey,
+      };
+
+      const prevMsgs = Array.isArray(target.messages) ? target.messages : [];
+      const updatedThread: ActivationRequestRecord = {
+        ...target,
+        updatedAt: nowIso,
+        seenByAdmin: true,
+        unreadByAdmin: false,
+        closed: false,
+        messages: [...prevMsgs, adminMsg].slice(-MAX_CHAT_MESSAGES_PER_THREAD),
+      };
+
+      const nextList = [
+        updatedThread,
+        ...existing.filter((_, i) => i !== idx),
+      ].slice(0, MAX_CHAT_THREADS);
+
+      filesToPatch["activation_requests.json"] = {
+        content: JSON.stringify(nextList, null, 2),
+      };
+
+      const saved = await patchGistFilesSerialized(filesToPatch);
+      if (!saved) {
+        return { ok: false, errorMsg: "Failed to push reply to Gist." };
+      }
+
+      return { ok: true, thread: updatedThread, generatedKey: createdKey };
+    } catch {
+      return { ok: false, errorMsg: "Network error sending reply." };
+    }
+  });
+}
+
+async function closeAdminActivationThread(threadId: string): Promise<boolean> {
+  if (!isGistConfigured()) return false;
+  return runSerializedGistTransaction(async () => {
+    try {
+      const existing = await fetchActivationThreads({ force: true });
+      const updated = existing.map((t) =>
+        t.id === threadId
+          ? { ...t, seenByAdmin: true, unreadByAdmin: false, closed: true }
+          : t
+      );
+      return await patchGistFilesSerialized({
+        "activation_requests.json": {
+          content: JSON.stringify(updated, null, 2),
+        },
+      });
+    } catch {
+      return false;
+    }
+  });
+}
+
+// ——— Admin Custom Notification Sound ("Soviet Power Supreme.mp3") & Phone Alert Engine ———
+
+let sharedAdminAlertAudio: HTMLAudioElement | null = null;
+let audioUnlockListenerAdded = false;
+
+function ensureAdminAlertAudio(): HTMLAudioElement | null {
+  if (typeof window === "undefined" || typeof Audio === "undefined") {
+    return null;
+  }
+  if (!sharedAdminAlertAudio) {
+    const audio = new Audio(ADMIN_ALERT_SOUND_URL);
+    audio.preload = "auto";
+    audio.volume = 1.0;
+    audio.crossOrigin = "anonymous";
+    sharedAdminAlertAudio = audio;
+  }
+  return sharedAdminAlertAudio;
+}
+
+/** Unlocks HTMLAudioElement once on first Admin tap so background/fullscreen alerts play reliably */
+function installAdminAudioAutoUnlock(): void {
+  if (typeof window === "undefined" || audioUnlockListenerAdded) return;
+  audioUnlockListenerAdded = true;
+
+  const unlock = () => {
+    const audio = ensureAdminAlertAudio();
+    if (!audio) return;
+    const prevVol = audio.volume;
+    audio.volume = 0;
+    const p = audio.play();
+    if (p && typeof p.then === "function") {
+      p.then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = prevVol || 1.0;
+      }).catch(() => {
+        audio.volume = prevVol || 1.0;
+      });
+    }
+    window.removeEventListener("pointerdown", unlock, true);
+    window.removeEventListener("keydown", unlock, true);
+  };
+
+  window.addEventListener("pointerdown", unlock, { capture: true, passive: true });
+  window.addEventListener("keydown", unlock, { capture: true, passive: true });
+}
+
+/** Fallback synthesized chime if device is offline or blocks MP3 playback */
+function playAdminHighAlertChimeFallback(): void {
   if (typeof window === "undefined") return;
   try {
     const AudioCtx =
@@ -897,24 +1221,183 @@ function playAdminHighAlertChime(): void {
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const now = ctx.currentTime;
-    [880, 1174.66].forEach((freq, idx) => {
+    [880, 1174.66, 1318.5].forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, now + idx * 0.16);
-      gain.gain.setValueAtTime(0.14, now + idx * 0.16);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.16 + 0.22);
+      osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+      gain.gain.setValueAtTime(0.18, now + idx * 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.14 + 0.24);
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(now + idx * 0.16);
-      osc.stop(now + idx * 0.16 + 0.24);
+      osc.start(now + idx * 0.14);
+      osc.stop(now + idx * 0.14 + 0.26);
     });
     window.setTimeout(() => {
       void ctx.close().catch(() => {});
-    }, 800);
+    }, 950);
   } catch {
-    // ignore if browser blocks autoplay audio
+    // ignore
   }
+}
+
+/** Plays the user's custom "Soviet Power Supreme.mp3" + vibration pattern */
+function playAdminSovietAlertSound(): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate([260, 90, 260, 90, 420]);
+    }
+  } catch {
+    // ignore unsupported vibration
+  }
+
+  try {
+    const audio = ensureAdminAlertAudio();
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = 1.0;
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {
+          playAdminHighAlertChimeFallback();
+        });
+      }
+      return;
+    }
+  } catch {
+    // fall through
+  }
+  playAdminHighAlertChimeFallback();
+}
+
+/** Soft gentle ping for the customer when Admin replies inside their Activation Chat */
+function playCustomerReplyPing(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx =
+      window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(660, now);
+    osc.frequency.exponentialRampToValueAtTime(990, now + 0.14);
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.22);
+    window.setTimeout(() => {
+      void ctx.close().catch(() => {});
+    }, 500);
+  } catch {
+    // ignore
+  }
+}
+
+let capacitorChannelInitialized = false;
+
+/**
+ * Triggers a native Android / OS notification (via @capacitor/local-notifications
+ * when bundled, or Web Notification API fallback) so Admin's phone alerts even
+ * when screen-locked or while another app is foregrounded.
+ */
+async function triggerAdminPhoneNotification(
+  title: string,
+  body: string
+): Promise<void> {
+  if (typeof window === "undefined") return;
+
+  // 1. Try Capacitor LocalNotifications (Native Android notification tray & lock screen)
+  if ((window as any).Capacitor) {
+    try {
+      const mod = await import(
+        /* @vite-ignore */ "@capacitor/local-notifications"
+      );
+      const LocalNotifications = mod?.LocalNotifications;
+      if (LocalNotifications) {
+        if (!capacitorChannelInitialized && LocalNotifications.createChannel) {
+          capacitorChannelInitialized = true;
+          await LocalNotifications.createChannel({
+            id: "rabtv_admin_activation_high",
+            name: "RABBiT TV Activation Requests",
+            description: "High-priority activation chat alerts from new users",
+            importance: 5,
+            visibility: 1,
+            vibration: true,
+            sound: "soviet_power_supreme.mp3",
+          }).catch(() => {});
+        }
+        const perm = await LocalNotifications.checkPermissions().catch(() => ({
+          display: "prompt",
+        }));
+        if (perm?.display === "granted") {
+          await LocalNotifications.schedule({
+            notifications: [
+              {
+                id: Math.floor(Date.now() % 2_000_000_000),
+                title,
+                body,
+                channelId: "rabtv_admin_activation_high",
+                sound: "soviet_power_supreme.mp3",
+                schedule: { at: new Date(Date.now() + 250) },
+                smallIcon: "ic_stat_icon_config_sample",
+              },
+            ],
+          });
+          return;
+        }
+      }
+    } catch {
+      // Plugin not installed in APK — fall through cleanly to Web Notification API
+    }
+  }
+
+  // 2. Web Notification API fallback (Android Chrome / Desktop / Capacitor WebView)
+  try {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, {
+        body,
+        tag: "rabtv-activation-chat",
+        requireInteraction: true,
+      });
+    }
+  } catch {
+    // ignore if unsupported in WebView
+  }
+}
+
+async function requestAdminPhoneNotificationPermission(): Promise<
+  "granted" | "denied" | "unsupported"
+> {
+  if (typeof window === "undefined") return "unsupported";
+  if ((window as any).Capacitor) {
+    try {
+      const mod = await import(
+        /* @vite-ignore */ "@capacitor/local-notifications"
+      );
+      if (mod?.LocalNotifications?.requestPermissions) {
+        const res = await mod.LocalNotifications.requestPermissions();
+        if (res?.display === "granted") return "granted";
+      }
+    } catch {
+      // fall through
+    }
+  }
+  try {
+    if ("Notification" in window && typeof Notification.requestPermission === "function") {
+      const res = await Notification.requestPermission();
+      return res === "granted" ? "granted" : "denied";
+    }
+  } catch {
+    // ignore
+  }
+  return "unsupported";
 }
 
 /**
@@ -937,7 +1420,6 @@ function launchDirectContact(
       ? `sms:+${SUPPORT_PHONE_RAW}&body=${encoded}`
       : `sms:+${SUPPORT_PHONE_RAW}?body=${encoded}`;
 
-    // Direct anchor click hands sms: cleanly to Android OS Messaging (Browser.open rejects sms:)
     const a = document.createElement("a");
     a.href = smsUrl;
     a.style.display = "none";
@@ -947,12 +1429,10 @@ function launchDirectContact(
     return;
   }
 
-  // Full E.164 WhatsApp URL with country code + phone number
   const waWebUrl = `https://api.whatsapp.com/send?phone=${SUPPORT_PHONE_RAW}&text=${encoded}`;
   const isAndroid = /android/i.test(navigator.userAgent || "");
 
   if (isAndroid) {
-    // Direct intent-friendly link click opens installed WhatsApp app or falls back to browser
     const a = document.createElement("a");
     a.href = waWebUrl;
     a.target = "_blank";
@@ -968,26 +1448,90 @@ function launchDirectContact(
 }
 
 /**
- * High-Alert Admin Activation Toast Listener:
- * Automatically runs in the background ONLY on verified Admin sessions when
- * the ActivationModal itself is closed, popping an urgent toast whenever a user
- * sends an activation request from the modal.
+ * ALWAYS-ON-TOP ADMIN FLOATING ACTIVATION CHAT BUBBLE:
+ * - Runs automatically in the background ONLY on verified Admin sessions.
+ * - Portals into `document.fullscreenElement || document.body` at max CSS z-index
+ *   so it floats ABOVE movies, Live TV players, modals, and fullscreen playback!
+ * - Plays "Soviet Power Supreme.mp3" + phone vibration + OS notification whenever
+ *   a customer sends a message from the Activation Modal.
+ * - Lets Admin read, reply directly back to THAT user's window only, or 1-tap
+ *   Generate & Send their bound lifetime unlock key without leaving the movie!
  */
 function AdminActivationAlertToast({ appTheme }: { appTheme: AppTheme }) {
-  const [activeAlerts, setActiveAlerts] = useState<ActivationRequestRecord[]>(
-    []
-  );
+  const [threads, setThreads] = useState<ActivationRequestRecord[]>([]);
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [minimized, setMinimized] = useState<boolean>(false);
+  const [replyDraft, setReplyDraft] = useState<string>("");
+  const [sendingReply, setSendingReply] = useState<boolean>(false);
+  const [statusBanner, setStatusBanner] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [notifPermission, setNotifPermission] = useState<string>(() => {
+    if (typeof window === "undefined") return "default";
+    try {
+      return "Notification" in window ? Notification.permission : "unsupported";
+    } catch {
+      return "unsupported";
+    }
+  });
+  const [portalTarget, setPortalTarget] = useState<Element | null>(() =>
+    typeof document !== "undefined"
+      ? document.fullscreenElement || document.body
+      : null
+  );
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const tokens = useMemo(() => getModalThemeTokens(appTheme), [appTheme]);
 
+  // Dynamically follow fullscreen changes so bubble floats OVER fullscreen movies!
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const syncPortalHost = () => {
+      const fsEl =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        null;
+      setPortalTarget(fsEl || document.body);
+    };
+    syncPortalHost();
+    document.addEventListener("fullscreenchange", syncPortalHost);
+    document.addEventListener("webkitfullscreenchange", syncPortalHost);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncPortalHost);
+      document.removeEventListener("webkitfullscreenchange", syncPortalHost);
+    };
+  }, []);
+
+  // Poll activation_requests.json via ETag-cached gist-client (0 rate-limit burn on 304!)
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (localStorage.getItem("rabtv_is_admin") !== "true") return;
-    if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return;
+    if (!isGistConfigured()) return;
+
+    installAdminAudioAutoUnlock();
+    ensureAdminAlertAudio();
 
     let cancelled = false;
+    let pollTimer: number | null = null;
 
-    const getSeenSet = (): Set<string> => {
+    const getLastAlertedMap = (): Record<string, string> => {
+      try {
+        const raw = localStorage.getItem(ADMIN_LAST_ALERTED_MAP_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch {
+        return {};
+      }
+    };
+
+    const saveLastAlertedMap = (map: Record<string, string>) => {
+      try {
+        localStorage.setItem(ADMIN_LAST_ALERTED_MAP_KEY, JSON.stringify(map));
+      } catch {
+        // ignore
+      }
+    };
+
+    const getLegacySeenSet = (): Set<string> => {
       try {
         const raw = localStorage.getItem(ADMIN_SEEN_REQS_KEY);
         const arr = raw ? JSON.parse(raw) : [];
@@ -997,78 +1541,139 @@ function AdminActivationAlertToast({ appTheme }: { appTheme: AppTheme }) {
       }
     };
 
-    const pollRequests = async () => {
-      if (cancelled || document.hidden) return;
+    const pollChats = async () => {
+      if (cancelled) return;
       if (localStorage.getItem("rabtv_is_admin") !== "true") return;
+
       try {
-        const bundle = await fetchGistBundle();
-        if (cancelled || !bundle.ok || !bundle.files) return;
-        const raw = bundle.files["activation_requests.json"]?.content;
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return;
+        const all = await fetchActivationThreads({ maxAgeMs: 5000 });
+        if (cancelled) return;
 
-        const seen = getSeenSet();
-        const fresh = (parsed as ActivationRequestRecord[]).filter(
-          (r) => r && r.id && !r.seenByAdmin && !seen.has(r.id)
-        );
+        const legacySeen = getLegacySeenSet();
+        const activeOpen = all
+          .filter((t) => {
+            if (t.closed) return false;
+            if (legacySeen.has(t.id) && !t.unreadByAdmin) return false;
+            // Keep open if unread OR had activity in the last 30 mins
+            const ageMs = Date.now() - Date.parse(t.updatedAt || t.requestedAt);
+            return t.unreadByAdmin || ageMs < 30 * 60 * 1000;
+          })
+          .slice(0, 6);
 
-        if (fresh.length > 0 && !cancelled) {
-          setActiveAlerts((prev) => {
-            const prevIds = new Set(prev.map((p) => p.id));
-            const brandNew = fresh.filter((f) => !prevIds.has(f.id));
-            if (brandNew.length > 0) {
-              playAdminHighAlertChime();
+        const alertedMap = getLastAlertedMap();
+        let newestPingThread: ActivationRequestRecord | null = null;
+        let newestPingMsg: ActivationChatMessage | null = null;
+
+        for (const t of activeOpen) {
+          const lastUserMsg = getLatestUserMessage(t);
+          const pingId = lastUserMsg?.id || t.id;
+          if (t.unreadByAdmin && alertedMap[t.id] !== pingId) {
+            alertedMap[t.id] = pingId;
+            if (!newestPingThread) {
+              newestPingThread = t;
+              newestPingMsg = lastUserMsg;
             }
-            return fresh.slice(0, 3);
-          });
+          }
         }
+
+        if (newestPingThread) {
+          saveLastAlertedMap(alertedMap);
+          playAdminSovietAlertSound();
+          setMinimized(false);
+          setSelectedId(newestPingThread.id);
+          void triggerAdminPhoneNotification(
+            `🚨 RABBiT TV Activation: ${newestPingThread.name} (Age ${newestPingThread.age})`,
+            newestPingMsg?.text || newestPingThread.note || "New activation chat message!"
+          );
+        }
+
+        setThreads(activeOpen);
+        setSelectedId((prev) =>
+          prev && activeOpen.some((t) => t.id === prev)
+            ? prev
+            : activeOpen[0]?.id || ""
+        );
       } catch {
         // silent background poll failure
+      } finally {
+        if (!cancelled) {
+          // 8s when foregrounded, 20s when phone screen locked / backgrounded (304 = 0 quota cost)
+          const nextDelay = document.hidden ? 20_000 : 8_000;
+          pollTimer = window.setTimeout(() => void pollChats(), nextDelay);
+        }
       }
     };
 
-    const initialTimer = window.setTimeout(() => void pollRequests(), 4500);
-    const interval = window.setInterval(() => void pollRequests(), 45000);
+    pollTimer = window.setTimeout(() => void pollChats(), 2500);
+    const onVis = () => {
+      if (!document.hidden && !cancelled) {
+        if (pollTimer) window.clearTimeout(pollTimer);
+        void pollChats();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(initialTimer);
-      window.clearInterval(interval);
+      if (pollTimer) window.clearTimeout(pollTimer);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
 
-  const acknowledgeAlert = async (reqId: string) => {
-    setActiveAlerts((prev) => prev.filter((a) => a.id !== reqId));
+  const activeThread = useMemo(
+    () => threads.find((t) => t.id === selectedId) || threads[0] || null,
+    [threads, selectedId]
+  );
+
+  // Auto-scroll chat feed when new messages arrive
+  useEffect(() => {
+    if (!minimized && activeThread) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [minimized, activeThread?.messages?.length, activeThread?.id]);
+
+  const handleSendReply = async (generateKey = false) => {
+    if (!activeThread || sendingReply) return;
+    if (!generateKey && !replyDraft.trim()) return;
+
+    setSendingReply(true);
+    setStatusBanner(null);
+    try {
+      const res = await sendAdminActivationReply({
+        threadId: activeThread.id,
+        replyText: replyDraft,
+        generateKeyForUser: generateKey,
+      });
+      if (res.ok && res.thread) {
+        setReplyDraft("");
+        setThreads((prev) =>
+          prev.map((t) => (t.id === res.thread!.id ? res.thread! : t))
+        );
+        setStatusBanner(
+          res.generatedKey
+            ? `🔑 Key [${res.generatedKey}] generated, activated & sent directly to ${activeThread.name}!`
+            : `✓ Reply sent directly to ${activeThread.name}'s screen!`
+        );
+        window.setTimeout(() => setStatusBanner(null), 3500);
+      } else {
+        setStatusBanner(`⚠️ ${res.errorMsg || "Could not send reply."}`);
+      }
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  const handleCloseThread = async (threadId: string) => {
+    setThreads((prev) => prev.filter((t) => t.id !== threadId));
     try {
       const raw = localStorage.getItem(ADMIN_SEEN_REQS_KEY);
       const arr: string[] = raw ? JSON.parse(raw) : [];
-      const next = Array.from(new Set([reqId, ...arr])).slice(0, 120);
+      const next = Array.from(new Set([threadId, ...arr])).slice(0, 120);
       localStorage.setItem(ADMIN_SEEN_REQS_KEY, JSON.stringify(next));
     } catch {
       // ignore
     }
-
-    // Mark seen remotely so other Admin devices stop alerting on this request
-    try {
-      const bundle = await fetchGistBundle();
-      const rawContent = bundle.files?.["activation_requests.json"]?.content;
-      if (bundle.ok && rawContent) {
-        const list = JSON.parse(rawContent);
-        if (Array.isArray(list)) {
-          const updated = list.map((item: any) =>
-            item && item.id === reqId ? { ...item, seenByAdmin: true } : item
-          );
-          await patchGistFiles({
-            "activation_requests.json": {
-              content: JSON.stringify(updated, null, 2),
-            },
-          });
-        }
-      }
-    } catch {
-      // ignore remote mark-seen error
-    }
+    await closeAdminActivationThread(threadId);
   };
 
   const handleCopyUser = (req: ActivationRequestRecord) => {
@@ -1082,81 +1687,243 @@ function AdminActivationAlertToast({ appTheme }: { appTheme: AppTheme }) {
     window.setTimeout(() => setCopiedId(null), 2000);
   };
 
-  if (activeAlerts.length === 0) return null;
+  const handleEnablePhoneNotifs = async () => {
+    const res = await requestAdminPhoneNotificationPermission();
+    setNotifPermission(res);
+    if (res === "granted") {
+      setStatusBanner("🔔 Phone lock-screen alerts enabled!");
+      window.setTimeout(() => setStatusBanner(null), 2500);
+    }
+  };
 
-  return (
-    <div
-      role="alert"
-      aria-live="assertive"
-      className="rabtv-vidsrc-protected fixed top-4 right-3 sm:right-5 z-[9999] flex flex-col gap-2.5 w-[min(92vw,370px)] pointer-events-auto"
+  if (threads.length === 0 || !portalTarget) return null;
+
+  const unreadCount = threads.filter((t) => t.unreadByAdmin).length;
+  const isLowRam = getHardwareLimits().effectiveMode === "low";
+
+  const bubbleUi = minimized ? (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setMinimized(false);
+      }}
+      style={{ zIndex: 2147483647 }}
+      className="rabtv-vidsrc-protected fixed bottom-5 right-4 flex items-center gap-2 rounded-full border-2 border-amber-400 bg-zinc-950/95 px-4 py-2.5 text-xs font-black text-white shadow-[0_12px_36px_rgba(239,68,68,0.65)] hover:scale-105 transition cursor-pointer pointer-events-auto"
     >
-      {activeAlerts.map((req) => (
-        <div
-          key={req.id}
-          className={`rounded-2xl border-2 p-3.5 text-white ${getHardwareLimits().effectiveMode === "low" ? "" : "backdrop-blur-xl"} space-y-2 animate-pulse ${tokens.alertToastBg}`}
-          style={{ animationIterationCount: 3 }}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 animate-ping shrink-0" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-300">
-                  HIGH ALERT • ACTIVATION REQUEST
-                </span>
-              </div>
-              <p className="text-sm font-black text-white truncate mt-0.5">
-                {req.name}{" "}
-                <span className={`font-extrabold ${tokens.labelAccent}`}>
-                  (Age {req.age})
-                </span>
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void acknowledgeAlert(req.id)}
-              aria-label="Dismiss alert"
-              className="h-7 w-7 shrink-0 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-
-          {req.note && (
-            <p className="rounded-xl bg-black/60 border border-white/10 px-2.5 py-1.5 text-[11px] text-slate-200 break-words">
-              “{req.note}”
-            </p>
-          )}
-
-          <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400">
-            <span className="font-mono truncate">ID: {req.deviceId.slice(0, 12)}</span>
-            <span className="shrink-0">
-              {new Date(req.requestedAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 animate-ping" />
+      <span>🚨 Activation Chat ({threads.length})</span>
+      {unreadCount > 0 && (
+        <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white">
+          {unreadCount} NEW
+        </span>
+      )}
+    </button>
+  ) : (
+    <div
+      role="dialog"
+      aria-live="assertive"
+      aria-label="Live Activation Support Bubble"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+      style={{ zIndex: 2147483647 }}
+      className="rabtv-vidsrc-protected fixed top-3 right-3 sm:top-4 sm:right-5 w-[min(94vw,410px)] pointer-events-auto"
+    >
+      <div
+        className={`rounded-3xl border-2 border-red-400/90 p-3.5 text-white ${
+          isLowRam ? "bg-zinc-950/98" : "bg-zinc-950/94 backdrop-blur-2xl"
+        } shadow-[0_24px_75px_rgba(0,0,0,0.96),0_0_40px_rgba(239,68,68,0.55)] space-y-2.5`}
+      >
+        {/* Top Priority Header */}
+        <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 animate-ping shrink-0" />
+            <span className="text-[10.5px] font-black uppercase tracking-widest text-amber-300 truncate">
+              🚨 LIVE ACTIVATION CHAT
             </span>
           </div>
-
-          <div className="grid grid-cols-2 gap-2 pt-0.5">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
-              onClick={() => handleCopyUser(req)}
-              className={`rounded-xl border py-1.5 px-2 text-[11px] font-extrabold transition cursor-pointer ${tokens.secondaryBtn}`}
+              onClick={() => playAdminSovietAlertSound()}
+              title="Test Soviet Power Supreme Alert Sound"
+              className="rounded-lg bg-white/10 hover:bg-white/20 px-2 py-1 text-[10px] font-bold text-amber-300 cursor-pointer"
             >
-              {copiedId === req.id ? "✓ Copied!" : "📋 Copy Name (Age)"}
+              🔊
             </button>
+            {notifPermission === "default" && (
+              <button
+                type="button"
+                onClick={() => void handleEnablePhoneNotifs()}
+                title="Enable Phone Lock-Screen Notifications"
+                className="rounded-lg bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/50 px-2 py-1 text-[10px] font-extrabold text-amber-200 cursor-pointer"
+              >
+                🔔 Alerts
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => void acknowledgeAlert(req.id)}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 py-1.5 px-2 text-[11px] font-extrabold text-white transition cursor-pointer"
+              onClick={() => setMinimized(true)}
+              title="Minimize to Corner Bubble"
+              className="h-7 w-7 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-black text-white cursor-pointer"
             >
-              ✓ Mark Handled
+              —
             </button>
           </div>
         </div>
-      ))}
+
+        {/* Multi-user tabs if more than one customer is chatting */}
+        {threads.length > 1 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+            {threads.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setSelectedId(t.id)}
+                className={`shrink-0 rounded-xl px-2.5 py-1 text-[10.5px] font-extrabold border transition cursor-pointer ${
+                  activeThread?.id === t.id
+                    ? "bg-red-600 border-amber-300 text-white"
+                    : "bg-black/70 border-white/15 text-zinc-300 hover:bg-white/10"
+                }`}
+              >
+                {t.unreadByAdmin ? "🔴 " : ""}
+                {t.name} ({t.age})
+              </button>
+            ))}
+          </div>
+        )}
+
+        {activeThread && (
+          <>
+            {/* Customer Identity Bar */}
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-black/70 border border-white/10 px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-sm font-black text-white truncate">
+                  {activeThread.name}{" "}
+                  <span className={`font-extrabold ${tokens.labelAccent}`}>
+                    (Age {activeThread.age})
+                  </span>
+                </p>
+                <p className="text-[10px] font-mono text-zinc-400 truncate">
+                  Device: {activeThread.deviceId.slice(0, 14)} • Private Thread
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleCopyUser(activeThread)}
+                className="shrink-0 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 px-2 py-1 text-[10px] font-extrabold text-cyan-200 cursor-pointer"
+              >
+                {copiedId === activeThread.id ? "✓ Copied" : "📋 Copy"}
+              </button>
+            </div>
+
+            {/* Live Chat Messages Feed */}
+            <div className="max-h-48 overflow-y-auto space-y-2 rounded-2xl bg-black/80 border border-white/10 p-2.5 scrollbar-none">
+              {(activeThread.messages || []).map((msg) => {
+                const isAdminMsg = msg.sender === "admin";
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${
+                      isAdminMsg ? "items-end" : "items-start"
+                    }`}
+                  >
+                    <div
+                      className={`max-w-[88%] rounded-2xl px-3 py-2 text-xs leading-snug break-words ${
+                        isAdminMsg
+                          ? "bg-emerald-950/90 border border-emerald-400/45 text-emerald-100"
+                          : "bg-zinc-900 border border-amber-400/35 text-white"
+                      }`}
+                    >
+                      <span className="block text-[9.5px] font-black uppercase tracking-wider opacity-75 mb-0.5">
+                        {isAdminMsg ? "🐰 You (Admin)" : `👤 ${activeThread.name}`}
+                      </span>
+                      <p className="font-semibold">{msg.text}</p>
+                      {msg.deliveredKey && (
+                        <div className="mt-1.5 rounded-lg bg-black/75 border border-amber-400/50 px-2 py-1 font-mono text-[11px] font-black text-amber-300">
+                          🔑 Key Sent: {msg.deliveredKey}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[9px] text-zinc-500 mt-0.5 px-1">
+                      {new Date(msg.sentAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                );
+              })}
+              <div ref={chatEndRef} />
+            </div>
+
+            {statusBanner && (
+              <p className="rounded-xl bg-emerald-950/85 border border-emerald-400/50 px-2.5 py-1.5 text-[11px] font-bold text-emerald-200 text-center">
+                {statusBanner}
+              </p>
+            )}
+
+            {/* Direct Reply Composer (Replies strictly to THIS user's Activation Modal!) */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                dir="ltr"
+                maxLength={240}
+                disabled={sendingReply}
+                value={replyDraft}
+                onChange={(e) => setReplyDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSendReply(false);
+                  }
+                }}
+                placeholder={`Reply directly to ${activeThread.name}...`}
+                style={{
+                  direction: "ltr",
+                  unicodeBidi: "plaintext",
+                  textAlign: "left",
+                }}
+                className="flex-1 min-w-0 rounded-xl border border-white/20 bg-black/85 px-3 py-2 text-xs font-bold text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+              <button
+                type="button"
+                disabled={sendingReply || !replyDraft.trim()}
+                onClick={() => void handleSendReply(false)}
+                className="shrink-0 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 px-3 py-2 text-xs font-black text-white cursor-pointer"
+              >
+                {sendingReply ? "..." : "Send"}
+              </button>
+            </div>
+
+            {/* One-Tap Key Delivery & Mark Handled Row */}
+            <div className="grid grid-cols-2 gap-2 pt-0.5">
+              <button
+                type="button"
+                disabled={sendingReply}
+                onClick={() => void handleSendReply(true)}
+                className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:brightness-110 disabled:opacity-45 py-2 px-2.5 text-[11px] font-black text-slate-950 shadow cursor-pointer"
+              >
+                🔑 Generate &amp; Send Key
+              </button>
+              <button
+                type="button"
+                disabled={sendingReply}
+                onClick={() => void handleCloseThread(activeThread.id)}
+                className="rounded-xl bg-emerald-600/85 hover:bg-emerald-500 py-2 px-2.5 text-[11px] font-extrabold text-white cursor-pointer"
+              >
+                ✓ Mark Done &amp; Close
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
+
+  return createPortal(bubbleUi, portalTarget);
 }
 
 interface ActivationModalProps {
@@ -1233,15 +2000,21 @@ export function ActivationModal({
   const [ageLockError, setAgeLockError] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Message Admin for Activation Code States
+  // Live 2-Way Activation Support Chat States (Isolated Strictly to This Device)
   const [showRequestAdminBox, setShowRequestAdminBox] = useState(false);
   const [requestNote, setRequestNote] = useState("");
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [chatThread, setChatThread] = useState<ActivationRequestRecord | null>(
+    null
+  );
+  const [isSyncingChat, setIsSyncingChat] = useState(false);
   const [requestStatusMsg, setRequestStatusMsg] = useState<{
     type: "ok" | "err";
     text: string;
   } | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const lastAdminReplyIdRef = useRef<string>("");
+  const userChatEndRef = useRef<HTMLDivElement>(null);
 
   // Extended Setup Features (Quality, Radio Station, Large Buttons, Autoplay, RAM Mode)
   const [selectedQuality, setSelectedQuality] = useState<StreamQuality>(
@@ -1925,7 +2698,72 @@ export function ActivationModal({
     }
   };
 
-  // Auto-filled Message Admin for Activation Code (Triggers High-Alert Admin Toast)
+  // Sync ONLY this device's private Activation Chat thread with Admin (ETag 304 safe!)
+  const syncMyActivationChat = useCallback(
+    async (force = false) => {
+      if (!effectiveOpen || !isGistConfigured()) return;
+      const devId = deviceId || getOrCreateDeviceId();
+      const shortFp = hwFingerprint ? hwFingerprint.slice(0, 12) : "";
+      if (!devId && !shortFp) return;
+
+      setIsSyncingChat(true);
+      try {
+        const all = await fetchActivationThreads({
+          force,
+          maxAgeMs: force ? 0 : 4000,
+        });
+        const mine =
+          all.find(
+            (t) =>
+              (devId && t.deviceId === devId) ||
+              (shortFp && t.hwFingerprint && t.hwFingerprint === shortFp)
+          ) || null;
+
+        if (mine) {
+          const msgs = mine.messages || [];
+          const latestAdminMsg = [...msgs]
+            .reverse()
+            .find((m) => m.sender === "admin");
+          if (
+            latestAdminMsg &&
+            latestAdminMsg.id !== lastAdminReplyIdRef.current
+          ) {
+            if (lastAdminReplyIdRef.current !== "") {
+              playCustomerReplyPing();
+            }
+            lastAdminReplyIdRef.current = latestAdminMsg.id;
+          }
+          setChatThread(mine);
+        }
+      } finally {
+        setIsSyncingChat(false);
+      }
+    },
+    [effectiveOpen, deviceId, hwFingerprint]
+  );
+
+  // Live poll every 6s while the customer has the Activation Chat drawer open
+  useEffect(() => {
+    if (!effectiveOpen || !showRequestAdminBox) return;
+    void syncMyActivationChat(true);
+    const interval = window.setInterval(() => {
+      if (!document.hidden) {
+        void syncMyActivationChat(false);
+      }
+    }, 6000);
+    return () => window.clearInterval(interval);
+  }, [effectiveOpen, showRequestAdminBox, syncMyActivationChat]);
+
+  useEffect(() => {
+    if (showRequestAdminBox && chatThread?.messages?.length) {
+      userChatEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }
+  }, [showRequestAdminBox, chatThread?.messages?.length]);
+
+  // Send a live 2-way chat message from this user's Activation Modal directly to Admin's floating bubble
   const handleSendAdminActivationRequest = async () => {
     const cleanName = sanitizeText(profileNameInput, 25);
     const parsedAge = parseInt(userAgeInput.trim(), 10);
@@ -1949,13 +2787,26 @@ export function ActivationModal({
       return;
     }
 
-    const lastSent = Number(localStorage.getItem(REQUEST_COOLDOWN_KEY) || 0);
-    const waitMs = REQUEST_COOLDOWN_MS - (Date.now() - lastSent);
-    if (waitMs > 0) {
-      const waitSec = Math.ceil(waitMs / 1000);
+    const msgToSend =
+      requestNote.trim() ||
+      (!chatThread
+        ? `Hi Rabbit, requesting an activation key for ${cleanName} (Age ${parsedAge}).`
+        : "");
+
+    if (!msgToSend) {
       setRequestStatusMsg({
         type: "err",
-        text: `⏳ Request already sent! Please wait ${waitSec}s before sending another.`,
+        text: "⚠️ Type a message to Rabbit before sending.",
+      });
+      return;
+    }
+
+    const lastSent = Number(localStorage.getItem(REQUEST_COOLDOWN_KEY) || 0);
+    const waitMs = CHAT_SEND_COOLDOWN_MS - (Date.now() - lastSent);
+    if (waitMs > 0) {
+      setRequestStatusMsg({
+        type: "err",
+        text: "⏳ Just a second before sending the next message...",
       });
       return;
     }
@@ -1965,24 +2816,27 @@ export function ActivationModal({
     try {
       const devId = deviceId || getOrCreateDeviceId();
       const fp = hwFingerprint || (await computeHardwareFingerprint());
-      const res = await sendHighAlertAdminRequest(
+      const res = await sendUserActivationChatMessage(
         cleanName,
         parsedAge,
-        requestNote,
+        msgToSend,
         devId,
         fp
       );
-      if (res.ok) {
+      if (res.ok && res.thread) {
         localStorage.setItem(REQUEST_COOLDOWN_KEY, String(Date.now()));
         setRequestNote("");
+        setChatThread(res.thread);
         setRequestStatusMsg({
           type: "ok",
-          text: `🚨 High-priority activation request sent to Rabbit for ${cleanName} (Age ${parsedAge})!`,
+          text: "✓ Sent! Keep this window open — Rabbit's reply will appear right here.",
         });
+        window.setTimeout(() => setRequestStatusMsg(null), 4000);
       } else {
         setRequestStatusMsg({
           type: "err",
-          text: res.errorMsg || "⚠️ Could not send request. Try WhatsApp or Text.",
+          text:
+            res.errorMsg || "⚠️ Could not send message. Try WhatsApp or Text.",
         });
       }
     } finally {
@@ -2606,68 +3460,170 @@ export function ActivationModal({
               </span>
             </button>
 
-            {/* Built-in Message Admin for Activation Code (Auto-Fills Name & Age -> High Alert Toast) */}
+            {/* Built-in Live 2-Way Activation Chat with Admin (Isolated strictly to this device) */}
             <div className={`rounded-2xl border border-white/15 bg-black/65 p-3 space-y-2.5 ${isLowRam ? "" : "backdrop-blur-md"}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-extrabold text-white">
-                  Need an activation code?
-                </span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-extrabold text-white">
+                    Need an activation code?
+                  </span>
+                  {chatThread && (chatThread.messages || []).some((m) => m.sender === "admin") && (
+                    <span className="rounded-full bg-emerald-500/20 border border-emerald-400/50 px-2 py-0.5 text-[9.5px] font-black text-emerald-300">
+                      🐰 Admin Replied!
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowRequestAdminBox((v) => !v)}
                   className={`rabtv-act-focus rounded-xl border px-3 py-1.5 text-[11px] font-extrabold transition cursor-pointer ${tokens.secondaryBtn}`}
                 >
                   {showRequestAdminBox
-                    ? "✕ Close Request"
-                    : "📩 Message Admin for Code"}
+                    ? "✕ Hide Chat"
+                    : "💬 Live Chat with Admin"}
                 </button>
               </div>
 
               {showRequestAdminBox && (
-                <div className="space-y-2 pt-1 border-t border-white/10">
+                <div className="space-y-2.5 pt-2 border-t border-white/10">
+                  {/* Live Header & Identity Strip */}
                   <div className="flex flex-wrap items-center justify-between gap-1.5 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2 text-[11px]">
-                    <span className="text-slate-300">
-                      Auto-filled:{" "}
+                    <span className="text-slate-300 truncate">
+                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 mr-1.5 align-middle" />
+                      Chatting as{" "}
                       <strong className="text-white">
                         {profileNameInput.trim() || "Enter Name above"}
                       </strong>{" "}
-                      • Age:{" "}
+                      (Age{" "}
                       <strong className={tokens.labelAccent}>
-                        {userAgeInput.trim() || "Enter Age above"}
+                        {userAgeInput.trim() || "?"}
                       </strong>
+                      )
                     </span>
+                    <button
+                      type="button"
+                      disabled={isSyncingChat}
+                      onClick={() => void syncMyActivationChat(true)}
+                      className="rounded-lg bg-white/10 hover:bg-white/20 px-2 py-0.5 text-[10px] font-bold text-cyan-300 cursor-pointer shrink-0"
+                    >
+                      {isSyncingChat ? "..." : "↻ Refresh"}
+                    </button>
                   </div>
 
-                  <input
-                    type="text"
-                    dir="ltr"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    maxLength={140}
-                    value={requestNote}
-                    onChange={(e) => setRequestNote(e.target.value)}
-                    placeholder="Optional note (e.g. e-Transfer sent, referred by...)"
-                    style={{
-                      direction: "ltr",
-                      unicodeBidi: "plaintext",
-                      textAlign: "left",
-                    }}
-                    className={`rabtv-act-focus w-full rounded-xl border px-3 py-2 text-xs font-bold focus:outline-none ${tokens.inputClass}`}
-                  />
+                  {/* Private 2-Way Message Feed */}
+                  <div className="max-h-48 overflow-y-auto space-y-2 rounded-2xl border border-white/10 bg-black/80 p-2.5 scrollbar-none">
+                    {!chatThread || (chatThread.messages || []).length === 0 ? (
+                      <div className="py-4 text-center space-y-1">
+                        <p className="text-xs font-bold text-zinc-200">
+                          🐰 Direct Line to Rabbit
+                        </p>
+                        <p className="text-[11px] text-zinc-400 leading-snug">
+                          Type a quick message (e.g. &ldquo;Sent $20 e-Transfer&rdquo;) and
+                          Rabbit&apos;s reply &amp; unlock key will appear right in this box.
+                        </p>
+                      </div>
+                    ) : (
+                      (chatThread.messages || []).map((msg) => {
+                        const isAdmin = msg.sender === "admin";
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex flex-col ${
+                              isAdmin ? "items-start" : "items-end"
+                            }`}
+                          >
+                            <div
+                              className={`max-w-[88%] rounded-2xl px-3 py-2 text-xs leading-snug break-words ${
+                                isAdmin
+                                  ? "bg-emerald-950/90 border border-emerald-400/50 text-emerald-100"
+                                  : "bg-zinc-900 border border-cyan-400/35 text-white"
+                              }`}
+                            >
+                              <span className="block text-[9.5px] font-black uppercase tracking-wider opacity-75 mb-0.5">
+                                {isAdmin ? "🐰 Rabbit (Admin)" : "You"}
+                              </span>
+                              <p className="font-semibold">{msg.text}</p>
 
-                  <button
-                    type="button"
-                    disabled={isSendingRequest}
-                    onClick={() => void handleSendAdminActivationRequest()}
-                    className={`rabtv-act-focus w-full rounded-xl py-2.5 px-3 text-xs font-black uppercase tracking-wider text-white transition cursor-pointer disabled:opacity-50 ${getPrimaryBgColor(
-                      appTheme
-                    )}`}
-                  >
-                    {isSendingRequest
-                      ? "📡 Sending High-Priority Alert..."
-                      : "🚨 Send Activation Request to Admin"}
-                  </button>
+                              {/* 1-Tap Auto-Fill Key when Admin sends a key! */}
+                              {msg.deliveredKey && (
+                                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-black/80 border border-amber-400/60 px-2.5 py-1.5">
+                                  <span className="font-mono text-xs font-black text-amber-300">
+                                    🔑 {msg.deliveredKey}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPasscodeInput(msg.deliveredKey || "");
+                                      setShowPasscode(true);
+                                      setPasscodeError(false);
+                                      setRequestStatusMsg({
+                                        type: "ok",
+                                        text: "✓ Unlock key filled into the box above! Tap Enter RABBiT TV.",
+                                      });
+                                    }}
+                                    className="rounded-lg bg-amber-400 hover:bg-amber-300 px-2.5 py-1 text-[10px] font-black text-slate-950 cursor-pointer"
+                                  >
+                                    ⚡ Fill Key
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-[9px] text-zinc-500 mt-0.5 px-1">
+                              {new Date(msg.sentAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={userChatEndRef} />
+                  </div>
+
+                  {/* Chat Message Composer */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      dir="ltr"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      maxLength={240}
+                      disabled={isSendingRequest}
+                      value={requestNote}
+                      onChange={(e) => setRequestNote(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void handleSendAdminActivationRequest();
+                        }
+                      }}
+                      placeholder={
+                        chatThread
+                          ? "Reply to Rabbit..."
+                          : "Say hi or note e-Transfer sent..."
+                      }
+                      style={{
+                        direction: "ltr",
+                        unicodeBidi: "plaintext",
+                        textAlign: "left",
+                      }}
+                      className={`rabtv-act-focus flex-1 min-w-0 rounded-xl border px-3 py-2 text-xs font-bold focus:outline-none ${tokens.inputClass}`}
+                    />
+
+                    <button
+                      type="button"
+                      disabled={isSendingRequest}
+                      onClick={() => void handleSendAdminActivationRequest()}
+                      className={`rabtv-act-focus shrink-0 rounded-xl py-2 px-3.5 text-xs font-black uppercase tracking-wider text-white transition cursor-pointer disabled:opacity-50 ${getPrimaryBgColor(
+                        appTheme
+                      )}`}
+                    >
+                      {isSendingRequest ? "Sending..." : "➤ Send"}
+                    </button>
+                  </div>
 
                   {requestStatusMsg && (
                     <p
