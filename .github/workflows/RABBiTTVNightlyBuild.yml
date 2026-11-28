@@ -1,0 +1,593 @@
+name: Build Global Android APK & Publish Nightly
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js (Node 22 Required for TanStack Start)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Setup Java 21 (Required for Gradle/Android Compilation)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Cache Gradle Dependencies (Safe Without Pre-existing Android Folder)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-cap6-${{ hashFiles('package-lock.json', 'capacitor.config.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-cap6-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Non-Blocking Dependency Security Check
+        run: npm audit --audit-level=high || true
+
+      - name: Verify Capacitor Config & V2 Brand Assets Exist
+        run: |
+          if [ ! -f capacitor.config.json ]; then
+            echo "Error: capacitor.config.json is missing!"
+            exit 1
+          fi
+          if [ ! -f assets/RabbitIconV2.jpg ]; then
+            echo "Error: assets/RabbitIconV2.jpg is missing!"
+            exit 1
+          fi
+          if [ ! -f assets/RabbitTVBannerV2.jpg ]; then
+            echo "Error: assets/RabbitTVBannerV2.jpg is missing!"
+            exit 1
+          fi
+
+      - name: Apply Explicit Patches for Android TV App
+        run: |
+          mkdir -p src/lib src/routes
+
+          # 0. Copy settings store & theme types to src/lib/settings.ts
+          if [ -f patches/settings.ts ]; then
+            cp patches/settings.ts src/lib/settings.ts
+            echo "Successfully patched src/lib/settings.ts"
+          else
+            echo "Warning: patches/settings.ts not found!"
+          fi
+
+          # 1. Copy storage engine to src/lib/watch-history.ts
+          if [ -f patches/watch-history.ts ]; then
+            cp patches/watch-history.ts src/lib/watch-history.ts
+            echo "Successfully patched src/lib/watch-history.ts"
+          else
+            echo "Warning: patches/watch-history.ts not found!"
+          fi
+
+          # 2. Copy watch history route UI to src/routes/watch-history.tsx
+          if [ -f patches/watch-history.tsx ]; then
+            cp patches/watch-history.tsx src/routes/watch-history.tsx
+            echo "Successfully patched src/routes/watch-history.tsx"
+          else
+            echo "Warning: patches/watch-history.tsx not found!"
+          fi
+
+          # 3. Copy details route UI to src/routes/details.tsx
+          if [ -f patches/details.tsx ]; then
+            cp patches/details.tsx src/routes/details.tsx
+            echo "Successfully patched src/routes/details.tsx"
+          else
+            echo "Error: patches/details.tsx not found!"
+            exit 1
+          fi
+
+          # 4. Copy main catalog & My List UI to src/routes/index.tsx
+          if [ -f patches/index.tsx ]; then
+            cp patches/index.tsx src/routes/index.tsx
+            echo "Successfully patched src/routes/index.tsx"
+          else
+            echo "Warning: patches/index.tsx not found!"
+          fi
+
+          # 5. Copy root UI (settings & tabs) to src/routes/__root.tsx
+          if [ -f patches/__root.tsx ]; then
+            cp patches/__root.tsx src/routes/__root.tsx
+            echo "Successfully patched src/routes/__root.tsx"
+          else
+            echo "Error: patches/__root.tsx not found!"
+            exit 1
+          fi
+
+          # 6. Copy global styles to src/styles.css (with slow-glow animations)
+          if [ -f patches/styles.css ]; then
+            cp patches/styles.css src/styles.css
+            echo "Successfully patched src/styles.css"
+          else
+            echo "Warning: patches/styles.css not found!"
+          fi
+
+      - name: Create Temporary index.html for Capacitor Build
+        run: |
+          cat << 'EOF' > index.html
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>RABBiT TV</title>
+            </head>
+            <body>
+              <div id="root"></div>
+              <script type="module" src="/src/entry-client.tsx"></script>
+            </body>
+          </html>
+          EOF
+
+      - name: Generate Dynamic Version File & Recent Changelog
+        run: |
+          mkdir -p src/lib
+          node -e '
+            const fs = require("fs");
+            const { execSync } = require("child_process");
+            const version = JSON.parse(fs.readFileSync("./package.json", "utf8")).version;
+            const buildDate = new Date().toISOString().split("T")[0];
+            let changes = [];
+            const blocked = /(gist|pat|token|secret|keystore|admin|passcode|keys\.json|9654|1988|trial_devices|fingerprint|lockout|enforcement|shadow_ban|bypass|workflow|\.ya?ml|\.tsx?|\.mjs|\.css|patch|env|webhook|api_key|signing|auth)/i;
+            try {
+              changes = execSync("git log -n 20 --pretty=format:%s", { encoding: "utf8" })
+                .split("\n")
+                .map((s) => s.trim())
+                .filter((s) => s && !s.startsWith("chore: auto-bump") && !s.startsWith("Merge ") && !blocked.test(s))
+                .slice(0, 5);
+            } catch {}
+            if (changes.length === 0) {
+              changes = [
+                "UI layout polish across phones, TVs, and projectors",
+                "Streaming stability, low-RAM optimizations, and under-the-hood improvements"
+              ];
+            }
+            const content = [
+              `export const APP_VERSION = ${JSON.stringify(version)};`,
+              `export const BUILD_TYPE = "nightly";`,
+              `export const IS_STABLE = false;`,
+              `export const BUILD_DATE = ${JSON.stringify(buildDate)};`,
+              `export const RECENT_CHANGES: string[] = ${JSON.stringify(changes, null, 2)};`,
+              ""
+            ].join("\n");
+            fs.writeFileSync("src/lib/version.ts", content);
+            console.log("Generated src/lib/version.ts for", version, "on", buildDate);
+          '
+
+      - name: Build Web Assets for Capacitor (Executes Version Bump)
+        env:
+          CAPACITOR_BUILD: "true"
+          VITE_TMDB_API_KEY: ${{ secrets.VITE_TMDB_API_KEY }}
+          TMDB_ACCESS_TOKEN: ${{ secrets.TMDB_ACCESS_TOKEN }}
+          VITE_GH_PAT: ${{ secrets.GH_PAT }}
+          VITE_GIST_ID: ${{ secrets.VITE_GIST_ID }}
+        run: npm run build
+
+      - name: Strip Debug Source Maps from Web Bundle
+        run: |
+          if [ -d dist/client ]; then
+            find dist/client -name "*.map" -delete || true
+            echo "Removed source map files from dist/client"
+          fi
+
+      - name: Extract App Name & Bumped Version for Artifacts
+        id: version-extractor
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "artifact_name=rabbittv-v${VERSION}-nightly" >> $GITHUB_OUTPUT
+          echo "apk_filename=rabbittv-v${VERSION}-nightly.apk" >> $GITHUB_OUTPUT
+
+          echo "Building RABBiT TV Nightly version ${VERSION}"
+
+      - name: Map TanStack Shell to Capacitor index.html
+        run: |
+          if [ -f dist/client/_shell.html ]; then
+            cp dist/client/_shell.html dist/client/index.html
+            echo "Successfully copied _shell.html to index.html"
+          elif [ ! -f dist/client/index.html ]; then
+            echo "Error: Could not find _shell.html or index.html in dist/client"
+            ls -R dist/ || true
+            exit 1
+          fi
+
+      - name: Create Dummy www Folder for Capacitor Init
+        run: |
+          mkdir -p www
+          cp dist/client/index.html www/index.html
+
+      - name: Initialize or Sync Capacitor Android Platform Safely
+        run: |
+          if [ -f android/app/rabbittv.keystore ]; then
+            mkdir -p /tmp/keystore_backup
+            cp android/app/rabbittv.keystore /tmp/keystore_backup/rabbittv.keystore
+            echo "Backed up existing keystore."
+          fi
+
+          if [ ! -d android ] || [ ! -f android/app/build.gradle ] || [ ! -f android/gradlew ]; then
+            echo "Android platform missing or incomplete, re-creating..."
+            rm -rf android
+            npx @capacitor/cli add android
+          else
+            echo "Android platform exists, syncing..."
+            npx @capacitor/cli sync android
+          fi
+
+          if [ -f /tmp/keystore_backup/rabbittv.keystore ]; then
+            mkdir -p android/app
+            cp /tmp/keystore_backup/rabbittv.keystore android/app/rabbittv.keystore
+            echo "Restored keystore to android/app/"
+          fi
+
+          if [ -f android/gradlew ]; then
+            chmod +x android/gradlew
+          fi
+
+      - name: Sync Version & Trim Unused Language Packs in build.gradle
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          CLEAN_VER="${VERSION%%-*}"
+          MAJOR=$(echo "$CLEAN_VER" | cut -d. -f1)
+          MINOR=$(echo "$CLEAN_VER" | cut -d. -f2)
+          PATCH=$(echo "$CLEAN_VER" | cut -d. -f3)
+          BUILD=$(echo "$CLEAN_VER" | cut -d. -f4)
+          [ -z "$MAJOR" ] && MAJOR=1
+          [ -z "$MINOR" ] && MINOR=0
+          [ -z "$PATCH" ] && PATCH=0
+          [ -z "$BUILD" ] && BUILD=0
+          VERSION_CODE=$((10#$MAJOR * 1000000 + 10#$MINOR * 10000 + 10#$PATCH * 100 + 10#$BUILD))
+
+          echo "Updating Android build.gradle with Version Name: $VERSION and Version Code: $VERSION_CODE"
+
+          if [ -f android/app/build.gradle ]; then
+            sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/g" android/app/build.gradle
+            sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/g" android/app/build.gradle
+
+            python3 -c '
+          path = "android/app/build.gradle"
+          txt = open(path, encoding="utf-8").read()
+          if "resourceConfigurations" not in txt and "resConfigs" not in txt and "defaultConfig {" in txt:
+              txt = txt.replace("defaultConfig {", "defaultConfig {\n        resConfigs \"en\"", 1)
+              open(path, "w", encoding="utf-8").write(txt)
+              print("Added resConfigs \"en\" to defaultConfig")
+          '
+          else
+            echo "Error: android/app/build.gradle not found!"
+            exit 1
+          fi
+
+      - name: Convert V2 Icon & TV Banner JPGs to Optimized PNGs
+        run: |
+          pip install --quiet --no-cache-dir Pillow
+          python3 -c '
+          import os
+          from PIL import Image
+
+          if os.path.exists("assets/RabbitIconV2.jpg"):
+              icon = Image.open("assets/RabbitIconV2.jpg").convert("RGBA")
+              icon.save("assets/icon.png", "PNG")
+              print("Converted RabbitIconV2.jpg -> assets/icon.png")
+          else:
+              print("Error: assets/RabbitIconV2.jpg not found!")
+              exit(1)
+
+          if os.path.exists("assets/RabbitTVBannerV2.jpg"):
+              banner = Image.open("assets/RabbitTVBannerV2.jpg").convert("RGBA")
+              banner_320 = banner.resize((320, 180), Image.Resampling.LANCZOS)
+              banner_320.save("assets/tv_banner_320.png", "PNG", optimize=True)
+              banner_hd = banner.resize((1280, 720), Image.Resampling.LANCZOS)
+              banner_hd.save("assets/tv_banner_hd.png", "PNG", optimize=True)
+              print("Converted RabbitTVBannerV2.jpg -> 320x180 & 1280x720 PNGs")
+          else:
+              print("Error: assets/RabbitTVBannerV2.jpg not found!")
+              exit(1)
+          '
+
+      - name: Generate App Icons and Splash Screens from V2 Assets
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#0c0a09' --iconBackgroundColorDark '#0c0a09'
+
+      - name: Bundle Fresh Offline Ad & Popup Blocklist (Safe Fallback)
+        run: |
+          mkdir -p android/app/src/main/assets
+          python3 -c '
+          import urllib.request, re
+
+          urls = [
+              "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/popupads.txt",
+              "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/adblock/popupads.txt",
+          ]
+          domains = set()
+          for url in urls:
+              try:
+                  req = urllib.request.Request(url, headers={"User-Agent": "RabbitTV-Build/1.0"})
+                  with urllib.request.urlopen(req, timeout=20) as resp:
+                      raw = resp.read().decode("utf-8", errors="ignore")
+                  for line in raw.splitlines():
+                      line = line.strip()
+                      if not line or line.startswith("!") or line.startswith("#"):
+                          continue
+                      m = re.match(r"^\|\|([a-z0-9.-]+\.[a-z]{2,})\^$", line, re.IGNORECASE)
+                      if m:
+                          domains.add(m.group(1).lower())
+                  if domains:
+                      print(f"Downloaded {len(domains)} popup/ad domains from {url}")
+                      break
+              except Exception as e:
+                  print(f"Warning: could not fetch {url}: {e}")
+
+          out_path = "android/app/src/main/assets/adblock_domains.txt"
+          with open(out_path, "w", encoding="utf-8") as f:
+              for d in sorted(domains):
+                  f.write(d + "\n")
+          print(f"Wrote {len(domains)} domains to {out_path}")
+          ' || true
+
+      - name: Install Native Android Files, TV Banners & Launch Theme
+        run: |
+          mkdir -p android/app/src/main/java/com/rabbittv/app
+          cp patches/MainActivity.java android/app/src/main/java/com/rabbittv/app/MainActivity.java
+
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/drawable-xhdpi
+          mkdir -p android/app/src/main/res/drawable-xxxhdpi
+          cp assets/tv_banner_320.png android/app/src/main/res/drawable/tv_banner.png
+          cp assets/tv_banner_320.png android/app/src/main/res/drawable-xhdpi/tv_banner.png
+          cp assets/tv_banner_hd.png android/app/src/main/res/drawable-xxxhdpi/tv_banner.png
+
+          cp patches/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+
+          # Bundle custom Admin Activation Chat notification sound for native Android lock-screen alerts
+          mkdir -p android/app/src/main/res/raw
+          if [ -f "assets/Notification-sounds/Soviet Power Supreme.mp3" ]; then
+            cp "assets/Notification-sounds/Soviet Power Supreme.mp3" android/app/src/main/res/raw/soviet_power_supreme.mp3
+            echo "Bundled Soviet Power Supreme.mp3 into Android res/raw/soviet_power_supreme.mp3"
+          fi
+
+          mkdir -p android/app/src/main/res/values
+          cat << 'EOF' > android/app/src/main/res/values/styles.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
+                  <item name="colorPrimary">@color/colorPrimary</item>
+                  <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+                  <item name="colorAccent">@color/colorAccent</item>
+              </style>
+
+              <style name="AppTheme.NoActionBar" parent="AppTheme">
+                  <item name="windowActionBar">false</item>
+                  <item name="windowNoTitle">true</item>
+              </style>
+
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+                  <item name="android:windowBackground">#0c0a09</item>
+                  <item name="android:windowSplashScreenAnimatedIcon">@drawable/tv_banner</item>
+                  <item name="android:windowSplashScreenBackground">#0c0a09</item>
+              </style>
+          </resources>
+          EOF
+
+      - name: Verify Android Directory Exists
+        run: |
+          if [ ! -d android ]; then
+            echo "Error: android directory was not created!"
+            exit 1
+          fi
+
+      - name: Build Signed Release APK with Custom Keystore
+        env:
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS_NAME: ${{ secrets.KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          cd android
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/app/rabbittv.keystore \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASS" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS_NAME" \
+            -Pandroid.injected.signing.key.password="$KEY_PASS"
+
+      - name: Save Signed APK Locally for Workflow Run (APK Only)
+        id: apk-prep
+        run: |
+          mkdir -p updates
+          APK_FILE="updates/${{ steps.version-extractor.outputs.apk_filename }}"
+          cp android/app/build/outputs/apk/release/app-release.apk "$APK_FILE"
+          APK_SIZE_MB=$(python3 -c "import os; print(f'{os.path.getsize("$APK_FILE") / (1024 * 1024):.1f} MB')")
+          echo "apk_size=${APK_SIZE_MB}" >> $GITHUB_OUTPUT
+          echo "Successfully saved APK as $APK_FILE ($APK_SIZE_MB)"
+
+      - name: Generate Security-Filtered Public Release Notes
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          REL_VERSION: ${{ steps.version-extractor.outputs.version }}
+          REL_APK_NAME: ${{ steps.version-extractor.outputs.apk_filename }}
+          REL_APK_SIZE: ${{ steps.apk-prep.outputs.apk_size }}
+        run: |
+          python3 - << 'PYEOF'
+          import datetime
+          import os
+          import re
+          import subprocess
+
+          version = os.environ.get("REL_VERSION", "2.6.0.0")
+          apk_name = os.environ.get("REL_APK_NAME", f"rabbittv-v{version}-nightly.apk")
+          apk_size = os.environ.get("REL_APK_SIZE", "")
+          build_date = datetime.datetime.now(datetime.timezone.utc).strftime("%B %d, %Y")
+
+          # Security filter: strip any commit mentioning internal secrets, keys, admin logic, or raw source files
+          sensitive_pattern = re.compile(
+              r"(gist|gh_pat|pat\b|token|secret|keystore|key_alias|key_pass|admin|passcode|unlock.?code|"
+              r"keys\.json|9654|1988|trial_devices|fingerprint|sha256|hash|lockout|enforcement|shadow.?ban|"
+              r"ban\b|mute\b|bypass|workflow|\.ya?ml|\.tsx?|\.jsx?|\.mjs|\.css|\.json|\.java|\.xml|"
+              r"patches/|scripts/|src/|android/|env\b|api.?key|webhook|device.?id|pin\b|gradle|capacitor|"
+              r"vite\.config|package\.json|dependabot|chore:|merge\s+pull|merge\s+branch|initial\s+commit|"
+              r"update\s+[a-z0-9_.-]+\.[a-z]{2,4}|create\s+[a-z0-9_.-]+\.[a-z]{2,4}|delete\s+[a-z0-9_.-]+\.[a-z]{2,4})",
+              re.IGNORECASE,
+          )
+
+          def run_git(args):
+              try:
+                  return subprocess.check_output(["git"] + args, text=True, stderr=subprocess.DEVNULL).strip()
+              except Exception:
+                  return ""
+
+          prev_tag = run_git(["describe", "--tags", "--abbrev=0"])
+          log_range = f"{prev_tag}..HEAD" if prev_tag else "-n 18"
+          log_args = ["log", "--pretty=format:%s"]
+          if prev_tag:
+              log_args.append(log_range)
+          else:
+              log_args.extend(["-n", "18"])
+
+          raw_commits = [c.strip() for c in run_git(log_args).splitlines() if c.strip()]
+
+          clean_updates = []
+          seen = set()
+          for msg in raw_commits:
+              if sensitive_pattern.search(msg):
+                  continue
+              # Strip conventional commit prefixes (feat:, fix:, perf:, ui:)
+              cleaned = re.sub(r"^(feat|fix|perf|ui|style|refactor|docs)(\([^)]*\))?:\s*", "", msg, flags=re.IGNORECASE).strip()
+              cleaned = re.sub(r"\s*\(#\d+\)$", "", cleaned).strip()
+              if len(cleaned) < 6:
+                  continue
+              cleaned = cleaned[0].upper() + cleaned[1:]
+              key = cleaned.lower()
+              if key not in seen:
+                  seen.add(key)
+                  clean_updates.append(cleaned)
+              if len(clean_updates) >= 8:
+                  break
+
+          if not clean_updates:
+              clean_updates = [
+                  "Layout and viewport polish across Android phones, tablets, TVs, and projectors.",
+                  "Improved streaming stability, responsiveness, and low-RAM performance.",
+                  "Under-the-hood reliability, ad-blocking, and security enhancements.",
+              ]
+
+          updates_md = "\n".join(f"- {item}" for item in clean_updates)
+
+          notes = f"""# 🐰 RABBiT TV v{version} (Nightly Build)
+
+          > **"Your Screen. Zero Ads. Zero Monthly Bills."**
+          > *Built independently for viewers who just want fast, clean, hassle-free entertainment on any Android screen.*
+
+          **Release Date:** {build_date}  
+          **Package:** `{apk_name}`{f" ({apk_size})" if apk_size else ""}  
+          **Channel:** Nightly Pre-Release (Android Phones, Tablets, Fire TV Sticks, Google/Android TV & Projectors)
+
+          ---
+
+          ## 🌟 Who We Are & What RABBiT TV Is
+
+          **RABBiT TV** is an independently crafted, community-focused entertainment app designed to bring **movies, TV series, and 280+ live TV & sports channels** together in one streamlined, ad-free hub.
+
+          We built RABBiT TV out of frustration with endless monthly subscriptions, cluttered interfaces, aggressive popups, and apps that crawl on older streaming sticks. Our mission is simple:
+          - **Zero Ads & Zero Popups:** Built-in ad & redirect blocking keeps playback clean.
+          - **Zero Tracking:** Your watch history, lists, and settings stay privately on your own device.
+          - **Zero Monthly Bills:** Try everything free with a 7-day trial, or unlock permanent lifetime access with a single one-time key.
+          - **Built for Every Screen & Every Age:** From handheld phones to 100-inch projectors, with dedicated modes for older 1–2GB streaming sticks, seniors, and kids.
+
+          ---
+
+          ## 🚀 What's New in v{version}
+
+          {updates_md}
+
+          ---
+
+          ## 🧭 Quick App Walkthrough
+
+          1. **Home Feed & Smart Discovery:** Browse Trending hits, filter by streaming platforms (Netflix, Prime, Disney+) or genres, resume titles from **Continue Watching**, spin **Surprise Me**, or launch **Movie Night Matcher** to pick something fast.
+          2. **Movies, Series & Collections:** Tap any poster for full ratings, cast search, live **Estimated Finish Time**, flip-to-preview **Official Trailers**, chronological **Franchise Collections**, and **Custom Watchlist Shelves**.
+          3. **280+ Live TV & Sports Channels:** Unified genre guide with live stream health badges, instant search, pinned favorite channels, a slide-over **Mini-Guide**, and **Split-Screen** viewing on 4GB+ devices.
+          4. **Crystal Console Sidebar:** Tap your profile pill in the top-left corner to customize **6 Neon Themes**, poster frames, built-in **Background Lobby Radio**, **Sleep Timer**, **Screensaver**, and one-tap **JSON Backup & Restore**.
+          5. **Senior Easy Mode, Kids Lock & Stick Mode:** Turn on **One-Tap Senior Easy Mode** (bigger text, enlarged buttons, XL cursor, high-contrast TV focus), lock **Kids Safe Mode** behind a PIN, adjust **TV/Projector Screen Safe-Zone**, or enable **1–2GB Low-RAM Mode** for smooth performance on Fire Sticks.
+          6. **Movie Club & Watch History:** Track every movie, episode, and live channel you watch, spot freshly aired shows with **New Episode Radar**, and join **Movie Club** for anonymous movie-buff cards and spoiler-safe Watch Buddy chats.
+          7. **Built-In App Tour & Bug Tracker:** Replay the interactive guided tour anytime from the Sidebar or footer, or use the **Community Bug Tracker** to report technical issues and watch fixes go live.
+
+          ---
+
+          ## 📲 How to Install (Android / Fire TV / Google TV)
+
+          1. Download **`{apk_name}`** from the **Assets** section below.
+          2. Open the downloaded file on your Android device (if prompted, allow **"Install unknown apps"** for your browser or file manager — this is normal for independent apps distributed outside the Play Store).
+          3. Launch **RABBiT TV**, pick your theme and display preferences, and start with a **7-day free trial** or enter your **lifetime unlock key** (you can also use the built-in live chat right inside the welcome screen if you need a hand).
+
+          *Note: Metadata, posters, and trailers are powered by TMDB. RABBiT TV does not host media files.*
+          """
+
+          # Dedent cleanly and write outside repo working tree so git rebase stays spotless
+          lines = notes.splitlines()
+          cleaned_lines = [line[10:] if line.startswith("          ") else line for line in lines]
+          with open("/tmp/release_notes.md", "w", encoding="utf-8") as f:
+              f.write("\n".join(cleaned_lines).strip() + "\n")
+
+          print("Generated /tmp/release_notes.md successfully:")
+          print(open("/tmp/release_notes.md", encoding="utf-8").read()[:600])
+          PYEOF
+
+      - name: Commit Version Bump & Manifest (Excluding APK Binary)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.io"
+          # Only commit config changes and package version bumps—never commit the raw APK binary to prevent token revocation
+          git add package.json capacitor.config.json android/app/build.gradle src/lib/version.ts
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto-bump version to ${{ steps.version-extractor.outputs.version }} [skip ci]"
+            # Clear temporary build-time patch copies in tracked files so rebase succeeds cleanly
+            git checkout -- .
+            git pull --rebase origin "${{ github.ref_name }}"
+            git push
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Publish Public Nightly Pre-Release (APK Only + Breakdown Notes)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ steps.version-extractor.outputs.version }}-nightly
+          name: RABBiT TV v${{ steps.version-extractor.outputs.version }} (Nightly)
+          prerelease: true
+          generate_release_notes: false
+          body_path: /tmp/release_notes.md
+          files: |
+            updates/${{ steps.version-extractor.outputs.apk_filename }}
+
+      - name: Upload APK Artifact (APK Only)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version-extractor.outputs.artifact_name }}
+          path: updates/${{ steps.version-extractor.outputs.apk_filename }}
+          retention-days: 14
