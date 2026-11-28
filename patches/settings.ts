@@ -160,6 +160,7 @@ export const SCREENSAVER_TIMEOUT_OPTIONS = [
   { label: "30 Minutes", value: 30 * 60 * 1000 },
   { label: "20 Minutes", value: 20 * 60 * 1000 },
   { label: "5 Minutes", value: 5 * 60 * 1000 },
+  { label: "Off (Disabled)", value: 0 },
 ];
 
 export const SLEEP_TIMER_OPTIONS: { label: string; value: SleepTimerMinutes }[] = [
@@ -385,7 +386,15 @@ function writeSetting(key: string, value: string, emitEvent = true): void {
     localStorage.setItem(key, value);
     memoryCache.set(key, value);
   } catch {
-    // Ignore storage quota exceptions on low-storage sticks
+    // Low-storage stick quota recovery: purge temp caches and retry once
+    try {
+      purgeOldTmdbCaches();
+      localStorage.setItem(key, value);
+      memoryCache.set(key, value);
+    } catch {
+      // Storage critically full; keep in-memory cache updated
+      memoryCache.set(key, value);
+    }
   }
   if (batchDepth > 0) {
     if (emitEvent) batchDirty = true;
@@ -529,6 +538,11 @@ export function getOrCreateDeviceId(): string {
   let generated = "";
   if (typeof window !== "undefined" && window.crypto?.randomUUID) {
     generated = `rab_${window.crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  } else if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
+    const buf = new Uint8Array(8);
+    window.crypto.getRandomValues(buf);
+    const hex = Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+    generated = `rab_${hex}`;
   } else {
     const rand = Math.random().toString(36).slice(2, 10);
     const ts = Date.now().toString(36);
@@ -541,6 +555,18 @@ export function getOrCreateDeviceId(): string {
 
 export function isValidAgeLockPin(pin: string): boolean {
   return /^\d{4,6}$/.test(String(pin || "").trim());
+}
+
+/** Constant-time string comparison to prevent timing side-channels */
+function constantTimeEqual(a: string, b: string): boolean {
+  const s1 = String(a || "");
+  const s2 = String(b || "");
+  let diff = s1.length ^ s2.length;
+  const max = Math.max(s1.length, s2.length);
+  for (let i = 0; i < max; i++) {
+    diff |= (s1.charCodeAt(i) || 0) ^ (s2.charCodeAt(i) || 0);
+  }
+  return diff === 0;
 }
 
 /**
@@ -642,12 +668,12 @@ export async function verifyAgeLockPin(inputPin: string): Promise<boolean> {
   const storedHash = readSetting(AGE_LOCK_PIN_HASH_KEY);
   if (storedHash) {
     const computed = await hashPinSha256(clean);
-    if (computed === storedHash) return true;
+    if (constantTimeEqual(computed, storedHash)) return true;
   }
 
   // Fallback for legacy plain-text PINs & automatic hash upgrade
   const legacyPlain = readSetting(AGE_LOCK_PIN_KEY);
-  if (legacyPlain && clean === legacyPlain.trim()) {
+  if (legacyPlain && constantTimeEqual(clean, legacyPlain.trim())) {
     const upgradedHash = await hashPinSha256(clean);
     writeSetting(AGE_LOCK_PIN_HASH_KEY, upgradedHash, false);
     writeSetting(AGE_LOCK_PIN_SUFFIX_KEY, clean.slice(-4), false);
@@ -660,6 +686,28 @@ export async function verifyAgeLockPin(inputPin: string): Promise<boolean> {
 const MAX_PIN_ATTEMPTS = 3;
 const PIN_LOCKOUT_DURATION_MS = 30 * 1000;
 
+function readLockoutNum(key: string): number {
+  if (typeof window === "undefined") return 0;
+  let sVal = 0;
+  let lVal = 0;
+  try { sVal = Number(sessionStorage.getItem(key) || 0); } catch { /* ignore */ }
+  try { lVal = Number(localStorage.getItem(key) || 0); } catch { /* ignore */ }
+  return Math.max(Number.isFinite(sVal) ? sVal : 0, Number.isFinite(lVal) ? lVal : 0);
+}
+
+function writeLockoutNum(key: string, val: number): void {
+  if (typeof window === "undefined") return;
+  const str = String(val);
+  try { sessionStorage.setItem(key, str); } catch { /* ignore */ }
+  try { localStorage.setItem(key, str); } catch { /* ignore */ }
+}
+
+function clearLockoutKey(key: string): void {
+  if (typeof window === "undefined") return;
+  try { sessionStorage.removeItem(key); } catch { /* ignore */ }
+  try { localStorage.removeItem(key); } catch { /* ignore */ }
+}
+
 export function getPinLockoutState(): PinLockoutState {
   if (typeof window === "undefined") {
     return {
@@ -669,8 +717,8 @@ export function getPinLockoutState(): PinLockoutState {
       attemptsLeft: MAX_PIN_ATTEMPTS,
     };
   }
-  const until = Number(sessionStorage.getItem(PIN_LOCKOUT_UNTIL_KEY) || 0);
-  const failed = Number(sessionStorage.getItem(PIN_FAILED_COUNT_KEY) || 0);
+  const until = readLockoutNum(PIN_LOCKOUT_UNTIL_KEY);
+  const failed = readLockoutNum(PIN_FAILED_COUNT_KEY);
   const now = Date.now();
 
   if (until > now) {
@@ -683,8 +731,8 @@ export function getPinLockoutState(): PinLockoutState {
   }
 
   if (until > 0 && until <= now) {
-    sessionStorage.removeItem(PIN_LOCKOUT_UNTIL_KEY);
-    sessionStorage.setItem(PIN_FAILED_COUNT_KEY, "0");
+    clearLockoutKey(PIN_LOCKOUT_UNTIL_KEY);
+    writeLockoutNum(PIN_FAILED_COUNT_KEY, 0);
     return {
       isLocked: false,
       remainingSeconds: 0,
@@ -703,14 +751,15 @@ export function getPinLockoutState(): PinLockoutState {
 
 export function recordPinFailure(): PinLockoutState {
   if (typeof window === "undefined") return getPinLockoutState();
-  const nextFailed =
-    Number(sessionStorage.getItem(PIN_FAILED_COUNT_KEY) || 0) + 1;
-  sessionStorage.setItem(PIN_FAILED_COUNT_KEY, String(nextFailed));
+  const nextFailed = readLockoutNum(PIN_FAILED_COUNT_KEY) + 1;
+  writeLockoutNum(PIN_FAILED_COUNT_KEY, nextFailed);
 
   if (nextFailed >= MAX_PIN_ATTEMPTS) {
-    sessionStorage.setItem(
+    // Exponential backoff: 3 -> 30s, 4 -> 60s, 5 -> 120s, 6+ -> 300s
+    const mult = Math.min(10, Math.pow(2, nextFailed - MAX_PIN_ATTEMPTS));
+    writeLockoutNum(
       PIN_LOCKOUT_UNTIL_KEY,
-      String(Date.now() + PIN_LOCKOUT_DURATION_MS)
+      Date.now() + PIN_LOCKOUT_DURATION_MS * mult
     );
   }
   return getPinLockoutState();
@@ -718,8 +767,8 @@ export function recordPinFailure(): PinLockoutState {
 
 export function resetPinFailures(): void {
   if (typeof window === "undefined") return;
-  sessionStorage.removeItem(PIN_FAILED_COUNT_KEY);
-  sessionStorage.removeItem(PIN_LOCKOUT_UNTIL_KEY);
+  clearLockoutKey(PIN_FAILED_COUNT_KEY);
+  clearLockoutKey(PIN_LOCKOUT_UNTIL_KEY);
 }
 
 export function getKidsModeLocked(): boolean {
@@ -741,7 +790,7 @@ export function getSavedCardSize(): CardSize {
 }
 
 export function saveCardSize(size: CardSize): void {
-  writeSetting(CARD_SIZE_KEY, size, false);
+  writeSetting(CARD_SIZE_KEY, size, true);
 }
 
 export function getSavedTheme(): AppTheme {
@@ -757,8 +806,8 @@ export function applyThemeToDocument(theme: AppTheme): void {
 
 export function saveTheme(theme: AppTheme): void {
   const safeTheme = THEME_OPTIONS.includes(theme) ? theme : "violet";
-  writeSetting(THEME_KEY, safeTheme, false);
   applyThemeToDocument(safeTheme);
+  writeSetting(THEME_KEY, safeTheme, true);
 }
 
 export function getThemeStyles(theme: AppTheme = "violet") {
@@ -774,7 +823,7 @@ export function getSavedStreamQuality(): StreamQuality {
 }
 
 export function saveStreamQuality(quality: StreamQuality): void {
-  writeSetting(STREAM_QUALITY_KEY, quality, false);
+  writeSetting(STREAM_QUALITY_KEY, quality, true);
 }
 
 export function getHelpfulMouse(): boolean {
@@ -977,8 +1026,10 @@ export function getPosterAppearanceClasses(
 
 export function getSavedScreensaverTimeout(): number {
   const val = readSetting(SCREENSAVER_TIMEOUT_KEY);
-  const parsed = val ? Number(val) : NaN;
-  return !isNaN(parsed) && parsed > 0 ? parsed : DEFAULT_SCREENSAVER_TIMEOUT;
+  if (val === null || val === "") return DEFAULT_SCREENSAVER_TIMEOUT;
+  const parsed = Number(val);
+  if (parsed === 0) return 0; // Explicitly disabled ("Off")
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SCREENSAVER_TIMEOUT;
 }
 
 export function saveScreensaverTimeout(timeoutMs: number): void {
@@ -1447,6 +1498,7 @@ export function applyAllSettingsToDocument(): void {
   root.setAttribute("data-poster-style", getPosterCardStyle());
   root.setAttribute("data-poster-layout", getPosterInfoLayout());
   root.setAttribute("data-kids-locked", getKidsModeLocked() ? "true" : "false");
+  root.setAttribute("data-senior-easy", getSeniorEasyMode() ? "true" : "false");
 }
 
 // ==========================================
@@ -1499,10 +1551,11 @@ export function isAllowedForAge(
   const cleanRating = (rating || "").trim().toUpperCase();
   const cleanGenre = resolvedGenre.trim().toLowerCase();
 
-  // Explicit adult ratings are strictly blocked for under 16
+  // Explicit adult ratings (US + Canadian 18A/A) are strictly blocked for under 16
   if (
-    ["R", "NC-17", "TV-MA", "UNRATED", "NR", "18+"].includes(cleanRating) ||
+    ["R", "NC-17", "TV-MA", "UNRATED", "NR", "18+", "18A", "A"].includes(cleanRating) ||
     cleanRating.includes("18+") ||
+    cleanRating.includes("18A") ||
     cleanRating.includes("NC-17") ||
     cleanRating.includes("TV-MA")
   ) {
@@ -1530,12 +1583,12 @@ export function isAllowedForAge(
 
   // Tier 1: Ages 0 - 8 (G, TV-Y, TV-G)
   if (resolvedUserAge < 9) {
-    return ["G", "TV-Y", "TV-G"].includes(cleanRating);
+    return ["G", "TV-Y", "TV-G", "C"].includes(cleanRating);
   }
 
   // Tier 2: Ages 9 - 12 (G, PG, TV-Y, TV-Y7, TV-G, TV-PG)
   if (resolvedUserAge < 13) {
-    return ["G", "PG", "TV-Y", "TV-Y7", "TV-G", "TV-PG"].includes(cleanRating);
+    return ["G", "PG", "TV-Y", "TV-Y7", "TV-G", "TV-PG", "C", "C8"].includes(cleanRating);
   }
 
   // Tier 3: Ages 13 - 15 (G, PG, PG-13, TV-Y, TV-Y7, TV-G, TV-PG, TV-14)
@@ -1549,6 +1602,10 @@ export function isAllowedForAge(
       "TV-G",
       "TV-PG",
       "TV-14",
+      "C",
+      "C8",
+      "14A",
+      "14+",
     ].includes(cleanRating);
   }
 
@@ -1727,8 +1784,9 @@ export function importSettingsSnapshot(
 
     if (
       typeof data.screensaverTimeoutMs === "number" &&
-      data.screensaverTimeoutMs >= 60_000 &&
-      data.screensaverTimeoutMs <= 12 * 60 * 60 * 1000
+      (data.screensaverTimeoutMs === 0 ||
+        (data.screensaverTimeoutMs >= 60_000 &&
+          data.screensaverTimeoutMs <= 12 * 60 * 60 * 1000))
     ) {
       writeSetting(
         SCREENSAVER_TIMEOUT_KEY,
@@ -1900,9 +1958,11 @@ export function importSettingsSnapshot(
 
     if (
       typeof data.profileMascot === "string" &&
-      data.profileMascot.length <= 4
+      data.profileMascot.trim().length > 0 &&
+      data.profileMascot.trim().length <= 64
     ) {
-      writeSetting(PROFILE_MASCOT_KEY, data.profileMascot, true);
+      const cleanMascot = data.profileMascot.replace(/[<>]/g, "").trim();
+      writeSetting(PROFILE_MASCOT_KEY, cleanMascot, true);
       appliedCount++;
     }
 
