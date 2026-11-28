@@ -24,6 +24,12 @@ import {
   calculateSeriesProgress,
 } from "./watch-history";
 import {
+  readGistJsonFile,
+  patchGistFilesSerialized,
+  runSerializedGistTransaction,
+  generateSecureId,
+} from "./gist-client";
+import {
   moderatePublicText,
   sanitizePublicText,
   validatePublicHandle,
@@ -454,65 +460,29 @@ async function fetchWithTimeout(
   }
 }
 
-/** GitHub Gist Adapter (active today when VITE_COMMUNITY_API_URL is empty) */
+/** GitHub Gist Adapter powered by enterprise gist-client (ETag + single-flight + serialized write queue) */
 const GistCommunityAdapter: CommunityStorageAdapter = {
   async readFile<T>(fileName: string, fallback: T): Promise<T> {
-    if (!GIST_API_URL || !GITHUB_TOKEN) return fallback;
-    try {
-      const res = await fetchWithTimeout(`${GIST_API_URL}?t=${Date.now()}`, {
-        method: "GET",
-        cache: "no-store",
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "RabbitTV-App",
-        },
-      });
-      if (!res.ok) return fallback;
-      const gist = await res.json();
-      const fileObj = gist?.files?.[fileName];
-      if (!fileObj) return fallback;
-
-      // Support truncated large Gist files transparently via raw_url
-      let rawText: string | undefined = fileObj.content;
-      if (fileObj.truncated && typeof fileObj.raw_url === "string") {
-        const rawRes = await fetchWithTimeout(fileObj.raw_url, {
-          method: "GET",
-          cache: "no-store",
-        });
-        if (rawRes.ok) rawText = await rawRes.text();
-      }
-      return safeJsonParse<T>(rawText, fallback);
-    } catch {
-      return fallback;
-    }
+    if (!COMMUNITY_GIST_ID || !GITHUB_TOKEN) return fallback;
+    return readGistJsonFile<T>(fileName, fallback, {
+      gistId: COMMUNITY_GIST_ID,
+      maxAgeMs: CACHE_TTL_MS,
+      timeoutMs: NETWORK_TIMEOUT_MS,
+    });
   },
 
   async writeFile(fileName: string, data: unknown): Promise<boolean> {
-    if (!GIST_API_URL || !GITHUB_TOKEN) return false;
-    try {
-      const content = JSON.stringify(data);
-      // Guard against runaway payloads bloating the Gist
-      if (content.length > 480 * 1024) return false;
-
-      const res = await fetchWithTimeout(GIST_API_URL, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: "application/vnd.github+json",
-          "Content-Type": "application/json",
-          "User-Agent": "RabbitTV-App",
-        },
-        body: JSON.stringify({
-          files: {
-            [fileName]: { content },
-          },
-        }),
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
+    if (!COMMUNITY_GIST_ID || !GITHUB_TOKEN) return false;
+    const content = JSON.stringify(data);
+    if (content.length > 480 * 1024) return false;
+    return patchGistFilesSerialized(
+      { [fileName]: { content } },
+      {
+        gistId: COMMUNITY_GIST_ID,
+        timeoutMs: NETWORK_TIMEOUT_MS,
+        maxPayloadBytes: 500 * 1024,
+      }
+    );
   },
 };
 
@@ -574,6 +544,24 @@ function getAdapter(): CommunityStorageAdapter {
 // 4. DEFENSIVE READ-TIME SANITIZATION & IN-MEMORY CACHE
 // ============================================================
 
+function loadPersistedCommunityCache(): CommunityBundle {
+  if (typeof window === "undefined") {
+    return { profiles: [], reviews: [], buddies: [] };
+  }
+  try {
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+    if (!raw) return { profiles: [], reviews: [], buddies: [] };
+    const parsed = safeJsonParse<Partial<CommunityBundle>>(raw, {});
+    return {
+      profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
+      reviews: Array.isArray(parsed.reviews) ? parsed.reviews : [],
+      buddies: Array.isArray(parsed.buddies) ? parsed.buddies : [],
+    };
+  } catch {
+    return { profiles: [], reviews: [], buddies: [] };
+  }
+}
+
 let cacheMem: {
   profilesAt: number;
   reviewsAt: number;
@@ -583,8 +571,12 @@ let cacheMem: {
   profilesAt: 0,
   reviewsAt: 0,
   buddiesAt: 0,
-  bundle: { profiles: [], reviews: [], buddies: [] },
+  bundle: loadPersistedCommunityCache(),
 };
+
+function persistCommunityCache(): void {
+  safeLocalWrite(LOCAL_CACHE_KEY, cacheMem.bundle);
+}
 
 function sanitizeRemoteProfile(raw: any): CommunityProfile | null {
   if (!raw || typeof raw !== "object") return null;
@@ -836,6 +828,7 @@ export async function fetchPublicProfiles(
 
   cacheMem.bundle.profiles = clean;
   cacheMem.profilesAt = Date.now();
+  persistCommunityCache();
   return filterVisibleProfiles(clean);
 }
 
@@ -992,6 +985,7 @@ async function loadAllReviews(force = false): Promise<CommunityReview[]> {
 
   cacheMem.bundle.reviews = clean;
   cacheMem.reviewsAt = Date.now();
+  persistCommunityCache();
   return clean;
 }
 
@@ -1099,7 +1093,7 @@ export async function submitTitleReview(input: {
   );
 
   const review: CommunityReview = {
-    reviewId: existingOwn?.reviewId || `rev_${Date.now().toString(36)}_${generateRandomHex(3)}`,
+    reviewId: existingOwn?.reviewId || generateSecureId("rev", 5),
     mediaKey,
     mediaId: cleanId,
     mediaType: input.mediaType,
@@ -1138,10 +1132,12 @@ export async function submitTitleReview(input: {
 }
 
 export async function deleteMyTitleReview(reviewId: string): Promise<boolean> {
-  const identity = getLocalCommunityIdentity();
+  const identity = await ensureUpgradedOwnerProof(getLocalCommunityIdentity());
+  return runSerializedGistTransaction(async () => {
   const freshList = await loadAllReviews(true);
   const target = freshList.find((r) => r.reviewId === reviewId);
   if (!target || target.authorId !== identity.publicId) return false;
+  if (target.ownerProof && target.ownerProof !== identity.ownerProof) return false;
 
   const next = freshList.filter((r) => r.reviewId !== reviewId);
   const ok = await getAdapter().writeFile(REVIEWS_FILE, next);
@@ -1153,6 +1149,7 @@ export async function deleteMyTitleReview(reviewId: string): Promise<boolean> {
     }
   }
   return ok;
+  }, COMMUNITY_GIST_ID);
 }
 
 export async function reportCommunityItem(
@@ -1218,6 +1215,7 @@ async function loadAllBuddyThreads(force = false): Promise<WatchBuddyThread[]> {
 
   cacheMem.bundle.buddies = clean;
   cacheMem.buddiesAt = Date.now();
+  persistCommunityCache();
   return clean;
 }
 
@@ -1294,7 +1292,7 @@ export async function sendWatchBuddyRequest(input: {
 
   const now = Date.now();
   const thread: WatchBuddyThread = {
-    threadId: `bud_${now.toString(36)}_${generateRandomHex(4)}`,
+    threadId: generateSecureId("bud", 6),
     mediaId: cleanMediaId,
     mediaType: input.mediaType,
     title: sanitizePublicText(input.title, 80),
@@ -1394,7 +1392,7 @@ export async function sendBuddyThreadMessage(
   }
 
   const msg: BuddyMessage = {
-    msgId: `msg_${Date.now().toString(36)}_${generateRandomHex(3)}`,
+    msgId: generateSecureId("msg", 5),
     senderId: identity.publicId,
     senderHandle: identity.publicHandle,
     senderMascot: getActiveMascotBadge(),
