@@ -7,7 +7,9 @@ import {
   getReducedMotion,
   getHardwareLimits,
   getGlowIntensity,
+  purgeOldTmdbCaches,
 } from "./settings";
+import { readGistJsonFile, isGistConfigured } from "./gist-client";
 
 const GITHUB_REPO =
   ((import.meta as any).env?.VITE_GH_REPO as string) ||
@@ -15,8 +17,6 @@ const GITHUB_REPO =
 const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_REPO}`;
 const DEFAULT_RELEASES_PAGE_URL = `https://github.com/${GITHUB_REPO}/releases`;
 const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
-const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
-const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
 
 const FETCH_TIMEOUT_MS = 7000;
 const SILENT_CHECK_COOLDOWN_MS = 30 * 60 * 1000; // 30 mins between silent checks
@@ -164,9 +164,18 @@ export function getUpdateChannel(): UpdateChannel {
   return saved === "stable" ? "stable" : "nightly";
 }
 
+function safeUpdaterStorageSet(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    try { purgeOldTmdbCaches(); localStorage.setItem(key, value); } catch { /* ignore */ }
+  }
+}
+
 export function setUpdateChannel(channel: UpdateChannel): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(UPDATE_CHANNEL_KEY, channel);
+  safeUpdaterStorageSet(UPDATE_CHANNEL_KEY, channel);
   window.dispatchEvent(new Event("rabtv_settings_updated"));
 }
 
@@ -247,25 +256,13 @@ export async function getCurrentAppVersion(): Promise<string> {
  * set inside the Admin Command Center.
  */
 export async function checkFleetPolicy(): Promise<FleetPolicySnapshot | null> {
-  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return null;
+  if (!isGistConfigured()) return null;
   try {
-    const res = await fetchWithTimeout(
-      `${GIST_API_URL}?t=${Date.now()}`,
-      {
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "RabbitTV-App",
-        },
-        cache: "no-store",
-      },
-      5500
+    const parsed = await readGistJsonFile<Record<string, any> | null>(
+      "admin_config.json",
+      null,
+      { maxAgeMs: 60_000, timeoutMs: 5500 }
     );
-    if (!res.ok) return null;
-    const gistData = await res.json();
-    const rawConfig = gistData.files?.["admin_config.json"]?.content;
-    if (!rawConfig) return null;
-    const parsed = JSON.parse(rawConfig);
     if (!parsed || typeof parsed !== "object") return null;
 
     return {
@@ -351,12 +348,46 @@ async function resolveLatestBuild(
 
   let best: CandidateBuild | null = null;
 
+  const RELEASES_ETAG_KEY = "rabtv_updater_releases_etag_v1";
+  const RELEASES_CACHE_KEY = "rabtv_updater_releases_cache_v1";
+  const reqHeaders: Record<string, string> = { ...headers };
+  let cachedReleases: any[] = [];
+  if (typeof window !== "undefined") {
+    try {
+      const savedEtag = localStorage.getItem(RELEASES_ETAG_KEY);
+      const savedJson = localStorage.getItem(RELEASES_CACHE_KEY);
+      if (savedEtag && savedJson) {
+        const parsed = JSON.parse(savedJson);
+        if (Array.isArray(parsed)) {
+          cachedReleases = parsed;
+          reqHeaders["If-None-Match"] = savedEtag;
+        }
+      }
+    } catch {
+      // ignore corrupt cache
+    }
+  }
+
   const releasesPromise = fetchWithTimeout(
     `${GITHUB_API_BASE}/releases?per_page=30`,
-    { headers, cache: "no-store" }
+    { headers: reqHeaders, cache: "no-store" }
   )
-    .then(async (res) => (res.ok ? res.json() : []))
-    .catch(() => []);
+    .then(async (res) => {
+      if (res.status === 304 && cachedReleases.length > 0) {
+        return cachedReleases;
+      }
+      if (!res.ok) return cachedReleases;
+      const list = await res.json();
+      if (Array.isArray(list) && typeof window !== "undefined") {
+        const etag = res.headers.get("etag");
+        if (etag) {
+          safeUpdaterStorageSet(RELEASES_ETAG_KEY, etag);
+          safeUpdaterStorageSet(RELEASES_CACHE_KEY, JSON.stringify(list.slice(0, 15)));
+        }
+      }
+      return Array.isArray(list) ? list : cachedReleases;
+    })
+    .catch(() => cachedReleases);
 
   const manifestPromise =
     channel === "nightly"
@@ -879,9 +910,15 @@ function showCrystalUpdateModal(result: UpdateCheckResult): void {
   titleWrap.appendChild(subEl);
   header.appendChild(titleWrap);
 
+  const previousFocusEl = document.activeElement as HTMLElement | null;
   const cleanupModal = () => {
-    window.removeEventListener("keydown", handleKeyDown);
+    window.removeEventListener("keydown", handleKeyDown, true);
     overlay.remove();
+    try {
+      previousFocusEl?.focus?.();
+    } catch {
+      // ignore if previous node unmounted
+    }
   };
 
   if (!result.isMandatory) {
@@ -1153,7 +1190,7 @@ function showCrystalUpdateModal(result: UpdateCheckResult): void {
     });
     skipBtn.onclick = () => {
       if (typeof window !== "undefined") {
-        localStorage.setItem(SKIPPED_VERSION_KEY, result.latestVersion);
+        safeUpdaterStorageSet(SKIPPED_VERSION_KEY, result.latestVersion);
       }
       cleanupModal();
     };
@@ -1216,7 +1253,28 @@ function showCrystalUpdateModal(result: UpdateCheckResult): void {
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape" && !result.isMandatory) {
+      e.preventDefault();
+      e.stopPropagation();
       cleanupModal();
+      return;
+    }
+
+    if (e.key === "Tab" || e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const focusables = Array.from(
+        card.querySelectorAll<HTMLButtonElement>("button:not([disabled])")
+      );
+      if (focusables.length === 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const idx = focusables.indexOf(document.activeElement as HTMLButtonElement);
+      const goPrev = e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey);
+      const nextIdx =
+        idx === -1
+          ? 0
+          : goPrev
+            ? (idx - 1 + focusables.length) % focusables.length
+            : (idx + 1) % focusables.length;
+      focusables[nextIdx]?.focus();
     }
   };
 
@@ -1226,7 +1284,7 @@ function showCrystalUpdateModal(result: UpdateCheckResult): void {
     });
   }
 
-  window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("keydown", handleKeyDown, true);
   document.body.appendChild(overlay);
   primaryBtn?.focus();
 }
@@ -1266,7 +1324,7 @@ export async function checkForAppUpdates(
     ]);
 
     if (typeof window !== "undefined") {
-      localStorage.setItem(LAST_CHECK_STORAGE_KEY, String(Date.now()));
+      safeUpdaterStorageSet(LAST_CHECK_STORAGE_KEY, String(Date.now()));
     }
 
     const minAppVersion = fleetPolicy?.minAppVersion || "";
