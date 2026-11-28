@@ -26,6 +26,15 @@ interface PendingConfirmation {
   codeSuffix?: string;
 }
 
+const IMG_ABI_BANNER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-bugs-banner.jpg";
+const IMG_ABI_CARD =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-section-card.jpg";
+const IMG_ABI_TAB_ACTIVE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-active.jpg";
+const IMG_ABI_TAB_IDLE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-idle.jpg";
+
 const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
 const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
 const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
@@ -350,8 +359,15 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
 
   return (
     <div className="space-y-3 w-full box-border text-white">
-      {/* Compact Header & Quick Actions */}
-      <div className="space-y-2 pb-2.5 border-b border-red-500/25">
+      {/* Armored Workbench Header & Quick Actions */}
+      <div className="relative overflow-hidden rounded-2xl border border-red-500/30 p-3 space-y-2 bg-[#0c0a09]">
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-28"
+          style={{ backgroundImage: `url(${IMG_ABI_BANNER})` }}
+          aria-hidden="true"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0c0a09]/85 via-[#0c0a09]/65 to-[#0c0a09]/85" aria-hidden="true" />
+        <div className="relative z-10 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-xs font-black uppercase tracking-wider text-red-300 flex items-center gap-1.5 min-w-0">
             <span className="truncate">🐞 Bug Inbox</span>
@@ -388,9 +404,10 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
             )}
           </div>
         </div>
-        <p className="text-[10px] text-slate-400">
-          Triaging, direct toast replies, strike tracking & ban control.
+        <p className="text-[10px] text-zinc-300">
+          Triaging, direct toast replies, strike tracking &amp; ban control.
         </p>
+        </div>
       </div>
 
       {/* Status Toast Banner */}
@@ -444,24 +461,24 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
           <button
             type="button"
             onClick={() => setActiveTab("inbox")}
-            className={`py-2 px-2 rounded-xl text-[11px] font-extrabold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === "inbox"
-                ? "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"
-                : "bg-black/65 border border-red-500/25 text-slate-300 hover:bg-red-950/40"
-            }`}
+            style={{
+              backgroundImage: `url(${activeTab === "inbox" ? IMG_ABI_TAB_ACTIVE : IMG_ABI_TAB_IDLE})`,
+              backgroundSize: "100% 100%",
+            }}
+            className="py-2 px-2 rounded-xl text-[11px] font-extrabold text-white whitespace-nowrap transition-all cursor-pointer hover:brightness-110"
           >
-            📥 Inbox ({reports.length})
+            <span className="drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">📥 Inbox ({reports.length})</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("banned")}
-            className={`py-2 px-2 rounded-xl text-[11px] font-extrabold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === "banned"
-                ? "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"
-                : "bg-black/65 border border-red-500/25 text-slate-300 hover:bg-red-950/40"
-            }`}
+            style={{
+              backgroundImage: `url(${activeTab === "banned" ? IMG_ABI_TAB_ACTIVE : IMG_ABI_TAB_IDLE})`,
+              backgroundSize: "100% 100%",
+            }}
+            className="py-2 px-2 rounded-xl text-[11px] font-extrabold text-white whitespace-nowrap transition-all cursor-pointer hover:brightness-110"
           >
-            🚫 Banned ({bannedUsers.length})
+            <span className="drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]">🚫 Banned ({bannedUsers.length})</span>
           </button>
         </div>
 
