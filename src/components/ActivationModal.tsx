@@ -979,9 +979,6 @@ function AdminActivationAlertToast({ appTheme }: { appTheme: AppTheme }) {
   );
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const tokens = useMemo(() => getModalThemeTokens(appTheme), [appTheme]);
-  const isLowRam = useMemo(() => getHardwareLimits().effectiveMode === "low", [effectiveOpen]);
-  void getCardBackground;
-  void getPrimaryAccentColor;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1328,6 +1325,12 @@ export function ActivationModal({
   const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
 
   const tokens = useMemo(() => getModalThemeTokens(appTheme), [appTheme]);
+  const isLowRam = useMemo(
+    () => getHardwareLimits().effectiveMode === "low",
+    [effectiveOpen]
+  );
+  void getCardBackground;
+  void getPrimaryAccentColor;
 
   // Precompute hardware fingerprint & hydrate IndexedDB lockout vault
   useEffect(() => {
