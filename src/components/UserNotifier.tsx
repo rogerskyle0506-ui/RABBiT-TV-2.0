@@ -24,10 +24,48 @@ interface UserNotifierProps {
 }
 
 const AGE_LOCK_KEY = "rabtv_age_passcode";
-const RABBIT_HEADER_PILL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
-const RABBIT_PANEL_ALT =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel-alt.jpg";
+const IMG_UN_CARD_FRAME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-section-card.jpg";
+const IMG_UN_HIGHLIGHT_FRAME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-legal-highlight-card.jpg";
+const IMG_UN_BTN_IDLE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-idle.jpg";
+
+const USER_NOTIFIER_STYLES = `
+  :root, html[data-theme="violet"] { --rabtv-un-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02); }
+  html[data-theme="red"] { --rabtv-un-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0); }
+  html[data-theme="midnight"] { --rabtv-un-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04); }
+  html[data-theme="emerald"] { --rabtv-un-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02); }
+  html[data-theme="amber"] { --rabtv-un-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04); }
+  html[data-theme="cyan"] { --rabtv-un-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
+
+  .rabtv-un-card {
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 16px 16px !important;
+    background-color: rgba(12, 10, 9, 0.94);
+    contain: layout paint;
+  }
+  .rabtv-un-9slice {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 14px 14px;
+    border-image-source: url("${IMG_UN_CARD_FRAME}");
+    border-image-slice: 14% 11% fill;
+    border-image-repeat: stretch;
+    filter: var(--rabtv-un-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .rabtv-un-9slice--fleet {
+    border-image-source: url("${IMG_UN_HIGHLIGHT_FRAME}");
+    filter: none;
+  }
+`;
 
 export function UserNotifier({ appTheme }: UserNotifierProps) {
   const [activeToast, setActiveToast] = useState<NotificationItem | null>(null);
@@ -207,21 +245,16 @@ export function UserNotifier({ appTheme }: UserNotifierProps) {
           };
 
   return (
-    <div className="rabtv-vidsrc-protected fixed bottom-5 right-4 sm:right-6 z-50 flex flex-col gap-3 max-w-md w-[92vw] pointer-events-none">
-      {/* 1. Fleet MOTD / Maintenance Banner (if active in admin_config.json) */}
+    <div className="rabtv-vidsrc-protected fixed bottom-5 right-3 sm:right-6 z-50 flex flex-col gap-3 max-w-md w-[92vw] pointer-events-none">
+      <style>{USER_NOTIFIER_STYLES}</style>
+
+      {/* 1. Fleet MOTD / Maintenance Bulletin (9-Sliced Amber Highlight Frame) */}
       {fleetBanner && (
-        <div className="pointer-events-auto relative overflow-hidden rounded-3xl bg-slate-950/85 border-2 border-amber-400/70 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.95),0_0_30px_rgba(245,158,11,0.45)] backdrop-blur-2xl">
-          <div
-            className="absolute inset-0 pointer-events-none z-0 opacity-70 mix-blend-lighten"
-            style={{
-              backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-              backgroundSize: "100% 100%",
-              backgroundRepeat: "no-repeat",
-            }}
-          />
+        <div className="rabtv-un-card pointer-events-auto rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+          <div className="rabtv-un-9slice rabtv-un-9slice--fleet" aria-hidden="true" />
           <div className="relative z-10 flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500/25 border border-amber-400/50 text-lg shadow-[0_0_15px_rgba(245,158,11,0.4)]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 border border-amber-400/50 text-lg">
                 🛡️
               </div>
               <div className="space-y-1 min-w-0">
@@ -239,8 +272,9 @@ export function UserNotifier({ appTheme }: UserNotifierProps) {
             <button
               type="button"
               onClick={handleDismissFleetBanner}
-              className="rounded-xl bg-black/60 hover:bg-red-600 border border-white/15 hover:border-red-300 px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white transition shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400"
               aria-label="Dismiss Bulletin"
+              style={{ backgroundImage: `url(${IMG_UN_BTN_IDLE})`, backgroundSize: "100% 100%" }}
+              className="rounded-lg px-2.5 py-1 text-xs font-black text-white hover:brightness-125 transition shrink-0 cursor-pointer"
             >
               ✕
             </button>
@@ -248,30 +282,21 @@ export function UserNotifier({ appTheme }: UserNotifierProps) {
         </div>
       )}
 
-      {/* 2. Targeted or Global Push Toast (notifications.json) */}
+      {/* 2. Targeted or Global Push Toast (9-Sliced Armored Frame) */}
       {activeToast && (
         <div
-          className={`pointer-events-auto relative overflow-hidden rounded-3xl bg-slate-950/85 border-2 p-4 backdrop-blur-2xl transition-all duration-300 ${severityStyles.border}`}
+          className={`rabtv-un-card pointer-events-auto rounded-2xl backdrop-blur-xl transition-all duration-300 ${severityStyles.border}`}
         >
-          {/* Crystal Neon Frame Layer */}
-          <div
-            className="absolute inset-0 pointer-events-none z-0 opacity-75 mix-blend-lighten"
-            style={{
-              backgroundImage: `url(${RABBIT_PANEL_ALT})`,
-              backgroundSize: "100% 100%",
-              backgroundRepeat: "no-repeat",
-            }}
-          />
-
+          <div className="rabtv-un-9slice" aria-hidden="true" />
           <div className="relative z-10 flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 min-w-0">
               <div
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border font-bold text-lg shadow-lg ${severityStyles.badgeBg}`}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border font-bold text-lg shadow-lg ${severityStyles.badgeBg}`}
               >
                 {severityStyles.icon}
               </div>
               <div className="space-y-1.5 min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full bg-black/60 border border-white/10 px-2.5 py-0.5">
+                <div className="inline-flex items-center gap-2 rounded-full bg-black/75 border border-white/15 px-2.5 py-0.5">
                   <span
                     className={`text-[10px] font-black uppercase tracking-wider ${severityStyles.titleColor}`}
                   >
@@ -287,8 +312,9 @@ export function UserNotifier({ appTheme }: UserNotifierProps) {
             <button
               type="button"
               onClick={handleDismissToast}
-              className="rounded-xl bg-black/65 hover:bg-red-600 border border-white/15 hover:border-red-300 px-2.5 py-1.5 text-xs font-extrabold text-slate-200 hover:text-white transition transform hover:scale-105 active:scale-95 shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400"
               aria-label="Dismiss Notification"
+              style={{ backgroundImage: `url(${IMG_UN_BTN_IDLE})`, backgroundSize: "100% 100%" }}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-black text-white hover:brightness-125 transition shrink-0 cursor-pointer"
             >
               ✕
             </button>
