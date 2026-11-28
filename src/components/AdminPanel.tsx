@@ -37,7 +37,11 @@ interface AdminPanelProps {
 }
 
 const RABBIT_HEADER_PILL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-idle.jpg";
+const IMG_AP_TAB_ACTIVE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-active.jpg";
+const IMG_AP_CARD_FRAME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-section-card.jpg";
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
@@ -798,7 +802,7 @@ export function AdminPanel({
   };
 
   const crimsonSubPanelClass =
-    "relative w-full p-3.5 sm:p-4 rounded-2xl mt-2 shadow-[0_12px_35px_rgba(0,0,0,0.85),inset_0_0_24px_rgba(239,68,68,0.12)] overflow-hidden box-border backdrop-blur-xl bg-slate-950/85 border border-red-500/40 space-y-3";
+    "relative w-full p-4 rounded-2xl mt-2 shadow-[0_12px_35px_rgba(0,0,0,0.9)] overflow-hidden box-border bg-[#0c0a09]/92 border border-red-500/40 space-y-3";
 
   const renderCrimsonAccordionButton = (
     sectionId: AdminSection,
@@ -823,8 +827,8 @@ export function AdminPanel({
         <div
           className="absolute inset-0 pointer-events-none z-0 opacity-85"
           style={{
-            backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-            backgroundSize: "130% 100%",
+            backgroundImage: `url(${isActive ? IMG_AP_TAB_ACTIVE : RABBIT_HEADER_PILL})`,
+            backgroundSize: "100% 100%",
             backgroundRepeat: "no-repeat",
             backgroundPosition: "center center",
           }}
