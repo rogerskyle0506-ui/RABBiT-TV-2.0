@@ -1373,67 +1373,83 @@ export async function probeStreamWithLatency(
     latencyMs: number;
   }> => {
     const isLowRam = getHardwareLimits().effectiveMode === "low";
-    const timeoutMs = isLowRam ? 3200 : 4500;
+    const timeoutMs = isLowRam ? 2600 : 3600;
     const startedAt = Date.now();
 
     const controller = new AbortController();
     const onParentAbort = () => controller.abort();
     signal?.addEventListener("abort", onParentAbort, { once: true });
 
-    const timer =
-      typeof window !== "undefined"
-        ? window.setTimeout(() => controller.abort(), timeoutMs)
-        : setTimeout(() => controller.abort(), timeoutMs);
+    let hardTimer: ReturnType<typeof setTimeout> | null = null;
+    const timeoutFallback = new Promise<{ health: ChannelHealth; latencyMs: number }>((resolve) => {
+      hardTimer = setTimeout(() => {
+        controller.abort();
+        resolve({ health: "offline", latencyMs: Date.now() - startedAt });
+      }, timeoutMs);
+    });
 
-    try {
-      const res = await fetch(cleanUrl, {
-        method: "GET",
-        signal: controller.signal,
-        mode: "cors",
-        cache: "no-store",
-        credentials: "omit",
-        headers: { Range: "bytes=0-512" },
-      });
+    const doFetch = async (): Promise<{ health: ChannelHealth; latencyMs: number }> => {
+      try {
+        // Simple GET without custom headers avoids CORS preflight OPTIONS stalls on IPTV servers
+        const res = await fetch(cleanUrl, {
+          method: "GET",
+          signal: controller.signal,
+          mode: "cors",
+          cache: "no-store",
+          credentials: "omit",
+        });
 
-      const latencyMs = Date.now() - startedAt;
-      if (res.ok || res.status === 206) {
-        // Verify HLS playlists aren't returning an HTML error/geo-block page
-        if (cleanUrl.toLowerCase().includes(".m3u8")) {
-          const contentType = (res.headers.get("content-type") || "").toLowerCase();
-          if (contentType.includes("text/html")) {
-            return { health: "offline", latencyMs };
-          }
-          try {
-            const snippet = (await res.text()).slice(0, 256).trim();
-            if (snippet && !snippet.startsWith("#EXTM3U") && /<!doctype|<html/i.test(snippet)) {
+        const latencyMs = Date.now() - startedAt;
+        if (res.ok || res.status === 206) {
+          if (cleanUrl.toLowerCase().includes(".m3u8")) {
+            const contentType = (res.headers.get("content-type") || "").toLowerCase();
+            if (contentType.includes("text/html")) {
+              try { await res.body?.cancel(); } catch {}
               return { health: "offline", latencyMs };
             }
-          } catch {
-            // If body can't be read, HTTP 200 is still good
+            // Read only the first chunk via ReadableStream so live feeds never stall on res.text()
+            try {
+              const reader = res.body?.getReader();
+              if (reader) {
+                const { value } = await reader.read();
+                void reader.cancel().catch(() => {});
+                if (value && value.length > 0) {
+                  const snippet = new TextDecoder().decode(value.slice(0, 256)).trim();
+                  if (snippet && !snippet.startsWith("#EXTM3U") && /<!doctype|<html/i.test(snippet)) {
+                    return { health: "offline", latencyMs };
+                  }
+                }
+              }
+            } catch {
+              // If chunk read fails, HTTP 200 is still healthy
+            }
+          } else {
+            try { await res.body?.cancel(); } catch {}
           }
+          return { health: "online", latencyMs };
         }
-        return { health: "online", latencyMs };
-      }
-      if (res.status === 401 || res.status === 403) {
+        try { await res.body?.cancel(); } catch {}
+        if (res.status === 401 || res.status === 403) {
+          return { health: "unknown", latencyMs };
+        }
+        if (res.status >= 400) {
+          return { health: "offline", latencyMs };
+        }
         return { health: "unknown", latencyMs };
-      }
-      if (res.status >= 400) {
+      } catch (err: any) {
+        const latencyMs = Date.now() - startedAt;
+        if (signal?.aborted) return { health: "checking", latencyMs };
+        if (err?.name === "AbortError") return { health: "offline", latencyMs };
+        if (err?.name === "TypeError") return { health: "unknown", latencyMs };
         return { health: "offline", latencyMs };
       }
-      return { health: "unknown", latencyMs };
-    } catch (err: any) {
-      const latencyMs = Date.now() - startedAt;
-      if (signal?.aborted) return { health: "checking", latencyMs };
-      if (err?.name === "AbortError") return { health: "offline", latencyMs };
-      if (err?.name === "TypeError") return { health: "unknown", latencyMs };
-      return { health: "offline", latencyMs };
+    };
+
+    try {
+      return await Promise.race([doFetch(), timeoutFallback]);
     } finally {
       signal?.removeEventListener("abort", onParentAbort);
-      if (typeof window !== "undefined") {
-        window.clearTimeout(timer as number);
-      } else {
-        clearTimeout(timer);
-      }
+      if (hardTimer !== null) clearTimeout(hardTimer);
       inFlightProbes.delete(cleanUrl);
     }
   })();
