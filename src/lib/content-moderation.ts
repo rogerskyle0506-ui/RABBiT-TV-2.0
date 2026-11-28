@@ -10,6 +10,8 @@
  * - Built-in rate limiting & 3-strike 24-hour posting cooldown
  */
 
+import { purgeOldTmdbCaches } from "./settings";
+
 const STRIKES_STORAGE_KEY = "rabtv_mod_strikes_v1";
 const RATE_LIMIT_STORAGE_KEY = "rabtv_mod_ratelimit_v1";
 const STRIKE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -346,6 +348,21 @@ function normalizeForScan(input: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
+  // Map Cyrillic & Greek visual homoglyphs commonly used to bypass filters
+  text = text
+    .replace(/[аàáâãäå]/g, "a")
+    .replace(/[еèéêë]/g, "e")
+    .replace(/[іїìíîï]/g, "i")
+    .replace(/[оòóôõö]/g, "o")
+    .replace(/[р]/g, "p")
+    .replace(/[сç]/g, "c")
+    .replace(/[х]/g, "x")
+    .replace(/[у]/g, "y")
+    .replace(/[к]/g, "k")
+    .replace(/[м]/g, "m")
+    .replace(/[т]/g, "t")
+    .replace(/[н]/g, "h");
+
   // Map common leetspeak & symbol substitutions
   text = text
     .replace(/[@4]/g, "a")
@@ -381,8 +398,13 @@ function containsPrivacyOrLinkRisk(text: string): string | null {
   if (/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(text)) {
     return "Email addresses are blocked to protect privacy.";
   }
-  if (/(?:\+?\d[\s().-]*){7,15}\b/.test(text) && /\d{3}[\s().-]+\d{3,4}/.test(text)) {
-    return "Phone numbers are blocked to protect privacy.";
+  // Linear-time O(n) phone number detector (avoids catastrophic regex backtracking)
+  const phoneTokens = text.match(/\+?[\d][\d\s().-]{6,19}\d/g) || [];
+  for (const candidate of phoneTokens) {
+    const digitCount = candidate.replace(/\D/g, "").length;
+    if (digitCount >= 7 && digitCount <= 15 && /\d{3}[\s().-]+\d{3,4}/.test(candidate)) {
+      return "Phone numbers are blocked to protect privacy.";
+    }
   }
   if (/\b(?:\d{1,3}\.){3}\d{1,3}\b/.test(text)) {
     return "IP addresses cannot be posted publicly.";
@@ -428,10 +450,11 @@ function recordSevereStrike(): StrikeState {
     mutedUntil: nextMutedUntil,
   };
   if (typeof window !== "undefined") {
+    const payload = JSON.stringify(updated);
     try {
-      localStorage.setItem(STRIKES_STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(STRIKES_STORAGE_KEY, payload);
     } catch {
-      // ignore quota errors
+      try { purgeOldTmdbCaches(); localStorage.setItem(STRIKES_STORAGE_KEY, payload); } catch { /* ignore */ }
     }
   }
   return updated;
@@ -490,7 +513,13 @@ export function commitActionRateLimit(bucketKey: string): void {
     const cur = map[bucketKey];
     const nextCount = cur && cur.dayStart === dayStart ? cur.dayCount + 1 : 1;
     map[bucketKey] = { lastAt: now, dayStart, dayCount: nextCount };
-    localStorage.setItem(RATE_LIMIT_STORAGE_KEY, JSON.stringify(map));
+    const serialized = JSON.stringify(map);
+    try {
+      localStorage.setItem(RATE_LIMIT_STORAGE_KEY, serialized);
+    } catch {
+      purgeOldTmdbCaches();
+      localStorage.setItem(RATE_LIMIT_STORAGE_KEY, serialized);
+    }
   } catch {
     // ignore quota errors
   }
