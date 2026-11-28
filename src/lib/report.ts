@@ -3,17 +3,21 @@ import {
   getOrCreateDeviceId,
   getHardwareLimits,
   getRamMode,
+  purgeOldTmdbCaches,
 } from "./settings";
+import {
+  isGistConfigured,
+  readGistJsonFile,
+  patchGistFilesSerialized,
+  runSerializedGistTransaction,
+  generateSecureId,
+} from "./gist-client";
 import { APP_VERSION } from "./version";
 
 // Full email base64 encoded
 const ENCODED_ALERT_DESTINATION = "cm9nZXJza3lsZTA1MDZAZ21haWwuY29t";
 const AUDIT_LOG_STORAGE_KEY = "rabtv_security_audit_log_v1";
 const MAX_AUDIT_ENTRIES = 25;
-
-const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
-const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
-const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
 
 export interface DeviceDiagnostics {
   model: string;
@@ -199,7 +203,7 @@ export function logSecurityEvent(
   );
 
   const entry: SecurityAuditEntry = {
-    id: `sec-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    id: generateSecureId("sec", 5),
     eventType,
     userName: sanitizeText(userName || "Friend", 40),
     userAge: resolvedAge,
@@ -212,14 +216,17 @@ export function logSecurityEvent(
   };
 
   if (typeof window !== "undefined") {
+    const next = [entry, ...getSecurityAuditLog()].slice(0, MAX_AUDIT_ENTRIES);
+    const serialized = JSON.stringify(next);
     try {
-      const next = [entry, ...getSecurityAuditLog()].slice(
-        0,
-        MAX_AUDIT_ENTRIES
-      );
-      localStorage.setItem(AUDIT_LOG_STORAGE_KEY, JSON.stringify(next));
+      localStorage.setItem(AUDIT_LOG_STORAGE_KEY, serialized);
     } catch {
-      // ignore quota issues
+      try {
+        purgeOldTmdbCaches();
+        localStorage.setItem(AUDIT_LOG_STORAGE_KEY, serialized);
+      } catch {
+        // ignore quota issues
+      }
     }
   }
 
@@ -233,67 +240,28 @@ export function logSecurityEvent(
 async function pushActivationTelemetryToGist(
   entry: SecurityAuditEntry
 ): Promise<boolean> {
-  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return false;
-
-  const controller = new AbortController();
-  const timer =
-    typeof window !== "undefined"
-      ? window.setTimeout(() => controller.abort(), 5000)
-      : setTimeout(() => controller.abort(), 5000);
-
-  try {
-    const getRes = await fetch(GIST_API_URL, {
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": "RabbitTV-App",
-      },
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    if (!getRes.ok) return false;
-
-    const gistData = await getRes.json();
-    let existingList: SecurityAuditEntry[] = [];
-    const rawContent = gistData.files?.["activations.json"]?.content;
-    if (rawContent) {
-      try {
-        const parsed = JSON.parse(rawContent);
-        if (Array.isArray(parsed)) existingList = parsed;
-      } catch {
-        existingList = [];
-      }
-    }
-
-    const updated = [entry, ...existingList].slice(0, 100);
-    const patchRes = await fetch(GIST_API_URL, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github+json",
-        "Content-Type": "application/json",
-        "User-Agent": "RabbitTV-App",
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        files: {
+  if (!isGistConfigured()) return false;
+  return runSerializedGistTransaction(async () => {
+    try {
+      const existingList = await readGistJsonFile<SecurityAuditEntry[]>(
+        "activations.json",
+        [],
+        { force: true, timeoutMs: 5500 }
+      );
+      const safeList = Array.isArray(existingList) ? existingList : [];
+      const updated = [entry, ...safeList].slice(0, 100);
+      return await patchGistFilesSerialized(
+        {
           "activations.json": {
             content: JSON.stringify(updated, null, 2),
           },
         },
-      }),
-    });
-
-    return patchRes.ok;
-  } catch {
-    return false;
-  } finally {
-    if (typeof window !== "undefined") {
-      window.clearTimeout(timer as number);
-    } else {
-      clearTimeout(timer);
+        { timeoutMs: 5500 }
+      );
+    } catch {
+      return false;
     }
-  }
+  });
 }
 
 /**
