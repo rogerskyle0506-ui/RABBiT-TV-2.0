@@ -1,5 +1,5 @@
 // src/components/ProfileSwitcherModal.tsx
-import React, { useState, useEffect, useMemo, useRef, memo } from "react";
+import React, { useState, useEffect, useRef, memo } from "react";
 import {
   type AppTheme,
   getHardwareLimits,
@@ -169,167 +169,6 @@ const THEME_OPTIONS: { id: AppTheme; label: string }[] = [
   { id: "cyan", label: "🔷 Cyan" },
 ];
 
-interface SwitcherThemeTokens {
-  shell: string;
-  subPanel: string;
-  dividerBorder: string;
-  accentText: string;
-  accentBar: string;
-  mutedText: string;
-  subMutedText: string;
-  badge: string;
-  btnPrimary: string;
-  btnSecondary: string;
-  cardIdle: string;
-  cardActive: string;
-  inputClass: string;
-  focusRing: string;
-}
-
-function getSwitcherThemeTokens(theme: AppTheme): SwitcherThemeTokens {
-  switch (theme) {
-    case "red":
-      return {
-        shell:
-          "bg-zinc-950/95 border-red-500/40 shadow-[0_25px_75px_rgba(0,0,0,0.96),0_0_36px_rgba(239,68,68,0.22)]",
-        subPanel: "bg-black/75 border-red-500/25",
-        dividerBorder: "border-red-500/20",
-        accentText: "text-red-300",
-        accentBar: "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]",
-        mutedText: "text-zinc-300",
-        subMutedText: "text-zinc-400",
-        badge: "bg-red-950/80 border-red-500/40 text-red-200",
-        btnPrimary:
-          "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/35",
-        btnSecondary:
-          "bg-red-950/60 hover:bg-red-900/80 border-red-500/35 text-red-100 hover:text-white",
-        cardIdle:
-          "bg-black/70 hover:bg-red-950/55 border-red-500/25 hover:border-red-400/70",
-        cardActive:
-          "bg-red-950/75 border-red-400 ring-2 ring-red-400/50 shadow-[0_0_24px_rgba(239,68,68,0.3)]",
-        inputClass:
-          "border-red-500/35 bg-black/85 text-white placeholder-zinc-500 focus:ring-2 focus:ring-red-500",
-        focusRing: "focus:ring-red-500",
-      };
-    case "midnight":
-      return {
-        shell:
-          "bg-slate-950/95 border-blue-500/40 shadow-[0_25px_75px_rgba(0,0,0,0.96),0_0_36px_rgba(59,130,246,0.22)]",
-        subPanel: "bg-black/75 border-blue-500/25",
-        dividerBorder: "border-blue-500/20",
-        accentText: "text-sky-300",
-        accentBar: "bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.9)]",
-        mutedText: "text-slate-300",
-        subMutedText: "text-slate-400",
-        badge: "bg-blue-950/80 border-blue-500/40 text-sky-200",
-        btnPrimary:
-          "bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 text-white shadow-lg shadow-blue-600/35",
-        btnSecondary:
-          "bg-blue-950/60 hover:bg-blue-900/80 border-blue-500/35 text-blue-100 hover:text-white",
-        cardIdle:
-          "bg-black/70 hover:bg-blue-950/55 border-blue-500/25 hover:border-sky-400/70",
-        cardActive:
-          "bg-blue-950/75 border-sky-400 ring-2 ring-sky-400/50 shadow-[0_0_24px_rgba(56,189,248,0.3)]",
-        inputClass:
-          "border-blue-500/35 bg-black/85 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-400",
-        focusRing: "focus:ring-sky-400",
-      };
-    case "emerald":
-      return {
-        shell:
-          "bg-neutral-950/95 border-emerald-500/40 shadow-[0_25px_75px_rgba(0,0,0,0.96),0_0_36px_rgba(16,185,129,0.22)]",
-        subPanel: "bg-black/75 border-emerald-500/25",
-        dividerBorder: "border-emerald-500/20",
-        accentText: "text-emerald-300",
-        accentBar: "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]",
-        mutedText: "text-neutral-300",
-        subMutedText: "text-neutral-400",
-        badge: "bg-emerald-950/80 border-emerald-500/40 text-emerald-200",
-        btnPrimary:
-          "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white shadow-lg shadow-emerald-600/35",
-        btnSecondary:
-          "bg-emerald-950/60 hover:bg-emerald-900/80 border-emerald-500/35 text-emerald-100 hover:text-white",
-        cardIdle:
-          "bg-black/70 hover:bg-emerald-950/55 border-emerald-500/25 hover:border-emerald-400/70",
-        cardActive:
-          "bg-emerald-950/75 border-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_24px_rgba(52,211,153,0.3)]",
-        inputClass:
-          "border-emerald-500/35 bg-black/85 text-white placeholder-neutral-500 focus:ring-2 focus:ring-emerald-400",
-        focusRing: "focus:ring-emerald-400",
-      };
-    case "amber":
-      return {
-        shell:
-          "bg-stone-950/95 border-amber-500/40 shadow-[0_25px_75px_rgba(0,0,0,0.96),0_0_36px_rgba(245,158,11,0.22)]",
-        subPanel: "bg-black/75 border-amber-500/25",
-        dividerBorder: "border-amber-500/20",
-        accentText: "text-amber-300",
-        accentBar: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)]",
-        mutedText: "text-stone-300",
-        subMutedText: "text-stone-400",
-        badge: "bg-amber-950/80 border-amber-500/40 text-amber-200",
-        btnPrimary:
-          "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-600/35",
-        btnSecondary:
-          "bg-amber-950/60 hover:bg-amber-900/80 border-amber-500/35 text-amber-100 hover:text-white",
-        cardIdle:
-          "bg-black/70 hover:bg-amber-950/55 border-amber-500/25 hover:border-amber-400/70",
-        cardActive:
-          "bg-amber-950/75 border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_24px_rgba(251,191,36,0.3)]",
-        inputClass:
-          "border-amber-500/35 bg-black/85 text-white placeholder-stone-500 focus:ring-2 focus:ring-amber-400",
-        focusRing: "focus:ring-amber-400",
-      };
-    case "cyan":
-      return {
-        shell:
-          "bg-slate-950/95 border-cyan-500/40 shadow-[0_25px_75px_rgba(0,0,0,0.96),0_0_36px_rgba(6,182,212,0.22)]",
-        subPanel: "bg-black/75 border-cyan-500/25",
-        dividerBorder: "border-cyan-500/20",
-        accentText: "text-cyan-300",
-        accentBar: "bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)]",
-        mutedText: "text-slate-300",
-        subMutedText: "text-slate-400",
-        badge: "bg-cyan-950/80 border-cyan-500/40 text-cyan-200",
-        btnPrimary:
-          "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 text-white shadow-lg shadow-cyan-600/35",
-        btnSecondary:
-          "bg-cyan-950/60 hover:bg-cyan-900/80 border-cyan-500/35 text-cyan-100 hover:text-white",
-        cardIdle:
-          "bg-black/70 hover:bg-cyan-950/55 border-cyan-500/25 hover:border-cyan-400/70",
-        cardActive:
-          "bg-cyan-950/75 border-cyan-400 ring-2 ring-cyan-400/50 shadow-[0_0_24px_rgba(34,211,238,0.3)]",
-        inputClass:
-          "border-cyan-500/35 bg-black/85 text-white placeholder-slate-500 focus:ring-2 focus:ring-cyan-400",
-        focusRing: "focus:ring-cyan-400",
-      };
-    case "violet":
-    default:
-      return {
-        shell:
-          "bg-slate-950/95 border-violet-500/40 shadow-[0_25px_75px_rgba(0,0,0,0.96),0_0_36px_rgba(139,92,246,0.22)]",
-        subPanel: "bg-black/75 border-violet-500/25",
-        dividerBorder: "border-violet-500/20",
-        accentText: "text-violet-300",
-        accentBar: "bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.9)]",
-        mutedText: "text-slate-300",
-        subMutedText: "text-slate-400",
-        badge: "bg-purple-950/80 border-violet-500/40 text-violet-200",
-        btnPrimary:
-          "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/35",
-        btnSecondary:
-          "bg-purple-950/60 hover:bg-purple-900/80 border-violet-500/35 text-purple-100 hover:text-white",
-        cardIdle:
-          "bg-black/70 hover:bg-purple-950/55 border-violet-500/25 hover:border-violet-400/70",
-        cardActive:
-          "bg-purple-950/75 border-violet-400 ring-2 ring-violet-400/50 shadow-[0_0_24px_rgba(139,92,246,0.3)]",
-        inputClass:
-          "border-violet-500/35 bg-black/85 text-white placeholder-slate-500 focus:ring-2 focus:ring-violet-400",
-        focusRing: "focus:ring-violet-400",
-      };
-  }
-}
-
 export const ProfileSwitcherModal = memo(function ProfileSwitcherModal({
   isOpen,
   appTheme,
@@ -363,7 +202,6 @@ export const ProfileSwitcherModal = memo(function ProfileSwitcherModal({
   const [newIsKids, setNewIsKids] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const tokens = useMemo(() => getSwitcherThemeTokens(appTheme), [appTheme]);
   const isLowRam = getHardwareLimits().effectiveMode === "low";
   const largeButtons = getLargeButtons();
 
@@ -506,6 +344,7 @@ export const ProfileSwitcherModal = memo(function ProfileSwitcherModal({
 
   return (
     <div
+      data-theme={appTheme}
       className={`rabtv-vidsrc-protected fixed inset-0 z-[99995] flex items-center justify-center bg-black/86 p-2.5 sm:p-5 ${
         isLowRam ? "" : "backdrop-blur-xl"
       }`}
