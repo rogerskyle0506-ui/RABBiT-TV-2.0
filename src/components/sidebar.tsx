@@ -1418,7 +1418,7 @@ export function Sidebar({
   };
 
   return (
-    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex justify-end items-center sm:items-start p-2 sm:pt-[64px] sm:pr-4 sm:pb-3 pointer-events-none">
+    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex justify-end items-center sm:items-start p-2 sm:pt-[76px] xl:pt-[104px] sm:pr-4 sm:pb-3 pointer-events-none">
       <style>{`
         :root, html[data-theme="violet"] { --rabtv-sb-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02); }
         html[data-theme="red"] { --rabtv-sb-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0); }
@@ -1429,14 +1429,14 @@ export function Sidebar({
         .rabtv-sb-pill-art { filter: var(--rabtv-sb-filter); }
         .rabtv-sb-9slice-shell {
           position: absolute;
-          inset: 0;
-          box-sizing: border-box;
-          border-style: solid;
-          border-color: transparent;
-          border-width: 28px 24px;
-          border-image-source: url("${RABBIT_DRAWER_FRAME}");
-          border-image-slice: 13% 11% fill;
-          border-image-repeat: stretch;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-image: url("${RABBIT_DRAWER_FRAME}");
+          background-size: 100% 100%;
+          background-position: center center;
+          background-repeat: no-repeat;
           filter: var(--rabtv-sb-filter);
           pointer-events: none;
           z-index: 0;
@@ -1466,7 +1466,7 @@ export function Sidebar({
       {/* Armored Punk-Neon Console Blade Drawer (9-Sliced — Zero Border Stretch & 100% Safe Inner Bay) */}
       <div
         data-tour="sidebar"
-        className={`relative w-full max-w-[min(420px,calc(100vw-16px))] h-[calc(100dvh-16px)] sm:h-[calc(100dvh-78px)] max-h-[calc(100dvh-16px)] rounded-[28px] bg-[#0c0a09]/96 flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-12 pb-12 px-8 sm:px-9 pointer-events-auto box-border backdrop-blur-2xl ${tokens.drawerShell}`}
+        className={`relative w-full max-w-[min(420px,calc(100vw-16px))] h-[calc(100dvh-16px)] sm:h-[calc(100dvh-92px)] xl:h-[calc(100dvh-120px)] max-h-[calc(100dvh-16px)] rounded-[28px] bg-[#0c0a09]/96 flex flex-col z-10 animate-crystal-blade-in overflow-hidden pt-14 pb-14 px-9 sm:px-10 pointer-events-auto box-border backdrop-blur-2xl ${tokens.drawerShell}`}
       >
         {/* 9-Sliced Punk-Neon Armored Outer Frame (Reused rabbit-tv-community-card-frame.jpg) */}
         <div className="rabtv-sb-9slice-shell" aria-hidden="true" />
@@ -1478,7 +1478,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => handleScrollSidebar("up")}
-          className={`absolute top-2.5 left-1/2 -translate-x-1/2 z-20 w-14 h-6 border rounded-full flex items-center justify-center text-xs font-bold transition hover:scale-105 cursor-pointer ${tokens.scrollBtn}`}
+          className={`absolute top-4 left-1/2 -translate-x-1/2 z-20 w-14 h-6 border rounded-full flex items-center justify-center text-xs font-bold transition hover:scale-105 cursor-pointer ${tokens.scrollBtn}`}
           title="Scroll Up"
           aria-label="Scroll sidebar up"
         >
@@ -3422,7 +3422,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => handleScrollSidebar("down")}
-          className={`absolute bottom-2 left-1/2 -translate-x-1/2 z-20 w-14 h-6 border rounded-full flex items-center justify-center text-xs font-bold transition hover:scale-110 cursor-pointer ${tokens.scrollBtn}`}
+          className={`absolute bottom-3.5 left-1/2 -translate-x-1/2 z-20 w-14 h-6 border rounded-full flex items-center justify-center text-xs font-bold transition hover:scale-110 cursor-pointer ${tokens.scrollBtn}`}
           title="Scroll Down"
           aria-label="Scroll sidebar down"
         >
