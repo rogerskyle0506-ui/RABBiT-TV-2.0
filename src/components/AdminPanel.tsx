@@ -11,6 +11,7 @@ import {
   recordPinFailure,
   resetPinFailures,
   isValidAgeLockPin,
+  getHardwareLimits,
 } from "@/lib/settings";
 import {
   getBrokenLinksCount,
@@ -37,11 +38,9 @@ interface AdminPanelProps {
 }
 
 const RABBIT_HEADER_PILL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-idle.jpg";
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-legal-tab-idle.jpg";
 const IMG_AP_TAB_ACTIVE =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-active.jpg";
-const IMG_AP_CARD_FRAME =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-section-card.jpg";
 const RABBIT_DIVIDER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
@@ -870,7 +869,7 @@ export function AdminPanel({
   return (
     <div className="space-y-3 w-full box-border">
       {/* Executive Command Header */}
-      <div className="rounded-2xl bg-gradient-to-r from-red-950/80 via-black/85 to-red-950/80 border border-red-500/45 p-3 shadow-[0_0_20px_rgba(239,68,68,0.25)] backdrop-blur-xl space-y-2.5">
+      <div className={`rounded-2xl bg-gradient-to-r from-red-950/80 via-black/85 to-red-950/80 border border-red-500/45 p-3 shadow-[0_0_20px_rgba(239,68,68,0.25)] ${getHardwareLimits().effectiveMode === "low" ? "" : "backdrop-blur-xl"} space-y-2.5`}>
         <div className="flex items-center gap-2.5">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-600/30 border border-red-400/50 text-sm shadow-[0_0_10px_rgba(239,68,68,0.6)]">
             🔐
@@ -964,7 +963,7 @@ export function AdminPanel({
               className="absolute inset-0 pointer-events-none z-0 opacity-90"
               style={{
                 backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                backgroundSize: "130% 100%",
+                backgroundSize: "100% 100%",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center center",
               }}
@@ -993,7 +992,7 @@ export function AdminPanel({
               className="absolute inset-0 pointer-events-none z-0 opacity-85"
               style={{
                 backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                backgroundSize: "130% 100%",
+                backgroundSize: "100% 100%",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center center",
               }}
