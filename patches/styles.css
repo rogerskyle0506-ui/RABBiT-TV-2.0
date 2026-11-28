@@ -1,52 +1,46 @@
 @import "tailwindcss";
 
-/* --- Custom Font Declarations --- */
+/* ============================================================================
+ * 1. CUSTOM FONT DECLARATIONS (font-display: swap for zero FOIT on Android)
+ * ========================================================================== */
 @font-face {
-  font-family: 'Aresink';
-  src: url('/assets/fonts/Aresink.otf') format('opentype');
+  font-family: "Aresink";
+  src: url("/assets/fonts/Aresink.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Dancing-Majesty';
-  src: url('/assets/fonts/Aresink.otf') format('opentype');
+  font-family: "Dancing-Majesty";
+  src: url("/assets/fonts/Aresink.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Cayu';
-  src: url('/assets/fonts/Cayu.ttf') format('truetype');
+  font-family: "Cayu";
+  src: url("/assets/fonts/Cayu.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
-:root {
-  color-scheme: dark;
-  font-family: "Dancing-Majesty", "Inter", "Segoe UI", sans-serif;
-  --app-bg: #070412;
-  --app-panel: #100921;
-  --app-surface: rgba(16, 9, 33, 0.88);
-  --app-border: rgba(168, 85, 247, 0.35);
-  --app-accent: #c084fc;
-  --app-accent-strong: #9333ea;
-  --app-accent-soft: rgba(168, 85, 247, 0.18);
-  --app-glow: rgba(139, 92, 246, 0.4);
-  --app-text: #f5f3ff;
-  --app-muted: #cbd5e1;
-  --selection-bg: rgba(168, 85, 247, 0.45);
-  --rabtv-overscan: 0%;
-}
-
-/* Theme: Violet (Default) */
+/* ============================================================================
+ * 2. 6-THEME DESIGN TOKENS (Document-level custom properties)
+ * ========================================================================== */
+:root,
 html[data-theme="violet"] {
+  color-scheme: dark;
+  --rabtv-font-accessible: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --rabtv-font-header: "Aresink", var(--rabtv-font-accessible);
+  --rabtv-font-body: "Dancing-Majesty", var(--rabtv-font-accessible);
+  --rabtv-font-media: "Cayu", var(--rabtv-font-accessible);
+
   --app-bg: #070412;
   --app-panel: #100921;
-  --app-surface: rgba(16, 9, 33, 0.88);
+  --app-surface: rgba(16, 9, 33, 0.9);
   --app-border: rgba(168, 85, 247, 0.35);
   --app-accent: #c084fc;
   --app-accent-strong: #9333ea;
@@ -54,14 +48,16 @@ html[data-theme="violet"] {
   --app-glow: rgba(139, 92, 246, 0.4);
   --app-text: #f5f3ff;
   --app-muted: #d8d4e8;
+  --accent-color: var(--app-accent);
+  --primary-color: var(--app-accent-strong);
   --selection-bg: rgba(168, 85, 247, 0.45);
+  --rabtv-overscan: 0%;
 }
 
-/* Theme: Red & Black */
 html[data-theme="red"] {
   --app-bg: #0d0202;
   --app-panel: #160404;
-  --app-surface: rgba(20, 5, 5, 0.9);
+  --app-surface: rgba(20, 5, 5, 0.92);
   --app-border: rgba(239, 68, 68, 0.38);
   --app-accent: #f87171;
   --app-accent-strong: #dc2626;
@@ -69,14 +65,15 @@ html[data-theme="red"] {
   --app-glow: rgba(239, 68, 68, 0.42);
   --app-text: #fef2f2;
   --app-muted: #d4d4d8;
+  --accent-color: var(--app-accent);
+  --primary-color: var(--app-accent-strong);
   --selection-bg: rgba(239, 68, 68, 0.45);
 }
 
-/* Theme: Midnight & Black */
 html[data-theme="midnight"] {
   --app-bg: #020617;
   --app-panel: #040d24;
-  --app-surface: rgba(4, 13, 36, 0.9);
+  --app-surface: rgba(4, 13, 36, 0.92);
   --app-border: rgba(59, 130, 246, 0.38);
   --app-accent: #60a5fa;
   --app-accent-strong: #2563eb;
@@ -84,14 +81,15 @@ html[data-theme="midnight"] {
   --app-glow: rgba(59, 130, 246, 0.42);
   --app-text: #f0f9ff;
   --app-muted: #cbd5e1;
+  --accent-color: var(--app-accent);
+  --primary-color: var(--app-accent-strong);
   --selection-bg: rgba(59, 130, 246, 0.45);
 }
 
-/* Theme: Emerald */
 html[data-theme="emerald"] {
   --app-bg: #02110b;
   --app-panel: #041b12;
-  --app-surface: rgba(4, 27, 18, 0.9);
+  --app-surface: rgba(4, 27, 18, 0.92);
   --app-border: rgba(16, 185, 129, 0.38);
   --app-accent: #34d399;
   --app-accent-strong: #059669;
@@ -99,14 +97,15 @@ html[data-theme="emerald"] {
   --app-glow: rgba(16, 185, 129, 0.4);
   --app-text: #ecfdf5;
   --app-muted: #d4d4d4;
+  --accent-color: var(--app-accent);
+  --primary-color: var(--app-accent-strong);
   --selection-bg: rgba(16, 185, 129, 0.4);
 }
 
-/* Theme: Amber */
 html[data-theme="amber"] {
   --app-bg: #140d03;
   --app-panel: #1f1405;
-  --app-surface: rgba(31, 20, 5, 0.9);
+  --app-surface: rgba(31, 20, 5, 0.92);
   --app-border: rgba(245, 158, 11, 0.38);
   --app-accent: #fbbf24;
   --app-accent-strong: #d97706;
@@ -114,14 +113,15 @@ html[data-theme="amber"] {
   --app-glow: rgba(245, 158, 11, 0.4);
   --app-text: #fffbeb;
   --app-muted: #d6d3d1;
+  --accent-color: var(--app-accent);
+  --primary-color: var(--app-accent-strong);
   --selection-bg: rgba(245, 158, 11, 0.38);
 }
 
-/* Theme: Cyan */
 html[data-theme="cyan"] {
   --app-bg: #021216;
   --app-panel: #041c22;
-  --app-surface: rgba(4, 28, 34, 0.9);
+  --app-surface: rgba(4, 28, 34, 0.92);
   --app-border: rgba(6, 182, 212, 0.38);
   --app-accent: #67e8f9;
   --app-accent-strong: #0891b2;
@@ -129,155 +129,211 @@ html[data-theme="cyan"] {
   --app-glow: rgba(6, 182, 212, 0.4);
   --app-text: #ecfeff;
   --app-muted: #cbd5e1;
+  --accent-color: var(--app-accent);
+  --primary-color: var(--app-accent-strong);
   --selection-bg: rgba(6, 182, 212, 0.38);
 }
 
-/* ==========================================================
-   Senior / Accessibility Text Scaling (Settings.ts Driven)
-   ========================================================== */
+/* Senior / Accessibility Text Scaling & Legible Sans Override */
 html[data-text-scale="normal"] {
   font-size: 100%;
 }
-
 html[data-text-scale="large"] {
   font-size: 112.5%;
 }
-
 html[data-text-scale="xl"] {
   font-size: 125%;
 }
-
-html,
-body {
-  margin: 0;
-  min-height: 100%;
-  max-width: 100%;
-  overflow-x: clip;
-  background-color: var(--app-bg);
-  color: var(--app-text);
-  font-family: 'Dancing-Majesty', sans-serif;
+html[data-senior-easy="true"],
+html[data-text-scale="xl"] {
+  --rabtv-font-header: var(--rabtv-font-accessible);
+  --rabtv-font-body: var(--rabtv-font-accessible);
+  --rabtv-font-media: var(--rabtv-font-accessible);
 }
 
-body {
-  min-height: 100dvh;
-  background-color: var(--app-bg);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+/* ============================================================================
+ * 3. BASE LAYER RESETS (Properly layered so Tailwind v4 utilities always win!)
+ *    - font-mono on clocks/codes/PINs now works properly
+ *    - text-center on Age/PIN inputs is no longer clobbered
+ *    - disabled:cursor-not-allowed & inline-block images work properly
+ * ========================================================================== */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    min-height: 100%;
+    background-color: var(--app-bg);
+    color: var(--app-text);
+  }
+
+  html {
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    overscroll-behavior: none;
+    font-family: var(--rabtv-font-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    isolation: isolate;
+  }
+
+  /* Role-based font defaults (honor Senior Easy Mode via CSS variables) */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  button,
+  [role="button"] {
+    font-family: var(--rabtv-font-header);
+  }
+
+  p,
+  span,
+  a,
+  li,
+  label,
+  input,
+  select,
+  textarea {
+    font-family: var(--rabtv-font-body);
+  }
+
+  /* Strict LTR flow on inputs to prevent Android WebView IME reversal
+     (text-align stays overrideable by Tailwind text-center on PIN/Age inputs) */
+  input[type="text"],
+  input[type="search"],
+  input[type="password"],
+  input[type="number"],
+  textarea {
+    direction: ltr;
+    unicode-bidi: plaintext;
+    text-align: left;
+  }
+
+  input[type="range"],
+  input[type="checkbox"] {
+    accent-color: var(--app-accent);
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  img {
+    max-width: 100%;
+    display: block;
+  }
+
+  ::selection {
+    background: var(--selection-bg);
+    color: #ffffff;
+  }
+
+  @media (max-width: 640px) {
+    html,
+    body,
+    #root {
+      min-width: 0;
+    }
+  }
 }
 
-/* ==========================================================
-   TV / Projector Overscan Safe-Zone Wrapper
-   Applied on dedicated wrapper so inner Tailwind padding stays intact
-   ========================================================== */
-.rabtv-overscan-shell {
-  padding: var(--rabtv-overscan, 0%);
-  transition: padding 0.2s ease;
-  width: 100%;
-  max-width: 100%;
+/* ============================================================================
+ * 4. SHARED COMPONENTS & TAILWIND V4 @utility HELPERS
+ * ========================================================================== */
+@layer components {
+  .rabtv-overscan-shell {
+    padding: var(--rabtv-overscan, 0%);
+    transition: padding 0.2s ease;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .app-panel-card {
+    background-color: var(--app-panel);
+    border: 1px solid var(--app-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .font-aresink {
+    font-family: var(--rabtv-font-header);
+  }
+
+  .media-detail,
+  .media-details,
+  .font-cayu {
+    font-family: var(--rabtv-font-media);
+  }
+
+  .font-dancingmajesty {
+    font-family: var(--rabtv-font-body);
+  }
 }
 
-/* --- Global Role-Based Font Mappings --- */
-/* Headers, Titles, Buttons -> Aresink */
-h1, h2, h3, h4, h5, h6,
-.font-aresink,
-button,
-[role="button"] {
-  font-family: 'Aresink', sans-serif !important;
-}
-
-/* Media Details -> Cayu */
-.media-detail,
-.media-details,
-.font-cayu {
-  font-family: 'Cayu', sans-serif !important;
-}
-
-/* General Body & Sidebar text -> Dancing-Majesty */
-p, span, a, li, label, input, select, textarea,
-.font-dancingmajesty {
-  font-family: 'Dancing-Majesty', sans-serif;
-}
-
-/* Enforce strict LTR text flow on inputs to prevent Android WebView IME reversal */
-input[type="text"],
-input[type="search"],
-input[type="password"],
-input[type="number"],
-textarea {
-  direction: ltr !important;
-  unicode-bidi: plaintext !important;
-  text-align: left;
-}
-
-/* Theme-matched native range sliders & accent color */
-input[type="range"],
-input[type="checkbox"] {
-  accent-color: var(--app-accent);
-}
-
-button,
-[role="button"] {
-  cursor: pointer;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-img {
-  max-width: 100%;
-  display: block;
-}
-
-::selection {
-  background: var(--selection-bg);
-}
-
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Glassmorphism & Panel Polish Utilities (Theme Driven) */
-.app-panel-card {
-  background-color: var(--app-panel);
-  border: 1px solid var(--app-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-/* Hide scrollbars cleanly across browsers */
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-none {
-  -ms-overflow-style: none;
+@utility scrollbar-none {
   scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-/* ==========================================================
-   Short Landscape Mobile Optimization (Prevents Header Slicing Video)
-   ========================================================== */
+@keyframes slowGlowPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.95);
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 7px currentColor);
+  }
+}
+
+@utility animate-slow-glow {
+  animation: slowGlowPulse 2.8s ease-in-out infinite;
+}
+
+/* ============================================================================
+ * 5. EXPLICIT OVERRIDES (Accessibility, Eye-Care, Low-RAM & Fire OS)
+ *    Intentionally unlayered so user safety & hardware overrides always win.
+ * ========================================================================== */
+
+/* Short landscape phones: stop fixed header from slicing video player */
 @media (max-height: 520px) and (orientation: landscape) {
   .rabtv-header-player-route {
     position: relative !important;
   }
 }
 
-/* ==========================================================
-   High-Contrast TV & Senior D-Pad Focus Spotlight
-   ========================================================== */
+/* High-Contrast TV & Senior D-Pad Focus Spotlight */
 html[data-high-contrast-focus="true"] a:focus-visible,
 html[data-high-contrast-focus="true"] button:focus-visible,
 html[data-high-contrast-focus="true"] input:focus-visible,
@@ -293,9 +349,7 @@ html[data-high-contrast-focus="true"] button:focus {
   z-index: 30;
 }
 
-/* ==========================================================
-   Night Owl Warm Eye-Care Filter (Preserves Fixed Positioning)
-   ========================================================== */
+/* Night Owl Warm Eye-Care Filter (Zero layout interference) */
 html[data-eye-care="true"] body::after {
   content: "";
   position: fixed;
@@ -306,9 +360,12 @@ html[data-eye-care="true"] body::after {
   mix-blend-mode: multiply;
 }
 
-/* ==========================================================
-   Reduced Motion / Steady Screen (Senior & Budget GPU Boost)
-   ========================================================== */
+html[data-ram-mode="low"][data-eye-care="true"] body::after {
+  mix-blend-mode: normal;
+  background: rgba(255, 150, 45, 0.09);
+}
+
+/* Reduced Motion / Steady Screen */
 html[data-reduced-motion="true"] *,
 html[data-reduced-motion="true"] *::before,
 html[data-reduced-motion="true"] *::after {
@@ -318,10 +375,7 @@ html[data-reduced-motion="true"] *::after {
   scroll-behavior: auto !important;
 }
 
-/* ==========================================================
-   Low-RAM Streaming Stick Optimization (1GB-2GB Devices)
-   Strips heavy GPU backdrop blurs to prevent WebView OOM crashes
-   ========================================================== */
+/* Low-RAM Streaming Stick Optimization (1GB–2GB Devices) */
 html[data-ram-mode="low"] .backdrop-blur-2xl,
 html[data-ram-mode="low"] .backdrop-blur-xl,
 html[data-ram-mode="low"] .backdrop-blur-md,
@@ -335,9 +389,7 @@ html[data-ram-mode="low"] .animate-ambient-pulse {
   display: none !important;
 }
 
-/* ==========================================================
-   Neon Glow Intensity Control ("off" | "subtle" | "full")
-   ========================================================== */
+/* Neon Glow Intensity Control ("off" | "subtle" | "full") */
 html[data-glow-intensity="off"] .crystal-menu-pill,
 html[data-glow-intensity="off"] .crystal-admin-pill,
 html[data-glow-intensity="off"] header,
@@ -350,43 +402,30 @@ html[data-glow-intensity="subtle"] .animate-slow-glow {
   opacity: 0.85;
 }
 
-/* ==========================================================
-   Category & Genre Scroll Bar Slow Glowing Pulse Animation
-   ========================================================== */
-@keyframes slowGlowPulse {
-  0%, 100% {
-    opacity: 0.35;
-    transform: scale(0.95);
-    filter: drop-shadow(0 0 2px currentColor);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
-    filter: drop-shadow(0 0 7px currentColor);
-  }
-}
-
-.animate-slow-glow {
-  animation: slowGlowPulse 2.8s ease-in-out infinite;
-}
-
-/* ==========================================================
-   Fire OS 7 / Fire Stick Specific Iframe & Viewport Corrections
-   (Only applies when the 'fire-os' class is detected at runtime)
-   ========================================================== */
-html.fire-os iframe,
-html.fire-os .video-player-container,
-html.fire-os video {
+/* Fire OS 7 / Fire Stick GPU Compositing (Preserves absolute inset-0 players!) */
+html.fire-os .video-player-container {
+  position: relative;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  will-change: transform;
-  position: relative !important;
   max-width: 100vw !important;
   max-height: 100vh !important;
 }
 
-/* Ensure Fire OS doesn't collapse flex containers on player views */
+html.fire-os iframe,
+html.fire-os video {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+}
+
 html.fire-os .player-view-wrapper {
   display: block !important;
   min-height: 100vh !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slow-glow {
+    animation: none;
+  }
 }
