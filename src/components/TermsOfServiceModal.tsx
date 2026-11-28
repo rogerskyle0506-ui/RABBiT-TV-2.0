@@ -1,7 +1,7 @@
 // src/components/TermsOfServiceModal.tsx
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import type { AppTheme } from "@/lib/settings";
+import { type AppTheme, getHardwareLimits } from "@/lib/settings";
 
 export const TOS_ACCEPTED_KEY = "rabtv_tos_accepted";
 export const TOS_ACCEPTED_AT_KEY = "rabtv_tos_accepted_at";
@@ -42,12 +42,12 @@ const IMG_TOS_BTN_ACCEPT =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-legal-btn-accept.jpg";
 
 const TOS_STYLES = `
-  :root, html[data-theme="violet"] { --rabtv-tos-filter: hue-rotate(-72deg) saturate(1.12) brightness(1.02); }
-  html[data-theme="red"] { --rabtv-tos-filter: hue-rotate(-24deg) saturate(1.12) brightness(1.0); }
-  html[data-theme="midnight"] { --rabtv-tos-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04); }
-  html[data-theme="emerald"] { --rabtv-tos-filter: hue-rotate(120deg) saturate(1.10) brightness(1.02); }
-  html[data-theme="amber"] { --rabtv-tos-filter: hue-rotate(0deg) saturate(1.10) brightness(1.03); }
-  html[data-theme="cyan"] { --rabtv-tos-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
+  .rabtv-tos-root[data-theme="violet"], :root { --rabtv-tos-filter: hue-rotate(-72deg) saturate(1.12) brightness(1.02); }
+  .rabtv-tos-root[data-theme="red"] { --rabtv-tos-filter: hue-rotate(-24deg) saturate(1.12) brightness(1.0); }
+  .rabtv-tos-root[data-theme="midnight"] { --rabtv-tos-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04); }
+  .rabtv-tos-root[data-theme="emerald"] { --rabtv-tos-filter: hue-rotate(120deg) saturate(1.10) brightness(1.02); }
+  .rabtv-tos-root[data-theme="amber"] { --rabtv-tos-filter: hue-rotate(0deg) saturate(1.10) brightness(1.03); }
+  .rabtv-tos-root[data-theme="cyan"] { --rabtv-tos-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
 
   .rabtv-tos-shell { position: relative; overflow: hidden; box-sizing: border-box; padding: 18px 14px !important; background-color: #0c0a09; contain: layout paint; }
   @media (min-width: 640px) { .rabtv-tos-shell { padding: 24px 22px !important; } }
@@ -71,28 +71,6 @@ export interface TermsOfServiceModalProps {
   onClose?: () => void;
   onOpenExternal?: (url: string, e?: React.MouseEvent) => void;
 }
-
-const themeBorderGlow: Record<AppTheme, string> = {
-  violet: "border-violet-500/45 shadow-[0_0_45px_rgba(139,92,246,0.35)]",
-  red: "border-red-500/45 shadow-[0_0_45px_rgba(239,68,68,0.35)]",
-  midnight: "border-blue-500/45 shadow-[0_0_45px_rgba(59,130,246,0.35)]",
-  emerald: "border-emerald-500/45 shadow-[0_0_45px_rgba(16,185,129,0.35)]",
-  amber: "border-amber-500/45 shadow-[0_0_45px_rgba(245,158,11,0.35)]",
-  cyan: "border-cyan-500/45 shadow-[0_0_45px_rgba(6,182,212,0.35)]",
-};
-
-const themeButtonGradient: Record<AppTheme, string> = {
-  violet:
-    "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 shadow-violet-600/35",
-  red: "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 shadow-red-600/35",
-  midnight:
-    "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-600 shadow-blue-600/35",
-  emerald:
-    "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 shadow-emerald-600/35",
-  amber:
-    "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 shadow-amber-600/35",
-  cyan: "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 shadow-cyan-600/35",
-};
 
 export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
   isOpen,
@@ -156,9 +134,12 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const isLowRam = getHardwareLimits().effectiveMode === "low";
+
   const modal = (
     <div
-      className="fixed inset-0 z-[99990] flex items-center justify-center p-2.5 sm:p-5 bg-black/86 backdrop-blur-md"
+      data-theme={appTheme}
+      className={`rabtv-tos-root fixed inset-0 z-[99990] flex items-center justify-center p-2.5 sm:p-5 bg-black/86 ${isLowRam ? "" : "backdrop-blur-md"}`}
       role="dialog"
       aria-modal="true"
       aria-label="RABBiT TV Terms of Service"
