@@ -2890,21 +2890,19 @@ export function ActivationModal({
           position: relative;
           overflow: hidden;
           box-sizing: border-box;
-          padding: 16px 14px !important;
+          padding: clamp(20px, 5%, 30px) clamp(20px, 6%, 34px) !important;
           background-color: #0c0a09;
-          contain: layout paint;
         }
-        @media (min-width: 640px) { .rabtv-act-shell { padding: 22px 20px !important; } }
         .rabtv-act-shell-9slice {
           position: absolute;
-          inset: 0;
-          box-sizing: border-box;
-          border-style: solid;
-          border-color: transparent;
-          border-width: 24px 20px;
-          border-image-source: url("${IMG_ACT_MODAL_FRAME}");
-          border-image-slice: 12% 11% fill;
-          border-image-repeat: stretch;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-image: url("${IMG_ACT_MODAL_FRAME}");
+          background-size: 100% 100%;
+          background-position: center center;
+          background-repeat: no-repeat;
           filter: var(--rabtv-act-filter);
           pointer-events: none;
           z-index: 0;
