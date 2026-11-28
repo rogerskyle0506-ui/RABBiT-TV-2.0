@@ -201,120 +201,92 @@ const COMMUNITY_PAGE_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 40px 36px !important;
+    padding: clamp(28px, 6.2%, 48px) clamp(26px, 6.8%, 50px) !important;
     background-color: #0c0a09;
-    contain: layout paint;
-  }
-
-  @media (min-width: 640px) {
-    .rabtv-club-plate {
-      padding: 48px 44px !important;
-    }
   }
 
   .rabtv-club-9slice-card {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 26px 22px;
-    border-image-source: url("${IMG_COMM_CARD_FRAME}");
-    border-image-slice: 13% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_COMM_CARD_FRAME}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-club-plate-filter);
     pointer-events: none;
     z-index: 0;
   }
 
-  @media (min-width: 640px) {
-    .rabtv-club-9slice-card {
-      border-width: 32px 28px;
-    }
-  }
-
   .rabtv-club-plate-scrim {
     position: absolute;
-    inset: 24px 20px;
+    inset: 22px 20px;
     border-radius: 14px;
     background: rgba(12, 10, 9, 0.34);
     pointer-events: none;
     z-index: 1;
   }
 
-  @media (min-width: 640px) {
-    .rabtv-club-plate-scrim {
-      inset: 30px 26px;
-    }
-  }
-
-  /* 9-Sliced Stat Cards (Movies Watched / Shows Watched) */
+  /* GPU-Safe Stat Cards (Movies Watched / Shows Watched) */
   .rabtv-club-stat {
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 20px 22px !important;
+    padding: clamp(16px, 4.5%, 24px) clamp(18px, 5.5%, 28px) !important;
     background-color: #0c0a09;
-    contain: layout paint;
   }
 
   .rabtv-club-9slice-stat {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 14px 16px;
-    border-image-source: url("${IMG_STAT_CARD}");
-    border-image-slice: 20% 14% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_STAT_CARD}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-club-plate-filter);
     pointer-events: none;
     z-index: 0;
   }
 
-  /* 9-Sliced 21:9 Movie Club Section Banner (Film-Reel & Rabbit-Ear Clamps Locked Cleanly at Ends) */
+  /* GPU-Safe 21:9 Movie Club Section Banner */
   .rabtv-club-section-banner {
     position: relative;
     width: 100%;
     min-height: 54px;
     box-sizing: border-box;
-    padding: 15px 64px !important;
+    padding: 15px clamp(52px, 14%, 96px) !important;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 18px;
     overflow: hidden;
     background-color: #0c0a09;
-    contain: layout paint;
   }
 
   @media (min-width: 640px) {
     .rabtv-club-section-banner {
       min-height: 64px;
-      padding: 18px 88px !important;
     }
   }
 
   .rabtv-club-9slice-banner {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 11px 52px;
-    border-image-source: url("${IMG_COMM_SECTION_BANNER}");
-    border-image-slice: 18% 20% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_COMM_SECTION_BANNER}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-club-plate-filter);
     pointer-events: none;
     z-index: 0;
-  }
-
-  @media (min-width: 640px) {
-    .rabtv-club-9slice-banner {
-      border-width: 13px 72px;
-    }
   }
 
   /* Empty State Underground Lounge Panel */
@@ -357,15 +329,14 @@ const COMMUNITY_PAGE_STYLES = `
     z-index: 1;
   }
 
-  /* 9-Sliced 4:1 Navigation Tab Plates (Zero Side-Clamp Clipping) */
+  /* GPU-Safe 4:1 Navigation Tab Plates (Zero Side-Clamp Clipping on Projector/TV) */
   .rabtv-club-tab {
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 11px 26px !important;
+    padding: 11px 20px !important;
     background-color: #0c0a09;
     border: 0 !important;
-    contain: layout paint;
     transition: transform 150ms ease, opacity 150ms ease;
   }
 
@@ -374,14 +345,14 @@ const COMMUNITY_PAGE_STYLES = `
 
   .rabtv-club-9slice-tab-active {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 9px 22px;
-    border-image-source: url("${IMG_COMM_TAB_ACTIVE}");
-    border-image-slice: 28% 20% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_COMM_TAB_ACTIVE}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-club-plate-filter) brightness(1.06);
     pointer-events: none;
     z-index: 0;
@@ -389,38 +360,37 @@ const COMMUNITY_PAGE_STYLES = `
 
   .rabtv-club-9slice-tab-idle {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 8px 18px;
-    border-image-source: url("${IMG_PILL_INACTIVE}");
-    border-image-slice: 24% 16% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_PILL_INACTIVE}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     opacity: 0.88;
     filter: var(--rabtv-club-plate-filter) brightness(0.92);
     pointer-events: none;
     z-index: 0;
   }
 
-  /* 9-Sliced Armored Input Housing (Typed Text & Placeholders Never Touch Side Clamps!) */
+  /* GPU-Safe Armored Input Housing (Typed Text & Placeholders Never Touch Side Clamps!) */
   .rabtv-club-input-shell {
     position: relative;
     overflow: hidden;
     background-color: #0c0a09;
-    contain: layout paint;
   }
 
   .rabtv-club-9slice-input {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 8px 22px;
-    border-image-source: url("${IMG_INPUT_BAR}");
-    border-image-slice: 22% 14% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_INPUT_BAR}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-club-plate-filter);
     pointer-events: none;
     z-index: 0;
