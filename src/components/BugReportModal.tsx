@@ -1,7 +1,7 @@
 // src/components/BugReportModal.tsx
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { submitBugReport, isUserBanned } from "@/lib/bugReports";
-import { AppTheme, getSavedTheme } from "@/lib/settings";
+import { AppTheme, getSavedTheme, getHardwareLimits } from "@/lib/settings";
 
 interface BugReportModalProps {
   isOpen: boolean;
@@ -13,13 +13,6 @@ interface BugReportModalProps {
 const MAX_MESSAGE_LENGTH = 50;
 const COOLDOWN_MS = 60 * 1000; // 60-second anti-spam cooldown between reports
 const LAST_REPORT_TS_KEY = "rabtv_last_bug_report_ts";
-
-const RABBIT_HEADER_PILL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-header-pill.jpg";
-const RABBIT_PANEL =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-panel.jpg";
-const RABBIT_DIVIDER =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/rabbit-divider.jpg";
 
 // TV-remote friendly presets (safe from media-request strike keywords)
 const IMG_BUG_MODAL_FRAME =
@@ -241,72 +234,6 @@ export function BugReportModal({
     };
   }, [isOpen, userName, userUnlockCode, onClose]);
 
-  const themeTokens = useMemo(() => {
-    switch (appTheme) {
-      case "red":
-        return {
-          borderGlow:
-            "border-red-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(239,68,68,0.3)]",
-          primaryBtn:
-            "bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 text-white shadow-lg shadow-red-600/35",
-          accentText: "text-red-300",
-          ring: "focus:ring-red-400",
-          laser: "from-transparent via-red-500 to-amber-400",
-        };
-      case "midnight":
-        return {
-          borderGlow:
-            "border-sky-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(56,189,248,0.3)]",
-          primaryBtn:
-            "bg-gradient-to-r from-blue-600 via-cyan-600 to-sky-500 text-white shadow-lg shadow-blue-600/35",
-          accentText: "text-sky-300",
-          ring: "focus:ring-sky-400",
-          laser: "from-transparent via-sky-400 to-blue-500",
-        };
-      case "emerald":
-        return {
-          borderGlow:
-            "border-emerald-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(16,185,129,0.3)]",
-          primaryBtn:
-            "bg-gradient-to-r from-emerald-600 via-teal-600 to-green-500 text-white shadow-lg shadow-emerald-600/35",
-          accentText: "text-emerald-300",
-          ring: "focus:ring-emerald-400",
-          laser: "from-transparent via-emerald-400 to-cyan-400",
-        };
-      case "amber":
-        return {
-          borderGlow:
-            "border-amber-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(245,158,11,0.3)]",
-          primaryBtn:
-            "bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 text-slate-950 shadow-lg shadow-amber-500/35",
-          accentText: "text-amber-300",
-          ring: "focus:ring-amber-400",
-          laser: "from-transparent via-amber-400 to-orange-500",
-        };
-      case "cyan":
-        return {
-          borderGlow:
-            "border-cyan-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(34,211,238,0.3)]",
-          primaryBtn:
-            "bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 text-white shadow-lg shadow-cyan-500/35",
-          accentText: "text-cyan-300",
-          ring: "focus:ring-cyan-400",
-          laser: "from-transparent via-cyan-400 to-sky-500",
-        };
-      case "violet":
-      default:
-        return {
-          borderGlow:
-            "border-purple-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(168,85,247,0.3)]",
-          primaryBtn:
-            "bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/35",
-          accentText: "text-violet-300",
-          ring: "focus:ring-violet-400",
-          laser: "from-transparent via-pink-500 to-cyan-400",
-        };
-    }
-  }, [appTheme]);
-
   // Real-time strike keyword warning before user hits submit
   const liveKeywordWarning = useMemo(() => {
     const lower = message.toLowerCase();
@@ -388,7 +315,8 @@ export function BugReportModal({
   };
 
   return (
-    <div className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/84 p-2.5 sm:p-5 backdrop-blur-xl overflow-y-auto">
+    <div data-theme={appTheme}
+      className={`rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/84 p-2.5 sm:p-5 ${getHardwareLimits().effectiveMode === "low" ? "" : "backdrop-blur-xl"} overflow-y-auto`}>
       <style>{BUG_MODAL_STYLES}</style>
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
