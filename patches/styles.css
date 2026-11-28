@@ -429,3 +429,18 @@ html.fire-os .player-view-wrapper {
     animation: none;
   }
 }
+
+/* ============================================================================
+ * 6. ANDROID TV / PROJECTOR GPU SAFE FRAME GUARD
+ *    Prevents Skia border-image + filter inward-shrink on any legacy -9slice
+ *    panels (Sidebar, Movie Club, Footer) across Android TV WebViews.
+ * ========================================================================== */
+[class*="-9slice"] {
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+}
