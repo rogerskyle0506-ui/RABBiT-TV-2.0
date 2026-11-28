@@ -9,7 +9,10 @@ import {
   setKidsModeLocked,
   applyAllSettingsToDocument,
   purgeOldTmdbCaches,
+  clearSettingsMemoryCache,
+  saveSettingsBatch,
 } from "@/lib/settings";
+import { generateSecureId } from "@/lib/gist-client";
 import {
   MASCOT_UPDATED_EVENT,
   sanitizeMascotId,
@@ -38,6 +41,7 @@ const ISOLATED_STORAGE_KEYS = [
   "rabtv_disliked_titles",
   "rabtv_recent_live_channels",
   "rabtv_favorite_live_channels",
+  "rabtv_hidden_live_channels_v1",
   CUSTOM_SHELVES_STORAGE_KEY,
 ] as const;
 
@@ -117,6 +121,8 @@ function applyIsolatedData(data: Record<string, string | null> | undefined): voi
       }
     }
   }
+  // CRITICAL: flush settings.ts in-memory cache so pinned live channels update immediately!
+  clearSettingsMemoryCache();
 }
 
 function persistProfiles(profiles: HouseholdProfile[]): boolean {
@@ -148,6 +154,7 @@ function broadcastProfileChange(): void {
   window.dispatchEvent(new Event("rabtv_watch_history_updated"));
   window.dispatchEvent(new Event("rabtv_disliked_updated"));
   window.dispatchEvent(new Event(CUSTOM_SHELVES_EVENT));
+  window.dispatchEvent(new Event("rabtv_live_catalog_updated"));
 }
 
 /**
@@ -296,7 +303,7 @@ export function createHouseholdProfile(input: {
   const now = Date.now();
   const isKids = Boolean(input.isKids);
   const newProfile: HouseholdProfile = {
-    id: `prof-${now}-${Math.random().toString(36).slice(2, 6)}`,
+    id: generateSecureId("prof", 4),
     name: cleanName,
     mascot: sanitizeMascot(input.mascot),
     theme: sanitizeTheme(input.theme),
@@ -320,14 +327,16 @@ export function switchHouseholdProfile(profileId: string): boolean {
   const target = profiles.find((p) => p.id === profileId);
   if (!target) return false;
 
-  // Apply target profile's isolated data & preferences
+  // Apply target profile's isolated data & preferences atomically in 1 DOM pass
   applyIsolatedData(target.data);
   localStorage.setItem("rabtv_profile_name", target.name);
   localStorage.setItem(ACTIVE_PROFILE_ID_KEY, target.id);
-  saveTheme(target.theme);
-  setActiveMascotBadge(target.mascot);
-  saveUserAge(target.age);
-  setKidsModeLocked(target.isKids);
+  saveSettingsBatch(() => {
+    saveTheme(target.theme);
+    setActiveMascotBadge(target.mascot);
+    saveUserAge(target.age);
+    setKidsModeLocked(target.isKids);
+  });
 
   const refreshed = profiles.map((p) =>
     p.id === target.id ? { ...p, lastUsedAt: Date.now() } : p
