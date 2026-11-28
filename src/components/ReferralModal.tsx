@@ -91,29 +91,32 @@ const REFERRAL_MODAL_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 18px 14px !important;
+    padding: clamp(22px, 5%, 34px) clamp(22px, 6.2%, 38px) !important;
     background-color: #0c0a09;
     box-shadow: 0 28px 80px rgba(0, 0, 0, 0.96), 0 0 38px var(--rabtv-ref-glow);
-    contain: layout paint;
-  }
-  @media (min-width: 640px) {
-    .rabtv-ref-shell {
-      padding: 24px 22px !important;
-    }
   }
   .rabtv-ref-shell-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 24px 20px;
-    border-image-source: url("${IMG_REF_MODAL_FRAME}");
-    border-image-slice: 12% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_REF_MODAL_FRAME}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-ref-plate-filter);
     pointer-events: none;
     z-index: 0;
+  }
+  @media (max-height: 540px) {
+    .rabtv-ref-shell {
+      padding: 16px 24px !important;
+    }
+    .rabtv-ref-hero-banner {
+      min-height: 78px !important;
+      padding: 10px 12px !important;
+    }
   }
 
   /* Mascot Handshake Header Banner */
@@ -153,31 +156,25 @@ const REFERRAL_MODAL_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 18px 16px !important;
+    padding: clamp(16px, 4.5%, 24px) clamp(18px, 5.4%, 28px) !important;
     background-color: #0c0a09;
-    contain: layout paint;
-  }
-  @media (min-width: 640px) {
-    .rabtv-ref-card {
-      padding: 20px 20px !important;
-    }
   }
   .rabtv-ref-card--stat {
-    padding: 14px 12px !important;
+    padding: 14px 14px !important;
   }
   .rabtv-ref-card--row {
-    padding: 13px 15px !important;
+    padding: 14px 18px !important;
   }
   .rabtv-ref-card-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 14px 14px;
-    border-image-source: url("${IMG_REF_SECTION_CARD}");
-    border-image-slice: 14% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_REF_SECTION_CARD}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-ref-plate-filter);
     pointer-events: none;
     z-index: 0;
@@ -322,14 +319,14 @@ const REFERRAL_MODAL_STYLES = `
   }
   .rabtv-ref-input-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 7px 16px;
-    border-image-source: url("${IMG_REF_INPUT_BAR}");
-    border-image-slice: 22% 14% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_REF_INPUT_BAR}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-ref-plate-filter);
     pointer-events: none;
     z-index: 0;
