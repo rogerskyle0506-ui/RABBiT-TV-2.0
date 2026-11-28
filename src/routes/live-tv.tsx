@@ -114,25 +114,19 @@ const LIVETV_VIEWPORT_STYLES = `
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 24px 20px !important;
+    padding: clamp(22px, 5%, 34px) clamp(20px, 5.5%, 38px) !important;
     background-color: rgba(12, 10, 9, 0.90);
-    contain: layout paint;
-  }
-  @media (min-width: 640px) {
-    .rabtv-ltv-deck {
-      padding: 28px 30px !important;
-    }
   }
   .rabtv-ltv-deck-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 20px 18px;
-    border-image-source: url("${IMG_LIVETV_CHANNEL_FRAME}");
-    border-image-slice: 13% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_LIVETV_CHANNEL_FRAME}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-ltv-plate-filter);
     pointer-events: none;
     z-index: 0;
@@ -172,14 +166,14 @@ const LIVETV_VIEWPORT_STYLES = `
   }
   .rabtv-ltv-card-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 14px 12px;
-    border-image-source: url("${IMG_LIVETV_CHANNEL_FRAME}");
-    border-image-slice: 13% 11% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_LIVETV_CHANNEL_FRAME}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-ltv-plate-filter);
     pointer-events: none;
     z-index: 0;
@@ -278,14 +272,14 @@ const LIVETV_VIEWPORT_STYLES = `
   }
   .rabtv-ltv-input-9slice {
     position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-style: solid;
-    border-color: transparent;
-    border-width: 7px 16px;
-    border-image-source: url("${IMG_INPUT_BAR}");
-    border-image-slice: 22% 14% fill;
-    border-image-repeat: stretch;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("${IMG_INPUT_BAR}");
+    background-size: 100% 100%;
+    background-position: center center;
+    background-repeat: no-repeat;
     filter: var(--rabtv-ltv-plate-filter);
     pointer-events: none;
     z-index: 0;
@@ -2074,7 +2068,7 @@ function LiveTvComponent() {
 
   return (
     <main
-      className={`min-h-screen ${tokens.bg} ${tokens.baseText} transition-colors duration-300 pb-16 px-2.5 sm:px-6 w-full max-w-full overflow-x-clip box-border relative rounded-3xl`}
+      className={`min-h-screen ${tokens.bg} ${tokens.baseText} transition-colors duration-300 pt-3 sm:pt-4 pb-16 px-2.5 sm:px-6 w-full max-w-full overflow-x-clip box-border relative rounded-3xl`}
     >
       <style>{LIVETV_VIEWPORT_STYLES}</style>
       <AppWallpaper backdropUrl={IMG_LIVETV_BROADCAST_DECK} />
@@ -2463,7 +2457,7 @@ function LiveTvComponent() {
                       key={genre}
                       type="button"
                       onClick={() => handleGenreSelect(genre)}
-                      className="rabtv-ltv-btn shrink-0 rounded-xl px-3.5 py-2 text-xs font-extrabold text-white whitespace-nowrap cursor-pointer"
+                      className="rabtv-ltv-btn shrink-0 rounded-xl px-5 py-2 text-xs font-extrabold text-white whitespace-nowrap cursor-pointer"
                     >
                       <span
                         className="rabtv-ltv-btn-bg"
