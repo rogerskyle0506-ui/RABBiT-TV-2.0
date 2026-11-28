@@ -1,5 +1,6 @@
 // src/components/AdminBugInbox.tsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { getHardwareLimits } from "@/lib/settings";
 import {
   fetchBugSystemData,
   updateBugReportStatus,
@@ -28,12 +29,10 @@ interface PendingConfirmation {
 
 const IMG_ABI_BANNER =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-bugs-banner.jpg";
-const IMG_ABI_CARD =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-section-card.jpg";
 const IMG_ABI_TAB_ACTIVE =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-active.jpg";
 const IMG_ABI_TAB_IDLE =
-  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-idle.jpg";
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-legal-tab-idle.jpg";
 
 const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
 const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
@@ -413,7 +412,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
       {/* Status Toast Banner */}
       {statusFeedback && (
         <div
-          className={`rounded-xl px-3 py-2 text-[11px] font-bold text-center border backdrop-blur-md transition ${
+          className={`rounded-xl px-3 py-2 text-[11px] font-bold text-center border ${getHardwareLimits().effectiveMode === "low" ? "" : "backdrop-blur-md"} transition ${
             statusFeedback.isError
               ? "bg-red-950/80 border-red-500/50 text-red-200"
               : "bg-emerald-950/80 border-emerald-500/50 text-emerald-300"
@@ -464,6 +463,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
             style={{
               backgroundImage: `url(${activeTab === "inbox" ? IMG_ABI_TAB_ACTIVE : IMG_ABI_TAB_IDLE})`,
               backgroundSize: "100% 100%",
+              clipPath: "polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px)",
             }}
             className="py-2 px-2 rounded-xl text-[11px] font-extrabold text-white whitespace-nowrap transition-all cursor-pointer hover:brightness-110"
           >
@@ -475,6 +475,7 @@ export function AdminBugInbox({ isOpen = true, onClose }: AdminBugInboxProps) {
             style={{
               backgroundImage: `url(${activeTab === "banned" ? IMG_ABI_TAB_ACTIVE : IMG_ABI_TAB_IDLE})`,
               backgroundSize: "100% 100%",
+              clipPath: "polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px)",
             }}
             className="py-2 px-2 rounded-xl text-[11px] font-extrabold text-white whitespace-nowrap transition-all cursor-pointer hover:brightness-110"
           >
