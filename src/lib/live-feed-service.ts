@@ -20,6 +20,11 @@ import {
 } from "./settings";
 import { getChannelCategory } from "./channel-categories";
 import { matchesChannelSearch } from "./channel-descriptions";
+import {
+  isGistConfigured,
+  readGistJsonFile,
+  generateSecureId,
+} from "./gist-client";
 
 export type ChannelHealth = "online" | "offline" | "checking" | "unknown";
 
@@ -115,10 +120,6 @@ const MAX_M3U_BYTES = 512 * 1024; // 512 KB cap prevents freezing 1-2GB sticks
 const MAX_M3U_LINES = 5000;
 const MAX_URL_LENGTH = 2048;
 const HIDE_OFFLINE_BY_DEFAULT = true;
-
-const GIST_ID = ((import.meta as any).env?.VITE_GIST_ID as string) || "";
-const GITHUB_TOKEN = ((import.meta as any).env?.VITE_GH_PAT as string) || "";
-const GIST_API_URL = GIST_ID ? `https://api.github.com/gists/${GIST_ID}` : "";
 
 const DEFAULT_LIVE_UA =
   "otg/1.5.1 (AppleTv Apple TV 4; tvOS16.0; appletv.client) libcurl/7.58.0 OpenSSL/1.0.2o zlib/1.2.11 clib/1.8.56";
@@ -564,6 +565,25 @@ function invalidateCatalogCache(): void {
   searchTokensMem = null;
 }
 
+if (typeof window !== "undefined") {
+  const handleExternalProfileOrStorageSync = () => {
+    customChannelsMem = null;
+    hiddenIdsMem = null;
+    invalidateCatalogCache();
+  };
+  window.addEventListener("rabtv_profiles_updated", handleExternalProfileOrStorageSync);
+  window.addEventListener("storage", (e) => {
+    if (
+      !e.key ||
+      e.key === CUSTOM_CHANNELS_KEY ||
+      e.key === HIDDEN_CHANNELS_KEY ||
+      e.key === HEALTH_CACHE_KEY
+    ) {
+      handleExternalProfileOrStorageSync();
+    }
+  });
+}
+
 function ensureCatalogIndexes(): void {
   if (mergedServicesMem && byIdIndexMem && byUrlIndexMem && byBaseNameIndexMem) {
     return;
@@ -754,7 +774,7 @@ export function addCustomLiveChannel(input: {
   const cleanGroup = sanitizeChannelText(input.groupTitle || "Custom", 25) || "Custom";
 
   const newChannel: LiveFeedService = defineChannel(
-    `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    generateSecureId("custom", 5),
     cleanName,
     cleanGroup,
     cleanUrl,
@@ -897,7 +917,7 @@ export function parseM3uPlaylist(
         };
         parsed.push(
           defineChannel(
-            `m3u-${parsed.length + 1}-${Date.now().toString(36)}`,
+            generateSecureId(`m3u${parsed.length + 1}`, 4),
             meta.name,
             meta.groupTitle,
             line,
@@ -1052,33 +1072,16 @@ export async function syncRemoteChannelOverrides(
     const cached = loadCachedRemoteOverrides();
     if (cached.length > 0) return cached;
   }
-  if (!GIST_ID || !GITHUB_TOKEN || !GIST_API_URL) return [];
+  if (!isGistConfigured()) return [];
   if (remoteSyncInFlight && !force) return remoteSyncInFlight;
 
   const task = (async () => {
-    const controller = new AbortController();
-    const timer =
-      typeof window !== "undefined"
-        ? window.setTimeout(() => controller.abort(), 5000)
-        : setTimeout(() => controller.abort(), 5000);
-
     try {
-      const res = await fetch(`${GIST_API_URL}?t=${Date.now()}`, {
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "RabbitTV-App",
-        },
-        signal: controller.signal,
-        cache: "no-store",
-      });
-      if (!res.ok) return loadCachedRemoteOverrides();
-
-      const gistData = await res.json();
-      const rawContent = gistData.files?.["live_channels.json"]?.content;
-      if (!rawContent) return [];
-
-      const parsed = JSON.parse(rawContent);
+      const parsed = await readGistJsonFile<unknown[]>(
+        "live_channels.json",
+        [],
+        { force, maxAgeMs: REMOTE_OVERRIDES_TTL_MS, timeoutMs: 5500 }
+      );
       if (!Array.isArray(parsed)) return [];
 
       const sanitized: LiveFeedService[] = parsed
@@ -1133,11 +1136,6 @@ export async function syncRemoteChannelOverrides(
     } catch {
       return loadCachedRemoteOverrides();
     } finally {
-      if (typeof window !== "undefined") {
-        window.clearTimeout(timer as number);
-      } else {
-        clearTimeout(timer);
-      }
       remoteSyncInFlight = null;
     }
   })();
