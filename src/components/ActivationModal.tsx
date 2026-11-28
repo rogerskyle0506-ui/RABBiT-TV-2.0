@@ -55,6 +55,19 @@ const ADMIN_SEEN_REQS_KEY = "rabtv_admin_seen_req_ids_v1";
 const IDB_VAULT_NAME = "rabtv_secure_vault_v1";
 const IDB_STORE_NAME = "kv";
 
+const IMG_ACT_MODAL_FRAME =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-modal-frame.jpg";
+const IMG_ACT_BANNER =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-activation-banner.jpg";
+const IMG_ACT_BTN_PRIMARY =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-btn-primary.jpg";
+const IMG_ACT_BTN_EMERALD =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-btn-emerald.jpg";
+const IMG_ACT_TAB_ACTIVE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-active.jpg";
+const IMG_ACT_TAB_IDLE =
+  "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/refs/heads/main/assets/rabbit-tv-referral-tab-idle.jpg";
+
 const BANNER_IMAGE_URL =
   "https://raw.githubusercontent.com/rogerskyle0506-ui/RABBiT-TV-2.0/main/assets/HeaderFamily.jpg";
 const RABBIT_HEADER_PILL =
@@ -2008,6 +2021,70 @@ export function ActivationModal({
       className="rabtv-vidsrc-protected fixed inset-0 z-50 flex items-center justify-center bg-black/88 p-2.5 sm:p-5 backdrop-blur-xl overflow-hidden"
     >
       <style>{`
+        :root, html[data-theme="violet"] { --rabtv-act-filter: hue-rotate(-78deg) saturate(1.12) brightness(1.02); }
+        html[data-theme="red"] { --rabtv-act-filter: hue-rotate(0deg) saturate(1.08) brightness(1.0); }
+        html[data-theme="midnight"] { --rabtv-act-filter: hue-rotate(-132deg) saturate(1.14) brightness(1.04); }
+        html[data-theme="emerald"] { --rabtv-act-filter: hue-rotate(154deg) saturate(1.10) brightness(1.02); }
+        html[data-theme="amber"] { --rabtv-act-filter: hue-rotate(28deg) saturate(1.14) brightness(1.04); }
+        html[data-theme="cyan"] { --rabtv-act-filter: hue-rotate(-154deg) saturate(1.12) brightness(1.04); }
+
+        .rabtv-act-shell {
+          position: relative;
+          overflow: hidden;
+          box-sizing: border-box;
+          padding: 16px 14px !important;
+          background-color: #0c0a09;
+          contain: layout paint;
+        }
+        @media (min-width: 640px) { .rabtv-act-shell { padding: 22px 20px !important; } }
+        .rabtv-act-shell-9slice {
+          position: absolute;
+          inset: 0;
+          box-sizing: border-box;
+          border-style: solid;
+          border-color: transparent;
+          border-width: 24px 20px;
+          border-image-source: url("${IMG_ACT_MODAL_FRAME}");
+          border-image-slice: 12% 11% fill;
+          border-image-repeat: stretch;
+          filter: var(--rabtv-act-filter);
+          pointer-events: none;
+          z-index: 0;
+        }
+        .rabtv-act-btn {
+          position: relative;
+          overflow: hidden;
+          background-color: #0c0a09;
+          border: 0 !important;
+          clip-path: polygon(9px 0%, calc(100% - 9px) 0%, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0% calc(100% - 9px), 0% 9px);
+          contain: layout paint;
+          transition: transform 140ms ease, filter 140ms ease;
+        }
+        .rabtv-act-btn:hover:not(:disabled) { transform: scale(1.02); filter: brightness(1.09); }
+        .rabtv-act-btn:active:not(:disabled) { transform: scale(0.97); }
+        .rabtv-act-btn-art {
+          position: absolute;
+          inset: -2px;
+          background-size: 100% 100%;
+          pointer-events: none;
+          z-index: 0;
+        }
+        .rabtv-act-btn-scrim {
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(ellipse 78% 72% at 50% 50%, rgba(12,10,9,0.36) 0%, rgba(12,10,9,0.14) 100%);
+          pointer-events: none;
+          z-index: 1;
+        }
+        .rabtv-act-btn-label {
+          position: relative;
+          z-index: 2;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          text-shadow: 0 1px 4px rgba(12,10,9,0.96);
+        }
         .rabtv-act-focus:focus,
         .rabtv-act-focus:focus-visible {
           outline: 2px solid rgba(255, 255, 255, 0.92);
@@ -2016,75 +2093,60 @@ export function ActivationModal({
         }
         @media (max-height: 500px) {
           .rabtv-act-scroll {
-            padding: 12px 14px !important;
+            padding: 8px 10px !important;
           }
         }
       `}</style>
 
       <form
         onSubmit={handleFirstTimeAuthorize}
-        className={`relative w-full max-w-2xl rounded-[28px] border-2 text-white ${tokens.frameBorder} ${tokens.frameShadow} ${getCardBackground(
-          appTheme
-        )} backdrop-blur-2xl max-h-[94dvh] overflow-hidden flex flex-col`}
+        className={`rabtv-act-shell relative w-full max-w-2xl rounded-[26px] text-white ${tokens.frameShadow} max-h-[94dvh] flex flex-col`}
       >
-        {/* Theme-Matched Top & Bottom Laser Accents */}
-        <div
-          className={`absolute inset-x-10 top-0 h-[2px] bg-gradient-to-r ${tokens.laserTop} opacity-95 z-20 pointer-events-none`}
-        />
-        <div
-          className={`absolute inset-x-10 bottom-0 h-[2px] bg-gradient-to-r ${tokens.laserBottom} opacity-95 z-20 pointer-events-none`}
-        />
-
-        {/* Subtle Splash Banner Background */}
-        <div className="absolute inset-0 pointer-events-none z-0">
-          <img
-            src={BANNER_IMAGE_URL}
-            alt=""
-            className="w-full h-full object-cover opacity-18 filter blur-[2px] scale-105"
-          />
-          <div className="absolute inset-0 bg-black/80" />
-        </div>
+        <div className="rabtv-act-shell-9slice" aria-hidden="true" />
 
         <div
           ref={scrollBodyRef}
-          className="rabtv-act-scroll relative z-10 p-4 sm:p-6 space-y-4 overflow-y-auto overflow-x-clip scrollbar-none max-h-[94dvh]"
+          className="rabtv-act-scroll relative z-10 p-2 sm:p-3 space-y-4 overflow-y-auto overflow-x-clip scrollbar-none max-h-[90dvh]"
         >
-          {/* Header Identity */}
-          <div className="text-center space-y-2">
+          {/* Vault Blast-Door Mascot Welcome Hero Banner */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 min-h-[168px] sm:min-h-[200px] p-3.5 sm:p-4 flex flex-col justify-between bg-[#0c0a09]">
             <div
-              className={`mx-auto flex h-14 w-14 sm:h-18 sm:w-18 items-center justify-center rounded-2xl overflow-hidden border-2 bg-black ${tokens.avatarBorder}`}
-            >
-              <img
-                src={headerIconUrl}
-                alt="RABBiT TV Logo"
-                className="h-full w-full object-cover"
-              />
+              className="absolute inset-0 bg-cover bg-center opacity-92 pointer-events-none"
+              style={{
+                backgroundImage: `url(${IMG_ACT_BANNER})`,
+                backgroundPosition: "center 35%",
+              }}
+              aria-hidden="true"
+            />
+            <div
+              className="absolute inset-0 bg-gradient-to-b from-[#0c0a09]/84 via-[#0c0a09]/22 to-[#0c0a09]/92 pointer-events-none"
+              aria-hidden="true"
+            />
+
+            <div className="relative z-10 flex items-center justify-between gap-2">
+              <span className="rounded-full bg-black/80 border border-white/15 px-2.5 py-1 text-[9.5px] font-black uppercase tracking-widest text-cyan-300">
+                🔐 Access Vault
+              </span>
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden border bg-black ${tokens.avatarBorder}`}
+              >
+                <img
+                  src={headerIconUrl}
+                  alt="RABBiT TV Logo"
+                  className="h-full w-full object-cover"
+                />
+              </div>
             </div>
 
-            <div className="relative inline-flex max-w-full items-center justify-center px-4 sm:px-6 py-1.5 rounded-2xl overflow-hidden border border-white/15">
-              <div
-                className="absolute inset-0 pointer-events-none opacity-80"
-                style={{
-                  backgroundImage: `url(${RABBIT_HEADER_PILL})`,
-                  backgroundSize: "115% 360%",
-                  backgroundPosition: "center center",
-                }}
-              />
-              <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" />
-              <h2
-                className={`relative z-10 whitespace-nowrap text-base sm:text-xl font-black tracking-wide drop-shadow ${getPrimaryAccentColor(
-                  appTheme
-                )}`}
-              >
+            <div className="relative z-10 pt-10 text-center">
+              <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight text-amber-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.98)]">
                 Welcome to RABBiT TV
               </h2>
+              <p className="text-[11px] sm:text-xs font-bold text-zinc-200 max-w-lg mx-auto mt-1 leading-snug drop-shadow">
+                Movies, series, and 280+ live TV channels — zero ads, zero monthly
+                bills. Use your remote D-Pad (▲ ▼ ◀ ▶) or tap to set up.
+              </p>
             </div>
-
-            <p className="text-xs sm:text-sm font-medium text-slate-200 max-w-lg mx-auto leading-snug">
-              Movies, series, and 280+ live TV channels — zero ads, zero monthly
-              bills. Use your remote D-Pad (▲ ▼ ◀ ▶) or tap to set up your
-              profile.
-            </p>
           </div>
 
           {/* Hardened Trial Notice Banner */}
@@ -2517,19 +2579,27 @@ export function ActivationModal({
               </div>
             )}
 
-            {/* Primary Authorize Submit Button */}
+            {/* Primary Armored Authorize Submit Button */}
             <button
               type="submit"
               disabled={isVerifying || lockoutSecondsLeft > 0}
-              className={`rabtv-act-focus w-full rounded-2xl ${getPrimaryBgColor(
-                appTheme
-              )} py-3.5 text-sm sm:text-base font-black tracking-wide text-white shadow-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 cursor-pointer`}
+              className="rabtv-act-btn rabtv-act-focus w-full py-3.5 text-sm sm:text-base font-black uppercase tracking-wider text-white disabled:opacity-50 cursor-pointer"
             >
-              {lockoutSecondsLeft > 0
-                ? `⏳ Security Cooldown (${lockoutSecondsLeft}s)`
-                : isVerifying
-                  ? "⚡ Verifying Credentials..."
-                  : "🚀 Enter RABBiT TV"}
+              <span
+                className="rabtv-act-btn-art"
+                style={{
+                  backgroundImage: `url(${IMG_ACT_BTN_PRIMARY})`,
+                  filter: "var(--rabtv-act-filter)",
+                }}
+              />
+              <span className="rabtv-act-btn-scrim" />
+              <span className="rabtv-act-btn-label">
+                {lockoutSecondsLeft > 0
+                  ? `⏳ Security Cooldown (${lockoutSecondsLeft}s)`
+                  : isVerifying
+                    ? "⚡ Verifying Credentials..."
+                    : "🚀 Enter RABBiT TV"}
+              </span>
             </button>
 
             {/* Built-in Message Admin for Activation Code (Auto-Fills Name & Age -> High Alert Toast) */}
@@ -2609,7 +2679,7 @@ export function ActivationModal({
                 </div>
               )}
 
-              {/* Fixed Direct Contact Buttons (WhatsApp E.164 + Native SMS + Copy for TVs) */}
+              {/* Armored Direct Contact Buttons (WhatsApp E.164 + Native SMS + Copy for TVs) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
                 <button
                   type="button"
@@ -2620,9 +2690,11 @@ export function ActivationModal({
                       (u) => handleOpenExternal(u)
                     )
                   }
-                  className="rabtv-act-focus rounded-xl bg-emerald-950/70 hover:bg-emerald-900/90 border border-emerald-400/45 py-2 px-2.5 text-[11px] font-extrabold text-emerald-200 hover:text-white transition cursor-pointer"
+                  className="rabtv-act-btn rabtv-act-focus py-2.5 px-2.5 text-[11px] font-extrabold text-white cursor-pointer"
                 >
-                  💬 WhatsApp Rabbit
+                  <span className="rabtv-act-btn-art" style={{ backgroundImage: `url(${IMG_ACT_BTN_EMERALD})` }} />
+                  <span className="rabtv-act-btn-scrim" />
+                  <span className="rabtv-act-btn-label">💬 WhatsApp Rabbit</span>
                 </button>
 
                 <button
@@ -2634,17 +2706,33 @@ export function ActivationModal({
                       (u) => handleOpenExternal(u)
                     )
                   }
-                  className="rabtv-act-focus rounded-xl bg-amber-950/70 hover:bg-amber-900/90 border border-amber-400/45 py-2 px-2.5 text-[11px] font-extrabold text-amber-200 hover:text-white transition cursor-pointer"
+                  className="rabtv-act-btn rabtv-act-focus py-2.5 px-2.5 text-[11px] font-extrabold text-white cursor-pointer"
                 >
-                  📱 Text {SUPPORT_PHONE_DISPLAY}
+                  <span
+                    className="rabtv-act-btn-art"
+                    style={{
+                      backgroundImage: `url(${IMG_ACT_TAB_ACTIVE})`,
+                      filter: "var(--rabtv-act-filter)",
+                    }}
+                  />
+                  <span className="rabtv-act-btn-scrim" />
+                  <span className="rabtv-act-btn-label">📱 Text {SUPPORT_PHONE_DISPLAY}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleCopySupportInfo}
-                  className={`rabtv-act-focus rounded-xl border py-2 px-2.5 text-[11px] font-extrabold transition cursor-pointer ${tokens.secondaryBtn}`}
+                  className="rabtv-act-btn rabtv-act-focus py-2.5 px-2.5 text-[11px] font-extrabold text-white cursor-pointer"
                 >
-                  {copyFeedback || "📋 Copy # (TVs)"}
+                  <span
+                    className="rabtv-act-btn-art"
+                    style={{
+                      backgroundImage: `url(${IMG_ACT_TAB_IDLE})`,
+                      filter: "var(--rabtv-act-filter)",
+                    }}
+                  />
+                  <span className="rabtv-act-btn-scrim" />
+                  <span className="rabtv-act-btn-label">{copyFeedback || "📋 Copy # (TVs)"}</span>
                 </button>
               </div>
             </div>
